@@ -53,26 +53,35 @@ export function ContentTable({
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
   
-  // Filter content based on search, status, and date range
-  let filteredContents = allContents;
+  console.log("Dữ liệu nội dung đã tải:", allContents.length, "items, role:", user?.role);
   
-  if (statusFilter) {
+  // Filter content based on search, status, and date range
+  let filteredContents = [...allContents]; // Clone mảng để tránh các vấn đề tham chiếu
+  
+  console.log("Trước khi lọc:", filteredContents.length, "items");
+  
+  // Bỏ qua bộ lọc trạng thái đối với người dùng thông thường để đảm bảo họ luôn thấy công việc 
+  if (statusFilter && user?.role === 'admin') {
     filteredContents = filteredContents.filter(
       content => content.status.toLowerCase() === statusFilter.toLowerCase()
     );
+    console.log("Sau khi lọc trạng thái:", filteredContents.length, "items");
   }
   
   if (searchQuery) {
     const query = searchQuery.toLowerCase();
     filteredContents = filteredContents.filter(
-      content => (content.source?.toLowerCase().includes(query) || 
-                 content.categories?.toLowerCase().includes(query) ||
-                 content.labels?.toLowerCase().includes(query))
+      content => (
+        (content.source?.toLowerCase().includes(query)) || 
+        (content.categories?.toLowerCase().includes(query)) ||
+        (content.labels?.toLowerCase().includes(query))
+      )
     );
+    console.log("Sau khi lọc từ khóa:", filteredContents.length, "items");
   }
   
   // Filter by date range if dates are provided
-  if (startDate && endDate) {
+  if (startDate && endDate && user?.role === 'admin') { // Bỏ qua lọc ngày cho người dùng thường
     // Setting time to start of day for startDate and end of day for endDate
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
@@ -84,14 +93,17 @@ export function ContentTable({
       const contentDate = new Date(content.updatedAt);
       return contentDate >= start && contentDate <= end;
     });
+    console.log("Sau khi lọc ngày:", filteredContents.length, "items");
   }
   
-  // Filter by source verification status
-  // Lọc nguồn "Web Thế giới" là đã xác minh, nguồn "Web Trẻ thơ" là chưa xác minh
-  if (sourceVerification === 'verified') {
-    filteredContents = filteredContents.filter(content => content.source === 'Web Thế giới');
-  } else if (sourceVerification === 'unverified') {
-    filteredContents = filteredContents.filter(content => content.source === 'Web Trẻ thơ');
+  // Filter by source verification status - chỉ áp dụng cho admin
+  if (user?.role === 'admin') {
+    if (sourceVerification === 'verified') {
+      filteredContents = filteredContents.filter(content => content.source === 'Web Thế giới');
+    } else if (sourceVerification === 'unverified') {
+      filteredContents = filteredContents.filter(content => content.source === 'Web Trẻ thơ');
+    }
+    console.log("Sau khi lọc nguồn:", filteredContents.length, "items");
   }
   
   // Pagination
