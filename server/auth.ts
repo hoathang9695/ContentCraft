@@ -28,6 +28,26 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+// Create admin user if it doesn't exist
+async function createAdminUser() {
+  try {
+    const existingAdmin = await storage.getUserByUsername('admin');
+    if (!existingAdmin) {
+      const hashedPassword = await hashPassword('admin');
+      await storage.createUser({
+        username: 'admin',
+        password: hashedPassword,
+        name: 'Administrator',
+        email: 'admin@example.com',
+        role: 'admin'
+      });
+      console.log('Admin user created successfully');
+    }
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+  }
+}
+
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "very-secure-secret-key",
@@ -43,6 +63,9 @@ export function setupAuth(app: Express) {
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+  
+  // Create admin user on startup
+  createAdminUser();
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
