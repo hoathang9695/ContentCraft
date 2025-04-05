@@ -426,6 +426,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Kafka simulation endpoints (admin only)
   
+  // Tạo endpoint test dành cho public để kiểm thử kafka
+  app.post("/api/kafka/test", async (req, res) => {
+    try {
+      // Tạo ID ngẫu nhiên cho nội dung test
+      const contentId = `test-${Date.now()}`;
+      
+      const message = await simulateKafkaMessage(contentId);
+      res.json({ 
+        success: true, 
+        message: "Kafka message simulated successfully (test endpoint)",
+        data: message
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error simulating Kafka message",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Simulate a single kafka message (admin only)
   app.post("/api/kafka/simulate", isAdmin, async (req, res) => {
     try {
