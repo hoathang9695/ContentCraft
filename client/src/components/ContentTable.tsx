@@ -99,8 +99,7 @@ export function ContentTable({
   // Get paginated data
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedContents = filteredContents
-    .slice(startIndex, startIndex + itemsPerPage)
-    .slice(0, limit);
+    .slice(startIndex, limit ? Math.min(startIndex + itemsPerPage, startIndex + limit) : startIndex + itemsPerPage);
   
   // Delete mutation
   const deleteMutation = useMutation({
@@ -175,7 +174,7 @@ export function ContentTable({
               key: 'id',
               header: 'ID Post',
               render: (row: Content) => (
-                <div className="font-medium text-xs">{row.id.toString().padStart(17, '1')}</div>
+                <div className="font-medium text-xs">{row.id}</div>
               ),
             },
             {
