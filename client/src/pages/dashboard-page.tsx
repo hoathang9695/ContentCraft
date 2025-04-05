@@ -62,7 +62,7 @@ export default function DashboardPage() {
   
   return (
     <DashboardLayout>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
       
       {/* Stats Section */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -102,7 +102,7 @@ export default function DashboardPage() {
       {/* Recent Content Section */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium text-gray-900">Recent Content</h2>
+          <h2 className="text-lg font-medium">Recent Content</h2>
           <Button onClick={handleCreateContent}>
             <Plus className="h-4 w-4 mr-2" />
             New Content
@@ -128,13 +128,13 @@ export default function DashboardPage() {
             {
               key: 'author',
               header: 'Author',
-              render: () => <span className="text-gray-500">{user?.name}</span>,
+              render: () => <span className="text-muted-foreground">{user?.name}</span>,
             },
             {
               key: 'updatedAt',
               header: 'Last Updated',
               render: (row: Content) => (
-                <span className="text-gray-500">
+                <span className="text-muted-foreground">
                   {formatDistanceToNow(new Date(row.updatedAt), { addSuffix: true })}
                 </span>
               ),
@@ -157,7 +157,7 @@ export default function DashboardPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleViewContent(row.id)}
-                    className="text-gray-600 hover:text-gray-900"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -165,7 +165,7 @@ export default function DashboardPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDeleteContent(row.id)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

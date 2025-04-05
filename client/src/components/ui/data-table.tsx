@@ -58,7 +58,7 @@ export function DataTable<T>({
         </div>
       )}
       
-      <div className="rounded-md border bg-white overflow-hidden">
+      <div className="rounded-md border bg-card overflow-hidden">
         <Table>
           {caption && <TableCaption>{caption}</TableCaption>}
           <TableHeader>
