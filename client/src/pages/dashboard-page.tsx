@@ -137,10 +137,14 @@ export default function DashboardPage() {
             {
               key: 'author',
               header: 'Author',
-              render: (row: Content) => {
-                // Hiển thị "Bạn" nếu là nội dung của user hiện tại hoặc tên phù hợp dựa trên ID tác giả
+              render: (row: any) => {
+                if (row.author) {
+                  return <span className="text-blue-600 font-medium">
+                    {row.authorId === user?.id ? 'Bạn' : row.author.name || row.author.username}
+                  </span>
+                }
                 return <span className="text-muted-foreground">
-                  {row.authorId === user?.id ? 'Bạn' : row.authorId === 1 ? 'Administrator' : 'Nguyễn Hoàng Anh'}
+                  {row.authorId === user?.id ? 'Bạn' : 'Không rõ'}
                 </span>
               },
             },

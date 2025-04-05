@@ -228,6 +228,16 @@ export function ContentTable({
               ),
             },
             {
+              key: 'author',
+              header: 'Tác giả',
+              render: (row: any) => {
+                if (row.author) {
+                  return <span className="text-blue-600 font-medium">{row.author.name || row.author.username}</span>;
+                }
+                return <span className="text-muted-foreground">Không rõ</span>;
+              },
+            },
+            {
               key: 'approver',
               header: 'Người phê duyệt',
               render: (row: Content) => {

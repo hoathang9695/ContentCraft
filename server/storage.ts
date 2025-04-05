@@ -99,21 +99,67 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getContent(id: number): Promise<Content | undefined> {
-    const result = await db.select().from(contents).where(eq(contents.id, id));
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async getAllContents(): Promise<Content[]> {
-    return await db.select().from(contents).orderBy(desc(contents.createdAt));
-  }
-
-  async getContentsByAuthor(authorId: number): Promise<Content[]> {
-    return await db
-      .select()
+  async getContent(id: number): Promise<(Content & { author?: { username: string, name: string } }) | undefined> {
+    const results = await db
+      .select({
+        content: contents,
+        author: {
+          username: users.username,
+          name: users.name
+        }
+      })
       .from(contents)
+      .leftJoin(users, eq(contents.authorId, users.id))
+      .where(eq(contents.id, id));
+    
+    if (results.length === 0) return undefined;
+    
+    // Format result to include author as a nested object
+    return {
+      ...results[0].content,
+      author: results[0].author || undefined
+    };
+  }
+
+  async getAllContents(): Promise<(Content & { author?: { username: string, name: string } })[]> {
+    const results = await db
+      .select({
+        content: contents,
+        author: {
+          username: users.username,
+          name: users.name
+        }
+      })
+      .from(contents)
+      .leftJoin(users, eq(contents.authorId, users.id))
+      .orderBy(desc(contents.createdAt));
+    
+    // Format results to include author as a nested object
+    return results.map(item => ({
+      ...item.content,
+      author: item.author || undefined
+    }));
+  }
+
+  async getContentsByAuthor(authorId: number): Promise<(Content & { author?: { username: string, name: string } })[]> {
+    const results = await db
+      .select({
+        content: contents,
+        author: {
+          username: users.username,
+          name: users.name
+        }
+      })
+      .from(contents)
+      .leftJoin(users, eq(contents.authorId, users.id))
       .where(eq(contents.authorId, authorId))
       .orderBy(desc(contents.createdAt));
+    
+    // Format results to include author as a nested object
+    return results.map(item => ({
+      ...item.content,
+      author: item.author || undefined
+    }));
   }
 
   async updateContent(id: number, contentUpdate: Partial<InsertContent>): Promise<Content | undefined> {
