@@ -1,8 +1,17 @@
 import { users, type User, type InsertUser, contents, type Content, type InsertContent } from "@shared/schema";
-import session from "express-session";
-import createMemoryStore from "memorystore";
+import expressSession from "express-session";
+import pg from "pg";
+import connectPgSimple from "connect-pg-simple";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
-const MemoryStore = createMemoryStore(session);
+// Create a PostgreSQL connection pool
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// Create a PostgreSQL session store with proper types for ESM
+const PgSession = connectPgSimple(expressSession);
 
 // Interface for storage operations
 export interface IStorage {
@@ -18,91 +27,78 @@ export interface IStorage {
   updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined>;
   deleteContent(id: number): Promise<boolean>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Using 'any' as a workaround for ESM compatibility
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private contents: Map<number, Content>;
-  sessionStore: session.SessionStore;
-  currentUserId: number;
-  currentContentId: number;
+export class DatabaseStorage implements IStorage {
+  sessionStore: any;
 
   constructor() {
-    this.users = new Map();
-    this.contents = new Map();
-    this.currentUserId = 1;
-    this.currentContentId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // 24 hours
+    this.sessionStore = new PgSession({
+      pool,
+      createTableIfMissing: true, // Automatically create the session table if it doesn't exist
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result.length > 0 ? result[0] : undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result.length > 0 ? result[0] : undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
   }
 
   // Content management implementations
   async createContent(insertContent: InsertContent): Promise<Content> {
-    const id = this.currentContentId++;
-    const now = new Date();
-    const content: Content = { 
-      ...insertContent, 
-      id, 
-      createdAt: now, 
-      updatedAt: now 
-    };
-    this.contents.set(id, content);
-    return content;
+    const result = await db.insert(contents).values(insertContent).returning();
+    return result[0];
   }
 
   async getContent(id: number): Promise<Content | undefined> {
-    return this.contents.get(id);
+    const result = await db.select().from(contents).where(eq(contents.id, id));
+    return result.length > 0 ? result[0] : undefined;
   }
 
   async getAllContents(): Promise<Content[]> {
-    return Array.from(this.contents.values());
+    return await db.select().from(contents).orderBy(desc(contents.createdAt));
   }
 
   async getContentsByAuthor(authorId: number): Promise<Content[]> {
-    return Array.from(this.contents.values()).filter(
-      (content) => content.authorId === authorId
-    );
+    return await db
+      .select()
+      .from(contents)
+      .where(eq(contents.authorId, authorId))
+      .orderBy(desc(contents.createdAt));
   }
 
   async updateContent(id: number, contentUpdate: Partial<InsertContent>): Promise<Content | undefined> {
-    const existingContent = this.contents.get(id);
+    const result = await db
+      .update(contents)
+      .set({
+        ...contentUpdate,
+        updatedAt: new Date(),
+      })
+      .where(eq(contents.id, id))
+      .returning();
     
-    if (!existingContent) {
-      return undefined;
-    }
-    
-    const updatedContent: Content = {
-      ...existingContent,
-      ...contentUpdate,
-      updatedAt: new Date()
-    };
-    
-    this.contents.set(id, updatedContent);
-    return updatedContent;
+    return result.length > 0 ? result[0] : undefined;
   }
 
   async deleteContent(id: number): Promise<boolean> {
-    return this.contents.delete(id);
+    const result = await db
+      .delete(contents)
+      .where(eq(contents.id, id))
+      .returning({ id: contents.id });
+    
+    return result.length > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
