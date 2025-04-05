@@ -27,6 +27,7 @@ const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email format"),
   role: z.string().default("editor"),
+  status: z.string().default("pending"),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -63,6 +64,7 @@ export default function AuthPage() {
       name: "",
       email: "",
       role: "editor",
+      status: "pending",
     },
   });
 
@@ -208,6 +210,12 @@ export default function AuthPage() {
                 </TabsContent>
                 
                 <TabsContent value="register">
+                  <div className="p-3 bg-blue-50 text-blue-600 rounded-md mb-4 text-sm">
+                    <p>
+                      <strong>Note:</strong> New accounts require administrator approval. After registration, 
+                      you will need to wait until your account is approved before you can log in.
+                    </p>
+                  </div>
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                       <FormField

@@ -51,11 +51,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Check if it's a status-related error
+      if (error.message.includes("pending")) {
+        toast({
+          title: "Account pending approval",
+          description: "Your account is waiting for administrator approval. Please try again later.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -70,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Registration successful",
-        description: `Welcome, ${user.name}!`,
+        description: `Welcome, ${user.name}! Your account has been created and is pending approval from an administrator.`,
       });
     },
     onError: (error: Error) => {

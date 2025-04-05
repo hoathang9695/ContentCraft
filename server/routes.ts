@@ -146,6 +146,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User management routes (admin only)
+  // Check if user is admin middleware
+  const isAdmin = (req: Request, res: Response, next: Function) => {
+    if (req.isAuthenticated() && (req.user as Express.User).role === 'admin') {
+      return next();
+    }
+    res.status(403).json({ message: "Admin access required" });
+  };
+
+  // Get all users (admin only)
+  app.get("/api/users", isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Remove password from response
+      const safeUsers = users.map(({ password, ...user }) => user);
+      res.json(safeUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching users" });
+    }
+  });
+
+  // Update user status (admin only)
+  app.patch("/api/users/:id/status", isAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const { status } = req.body;
+      
+      if (!status || !['active', 'pending', 'blocked'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      
+      const updatedUser = await storage.updateUserStatus(userId, status);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...safeUser } = updatedUser;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating user status" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

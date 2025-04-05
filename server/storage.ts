@@ -15,9 +15,13 @@ const PgSession = connectPgSimple(expressSession);
 
 // Interface for storage operations
 export interface IStorage {
+  // User management operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  updateUserStatus(id: number, status: string): Promise<User | undefined>;
   
   // Content management operations
   createContent(content: InsertContent): Promise<Content>;
@@ -53,6 +57,30 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const result = await db.insert(users).values(insertUser).returning();
     return result[0];
+  }
+
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUserStatus(id: number, status: string): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({ status })
+      .where(eq(users.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
   }
 
   // Content management implementations

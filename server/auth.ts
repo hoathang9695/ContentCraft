@@ -113,6 +113,11 @@ export function setupAuth(app: Express) {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid username or password" });
       
+      // Check if user status is pending
+      if (user.status === "pending") {
+        return res.status(403).json({ message: "Your account is pending approval. Please try again later." });
+      }
+      
       req.login(user, (err) => {
         if (err) return next(err);
         // Remove password from response

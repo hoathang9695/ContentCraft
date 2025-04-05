@@ -9,6 +9,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   role: text("role").notNull().default("editor"),
+  status: text("status").notNull().default("pending"), // 'active', 'pending', 'inactive'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const contents = pgTable("contents", {
@@ -21,7 +23,7 @@ export const contents = pgTable("contents", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertContentSchema = createInsertSchema(contents).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
