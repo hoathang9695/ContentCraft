@@ -190,6 +190,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error updating user status" });
     }
   });
+  
+  // Update user details (admin only)
+  app.patch("/api/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const { department, position, role } = req.body;
+      
+      // Validate role if it's provided
+      if (role && !['admin', 'editor', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role value" });
+      }
+      
+      // Build update object with only the fields that are provided
+      const updateData: Record<string, string> = {};
+      if (department) updateData.department = department;
+      if (position) updateData.position = position;
+      if (role) updateData.role = role;
+      
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, updateData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...safeUser } = updatedUser;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating user details" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

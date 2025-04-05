@@ -8,14 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Edit, MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
+import { UserEditDialog } from "@/components/UserEditDialog";
 
 export default function UsersPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUser, setSelectedUser] = useState<Omit<User, "password"> | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Redirect if not admin
   if (user && user.role !== "admin") {
@@ -178,33 +181,48 @@ export default function UsersPage() {
                       </>
                     )}
                     {row.status === "active" && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600">
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Block
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Block User</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to block {row.name}? They will no longer be able to access the system.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleRejectUser(row.id)}>
-                              {updateStatusMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                              ) : (
-                                <XCircle className="h-4 w-4 mr-1" />
-                              )}
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-blue-500 border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                          onClick={() => {
+                            setSelectedUser(row);
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600">
+                              <XCircle className="h-4 w-4 mr-1" />
                               Block
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Block User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to block {row.name}? They will no longer be able to access the system.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleRejectUser(row.id)}>
+                                {updateStatusMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                )}
+                                Block
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
                     )}
                     {row.status === "blocked" && (
                       <AlertDialog>
@@ -265,6 +283,13 @@ export default function UsersPage() {
           )}
         </div>
       </div>
+      
+      {/* User edit dialog */}
+      <UserEditDialog 
+        open={editDialogOpen} 
+        user={selectedUser} 
+        onOpenChange={setEditDialogOpen} 
+      />
     </DashboardLayout>
   );
 }
