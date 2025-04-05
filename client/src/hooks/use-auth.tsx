@@ -8,6 +8,7 @@ import { insertUserSchema, User as SelectUser, InsertUser, LoginData } from "@sh
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { useLocation } from "wouter";
 
 type AuthResponse = Omit<SelectUser, "password"> & {
   message?: string;
@@ -34,6 +35,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const {
     data: user,
     error,
@@ -56,20 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome back, ${user.name}!`,
       });
       
-      // Sử dụng navigate để chuyển hướng đến đường dẫn chính xác
-      setTimeout(() => {
-        // Chuyển hướng người dùng dựa trên vai trò
-        // Sử dụng window.history để điều hướng
-        if (user.role === 'admin') {
-          // Admin vào trang dashboard
-          window.history.pushState({}, "", "/");
-          window.location.reload();
-        } else {
-          // Người dùng thường vào trang nội dung
-          window.history.pushState({}, "", "/contents");
-          window.location.reload();
-        }
-      }, 500);
+      // Chuyển hướng người dùng dựa trên vai trò sử dụng wouter
+      if (user.role === 'admin') {
+        // Admin vào trang dashboard
+        navigate("/");
+      } else {
+        // Người dùng thường vào trang nội dung
+        navigate("/contents");
+      }
     },
     onError: (error: any) => {
       // Error message is now handled directly by throwIfResNotOk
@@ -133,6 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged out",
         description: "You've been successfully logged out.",
       });
+      // Chuyển hướng về trang đăng nhập
+      navigate("/auth");
     },
     onError: (error: Error) => {
       toast({
