@@ -26,9 +26,9 @@ interface SidebarItemProps {
 function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarItemProps) {
   return (
     <Link href={href}>
-      <a
+      <div
         className={cn(
-          "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+          "group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
           isActive
             ? "bg-primary text-primary-foreground"
             : "text-foreground hover:bg-muted hover:text-foreground"
@@ -37,7 +37,7 @@ function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarI
       >
         <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
         {children}
-      </a>
+      </div>
     </Link>
   );
 }
