@@ -61,13 +61,13 @@ export default function UsersPage() {
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600 max-w-[140px] truncate">Active</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Pending</Badge>;
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600 max-w-[140px] truncate">Pending</Badge>;
       case "blocked":
-        return <Badge className="bg-red-500 hover:bg-red-600">Blocked</Badge>;
+        return <Badge className="bg-red-500 hover:bg-red-600 max-w-[140px] truncate">Blocked</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge className="max-w-[140px] truncate">{status}</Badge>;
     }
   };
 
@@ -103,17 +103,77 @@ export default function UsersPage() {
             data={filteredUsers || []}
             columns={[
               { key: "id", header: "ID" },
-              { key: "username", header: "Username" },
-              { key: "name", header: "Name" },
-              { key: "email", header: "Email" },
-              { key: "department", header: "Phòng ban", 
-                render: (row) => <Badge variant="secondary">{row.department || "N/A"}</Badge> 
+              { 
+                key: "username", 
+                header: "Username",
+                className: "w-[150px]",
+                render: (row) => (
+                  <div className="max-w-[150px] truncate" title={row.username}>
+                    {row.username}
+                  </div>
+                )
               },
-              { key: "position", header: "Vai trò", 
-                render: (row) => <Badge variant="outline">{row.position || "N/A"}</Badge> 
+              { 
+                key: "name", 
+                header: "Name",
+                className: "w-[180px]",
+                render: (row) => (
+                  <div className="max-w-[180px] truncate" title={row.name}>
+                    {row.name}
+                  </div>
+                )
               },
-              { key: "role", header: "Quyền hạn", 
-                render: (row) => <Badge variant="outline" className="capitalize">{row.role}</Badge> 
+              { 
+                key: "email", 
+                header: "Email",
+                className: "w-[220px]",
+                render: (row) => (
+                  <div className="max-w-[220px] truncate" title={row.email}>
+                    {row.email}
+                  </div>
+                )
+              },
+              { 
+                key: "department", 
+                header: "Phòng ban", 
+                className: "w-[180px]",
+                render: (row) => (
+                  <Badge 
+                    variant="secondary" 
+                    className="max-w-[180px] truncate" 
+                    title={row.department || "N/A"}
+                  >
+                    {row.department || "N/A"}
+                  </Badge>
+                )
+              },
+              { 
+                key: "position", 
+                header: "Vai trò", 
+                className: "w-[140px]",
+                render: (row) => (
+                  <Badge 
+                    variant="outline" 
+                    className="max-w-[140px] truncate" 
+                    title={row.position || "N/A"}
+                  >
+                    {row.position || "N/A"}
+                  </Badge>
+                )
+              },
+              { 
+                key: "role", 
+                header: "Quyền hạn", 
+                className: "w-[140px]",
+                render: (row) => (
+                  <Badge 
+                    variant="outline" 
+                    className="capitalize max-w-[140px] truncate" 
+                    title={row.role}
+                  >
+                    {row.role}
+                  </Badge>
+                )
               },
               { key: "status", header: "Trạng thái", 
                 render: (row) => <StatusBadge status={row.status} /> 

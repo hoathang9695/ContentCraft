@@ -51,24 +51,15 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Create form with defaults from user data
+  // Set up the form with user data
   const form = useForm<UserUpdateFormValues>({
     resolver: zodResolver(userUpdateSchema),
-    defaultValues: {
+    values: {
       department: user?.department || "",
       position: user?.position || "",
       role: user?.role || "",
     },
   });
-
-  // If the dialog opens with a different user, reset the form
-  if (open && user && form.getValues().department !== user.department) {
-    form.reset({
-      department: user.department || "",
-      position: user.position || "",
-      role: user.role || "",
-    });
-  }
 
   // Update user mutation
   const updateUserMutation = useMutation({
@@ -122,7 +113,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   <FormLabel>Phòng ban</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -150,7 +141,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   <FormLabel>Vai trò</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -175,7 +166,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   <FormLabel>Quyền hạn</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
