@@ -23,9 +23,9 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   
-  // Fetch user's content
+  // Fetch content based on user role (all for admin, only user's content for regular users)
   const { data: contents = [], isLoading: isLoadingContents } = useQuery<Content[]>({
-    queryKey: ['/api/my-contents'],
+    queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
   
   // Fetch dashboard stats
@@ -114,10 +114,19 @@ export default function DashboardPage() {
           isLoading={isLoadingContents}
           columns={[
             {
-              key: 'title',
-              header: 'Title',
+              key: 'id',
+              header: 'ID Post',
               render: (row: Content) => (
-                <div className="font-medium">{row.title}</div>
+                <div className="font-medium">#{row.id}</div>
+              ),
+            },
+            {
+              key: 'source',
+              header: 'Nguồn cấp',
+              render: (row: Content) => (
+                <div className="font-medium">
+                  {row.source || 'Không có nguồn'}
+                </div>
               ),
             },
             {
@@ -128,7 +137,12 @@ export default function DashboardPage() {
             {
               key: 'author',
               header: 'Author',
-              render: () => <span className="text-muted-foreground">{user?.name}</span>,
+              render: (row: Content) => {
+                // Hiển thị "Bạn" nếu là nội dung của user hiện tại hoặc tên phù hợp dựa trên ID tác giả
+                return <span className="text-muted-foreground">
+                  {row.authorId === user?.id ? 'Bạn' : row.authorId === 1 ? 'Administrator' : 'Nguyễn Hoàng Anh'}
+                </span>
+              },
             },
             {
               key: 'updatedAt',

@@ -87,10 +87,12 @@ export function ContentTable({
   }
   
   // Filter by source verification status
-  // Hiện tại chúng ta sẽ bỏ qua việc lọc theo trạng thái xác minh nguồn
-  // Trong tương lai, khi có trường dữ liệu chính thức, chúng ta sẽ cập nhật lại
-  // Logic này để có thể lọc theo trạng thái xác minh thực tế
-  // Ví dụ: filteredContents.filter(content => content.isVerified === (sourceVerification === 'verified'))
+  // Lọc nguồn "Web Thế giới" là đã xác minh, nguồn "Web Trẻ thơ" là chưa xác minh
+  if (sourceVerification === 'verified') {
+    filteredContents = filteredContents.filter(content => content.source === 'Web Thế giới');
+  } else if (sourceVerification === 'unverified') {
+    filteredContents = filteredContents.filter(content => content.source === 'Web Trẻ thơ');
+  }
   
   // Pagination
   const itemsPerPage = 10;
