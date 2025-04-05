@@ -50,7 +50,7 @@ export function ContentTable({
   
   // Fetch content list
   const { data: allContents = [], isLoading } = useQuery<Content[]>({
-    queryKey: ['/api/my-contents'],
+    queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
   
   // Filter content based on search, status, and date range
@@ -117,6 +117,7 @@ export function ContentTable({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       toast({
         title: 'Content deleted',
