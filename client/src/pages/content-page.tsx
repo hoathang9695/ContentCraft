@@ -95,7 +95,8 @@ export default function ContentPage() {
                           if (date > endDate) {
                             setEndDate(date);
                           }
-                          handleDateFilter();
+                          // Tự động áp dụng bộ lọc khi người dùng chọn ngày
+                          setTimeout(handleDateFilter, 100);
                         }
                       }}
                       initialFocus
@@ -130,13 +131,31 @@ export default function ContentPage() {
                           if (date < startDate) {
                             setStartDate(date);
                           }
-                          handleDateFilter();
+                          // Tự động áp dụng bộ lọc khi người dùng chọn ngày
+                          setTimeout(handleDateFilter, 100);
                         }
                       }}
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
+              </div>
+              
+              {/* Nút xóa bộ lọc */}
+              <div className="grid w-full items-end">
+                <Button 
+                  variant="outline" 
+                  className="mt-1.5" 
+                  onClick={() => {
+                    // Đặt lại ngày về ngày hôm nay
+                    const today = new Date();
+                    setStartDate(today);
+                    setEndDate(today);
+                    setTimeout(handleDateFilter, 100);
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
               </div>
             </div>
           </div>

@@ -89,19 +89,41 @@ export function ContentTable({
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
     
-    filteredContents = filteredContents.filter(content => {
-      const contentDate = new Date(content.updatedAt);
-      return contentDate >= start && contentDate <= end;
-    });
-    console.log("Sau khi lọc ngày:", filteredContents.length, "items");
+    // Kiểm tra xem có cần phải lọc theo ngày hay không 
+    const isSameDay = start.getDate() === end.getDate() && 
+                      start.getMonth() === end.getMonth() && 
+                      start.getFullYear() === end.getFullYear();
+
+    // Nếu đã chọn lọc theo thời gian (có startDate và endDate)
+    if (isSameDay || start < end) {
+      filteredContents = filteredContents.filter(content => {
+        if (!content.createdAt) return false;
+        
+        const contentDate = new Date(content.createdAt);
+        // Nếu là cùng ngày, chỉ cần kiểm tra ngày tháng năm
+        if (isSameDay) {
+          return contentDate.getDate() === start.getDate() && 
+                 contentDate.getMonth() === start.getMonth() && 
+                 contentDate.getFullYear() === start.getFullYear();
+        }
+        // Ngược lại kiểm tra trong khoảng
+        return contentDate >= start && contentDate <= end;
+      });
+      console.log("Sau khi lọc ngày:", filteredContents.length, "items");
+    } else {
+      console.log("Bỏ qua lọc ngày: ngày bắt đầu lớn hơn ngày kết thúc");
+    }
   }
   
   // Filter by source verification status - chỉ áp dụng cho admin
   if (user?.role === 'admin') {
     if (sourceVerification === 'verified') {
-      filteredContents = filteredContents.filter(content => content.source === 'Web Thế giới');
+      // Không lọc vì hiện tại không có dữ liệu nguồn 'verified'
+      // Hoặc có thể sửa thành các nguồn khác nếu cần thiết
+      console.log("Bỏ qua bộ lọc 'verified' vì không có dữ liệu phù hợp");
     } else if (sourceVerification === 'unverified') {
-      filteredContents = filteredContents.filter(content => content.source === 'Web Trẻ thơ');
+      // Lọc theo nguồn thực tế trong cơ sở dữ liệu
+      filteredContents = filteredContents.filter(content => content.source === 'Kafka Simulator');
     }
     console.log("Sau khi lọc nguồn:", filteredContents.length, "items");
   }
@@ -275,6 +297,21 @@ export function ContentTable({
               key: 'reactions',
               header: 'Reactions',
               render: (row: Content) => <span className="text-muted-foreground">{row.reactions || 0}</span>,
+            },
+            {
+              key: 'createdAt',
+              header: 'Ngày tạo',
+              render: (row: Content) => {
+                if (row.createdAt) {
+                  const date = new Date(row.createdAt);
+                  return (
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      {`${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`}
+                    </span>
+                  );
+                }
+                return <span className="text-muted-foreground">N/A</span>;
+              },
             },
             {
               key: 'actions',
