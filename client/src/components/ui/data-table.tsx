@@ -59,52 +59,54 @@ export function DataTable<T>({
       )}
       
       <div className="rounded-md border bg-card overflow-hidden">
-        <Table>
-          {caption && <TableCaption>{caption}</TableCaption>}
-          <TableHeader>
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={column.key} className={column.className}>
-                  {column.header}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+        <div className="overflow-x-auto">
+          <Table className="min-w-full">
+            {caption && <TableCaption>{caption}</TableCaption>}
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  <div className="flex justify-center items-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                    <span>Loading...</span>
-                  </div>
-                </TableCell>
+                {columns.map((column) => (
+                  <TableHead key={column.key} className={column.className}>
+                    {column.header}
+                  </TableHead>
+                ))}
               </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((row, rowIndex) => (
-                <TableRow key={rowIndex} className="hover:bg-muted/50">
-                  {columns.map((column) => (
-                    <TableCell key={`${rowIndex}-${column.key}`} className={column.className}>
-                      {column.render
-                        ? column.render(row)
-                        // @ts-ignore - accessing dynamic property
-                        : row[column.key] !== undefined
-                        // @ts-ignore - accessing dynamic property
-                        ? String(row[column.key])
-                        : null}
-                    </TableCell>
-                  ))}
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <div className="flex justify-center items-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                      <span>Loading...</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No results found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data.map((row, rowIndex) => (
+                  <TableRow key={rowIndex} className="hover:bg-muted/50">
+                    {columns.map((column) => (
+                      <TableCell key={`${rowIndex}-${column.key}`} className={column.className}>
+                        {column.render
+                          ? column.render(row)
+                          // @ts-ignore - accessing dynamic property
+                          : row[column.key] !== undefined
+                          // @ts-ignore - accessing dynamic property
+                          ? String(row[column.key])
+                          : null}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       
       {pagination && pagination.totalPages > 1 && (

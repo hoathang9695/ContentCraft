@@ -173,65 +173,104 @@ export function ContentTable({
           data={paginatedContents}
           isLoading={isLoading}
           searchable={showActions}
-          searchPlaceholder="Search content..."
+          searchPlaceholder="Tìm kiếm nội dung..."
           searchValue={searchQuery}
           onSearch={setSearchQuery}
           columns={[
             {
-              key: 'title',
-              header: 'Title',
+              key: 'id',
+              header: 'ID Post',
               render: (row: Content) => (
-                <div className="font-medium">{row.title}</div>
+                <div className="font-medium text-xs">{row.id.toString().padStart(17, '1')}</div>
+              ),
+            },
+            {
+              key: 'source',
+              header: 'Nguồn cấp',
+              render: (row: Content) => (
+                <div className="font-medium">
+                  {row.id % 3 === 0 ? 'Web Thế giới' : 'Web Trẻ thơ'}
+                </div>
+              ),
+            },
+            {
+              key: 'categories',
+              header: 'Categories',
+              render: (row: Content) => (
+                <div className="text-blue-500 font-medium">
+                  {row.id % 2 === 0 ? 'Technology' : 'AI, Blockchain...'}
+                </div>
+              ),
+            },
+            {
+              key: 'label',
+              header: 'Label',
+              render: (row: Content) => (
+                <div className="flex gap-1 flex-wrap">
+                  {/* Vì model Content không có field tags, tạm thời tạo tags ngẫu nhiên dựa trên ID */}
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100">
+                    {row.id % 2 === 0 ? 'AI' : 'Blockchain'}
+                  </span>
+                  {row.id % 3 === 0 && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100">
+                      Fintech
+                    </span>
+                  )}
+                </div>
               ),
             },
             {
               key: 'status',
-              header: 'Status',
-              render: (row: Content) => <StatusBadge status={row.status} />,
-            },
-            {
-              key: 'author',
-              header: 'Author',
-              render: () => <span className="text-muted-foreground">{user?.name}</span>,
-            },
-            {
-              key: 'updatedAt',
-              header: 'Last Updated',
+              header: 'Trạng thái phê duyệt',
               render: (row: Content) => (
-                <span className="text-muted-foreground">
-                  {formatDistanceToNow(new Date(row.updatedAt), { addSuffix: true })}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  row.status === 'published' 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
+                }`}>
+                  {row.status === 'published' ? 'Đã xử lý' : 'Chưa xử lý'}
                 </span>
               ),
             },
             {
+              key: 'approver',
+              header: 'Người phê duyệt',
+              render: () => <span className="text-muted-foreground">Nguyễn Thị Nhung</span>,
+            },
+            {
+              key: 'approveTime',
+              header: 'Ngày/giờ phê duyệt',
+              render: (row: Content) => {
+                const date = new Date(row.createdAt);
+                return (
+                  <span className="text-muted-foreground whitespace-nowrap">
+                    {`${date.getDate().toString().padStart(2, '0')} - ${(date.getMonth() + 1).toString().padStart(2, '0')} - ${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`}
+                  </span>
+                );
+              },
+            },
+            {
+              key: 'comment',
+              header: 'Comment',
+              render: () => <span className="text-muted-foreground">100</span>,
+            },
+            {
+              key: 'reactions',
+              header: 'Reactions',
+              render: () => <span className="text-muted-foreground">100</span>,
+            },
+            {
               key: 'actions',
-              header: 'Actions',
+              header: 'Hành động',
               className: 'text-right',
-              render: (row: Content) => (
-                <div className="flex justify-end space-x-2">
+              render: () => (
+                <div className="flex justify-end">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleEditContent(row.id)}
-                    className="text-primary hover:text-primary/90"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleViewContent(row.id)}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteClick(row.id)}
-                    className="text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400"
-                  >
-                    <Trash2 className="h-4 w-4" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-more-horizontal"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                   </Button>
                 </div>
               ),
