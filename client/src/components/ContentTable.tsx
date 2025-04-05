@@ -25,6 +25,8 @@ type ContentTableProps = {
   title?: string;
   showActions?: boolean;
   statusFilter?: string;
+  startDate?: Date;
+  endDate?: Date;
   limit?: number;
 };
 
@@ -32,6 +34,8 @@ export function ContentTable({
   title = "Content", 
   showActions = true,
   statusFilter,
+  startDate,
+  endDate,
   limit
 }: ContentTableProps) {
   const { user } = useAuth();
@@ -47,7 +51,7 @@ export function ContentTable({
     queryKey: ['/api/my-contents'],
   });
   
-  // Filter content based on search and status
+  // Filter content based on search, status, and date range
   let filteredContents = allContents;
   
   if (statusFilter) {
@@ -62,6 +66,21 @@ export function ContentTable({
       content => content.title.toLowerCase().includes(query) ||
                  content.body.toLowerCase().includes(query)
     );
+  }
+  
+  // Filter by date range if dates are provided
+  if (startDate && endDate) {
+    // Setting time to start of day for startDate and end of day for endDate
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    
+    filteredContents = filteredContents.filter(content => {
+      const contentDate = new Date(content.updatedAt);
+      return contentDate >= start && contentDate <= end;
+    });
   }
   
   // Pagination
