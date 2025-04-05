@@ -18,15 +18,18 @@ export const users = pgTable("users", {
 
 export const contents = pgTable("contents", {
   id: serial("id").primaryKey(),
-  source: text("source"),
-  categories: text("categories"),
-  labels: text("labels"),
-  status: text("status").notNull().default("draft"),
-  approverId: integer("approver_id").references(() => users.id),
-  approveTime: timestamp("approve_time"),
-  comments: integer("comments").default(0),
-  reactions: integer("reactions").default(0),
-  authorId: integer("author_id").notNull().references(() => users.id),
+  externalId: text("external_id").unique(), // ID nội dung từ service bên ngoài qua Kafka
+  source: text("source"), // Nguồn cấp
+  categories: text("categories"), // Danh mục
+  labels: text("labels"), // Nhãn
+  status: text("status").notNull().default("pending"), // 'pending', 'processing', 'completed'
+  assignedToId: integer("assigned_to_id").references(() => users.id), // Người được phân công xử lý
+  assignedAt: timestamp("assigned_at"), // Thời điểm phân công
+  approverId: integer("approver_id").references(() => users.id), // Người phê duyệt
+  approveTime: timestamp("approve_time"), // Thời điểm phê duyệt
+  comments: integer("comments").default(0), // Số lượng comment
+  reactions: integer("reactions").default(0), // Số lượng reaction
+  processingResult: text("processing_result"), // Kết quả xử lý
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

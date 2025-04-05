@@ -7,6 +7,7 @@ import { insertContentSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { simulateKafkaMessage, simulateMultipleMessages } from "./kafka-simulator";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -85,7 +86,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertContentSchema.parse({
         ...req.body,
-        authorId: (req.user as Express.User).id
+        assignedToId: (req.user as Express.User).id,
+        assignedAt: new Date()
       });
       
       const newContent = await storage.createContent(validatedData);
@@ -111,16 +113,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Content not found" });
       }
       
-      // Check if user is the author of the content or an admin
-      if (existingContent.authorId !== user.id && user.role !== 'admin') {
-        return res.status(403).json({ message: "You can only edit your own content" });
+      // Check if user is assigned to the content or an admin
+      if (existingContent.assignedToId !== user.id && user.role !== 'admin') {
+        return res.status(403).json({ message: "You can only edit content assigned to you" });
       }
       
       // Validate request body (partial validation)
       const validatedData = insertContentSchema.partial().parse(req.body);
       
-      // If admin is approving content, add approval information
-      if (user.role === 'admin' && validatedData.status === 'published') {
+      // If admin or assigned user is completing processing, add completion info
+      if (validatedData.status === 'completed') {
         validatedData.approverId = user.id;
         validatedData.approveTime = new Date();
       }
@@ -148,9 +150,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Content not found" });
       }
       
-      // Check if user is the author of the content or an admin
-      if (existingContent.authorId !== user.id && user.role !== 'admin') {
-        return res.status(403).json({ message: "You can only delete your own content" });
+      // Only admin can delete content
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: "Only administrators can delete content" });
       }
       
       const deleted = await storage.deleteContent(contentId);
@@ -164,13 +166,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get contents by current user
+  // Get contents assigned to current user
   app.get("/api/my-contents", isAuthenticated, async (req, res) => {
     try {
-      const contents = await storage.getContentsByAuthor((req.user as Express.User).id);
+      const contents = await storage.getContentsByAssignee((req.user as Express.User).id);
       res.json(contents);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching your contents" });
+      res.status(500).json({ message: "Error fetching your assigned contents" });
     }
   });
 
@@ -180,19 +182,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allContents = await storage.getAllContents();
       const user = req.user as Express.User;
       
-      // If user is admin, show stats for all content, otherwise filter by user
-      const filteredContents = user.role === 'admin' ? allContents : allContents.filter(c => c.authorId === user.id);
+      // If user is admin, show stats for all content, otherwise filter by assigned to user
+      const filteredContents = user.role === 'admin' 
+        ? allContents 
+        : allContents.filter(c => c.assignedToId === user.id);
       
       // Count contents by status
-      const published = filteredContents.filter(c => c.status === 'published').length;
-      const draft = filteredContents.filter(c => c.status === 'draft').length;
-      const review = filteredContents.filter(c => c.status === 'review').length;
+      const pending = filteredContents.filter(c => c.status === 'pending').length;
+      const processing = filteredContents.filter(c => c.status === 'processing').length;
+      const completed = filteredContents.filter(c => c.status === 'completed').length;
       
       res.json({
         totalContent: filteredContents.length,
-        published,
-        draft,
-        review
+        pending,
+        processing,
+        completed
       });
     } catch (error) {
       res.status(500).json({ message: "Error fetching statistics" });
@@ -417,6 +421,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(activities);
     } catch (error) {
       res.status(500).json({ message: "Error fetching recent activities" });
+    }
+  });
+  
+  // Kafka simulation endpoints (admin only)
+  
+  // Simulate a single kafka message (admin only)
+  app.post("/api/kafka/simulate", isAdmin, async (req, res) => {
+    try {
+      const { contentId } = req.body;
+      
+      if (!contentId) {
+        return res.status(400).json({ message: "Content ID is required" });
+      }
+      
+      const message = await simulateKafkaMessage(contentId);
+      res.json({ 
+        success: true, 
+        message: "Kafka message simulated successfully",
+        data: message
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error simulating Kafka message",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Simulate multiple kafka messages (admin only)
+  app.post("/api/kafka/simulate-batch", isAdmin, async (req, res) => {
+    try {
+      const { count = 5 } = req.body;
+      
+      // Validate count
+      const messageCount = Math.min(Math.max(1, Number(count)), 20);
+      
+      const messages = await simulateMultipleMessages(messageCount);
+      res.json({ 
+        success: true, 
+        message: `${messages.length} Kafka messages simulated successfully`,
+        data: messages
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error simulating Kafka messages",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Get assignable users (active editors) (admin only)
+  app.get("/api/users/assignable", isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Filter for active editors only
+      const assignableUsers = users
+        .filter(user => user.role === 'editor' && user.status === 'active')
+        .map(({ password, ...user }) => user);
+      
+      res.json(assignableUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching assignable users" });
+    }
+  });
+  
+  // Assign content to user (admin only)
+  app.post("/api/contents/:id/assign", isAdmin, async (req, res) => {
+    try {
+      const contentId = Number(req.params.id);
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const content = await storage.assignContentToUser(contentId, Number(userId));
+      
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Content assigned successfully",
+        data: content
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error assigning content to user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Complete content processing (authenticated user)
+  app.post("/api/contents/:id/complete", isAuthenticated, async (req, res) => {
+    try {
+      const contentId = Number(req.params.id);
+      const { result } = req.body;
+      const user = req.user as Express.User;
+      
+      if (!result) {
+        return res.status(400).json({ message: "Processing result is required" });
+      }
+      
+      // Get the content
+      const content = await storage.getContent(contentId);
+      
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      // Check if content is assigned to the current user or if user is admin
+      if (content.assignedToId !== user.id && user.role !== 'admin') {
+        return res.status(403).json({ message: "You can only complete content assigned to you" });
+      }
+      
+      // Complete processing
+      const completedContent = await storage.completeProcessing(contentId, result, user.id);
+      
+      res.json({ 
+        success: true, 
+        message: "Content processing completed successfully",
+        data: completedContent
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error completing content processing",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

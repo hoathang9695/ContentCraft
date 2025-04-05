@@ -135,17 +135,15 @@ export default function DashboardPage() {
               render: (row: Content) => <StatusBadge status={row.status} />,
             },
             {
-              key: 'author',
-              header: 'Author',
-              render: (row: any) => {
-                if (row.author) {
+              key: 'processor',
+              header: 'Người xử lý',
+              render: (row: Content) => {
+                if (row.assignedToId) {
                   return <span className="text-blue-600 font-medium">
-                    {row.authorId === user?.id ? 'Bạn' : row.author.name || row.author.username}
+                    {row.assignedToId === user?.id ? 'Bạn' : `Nhân viên #${row.assignedToId}`}
                   </span>
                 }
-                return <span className="text-muted-foreground">
-                  {row.authorId === user?.id ? 'Bạn' : 'Không rõ'}
-                </span>
+                return <span className="text-muted-foreground">Chưa phân công</span>
               },
             },
             {

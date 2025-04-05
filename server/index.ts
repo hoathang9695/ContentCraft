@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupKafkaConsumer, disconnectKafkaConsumer } from "./kafka-consumer";
 
 const app = express();
 app.use(express.json());
@@ -90,5 +91,46 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Khởi động Kafka consumer (có thể bỏ comment nếu có Kafka server)
+    // Chỉ kết nối với Kafka khi có biến môi trường KAFKA_ENABLED=true
+    if (process.env.KAFKA_ENABLED === 'true') {
+      const kafkaBrokers = process.env.KAFKA_BROKERS?.split(',') || ['localhost:9092'];
+      const kafkaGroupId = process.env.KAFKA_GROUP_ID || 'content-processing-group';
+      const kafkaTopic = process.env.KAFKA_TOPIC || 'content-topic';
+      
+      setupKafkaConsumer(kafkaBrokers, kafkaGroupId, kafkaTopic)
+        .then(() => log('Kafka consumer started successfully', 'kafka'))
+        .catch(err => log(`Failed to start Kafka consumer: ${err}`, 'kafka-error'));
+    } else {
+      log('Kafka consumer disabled. Set KAFKA_ENABLED=true to enable.', 'kafka');
+    }
   });
+  
+  // Xử lý tắt ứng dụng
+  const shutdown = async () => {
+    log('Shutting down server...', 'app');
+    
+    // Đóng Kafka consumer nếu đang chạy
+    if (process.env.KAFKA_ENABLED === 'true') {
+      await disconnectKafkaConsumer()
+        .catch(err => log(`Error disconnecting Kafka consumer: ${err}`, 'kafka-error'));
+    }
+    
+    // Đóng server
+    server.close(() => {
+      log('Server closed', 'app');
+      process.exit(0);
+    });
+    
+    // Nếu server không đóng trong 5 giây, thoát cưỡng bức
+    setTimeout(() => {
+      log('Server close timeout, forcing exit', 'app');
+      process.exit(1);
+    }, 5000);
+  };
+  
+  // Xử lý các sự kiện thoát
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 })();

@@ -25,7 +25,9 @@ export interface IStorage {
   createContent(content: InsertContent): Promise<Content>;
   getContent(id: number): Promise<Content | undefined>;
   getAllContents(): Promise<Content[]>;
-  getContentsByAuthor(authorId: number): Promise<Content[]>;
+  getContentsByAssignee(assigneeId: number): Promise<Content[]>;
+  assignContentToUser(id: number, userId: number): Promise<Content | undefined>;
+  completeProcessing(id: number, result: string, approverId: number): Promise<Content | undefined>;
   updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined>;
   deleteContent(id: number): Promise<boolean>;
   
@@ -99,67 +101,121 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getContent(id: number): Promise<(Content & { author?: { username: string, name: string } }) | undefined> {
+  async getContent(id: number): Promise<(Content & { processor?: { username: string, name: string } }) | undefined> {
     const results = await db
       .select({
         content: contents,
-        author: {
+        processor: {
           username: users.username,
           name: users.name
         }
       })
       .from(contents)
-      .leftJoin(users, eq(contents.authorId, users.id))
+      .leftJoin(users, eq(contents.assignedToId, users.id))
       .where(eq(contents.id, id));
     
     if (results.length === 0) return undefined;
     
-    // Format result to include author as a nested object
+    // Format result to include processor as a nested object
     return {
       ...results[0].content,
-      author: results[0].author || undefined
+      processor: results[0].processor || undefined
     };
   }
 
-  async getAllContents(): Promise<(Content & { author?: { username: string, name: string } })[]> {
+  async getAllContents(): Promise<(Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[]> {
     const results = await db
       .select({
         content: contents,
-        author: {
+        processor: {
           username: users.username,
           name: users.name
         }
       })
       .from(contents)
-      .leftJoin(users, eq(contents.authorId, users.id))
+      .leftJoin(users, eq(contents.assignedToId, users.id))
       .orderBy(desc(contents.createdAt));
     
-    // Format results to include author as a nested object
+    // Get approver information in a separate query to avoid column naming conflicts
+    const contentIds = results.map(item => item.content.id);
+    
+    const approverInfo = contentIds.length > 0 
+      ? await db
+          .select({
+            contentId: contents.id,
+            approver: {
+              username: users.username,
+              name: users.name
+            }
+          })
+          .from(contents)
+          .leftJoin(users, eq(contents.approverId, users.id))
+          .where(contents.id.in(contentIds))
+      : [];
+    
+    // Create a map of content IDs to approver info
+    const approverMap = new Map(
+      approverInfo.map(item => [item.contentId, item.approver])
+    );
+    
+    // Format results to include processor and approver as nested objects
     return results.map(item => ({
       ...item.content,
-      author: item.author || undefined
+      processor: item.processor || undefined,
+      approver: approverMap.get(item.content.id) || undefined
     }));
   }
 
-  async getContentsByAuthor(authorId: number): Promise<(Content & { author?: { username: string, name: string } })[]> {
+  async getContentsByAssignee(assigneeId: number): Promise<(Content & { processor?: { username: string, name: string } })[]> {
     const results = await db
       .select({
         content: contents,
-        author: {
+        processor: {
           username: users.username,
           name: users.name
         }
       })
       .from(contents)
-      .leftJoin(users, eq(contents.authorId, users.id))
-      .where(eq(contents.authorId, authorId))
+      .leftJoin(users, eq(contents.assignedToId, users.id))
+      .where(eq(contents.assignedToId, assigneeId))
       .orderBy(desc(contents.createdAt));
     
-    // Format results to include author as a nested object
+    // Format results to include processor as a nested object
     return results.map(item => ({
       ...item.content,
-      author: item.author || undefined
+      processor: item.processor || undefined
     }));
+  }
+  
+  async assignContentToUser(id: number, userId: number): Promise<Content | undefined> {
+    const result = await db
+      .update(contents)
+      .set({
+        assignedToId: userId,
+        assignedAt: new Date(),
+        status: 'processing',
+        updatedAt: new Date()
+      })
+      .where(eq(contents.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async completeProcessing(id: number, result: string, approverId: number): Promise<Content | undefined> {
+    const updateResult = await db
+      .update(contents)
+      .set({
+        status: 'completed',
+        processingResult: result,
+        approverId,
+        approveTime: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(contents.id, id))
+      .returning();
+    
+    return updateResult.length > 0 ? updateResult[0] : undefined;
   }
 
   async updateContent(id: number, contentUpdate: Partial<InsertContent>): Promise<Content | undefined> {
