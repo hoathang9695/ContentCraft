@@ -92,24 +92,66 @@ export function ContentTable({
     // Kiểm tra xem có cần phải lọc theo ngày hay không 
     const isSameDay = start.getDate() === end.getDate() && 
                       start.getMonth() === end.getMonth() && 
-                      start.getFullYear() === end.getFullYear();
+                      start.getFullYear() === start.getFullYear();
+
+    // In ra thông tin về khoảng ngày đã chọn để debug
+    console.log("Đang lọc theo khoảng ngày:", {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      isSameDay
+    });
 
     // Nếu đã chọn lọc theo thời gian (có startDate và endDate)
     if (isSameDay || start < end) {
+      // Lưu lại số lượng dữ liệu trước khi lọc
+      const preFilterCount = filteredContents.length;
+
       filteredContents = filteredContents.filter(content => {
         if (!content.createdAt) return false;
         
+        // Dữ liệu ngày trong database luôn ở dạng UTC ISO string
         const contentDate = new Date(content.createdAt);
+        console.log("So sánh ngày:", { 
+          contentDate: contentDate.toISOString(),
+          startDate: start.toISOString(),
+          endDate: end.toISOString() 
+        });
+        
+        // Chuyển đổi thành UTC để so sánh chính xác
+        const contentDay = new Date(Date.UTC(
+          contentDate.getFullYear(),
+          contentDate.getMonth(),
+          contentDate.getDate()
+        ));
+        const startDay = new Date(Date.UTC(
+          start.getFullYear(),
+          start.getMonth(),
+          start.getDate()
+        ));
+        const endDay = new Date(Date.UTC(
+          end.getFullYear(),
+          end.getMonth(),
+          end.getDate()
+        ));
+
         // Nếu là cùng ngày, chỉ cần kiểm tra ngày tháng năm
         if (isSameDay) {
-          return contentDate.getDate() === start.getDate() && 
-                 contentDate.getMonth() === start.getMonth() && 
-                 contentDate.getFullYear() === start.getFullYear();
+          return contentDay.getTime() === startDay.getTime();
         }
         // Ngược lại kiểm tra trong khoảng
-        return contentDate >= start && contentDate <= end;
+        return contentDay >= startDay && contentDay <= endDay;
       });
+      
       console.log("Sau khi lọc ngày:", filteredContents.length, "items");
+      
+      // Hiển thị thông báo cho người dùng nếu không có dữ liệu nào phù hợp
+      if (filteredContents.length === 0 && preFilterCount > 0) {
+        toast({
+          title: "Không tìm thấy dữ liệu",
+          description: `Không có dữ liệu nào trong khoảng từ ${start.getDate()}/${start.getMonth() + 1}/${start.getFullYear()} đến ${end.getDate()}/${end.getMonth() + 1}/${end.getFullYear()}`,
+          variant: "destructive"
+        });
+      }
     } else {
       console.log("Bỏ qua lọc ngày: ngày bắt đầu lớn hơn ngày kết thúc");
     }

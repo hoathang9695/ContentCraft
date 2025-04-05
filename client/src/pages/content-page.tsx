@@ -19,8 +19,10 @@ import {
   TabsList, 
   TabsTrigger 
 } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ContentPage() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
   // Sử dụng ngày hiện tại làm giá trị mặc định
   const today = new Date();
@@ -145,12 +147,20 @@ export default function ContentPage() {
               <div className="grid w-full items-end">
                 <Button 
                   variant="outline" 
-                  className="mt-1.5" 
+                  className="mt-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
                   onClick={() => {
                     // Đặt lại ngày về ngày hôm nay
                     const today = new Date();
                     setStartDate(today);
                     setEndDate(today);
+                    
+                    // Thông báo cho người dùng biết đã xóa bộ lọc
+                    // Dùng toast từ hàm useToast()
+                    toast({
+                      title: "Đã đặt lại bộ lọc",
+                      description: "Hiển thị tất cả dữ liệu cho ngày hiện tại",
+                    });
+                    
                     setTimeout(handleDateFilter, 100);
                   }}
                 >
