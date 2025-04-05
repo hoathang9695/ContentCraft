@@ -11,6 +11,7 @@ import { z } from "zod";
 
 type AuthResponse = Omit<SelectUser, "password"> & {
   message?: string;
+  avatarUrl?: string;
 };
 
 type AuthContextType = {

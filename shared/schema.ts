@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   position: text("position").notNull().default("Nhân viên"), // 'Nhân viên', 'Trưởng phòng'
   role: text("role").notNull().default("editor"),
   status: text("status").notNull().default("pending"), // 'active', 'pending', 'inactive'
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

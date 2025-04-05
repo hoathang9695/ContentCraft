@@ -5,6 +5,7 @@ import {
   Image, 
   Users, 
   Settings, 
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -103,6 +104,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               Users
             </SidebarItem>
             
+            <SidebarItem
+              href="/profile"
+              icon={User}
+              isActive={isActivePath('/profile')}
+              onClick={handleItemClick}
+            >
+              Thông tin cá nhân
+            </SidebarItem>
+
             <SidebarItem
               href="/settings"
               icon={Settings}
