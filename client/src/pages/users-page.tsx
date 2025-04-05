@@ -80,7 +80,9 @@ export default function UsersPage() {
   const filteredUsers = users?.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.department && user.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (user.position && user.position.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -101,10 +103,16 @@ export default function UsersPage() {
               { key: "username", header: "Username" },
               { key: "name", header: "Name" },
               { key: "email", header: "Email" },
-              { key: "role", header: "Role", 
+              { key: "department", header: "Phòng ban", 
+                render: (row) => <Badge variant="secondary">{row.department || "N/A"}</Badge> 
+              },
+              { key: "position", header: "Vai trò", 
+                render: (row) => <Badge variant="outline">{row.position || "N/A"}</Badge> 
+              },
+              { key: "role", header: "Quyền hạn", 
                 render: (row) => <Badge variant="outline" className="capitalize">{row.role}</Badge> 
               },
-              { key: "status", header: "Status", 
+              { key: "status", header: "Trạng thái", 
                 render: (row) => <StatusBadge status={row.status} /> 
               },
               { key: "actions", header: "Actions", 

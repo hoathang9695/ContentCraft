@@ -17,7 +17,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
+import { Eye, EyeOff, Mail, Lock, User, Loader2, Building, UsersRound } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { InsertUser, loginSchema } from "@shared/schema";
@@ -27,6 +34,8 @@ const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email format"),
+  department: z.string().default("Marketing"),
+  position: z.string().default("Nhân viên"),
   role: z.string().default("editor"),
   status: z.string().default("pending"),
 });
@@ -64,6 +73,8 @@ export default function AuthPage() {
       password: "",
       name: "",
       email: "",
+      department: "Marketing",
+      position: "Nhân viên",
       role: "editor",
       status: "pending",
     },
@@ -333,6 +344,67 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={registerForm.control}
+                          name="department"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phòng ban</FormLabel>
+                              <div className="relative">
+                                <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                <Select 
+                                  onValueChange={field.onChange} 
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="pl-10">
+                                      <SelectValue placeholder="Chọn phòng ban" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Marketing">Marketing</SelectItem>
+                                    <SelectItem value="Chăm sóc khách hàng">Chăm sóc khách hàng</SelectItem>
+                                    <SelectItem value="Kinh doanh">Kinh doanh</SelectItem>
+                                    <SelectItem value="Kế toán">Kế toán</SelectItem>
+                                    <SelectItem value="Lập trình viên">Lập trình viên</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={registerForm.control}
+                          name="position"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Vai trò</FormLabel>
+                              <div className="relative">
+                                <UsersRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                <Select 
+                                  onValueChange={field.onChange} 
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="pl-10">
+                                      <SelectValue placeholder="Chọn vai trò" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Nhân viên">Nhân viên</SelectItem>
+                                    <SelectItem value="Trưởng phòng">Trưởng phòng</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                       
                       <div className="mb-4 text-sm text-amber-600 p-3 border border-amber-200 rounded-md bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
                         Note: After registration, your account will need administrator approval before you can log in.

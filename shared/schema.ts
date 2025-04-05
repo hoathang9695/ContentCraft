@@ -8,6 +8,8 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  department: text("department").notNull().default("Marketing"), // 'Marketing', 'Chăm sóc khách hàng', 'Kinh doanh', 'Kế toán', 'Lập trình viên'
+  position: text("position").notNull().default("Nhân viên"), // 'Nhân viên', 'Trưởng phòng'
   role: text("role").notNull().default("editor"),
   status: text("status").notNull().default("pending"), // 'active', 'pending', 'inactive'
   createdAt: timestamp("created_at").notNull().defaultNow(),
