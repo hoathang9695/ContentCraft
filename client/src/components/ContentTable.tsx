@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Content } from '@shared/schema';
@@ -48,6 +48,11 @@ export function ContentTable({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
   
+  // Trạng thái để theo dõi lọc dữ liệu
+  const [filteredCount, setFilteredCount] = useState<number | null>(null);
+  const [preFilterCount, setPreFilterCount] = useState<number | null>(null);
+  const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({start: null, end: null});
+  
   // Fetch content list - Admin sẽ thấy tất cả nội dung, người dùng thông thường chỉ xem được nội dung được phân công
   const { data: allContents = [], isLoading } = useQuery<Content[]>({
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
@@ -81,7 +86,7 @@ export function ContentTable({
   }
   
   // Filter by date range if dates are provided
-  if (startDate && endDate && user?.role === 'admin') { // Bỏ qua lọc ngày cho người dùng thường
+  if (startDate && endDate) { // Cho phép tất cả các vai trò đều có thể lọc theo ngày
     // Setting time to start of day for startDate and end of day for endDate
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
@@ -104,7 +109,14 @@ export function ContentTable({
     // Nếu đã chọn lọc theo thời gian (có startDate và endDate)
     if (isSameDay || start < end) {
       // Lưu lại số lượng dữ liệu trước khi lọc
-      const preFilterCount = filteredContents.length;
+      const tempPreFilterCount = filteredContents.length;
+      setPreFilterCount(tempPreFilterCount);
+      
+      // Lưu lại khoảng ngày đang lọc để hiển thị thông báo nếu cần
+      setDateRange({
+        start: start,
+        end: end
+      });
 
       filteredContents = filteredContents.filter(content => {
         if (!content.createdAt) return false;
@@ -144,14 +156,11 @@ export function ContentTable({
       
       console.log("Sau khi lọc ngày:", filteredContents.length, "items");
       
+      // Cập nhật số lượng dữ liệu sau khi lọc
+      setFilteredCount(filteredContents.length);
+      
       // Hiển thị thông báo cho người dùng nếu không có dữ liệu nào phù hợp
-      if (filteredContents.length === 0 && preFilterCount > 0) {
-        toast({
-          title: "Không tìm thấy dữ liệu",
-          description: `Không có dữ liệu nào trong khoảng từ ${start.getDate()}/${start.getMonth() + 1}/${start.getFullYear()} đến ${end.getDate()}/${end.getMonth() + 1}/${end.getFullYear()}`,
-          variant: "destructive"
-        });
-      }
+      // Sử dụng useEffect ở bên ngoài đoạn lọc dữ liệu để tránh vòng lặp vô hạn
     } else {
       console.log("Bỏ qua lọc ngày: ngày bắt đầu lớn hơn ngày kết thúc");
     }
@@ -226,6 +235,24 @@ export function ContentTable({
       deleteMutation.mutate(contentToDelete);
     }
   };
+  
+  // Hiển thị thông báo cho người dùng nếu không có dữ liệu phù hợp
+  useEffect(() => {
+    if (filteredCount !== null && preFilterCount !== null && dateRange.start && dateRange.end) {
+      if (filteredCount === 0 && preFilterCount > 0) {
+        // Đảm bảo chỉ hiển thị thông báo khi có dữ liệu trước khi lọc nhưng không có dữ liệu sau khi lọc
+        toast({
+          title: "Không tìm thấy dữ liệu",
+          description: `Không có dữ liệu nào trong khoảng từ ${dateRange.start.getDate()}/${dateRange.start.getMonth() + 1}/${dateRange.start.getFullYear()} đến ${dateRange.end.getDate()}/${dateRange.end.getMonth() + 1}/${dateRange.end.getFullYear()}`,
+          variant: "destructive"
+        });
+      }
+      
+      // Reset các state liên quan đến thông báo để tránh hiển thị nhiều lần
+      setFilteredCount(null);
+      setPreFilterCount(null);
+    }
+  }, [filteredCount, preFilterCount, dateRange, toast]);
   
   return (
     <>

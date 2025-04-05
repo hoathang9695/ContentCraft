@@ -97,8 +97,7 @@ export default function ContentPage() {
                           if (date > endDate) {
                             setEndDate(date);
                           }
-                          // Tự động áp dụng bộ lọc khi người dùng chọn ngày
-                          setTimeout(handleDateFilter, 100);
+                          // Không tự động áp dụng bộ lọc nữa, người dùng sẽ nhấn nút Áp dụng
                         }
                       }}
                       initialFocus
@@ -133,8 +132,7 @@ export default function ContentPage() {
                           if (date < startDate) {
                             setStartDate(date);
                           }
-                          // Tự động áp dụng bộ lọc khi người dùng chọn ngày
-                          setTimeout(handleDateFilter, 100);
+                          // Không tự động áp dụng bộ lọc nữa, người dùng sẽ nhấn nút Áp dụng
                         }
                       }}
                       initialFocus
@@ -143,11 +141,29 @@ export default function ContentPage() {
                 </Popover>
               </div>
               
-              {/* Nút xóa bộ lọc */}
-              <div className="grid w-full items-end">
+              <div className="flex flex-col gap-2 items-end justify-end w-full">
+                {/* Nút áp dụng bộ lọc */}
+                <Button 
+                  variant="default" 
+                  className="mt-1.5 bg-green-600 hover:bg-green-700 text-white" 
+                  onClick={() => {
+                    // Áp dụng bộ lọc theo ngày
+                    handleDateFilter();
+                    
+                    // Thông báo cho người dùng
+                    toast({
+                      title: "Đã áp dụng bộ lọc",
+                      description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+                    });
+                  }}
+                >
+                  Áp dụng
+                </Button>
+                
+                {/* Nút xóa bộ lọc */}
                 <Button 
                   variant="outline" 
-                  className="mt-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
+                  className="bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
                   onClick={() => {
                     // Đặt lại ngày về ngày hôm nay
                     const today = new Date();
@@ -155,12 +171,12 @@ export default function ContentPage() {
                     setEndDate(today);
                     
                     // Thông báo cho người dùng biết đã xóa bộ lọc
-                    // Dùng toast từ hàm useToast()
                     toast({
                       title: "Đã đặt lại bộ lọc",
                       description: "Hiển thị tất cả dữ liệu cho ngày hiện tại",
                     });
                     
+                    // Áp dụng ngay bộ lọc mới
                     setTimeout(handleDateFilter, 100);
                   }}
                 >
