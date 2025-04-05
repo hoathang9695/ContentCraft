@@ -4,7 +4,6 @@ import {
   FileText, 
   Image, 
   Users, 
-  Settings, 
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -102,15 +101,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               onClick={handleItemClick}
             >
               Users
-            </SidebarItem>
-            
-            <SidebarItem
-              href="/settings"
-              icon={Settings}
-              isActive={isActivePath('/settings')}
-              onClick={handleItemClick}
-            >
-              Settings
             </SidebarItem>
           </div>
         </div>

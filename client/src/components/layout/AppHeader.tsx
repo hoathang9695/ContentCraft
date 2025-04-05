@@ -16,7 +16,6 @@ import {
   Search, 
   FileText,
   User as UserIcon, 
-  Settings, 
   LogOut 
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -112,10 +111,6 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
                 <DropdownMenuItem onClick={() => navigate("/profile")}>
                   <UserIcon className="mr-2 h-4 w-4" />
                   <span>Your Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
