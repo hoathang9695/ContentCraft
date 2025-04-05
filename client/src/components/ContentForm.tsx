@@ -28,6 +28,9 @@ import { Loader2 } from 'lucide-react';
 const contentSchema = insertContentSchema.extend({
   title: z.string().min(3, "Title must be at least 3 characters"),
   body: z.string().min(10, "Content must be at least 10 characters"),
+  source: z.string().optional(),
+  categories: z.string().optional(),
+  labels: z.string().optional(),
 });
 
 export type ContentFormValues = z.infer<typeof contentSchema>;
@@ -51,6 +54,9 @@ export function ContentForm({
     defaultValues: {
       title: defaultValues?.title || '',
       body: defaultValues?.body || '',
+      source: defaultValues?.source || '',
+      categories: defaultValues?.categories || '',
+      labels: defaultValues?.labels || '',
       status: defaultValues?.status || 'draft',
       authorId: user?.id || 0
     }
@@ -103,6 +109,57 @@ export function ContentForm({
           )}
         />
         
+        <FormField
+          control={form.control}
+          name="source"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Source</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter content source" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="categories"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Categories</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter categories (separate with commas)" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="labels"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Labels</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter labels (separate with commas)" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="body"

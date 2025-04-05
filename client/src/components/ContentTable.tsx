@@ -190,7 +190,7 @@ export function ContentTable({
               header: 'Nguồn cấp',
               render: (row: Content) => (
                 <div className="font-medium">
-                  {row.id % 3 === 0 ? 'Web Thế giới' : 'Web Trẻ thơ'}
+                  {row.source || 'Không có nguồn'}
                 </div>
               ),
             },
@@ -199,7 +199,7 @@ export function ContentTable({
               header: 'Categories',
               render: (row: Content) => (
                 <div className="text-blue-500 font-medium">
-                  {row.id % 2 === 0 ? 'Technology' : 'AI, Blockchain...'}
+                  {row.categories || 'Chưa phân loại'}
                 </div>
               ),
             },
@@ -208,14 +208,14 @@ export function ContentTable({
               header: 'Label',
               render: (row: Content) => (
                 <div className="flex gap-1 flex-wrap">
-                  {/* Vì model Content không có field tags, tạm thời tạo tags ngẫu nhiên dựa trên ID */}
-                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100">
-                    {row.id % 2 === 0 ? 'AI' : 'Blockchain'}
-                  </span>
-                  {row.id % 3 === 0 && (
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100">
-                      Fintech
-                    </span>
+                  {row.labels ? (
+                    row.labels.split(',').map((label, index) => (
+                      <span key={index} className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100">
+                        {label.trim()}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-xs">Chưa có nhãn</span>
                   )}
                 </div>
               ),
@@ -236,29 +236,37 @@ export function ContentTable({
             {
               key: 'approver',
               header: 'Người phê duyệt',
-              render: () => <span className="text-muted-foreground">Nguyễn Thị Nhung</span>,
+              render: (row: Content) => {
+                if (row.approverId) {
+                  return <span className="text-muted-foreground">Admin</span>;
+                }
+                return <span className="text-muted-foreground">Chưa phê duyệt</span>;
+              },
             },
             {
               key: 'approveTime',
               header: 'Ngày/giờ phê duyệt',
               render: (row: Content) => {
-                const date = new Date(row.createdAt);
-                return (
-                  <span className="text-muted-foreground whitespace-nowrap">
-                    {`${date.getDate().toString().padStart(2, '0')} - ${(date.getMonth() + 1).toString().padStart(2, '0')} - ${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`}
-                  </span>
-                );
+                if (row.approveTime) {
+                  const date = new Date(row.approveTime);
+                  return (
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      {`${date.getDate().toString().padStart(2, '0')} - ${(date.getMonth() + 1).toString().padStart(2, '0')} - ${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`}
+                    </span>
+                  );
+                }
+                return <span className="text-muted-foreground">Chưa phê duyệt</span>;
               },
             },
             {
               key: 'comment',
               header: 'Comment',
-              render: () => <span className="text-muted-foreground">100</span>,
+              render: (row: Content) => <span className="text-muted-foreground">{row.comments || 0}</span>,
             },
             {
               key: 'reactions',
               header: 'Reactions',
-              render: () => <span className="text-muted-foreground">100</span>,
+              render: (row: Content) => <span className="text-muted-foreground">{row.reactions || 0}</span>,
             },
             {
               key: 'actions',
