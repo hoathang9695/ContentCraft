@@ -19,8 +19,8 @@ export default function ContentPage() {
   return (
     <DashboardLayout onSearch={handleSearch}>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Content Management</h1>
-        <p className="text-gray-500 mt-1">Create, edit, and manage your content</p>
+        <h1 className="text-2xl font-semibold">Content Management</h1>
+        <p className="text-muted-foreground mt-1">Create, edit, and manage your content</p>
       </div>
       
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>

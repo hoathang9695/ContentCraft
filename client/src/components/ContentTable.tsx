@@ -126,7 +126,7 @@ export function ContentTable({
       <div className="mb-6">
         {showActions && (
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-medium text-gray-900">{title}</h2>
+            <h2 className="text-lg font-medium">{title}</h2>
             <Button onClick={handleCreateContent}>
               <Plus className="h-4 w-4 mr-2" />
               New Content
@@ -157,13 +157,13 @@ export function ContentTable({
             {
               key: 'author',
               header: 'Author',
-              render: () => <span className="text-gray-500">{user?.name}</span>,
+              render: () => <span className="text-muted-foreground">{user?.name}</span>,
             },
             {
               key: 'updatedAt',
               header: 'Last Updated',
               render: (row: Content) => (
-                <span className="text-gray-500">
+                <span className="text-muted-foreground">
                   {formatDistanceToNow(new Date(row.updatedAt), { addSuffix: true })}
                 </span>
               ),
@@ -186,7 +186,7 @@ export function ContentTable({
                     variant="ghost"
                     size="icon"
                     onClick={() => handleViewContent(row.id)}
-                    className="text-gray-600 hover:text-gray-900"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -194,7 +194,7 @@ export function ContentTable({
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDeleteClick(row.id)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -232,7 +232,7 @@ export function ContentTable({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600 dark:bg-red-700 dark:hover:bg-red-800 dark:focus:ring-red-700"
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
