@@ -50,6 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: AuthResponse) => {
       queryClient.setQueryData(["/api/user"], user);
+      // Chuyển hướng người dùng dựa trên vai trò
+      if (user.role === 'admin') {
+        // Admin vào trang dashboard
+        window.location.href = "/";
+      } else {
+        // Người dùng thường vào trang nội dung
+        window.location.href = "/contents";
+      }
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.name}!`,

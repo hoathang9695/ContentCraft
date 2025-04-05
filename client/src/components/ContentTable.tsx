@@ -48,7 +48,7 @@ export function ContentTable({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
   
-  // Fetch content list
+  // Fetch content list - Admin sẽ thấy tất cả nội dung, người dùng thông thường chỉ xem được nội dung được phân công
   const { data: allContents = [], isLoading } = useQuery<Content[]>({
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
@@ -157,10 +157,12 @@ export function ContentTable({
         {showActions && (
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-medium">{title}</h2>
-            <Button onClick={handleCreateContent}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Content
-            </Button>
+            {user?.role === 'admin' && (
+              <Button onClick={handleCreateContent}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Content
+              </Button>
+            )}
           </div>
         )}
         
@@ -266,15 +268,45 @@ export function ContentTable({
               key: 'actions',
               header: 'Hành động',
               className: 'text-right',
-              render: () => (
+              render: (row: Content) => (
                 <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-more-horizontal"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                  </Button>
+                  {user?.role === 'admin' ? (
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditContent(row.id)}
+                        className="text-primary hover:text-primary/90"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewContent(row.id)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClick(row.id)}
+                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleViewContent(row.id)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               ),
             },
@@ -290,7 +322,9 @@ export function ContentTable({
           }
           caption={
             filteredContents.length === 0 && !isLoading
-              ? "No content found. Click 'New Content' to create one."
+              ? user?.role === 'admin' 
+                ? "No content found. Click 'New Content' to create one."
+                : "Hiện không có nội dung nào được phân công cho bạn."
               : undefined
           }
         />

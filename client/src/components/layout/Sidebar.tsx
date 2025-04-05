@@ -73,14 +73,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="flex flex-col h-full">
         <div className="pt-5 pb-4 overflow-y-auto flex-1">
           <div className="px-2 space-y-1">
-            <SidebarItem
-              href="/"
-              icon={LayoutDashboard}
-              isActive={isActivePath('/')}
-              onClick={handleItemClick}
-            >
-              Dashboard
-            </SidebarItem>
+            {isAdmin && (
+              <SidebarItem
+                href="/"
+                icon={LayoutDashboard}
+                isActive={isActivePath('/')}
+                onClick={handleItemClick}
+              >
+                Dashboard
+              </SidebarItem>
+            )}
             
             <SidebarItem
               href="/contents"
@@ -91,27 +93,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               Content
             </SidebarItem>
             
-            <SidebarItem
-              href="/media"
-              icon={Image}
-              isActive={isActivePath('/media')}
-              onClick={handleItemClick}
-            >
-              Media
-            </SidebarItem>
-            
-            <SidebarItem
-              href="/users"
-              icon={Users}
-              isActive={isActivePath('/users')}
-              onClick={handleItemClick}
-            >
-              Users
-            </SidebarItem>
-
-            {/* Admin only menu items */}
             {isAdmin && (
               <>
+                <SidebarItem
+                  href="/media"
+                  icon={Image}
+                  isActive={isActivePath('/media')}
+                  onClick={handleItemClick}
+                >
+                  Media
+                </SidebarItem>
+                
+                <SidebarItem
+                  href="/users"
+                  icon={Users}
+                  isActive={isActivePath('/users')}
+                  onClick={handleItemClick}
+                >
+                  Users
+                </SidebarItem>
+
                 <div className="mt-4 mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Admin Functions
                 </div>

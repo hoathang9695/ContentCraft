@@ -17,13 +17,13 @@ import { ThemeProvider } from "@/hooks/use-theme";
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={DashboardPage} />
+      <ProtectedRoute path="/" component={DashboardPage} adminOnly={true} />
       <ProtectedRoute path="/contents" component={ContentPage} />
-      <ProtectedRoute path="/contents/new" component={ContentEditor} />
-      <ProtectedRoute path="/contents/:id/edit" component={ContentEditor} />
-      <ProtectedRoute path="/users" component={UsersPage} />
+      <ProtectedRoute path="/contents/new" component={ContentEditor} adminOnly={true} />
+      <ProtectedRoute path="/contents/:id/edit" component={ContentEditor} adminOnly={true} />
+      <ProtectedRoute path="/users" component={UsersPage} adminOnly={true} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
-      <ProtectedRoute path="/user-activities" component={UserActivitiesPage} />
+      <ProtectedRoute path="/user-activities" component={UserActivitiesPage} adminOnly={true} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
