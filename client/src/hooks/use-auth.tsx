@@ -50,18 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: AuthResponse) => {
       queryClient.setQueryData(["/api/user"], user);
-      // Chuyển hướng người dùng dựa trên vai trò
-      if (user.role === 'admin') {
-        // Admin vào trang dashboard
-        window.location.href = "/";
-      } else {
-        // Người dùng thường vào trang nội dung
-        window.location.href = "/contents";
-      }
+      // Hiển thị thông báo thành công
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.name}!`,
       });
+      
+      // Sử dụng navigate để chuyển hướng đến đường dẫn chính xác
+      setTimeout(() => {
+        // Chuyển hướng người dùng dựa trên vai trò
+        // Sử dụng window.history để điều hướng
+        if (user.role === 'admin') {
+          // Admin vào trang dashboard
+          window.history.pushState({}, "", "/");
+          window.location.reload();
+        } else {
+          // Người dùng thường vào trang nội dung
+          window.history.pushState({}, "", "/contents");
+          window.location.reload();
+        }
+      }, 500);
     },
     onError: (error: any) => {
       // Error message is now handled directly by throwIfResNotOk
