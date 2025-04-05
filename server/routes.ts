@@ -1,9 +1,51 @@
-import type { Express, Request, Response } from "express";
+import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
 import { insertContentSchema } from "@shared/schema";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Setup multer for file uploads
+const uploadDir = path.join(process.cwd(), "uploads");
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure storage
+const storage_config = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Create a unique filename using timestamp and original extension
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'avatar-' + uniqueSuffix + ext);
+  }
+});
+
+// Configure file filter
+const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  // Accept images only
+  if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+    return cb(new Error('Only image files are allowed!'));
+  }
+  cb(null, true);
+};
+
+// Setup upload middleware
+const upload = multer({ 
+  storage: storage_config,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 1024 * 1024 * 5 // 5MB max file size
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -226,7 +268,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update user avatar (authenticated user)
+  // Serve uploaded files as static assets
+  app.use('/uploads', express.static(uploadDir));
+
+  // Upload user avatar (authenticated user)
+  app.post("/api/user/avatar/upload", isAuthenticated, upload.single('avatar'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const userId = (req.user as Express.User).id;
+      
+      // Generate relative URL to the uploaded file
+      const avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+      
+      const updatedUser = await storage.updateUser(userId, { avatarUrl });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...safeUser } = updatedUser;
+      res.json(safeUser);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message || "Error uploading avatar" });
+      } else {
+        res.status(500).json({ message: "Error uploading avatar" });
+      }
+    }
+  });
+  
+  // Keep the old endpoint for backward compatibility
   app.patch("/api/user/avatar", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as Express.User).id;

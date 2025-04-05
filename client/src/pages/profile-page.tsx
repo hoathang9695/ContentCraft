@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Camera, User, Lock } from "lucide-react";
+import { Loader2, Camera, User, Lock, Upload } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -44,20 +44,32 @@ const passwordChangeSchema = z
 
 type PasswordChangeFormValues = z.infer<typeof passwordChangeSchema>;
 
-// Schema for avatar update form
-const avatarUpdateSchema = z.object({
-  avatarUrl: z.string().url({
-    message: "Vui lòng nhập một URL hợp lệ.",
-  }),
+// Schema for avatar upload form
+const avatarUploadSchema = z.object({
+  avatar: z.any()
+    .refine((file) => file instanceof File, {
+      message: "Vui lòng chọn một file ảnh.",
+    })
+    .refine((file) => file instanceof File && file.size <= 5 * 1024 * 1024, {
+      message: "Kích thước file tối đa là 5MB.",
+    })
+    .refine(
+      (file) => file instanceof File && ['image/jpeg', 'image/png', 'image/gif'].includes(file.type),
+      {
+        message: "Chỉ chấp nhận file ảnh (JPG, PNG, GIF).",
+      }
+    ),
 });
 
-type AvatarUpdateFormValues = z.infer<typeof avatarUpdateSchema>;
+type AvatarUploadFormValues = z.infer<typeof avatarUploadSchema>;
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Password change form
   const passwordForm = useForm<PasswordChangeFormValues>({
@@ -69,11 +81,11 @@ export default function ProfilePage() {
     },
   });
 
-  // Avatar update form
-  const avatarForm = useForm<AvatarUpdateFormValues>({
-    resolver: zodResolver(avatarUpdateSchema),
+  // Avatar upload form
+  const avatarForm = useForm<AvatarUploadFormValues>({
+    resolver: zodResolver(avatarUploadSchema),
     defaultValues: {
-      avatarUrl: user?.avatarUrl || "",
+      avatar: undefined,
     },
   });
 
@@ -99,25 +111,42 @@ export default function ProfilePage() {
     },
   });
 
-  // Avatar update mutation
-  const avatarUpdateMutation = useMutation({
-    mutationFn: async (data: AvatarUpdateFormValues) => {
-      const res = await apiRequest("PATCH", "/api/user/avatar", data);
+  // Avatar upload mutation
+  const avatarUploadMutation = useMutation({
+    mutationFn: async (data: AvatarUploadFormValues) => {
+      const formData = new FormData();
+      formData.append('avatar', data.avatar);
+      
+      const res = await fetch('/api/user/avatar/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Không thể tải lên avatar");
+      }
+      
       return await res.json();
     },
     onSuccess: () => {
       toast({
         title: "Avatar đã được cập nhật",
-        description: "Avatar của bạn đã được thay đổi thành công.",
+        description: "Avatar của bạn đã được tải lên thành công.",
       });
       // Update the user data in the cache
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       setIsUpdatingAvatar(false);
+      setPreviewUrl(null);
+      
+      // Reset the form
+      avatarForm.reset();
     },
     onError: (error: Error) => {
       toast({
         title: "Lỗi",
-        description: error.message || "Không thể cập nhật avatar. Vui lòng thử lại.",
+        description: error.message || "Không thể tải lên avatar. Vui lòng thử lại.",
         variant: "destructive",
       });
     },
@@ -129,8 +158,37 @@ export default function ProfilePage() {
   };
 
   // Handle avatar form submission
-  const onAvatarSubmit = (data: AvatarUpdateFormValues) => {
-    avatarUpdateMutation.mutate(data);
+  const onAvatarSubmit = (data: AvatarUploadFormValues) => {
+    avatarUploadMutation.mutate(data);
+  };
+
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Update the form
+      avatarForm.setValue("avatar", file, { shouldValidate: true });
+      
+      // Create a preview URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      setIsUpdatingAvatar(true);
+    }
+  };
+
+  // Trigger file input click
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+  
+  // Cancel avatar update
+  const cancelAvatarUpdate = () => {
+    avatarForm.reset();
+    setIsUpdatingAvatar(false);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   // Generate avatar fallback (initials from user name)
@@ -348,11 +406,7 @@ export default function ProfilePage() {
                       <div className="flex justify-center mb-4">
                         <Avatar className="w-32 h-32">
                           <AvatarImage
-                            src={
-                              isUpdatingAvatar
-                                ? avatarForm.watch("avatarUrl")
-                                : user.avatarUrl || ""
-                            }
+                            src={previewUrl || user.avatarUrl || ""}
                             alt={user.name}
                           />
                           <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
@@ -361,56 +415,70 @@ export default function ProfilePage() {
                         </Avatar>
                       </div>
 
-                      <FormField
-                        control={avatarForm.control}
-                        name="avatarUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>URL Avatar</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="https://example.com/avatar.jpg"
-                                {...field}
-                                onChange={(e) => {
-                                  setIsUpdatingAvatar(true);
-                                  field.onChange(e);
-                                }}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Nhập URL của hình ảnh để sử dụng làm avatar.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
+                      <div className="space-y-4">
+                        <Label>Tải lên hình ảnh mới</Label>
+                        <input
+                          type="file"
+                          className="hidden"
+                          ref={fileInputRef}
+                          accept="image/jpeg,image/png,image/gif"
+                          onChange={handleFileChange}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full flex items-center justify-center" 
+                          onClick={triggerFileInput}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Chọn file ảnh
+                        </Button>
+                        <FormField
+                          control={avatarForm.control}
+                          name="avatar"
+                          render={({ field }) => (
+                            <FormItem className="hidden">
+                              <FormControl>
+                                <Input {...field} value={field.value?.name || ''} readOnly/>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        {avatarForm.formState.errors.avatar && (
+                          <p className="text-sm font-medium text-destructive">
+                            {avatarForm.formState.errors.avatar.message?.toString()}
+                          </p>
                         )}
-                      />
+                        
+                        {isUpdatingAvatar && (
+                          <p className="text-sm text-muted-foreground">
+                            File đã chọn: {(avatarForm.getValues().avatar as File)?.name || 'Không có file nào'}
+                          </p>
+                        )}
+                      </div>
 
                       <div className="flex justify-between">
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => {
-                            avatarForm.reset({
-                              avatarUrl: user.avatarUrl || "",
-                            });
-                            setIsUpdatingAvatar(false);
-                          }}
-                          disabled={avatarUpdateMutation.isPending}
+                          onClick={cancelAvatarUpdate}
+                          disabled={avatarUploadMutation.isPending || !isUpdatingAvatar}
                         >
                           Hủy
                         </Button>
                         <Button
                           type="submit"
                           disabled={
-                            avatarUpdateMutation.isPending ||
+                            avatarUploadMutation.isPending ||
                             !isUpdatingAvatar ||
                             !avatarForm.formState.isValid
                           }
                         >
-                          {avatarUpdateMutation.isPending ? (
+                          {avatarUploadMutation.isPending ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Đang cập nhật...
+                              Đang tải lên...
                             </>
                           ) : (
                             "Lưu avatar"
