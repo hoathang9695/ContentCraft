@@ -25,26 +25,21 @@ export default function ContentPage() {
       
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
-          <TabsTrigger value="all">All Content</TabsTrigger>
-          <TabsTrigger value="published">Published</TabsTrigger>
-          <TabsTrigger value="draft">Drafts</TabsTrigger>
-          <TabsTrigger value="review">In Review</TabsTrigger>
+          <TabsTrigger value="all">Tất cả</TabsTrigger>
+          <TabsTrigger value="processed">Đã xử lý</TabsTrigger>
+          <TabsTrigger value="unprocessed">Chưa xử lý</TabsTrigger>
         </TabsList>
         
         <TabsContent value="all">
-          <ContentTable title="All Content" />
+          <ContentTable title="Tất cả nội dung" />
         </TabsContent>
         
-        <TabsContent value="published">
-          <ContentTable title="Published Content" statusFilter="published" />
+        <TabsContent value="processed">
+          <ContentTable title="Nội dung đã xử lý" statusFilter="published" />
         </TabsContent>
         
-        <TabsContent value="draft">
-          <ContentTable title="Draft Content" statusFilter="draft" />
-        </TabsContent>
-        
-        <TabsContent value="review">
-          <ContentTable title="Content In Review" statusFilter="review" />
+        <TabsContent value="unprocessed">
+          <ContentTable title="Nội dung chưa xử lý" statusFilter="draft" />
         </TabsContent>
       </Tabs>
     </DashboardLayout>

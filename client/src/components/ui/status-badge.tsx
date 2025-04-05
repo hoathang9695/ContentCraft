@@ -13,17 +13,17 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       case 'published':
         return {
           className: 'bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-950',
-          label: 'Published'
+          label: 'Đã xử lý'
         };
       case 'draft':
         return {
           className: 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950',
-          label: 'Draft'
+          label: 'Chưa xử lý'
         };
       case 'review':
         return {
           className: 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950',
-          label: 'Review'
+          label: 'Đang xem xét'
         };
       default:
         return {
