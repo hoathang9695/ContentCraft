@@ -107,10 +107,19 @@ export function setupAuth(app: Express) {
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
       
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json(userWithoutPassword);
-      });
+      // Don't auto-login non-admin users that are in pending status
+      if (user.role === 'admin' || user.status === 'active') {
+        req.login(user, (err) => {
+          if (err) return next(err);
+          res.status(201).json(userWithoutPassword);
+        });
+      } else {
+        // Just return the user without logging them in
+        res.status(201).json({
+          ...userWithoutPassword,
+          message: "Account created successfully. Please wait for administrator approval before logging in."
+        });
+      }
     } catch (error) {
       next(error);
     }

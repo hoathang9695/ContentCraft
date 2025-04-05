@@ -9,13 +9,17 @@ import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
+type AuthResponse = Omit<SelectUser, "password"> & {
+  message?: string;
+};
+
 type AuthContextType = {
-  user: Omit<SelectUser, "password"> | null;
+  user: AuthResponse | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: UseMutationResult<Omit<SelectUser, "password">, Error, LoginData>;
+  loginMutation: UseMutationResult<AuthResponse, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<Omit<SelectUser, "password">, Error, InsertUser>;
+  registerMutation: UseMutationResult<AuthResponse, Error, InsertUser>;
 };
 
 // Extend user schema with validation for registration
@@ -33,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<Omit<SelectUser, "password"> | undefined, Error>({
+  } = useQuery<AuthResponse | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
@@ -43,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/login", credentials);
       return await res.json();
     },
-    onSuccess: (user: Omit<SelectUser, "password">) => {
+    onSuccess: (user: AuthResponse) => {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Login successful",
@@ -77,11 +81,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/register", userData);
       return await res.json();
     },
-    onSuccess: (user: Omit<SelectUser, "password">) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (user: AuthResponse) => {
+      // If the user has message and is pending, don't set them as logged in
+      if (user.message) {
+        // Clear any existing user data
+        queryClient.setQueryData(["/api/user"], null);
+      } else {
+        // Set user data if they're immediately approved (admin account)
+        queryClient.setQueryData(["/api/user"], user);
+      }
+      
+      // Show appropriate toast message
       toast({
         title: "Registration successful",
-        description: `Welcome, ${user.name}! Your account has been created and is pending approval from an administrator.`,
+        description: user.message || `Welcome, ${user.name}! Your account has been created and is pending approval from an administrator.`,
       });
     },
     onError: (error: Error) => {

@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { InsertUser, loginSchema } from "@shared/schema";
 
 const registerSchema = z.object({
@@ -72,8 +73,22 @@ export default function AuthPage() {
     loginMutation.mutate(data);
   };
 
+  const { toast } = useToast();
+  
   const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data as InsertUser);
+    registerMutation.mutate(data as InsertUser, {
+      onSuccess: (response: any) => {
+        if (response.message) {
+          // Show registration success message and switch to login tab
+          toast({
+            title: "Registration Successful",
+            description: response.message,
+            variant: "default",
+          });
+          setActiveTab("login");
+        }
+      }
+    });
   };
 
   const togglePasswordVisibility = () => {
