@@ -65,8 +65,9 @@ export function ContentTable({
   if (searchQuery) {
     const query = searchQuery.toLowerCase();
     filteredContents = filteredContents.filter(
-      content => content.title.toLowerCase().includes(query) ||
-                 content.body.toLowerCase().includes(query)
+      content => (content.source?.toLowerCase().includes(query) || 
+                 content.categories?.toLowerCase().includes(query) ||
+                 content.labels?.toLowerCase().includes(query))
     );
   }
   

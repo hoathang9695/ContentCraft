@@ -18,8 +18,6 @@ export const users = pgTable("users", {
 
 export const contents = pgTable("contents", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  body: text("body").notNull(),
   source: text("source"),
   categories: text("categories"),
   labels: text("labels"),

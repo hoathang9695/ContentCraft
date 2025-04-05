@@ -26,8 +26,6 @@ import { Loader2 } from 'lucide-react';
 
 // Content schema with validation
 const contentSchema = insertContentSchema.extend({
-  title: z.string().min(3, "Title must be at least 3 characters"),
-  body: z.string().min(10, "Content must be at least 10 characters"),
   source: z.string().optional(),
   categories: z.string().optional(),
   labels: z.string().optional(),
@@ -52,8 +50,6 @@ export function ContentForm({
   const form = useForm<ContentFormValues>({
     resolver: zodResolver(contentSchema),
     defaultValues: {
-      title: defaultValues?.title || '',
-      body: defaultValues?.body || '',
       source: defaultValues?.source || '',
       categories: defaultValues?.categories || '',
       labels: defaultValues?.labels || '',
@@ -65,24 +61,6 @@ export function ContentForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Enter content title" 
-                  {...field} 
-                  className="text-lg"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
         <FormField
           control={form.control}
           name="status"
@@ -99,9 +77,9 @@ export function ContentForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="draft">Chưa xử lý</SelectItem>
+                  <SelectItem value="review">Đang xử lý</SelectItem>
+                  <SelectItem value="published">Đã xử lý</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -114,10 +92,10 @@ export function ContentForm({
           name="source"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Source</FormLabel>
+              <FormLabel>Nguồn</FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="Enter content source" 
+                  placeholder="Nhập nguồn dữ liệu" 
                   {...field} 
                 />
               </FormControl>
@@ -131,10 +109,10 @@ export function ContentForm({
           name="categories"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Categories</FormLabel>
+              <FormLabel>Danh mục</FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="Enter categories (separate with commas)" 
+                  placeholder="Nhập danh mục (phân tách bằng dấu phẩy)" 
                   {...field} 
                 />
               </FormControl>
@@ -148,28 +126,10 @@ export function ContentForm({
           name="labels"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Labels</FormLabel>
+              <FormLabel>Nhãn</FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="Enter labels (separate with commas)" 
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="body"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Content</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Enter content body" 
-                  className="min-h-[200px] resize-y"
+                  placeholder="Nhập nhãn (phân tách bằng dấu phẩy)" 
                   {...field} 
                 />
               </FormControl>
