@@ -173,13 +173,17 @@ export default function UserActivitiesPage() {
                   ),
                 },
                 {
-                  key: 'metadata',
-                  header: 'Chi tiết',
-                  render: (row: UserActivity) => (
-                    <span className="text-sm">
-                      {row.metadata ? JSON.stringify(row.metadata) : 'N/A'}
-                    </span>
-                  ),
+                  key: 'createdTime',
+                  header: 'Thời gian chi tiết',
+                  render: (row: UserActivity) => {
+                    const date = new Date(row.timestamp);
+                    return (
+                      <div className="flex flex-col">
+                        <span className="font-medium">{format(date, 'HH:mm:ss')}</span>
+                        <span className="text-sm text-gray-500">{format(date, 'dd/MM/yyyy')}</span>
+                      </div>
+                    );
+                  },
                 },
               ]}
               isLoading={isLoading}
