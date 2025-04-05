@@ -61,11 +61,11 @@ export default function UsersPage() {
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-500 hover:bg-green-600 max-w-[140px] truncate">Active</Badge>;
+        return <Badge variant="outline" className="text-green-700 bg-green-100 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800 max-w-[140px] truncate">Active</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600 max-w-[140px] truncate">Pending</Badge>;
+        return <Badge variant="outline" className="text-amber-700 bg-amber-100 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800 max-w-[140px] truncate">Pending</Badge>;
       case "blocked":
-        return <Badge className="bg-red-500 hover:bg-red-600 max-w-[140px] truncate">Blocked</Badge>;
+        return <Badge variant="outline" className="text-red-700 bg-red-100 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800 max-w-[140px] truncate">Blocked</Badge>;
       default:
         return <Badge className="max-w-[140px] truncate">{status}</Badge>;
     }
@@ -185,7 +185,7 @@ export default function UsersPage() {
                       <>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-green-500 border-green-500 hover:bg-green-50 hover:text-green-600">
+                            <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950">
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Approve
                             </Button>
@@ -213,7 +213,7 @@ export default function UsersPage() {
 
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600">
+                            <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950">
                               <XCircle className="h-4 w-4 mr-1" />
                               Reject
                             </Button>
@@ -245,7 +245,7 @@ export default function UsersPage() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="text-blue-500 border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                          className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
                           onClick={() => {
                             setSelectedUser(row);
                             setEditDialogOpen(true);
@@ -257,7 +257,7 @@ export default function UsersPage() {
                         
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600">
+                            <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950">
                               <XCircle className="h-4 w-4 mr-1" />
                               Block
                             </Button>
@@ -287,7 +287,7 @@ export default function UsersPage() {
                     {row.status === "blocked" && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-green-500 border-green-500 hover:bg-green-50 hover:text-green-600">
+                          <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950">
                             <CheckCircle className="h-4 w-4 mr-1" />
                             Unblock
                           </Button>

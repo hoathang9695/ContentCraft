@@ -236,7 +236,7 @@ export default function AuthPage() {
                 </TabsContent>
                 
                 <TabsContent value="register">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-md mb-4 text-sm">
+                  <div className="p-3 bg-primary/10 text-primary rounded-md mb-4 text-sm">
                     <p>
                       <strong>Note:</strong> New accounts require administrator approval. After registration, 
                       you will need to wait until your account is approved before you can log in.
@@ -406,7 +406,7 @@ export default function AuthPage() {
                         />
                       </div>
                       
-                      <div className="mb-4 text-sm text-amber-600 p-3 border border-amber-200 rounded-md bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+                      <div className="mb-4 text-sm text-amber-600 dark:text-amber-400 p-3 border border-amber-200 dark:border-amber-800 rounded-md bg-amber-50 dark:bg-amber-950">
                         Note: After registration, your account will need administrator approval before you can log in.
                       </div>
                       
@@ -430,7 +430,7 @@ export default function AuthPage() {
               </Tabs>
               
               <div className="text-center mt-6">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   {activeTab === 'login' ? (
                     <>
                       Don't have an account?{" "}

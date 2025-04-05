@@ -53,7 +53,7 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-background shadow-sm border-b border-border">
       <div className="flex justify-between items-center px-4 sm:px-6 h-16">
         {/* Left section: Menu button and logo */}
         <div className="flex items-center">
@@ -69,7 +69,7 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
           
           <div className="ml-2 md:ml-0 flex items-center">
             <FileText className="h-6 w-6 text-primary mr-2" />
-            <span className="text-lg font-medium">CMS Portal</span>
+            <span className="text-lg font-medium text-foreground">CMS Portal</span>
           </div>
         </div>
         
@@ -78,7 +78,7 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
           {/* Search */}
           <form onSubmit={handleSearch} className="hidden md:flex relative">
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search content..."
@@ -90,7 +90,7 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
           </form>
           
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="text-gray-600">
+          <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
           </Button>
           
@@ -105,7 +105,7 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
                   <span className="hidden md:inline-block text-sm font-medium">
                     {user.name}
                   </span>
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
