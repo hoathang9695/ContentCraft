@@ -26,6 +26,8 @@ export default function ContentPage() {
   const today = new Date();
   const [startDate, setStartDate] = useState<Date>(today);
   const [endDate, setEndDate] = useState<Date>(today);
+  // State cho bộ lọc trạng thái nguồn (mặc định là "Chưa xác minh")
+  const [sourceStatus, setSourceStatus] = useState('unverified');
   
   const handleSearch = (query: string) => {
     // In a real app, this might filter by API
@@ -38,6 +40,11 @@ export default function ContentPage() {
     console.log('Filtering by date range:', { startDate, endDate });
   };
   
+  // Hàm xử lý khi thay đổi trạng thái nguồn
+  const toggleSourceStatus = () => {
+    setSourceStatus(prev => prev === 'unverified' ? 'verified' : 'unverified');
+  };
+  
   return (
     <DashboardLayout onSearch={handleSearch}>
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between">
@@ -47,75 +54,90 @@ export default function ContentPage() {
         </div>
         
         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center border rounded-md p-2">
-            <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="startDate" className="text-xs">Ngày bắt đầu</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        setStartDate(date);
-                        // Nếu ngày bắt đầu mới lớn hơn ngày kết thúc, cập nhật ngày kết thúc
-                        if (date > endDate) {
-                          setEndDate(date);
-                        }
-                        handleDateFilter();
-                      }
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+          <div className="flex flex-wrap gap-2 items-start sm:items-center">
+            {/* Source Status Filter */}
+            <Button
+              variant="outline"
+              className={cn(
+                "whitespace-nowrap min-w-[145px] h-10 px-4 py-2",
+                sourceStatus === 'unverified' ? "bg-muted" : ""
+              )}
+              onClick={toggleSourceStatus}
+            >
+              {sourceStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
+            </Button>
             
-            <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="endDate" className="text-xs">Ngày kết thúc</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        setEndDate(date);
-                        // Nếu ngày kết thúc mới nhỏ hơn ngày bắt đầu, cập nhật ngày bắt đầu
-                        if (date < startDate) {
+            {/* Date filters */}
+            <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center border rounded-md p-2">
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="startDate" className="text-xs">Ngày bắt đầu</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        if (date) {
                           setStartDate(date);
+                          // Nếu ngày bắt đầu mới lớn hơn ngày kết thúc, cập nhật ngày kết thúc
+                          if (date > endDate) {
+                            setEndDate(date);
+                          }
+                          handleDateFilter();
                         }
-                        handleDateFilter();
-                      }
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="endDate" className="text-xs">Ngày kết thúc</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setEndDate(date);
+                          // Nếu ngày kết thúc mới nhỏ hơn ngày bắt đầu, cập nhật ngày bắt đầu
+                          if (date < startDate) {
+                            setStartDate(date);
+                          }
+                          handleDateFilter();
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
         </div>
@@ -133,6 +155,7 @@ export default function ContentPage() {
             title="Tất cả nội dung" 
             startDate={startDate}
             endDate={endDate}
+            sourceVerification={sourceStatus as 'verified' | 'unverified'}
           />
         </TabsContent>
         
@@ -142,6 +165,7 @@ export default function ContentPage() {
             statusFilter="published"
             startDate={startDate}
             endDate={endDate}
+            sourceVerification={sourceStatus as 'verified' | 'unverified'}
           />
         </TabsContent>
         
@@ -151,6 +175,7 @@ export default function ContentPage() {
             statusFilter="draft"
             startDate={startDate}
             endDate={endDate}
+            sourceVerification={sourceStatus as 'verified' | 'unverified'}
           />
         </TabsContent>
       </Tabs>

@@ -27,6 +27,7 @@ type ContentTableProps = {
   statusFilter?: string;
   startDate?: Date;
   endDate?: Date;
+  sourceVerification?: 'verified' | 'unverified';
   limit?: number;
 };
 
@@ -36,6 +37,7 @@ export function ContentTable({
   statusFilter,
   startDate,
   endDate,
+  sourceVerification = 'unverified', // Mặc định là 'chưa xác minh'
   limit
 }: ContentTableProps) {
   const { user } = useAuth();
@@ -80,6 +82,20 @@ export function ContentTable({
     filteredContents = filteredContents.filter(content => {
       const contentDate = new Date(content.updatedAt);
       return contentDate >= start && contentDate <= end;
+    });
+  }
+  
+  // Filter by source verification status
+  if (sourceVerification) {
+    // Ở đây chúng ta giả định rằng trạng thái xác minh nguồn được lưu trong trường metadata của content
+    // Vì không có trường này trong dữ liệu hiện tại, tôi sẽ sử dụng logic tạm thời để mô phỏng
+    // Trong môi trường thực, hãy thay thế phần này bằng logic lọc thực tế dựa trên dữ liệu của bạn
+    const isVerified = sourceVerification === 'verified';
+    
+    // Giả sử nội dung có ID chẵn là "đã xác minh" và ID lẻ là "chưa xác minh"
+    filteredContents = filteredContents.filter(content => {
+      const contentIsVerified = content.id % 2 === 0;
+      return isVerified ? contentIsVerified : !contentIsVerified;
     });
   }
   
