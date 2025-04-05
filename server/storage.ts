@@ -6,7 +6,7 @@ import {
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db, pool } from "./db"; // Import pool from db.ts
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 
 // Create a PostgreSQL session store with proper types for ESM
 const PgSession = connectPgSimple(expressSession);
@@ -111,7 +111,7 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(contents)
-      .leftJoin(users, eq(contents.assignedToId, users.id))
+      .leftJoin(users, eq(contents.assigned_to_id, users.id))
       .where(eq(contents.id, id));
     
     if (results.length === 0) return undefined;
@@ -133,7 +133,7 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(contents)
-      .leftJoin(users, eq(contents.assignedToId, users.id))
+      .leftJoin(users, eq(contents.assigned_to_id, users.id))
       .orderBy(desc(contents.createdAt));
     
     // Get approver information in a separate query to avoid column naming conflicts
@@ -149,8 +149,8 @@ export class DatabaseStorage implements IStorage {
             }
           })
           .from(contents)
-          .leftJoin(users, eq(contents.approverId, users.id))
-          .where(contents.id.in(contentIds))
+          .leftJoin(users, eq(contents.approver_id, users.id))
+          .where(inArray(contents.id, contentIds))
       : [];
     
     // Create a map of content IDs to approver info
@@ -176,8 +176,8 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(contents)
-      .leftJoin(users, eq(contents.assignedToId, users.id))
-      .where(eq(contents.assignedToId, assigneeId))
+      .leftJoin(users, eq(contents.assigned_to_id, users.id))
+      .where(eq(contents.assigned_to_id, assigneeId))
       .orderBy(desc(contents.createdAt));
     
     // Format results to include processor as a nested object
@@ -191,7 +191,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .update(contents)
       .set({
-        assignedToId: userId,
+        assigned_to_id: userId,
         assignedAt: new Date(),
         status: 'processing',
         updatedAt: new Date()
@@ -208,7 +208,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         status: 'completed',
         processingResult: result,
-        approverId,
+        approver_id: approverId,
         approveTime: new Date(),
         updatedAt: new Date()
       })

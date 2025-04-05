@@ -7,7 +7,7 @@ import { insertContentSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { simulateKafkaMessage, simulateMultipleMessages } from "./kafka-simulator";
+import { simulateKafkaMessage, simulateMultipleMessages, simulateMassMessages } from "./kafka-simulator";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertContentSchema.parse({
         ...req.body,
-        assignedToId: (req.user as Express.User).id,
+        assigned_to_id: (req.user as Express.User).id,
         assignedAt: new Date()
       });
       
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user is assigned to the content or an admin
-      if (existingContent.assignedToId !== user.id && user.role !== 'admin') {
+      if (existingContent.assigned_to_id !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only edit content assigned to you" });
       }
       
@@ -123,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If admin or assigned user is completing processing, add completion info
       if (validatedData.status === 'completed') {
-        validatedData.approverId = user.id;
+        validatedData.approver_id = user.id;
         validatedData.approveTime = new Date();
       }
       
@@ -185,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If user is admin, show stats for all content, otherwise filter by assigned to user
       const filteredContents = user.role === 'admin' 
         ? allContents 
-        : allContents.filter(c => c.assignedToId === user.id);
+        : allContents.filter(c => c.assigned_to_id === user.id);
       
       // Count contents by status
       const pending = filteredContents.filter(c => c.status === 'pending').length;
@@ -494,6 +494,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Simulate mass kafka messages (special endpoint for 99 messages) (admin only)
+  app.post("/api/kafka/simulate-mass", isAdmin, async (req, res) => {
+    try {
+      const { count = 99 } = req.body;
+      
+      // Validate count (no upper limit for mass simulation)
+      const messageCount = Math.max(1, Number(count));
+      
+      res.json({ 
+        success: true, 
+        message: `Starting simulation of ${messageCount} Kafka messages. This may take some time...`,
+      });
+      
+      // Asynchronously process messages without blocking response
+      simulateMassMessages(messageCount).then(messages => {
+        console.log(`Completed processing ${messages.length} messages in mass simulation`);
+      }).catch(err => {
+        console.error('Error in mass simulation:', err);
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error starting mass Kafka message simulation",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Get assignable users (active editors) (admin only)
   app.get("/api/users/assignable", isAdmin, async (req, res) => {
     try {
@@ -558,7 +586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if content is assigned to the current user or if user is admin
-      if (content.assignedToId !== user.id && user.role !== 'admin') {
+      if (content.assigned_to_id !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only complete content assigned to you" });
       }
       

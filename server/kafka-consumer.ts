@@ -107,17 +107,17 @@ export async function processContentMessage(contentMessage: ContentMessage) {
     
     // 1. Lấy nội dung mới nhất đã được phân công
     const lastAssignedContent = await db.query.contents.findFirst({
-      where: (contents, { isNotNull }) => isNotNull(contents.assignedToId),
+      where: (contents, { isNotNull }) => isNotNull(contents.assigned_to_id),
       orderBy: (contents, { desc }) => [desc(contents.assignedAt)],
     });
     
     let nextAssigneeIndex = 0;
     
     // 2. Nếu đã có nội dung được phân công trước đó
-    if (lastAssignedContent && lastAssignedContent.assignedToId) {
+    if (lastAssignedContent && lastAssignedContent.assigned_to_id) {
       // Tìm vị trí của người được phân công trước đó
       const lastAssigneeIndex = editorUsers.findIndex(
-        user => user.id === lastAssignedContent.assignedToId
+        user => user.id === lastAssignedContent.assigned_to_id
       );
       
       if (lastAssigneeIndex !== -1) {
@@ -127,7 +127,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
     }
     
     // Phân công cho người tiếp theo
-    const assignedToId = editorUsers[nextAssigneeIndex].id;
+    const assigned_to_id = editorUsers[nextAssigneeIndex].id;
     const now = new Date();
     
     // Lưu nội dung với thông tin phân công
@@ -137,11 +137,11 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       categories: contentMessage.categories || null,
       labels: contentMessage.labels || null,
       status: 'pending',
-      assignedToId,
+      assigned_to_id,
       assignedAt: now,
     });
     
-    log(`Content ${contentMessage.externalId} assigned to user ID ${assignedToId}`, 'kafka');
+    log(`Content ${contentMessage.externalId} assigned to user ID ${assigned_to_id}`, 'kafka');
   } catch (error) {
     log(`Error processing content message: ${error}`, 'kafka-error');
   }

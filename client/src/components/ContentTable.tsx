@@ -231,7 +231,7 @@ export function ContentTable({
               key: 'approver',
               header: 'Người phê duyệt',
               render: (row: Content) => {
-                if (row.approverId) {
+                if (row.approver_id) {
                   return <span className="text-muted-foreground">Admin</span>;
                 }
                 return <span className="text-muted-foreground">Chưa phê duyệt</span>;

@@ -47,9 +47,35 @@ export async function simulateMultipleMessages(count: number = 5): Promise<Conte
     messages.push(message);
     
     // Đợi một khoảng thời gian ngắn giữa các tin nhắn để tránh đụng độ
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
   
   log(`Completed simulation of ${count} messages`, 'kafka-simulator');
+  return messages;
+}
+
+/**
+ * Tạo và xử lý lô lớn thông điệp nội dung (không giới hạn số lượng)
+ */
+export async function simulateMassMessages(count: number = 99): Promise<ContentMessage[]> {
+  const messages: ContentMessage[] = [];
+  
+  log(`Simulating ${count} Kafka messages (mass simulation)...`, 'kafka-simulator');
+  
+  for (let i = 0; i < count; i++) {
+    const contentId = `mass-content-${Date.now()}-${i}`;
+    const message = await simulateKafkaMessage(contentId);
+    messages.push(message);
+    
+    // Giảm thời gian chờ và log ít hơn để tránh quá tải console
+    if (i % 10 === 0) {
+      log(`Processed ${i}/${count} messages`, 'kafka-simulator');
+    }
+    
+    // Đợi một khoảng thời gian ngắn giữa các tin nhắn để giảm tải cho hệ thống
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  log(`Completed simulation of ${count} messages (mass simulation)`, 'kafka-simulator');
   return messages;
 }

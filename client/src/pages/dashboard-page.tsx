@@ -138,9 +138,9 @@ export default function DashboardPage() {
               key: 'processor',
               header: 'Người xử lý',
               render: (row: Content) => {
-                if (row.assignedToId) {
+                if (row.assigned_to_id) {
                   return <span className="text-blue-600 font-medium">
-                    {row.assignedToId === user?.id ? 'Bạn' : `Nhân viên #${row.assignedToId}`}
+                    {row.assigned_to_id === user?.id ? 'Bạn' : `Nhân viên #${row.assigned_to_id}`}
                   </span>
                 }
                 return <span className="text-muted-foreground">Chưa phân công</span>
