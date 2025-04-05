@@ -374,6 +374,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error changing password" });
     }
   });
+  
+  // User activity monitoring routes (admin only)
+  
+  // Get all user activities (admin only)
+  app.get("/api/user-activities", isAdmin, async (req, res) => {
+    try {
+      const activities = await storage.getUserActivities();
+      res.json(activities);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching user activities" });
+    }
+  });
+  
+  // Get activities for a specific user (admin only)
+  app.get("/api/user-activities/:userId", isAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.userId);
+      const activities = await storage.getUserActivities(userId);
+      res.json(activities);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching user activities" });
+    }
+  });
+  
+  // Get recent activities with limit (admin only)
+  app.get("/api/recent-activities", isAdmin, async (req, res) => {
+    try {
+      const limit = req.query.limit ? Number(req.query.limit) : 100;
+      const activities = await storage.getRecentActivities(limit);
+      res.json(activities);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching recent activities" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

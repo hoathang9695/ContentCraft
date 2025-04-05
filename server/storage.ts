@@ -1,4 +1,8 @@
-import { users, type User, type InsertUser, contents, type Content, type InsertContent } from "@shared/schema";
+import { 
+  users, type User, type InsertUser, 
+  contents, type Content, type InsertContent,
+  userActivities, type UserActivity, type InsertUserActivity
+} from "@shared/schema";
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db, pool } from "./db"; // Import pool from db.ts
@@ -24,6 +28,11 @@ export interface IStorage {
   getContentsByAuthor(authorId: number): Promise<Content[]>;
   updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined>;
   deleteContent(id: number): Promise<boolean>;
+  
+  // User activity tracking operations
+  logUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
+  getUserActivities(userId?: number): Promise<UserActivity[]>;
+  getRecentActivities(limit?: number): Promise<UserActivity[]>;
   
   sessionStore: any; // Using 'any' as a workaround for ESM compatibility
 }
@@ -127,6 +136,35 @@ export class DatabaseStorage implements IStorage {
       .returning({ id: contents.id });
     
     return result.length > 0;
+  }
+
+  // User activity tracking implementations
+  async logUserActivity(activity: InsertUserActivity): Promise<UserActivity> {
+    const result = await db.insert(userActivities).values(activity).returning();
+    return result[0];
+  }
+
+  async getUserActivities(userId?: number): Promise<UserActivity[]> {
+    if (userId) {
+      return await db
+        .select()
+        .from(userActivities)
+        .where(eq(userActivities.userId, userId))
+        .orderBy(desc(userActivities.timestamp));
+    } else {
+      return await db
+        .select()
+        .from(userActivities)
+        .orderBy(desc(userActivities.timestamp));
+    }
+  }
+
+  async getRecentActivities(limit: number = 100): Promise<UserActivity[]> {
+    return await db
+      .select()
+      .from(userActivities)
+      .orderBy(desc(userActivities.timestamp))
+      .limit(limit);
   }
 }
 

@@ -9,6 +9,7 @@ import ContentPage from "@/pages/content-page";
 import ContentEditor from "@/pages/content-editor";
 import UsersPage from "@/pages/users-page";
 import ProfilePage from "@/pages/profile-page";
+import UserActivitiesPage from "@/pages/user-activities-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -22,6 +23,7 @@ function Router() {
       <ProtectedRoute path="/contents/:id/edit" component={ContentEditor} />
       <ProtectedRoute path="/users" component={UsersPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
+      <ProtectedRoute path="/user-activities" component={UserActivitiesPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

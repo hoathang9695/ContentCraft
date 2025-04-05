@@ -128,13 +128,49 @@ export function setupAuth(app: Express) {
         password: await hashPassword(req.body.password),
       });
 
+      // Log registration activity
+      try {
+        await storage.logUserActivity({
+          userId: user.id,
+          activityType: 'register',
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          metadata: { 
+            success: true,
+            role: user.role,
+            status: user.status
+          }
+        });
+      } catch (error) {
+        console.error('Error logging registration activity:', error);
+        // Continue despite logging error
+      }
+
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
       
       // Don't auto-login non-admin users that are in pending status
       if (user.role === 'admin' || user.status === 'active') {
-        req.login(user, (err) => {
+        req.login(user, async (err) => {
           if (err) return next(err);
+          
+          // Log login activity if auto-login happens
+          try {
+            await storage.logUserActivity({
+              userId: user.id,
+              activityType: 'login',
+              ipAddress: req.ip,
+              userAgent: req.headers['user-agent'],
+              metadata: { 
+                success: true,
+                method: 'auto-login-after-registration'
+              }
+            });
+          } catch (error) {
+            console.error('Error logging auto-login activity:', error);
+            // Continue despite logging error
+          }
+          
           res.status(201).json(userWithoutPassword);
         });
       } else {
@@ -150,15 +186,33 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: any) => {
+    passport.authenticate("local", async (err: Error | null, user: Express.User | false, info: any) => {
       if (err) return next(err);
       if (!user) {
         // Use the message from the LocalStrategy if available
         return res.status(401).json({ message: info?.message || "Invalid username or password" });
       }
       
-      req.login(user, (err) => {
+      req.login(user, async (err) => {
         if (err) return next(err);
+        
+        // Log login activity
+        try {
+          await storage.logUserActivity({
+            userId: user.id,
+            activityType: 'login',
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+            metadata: { 
+              success: true,
+              method: 'password' 
+            }
+          });
+        } catch (error) {
+          console.error('Error logging user activity:', error);
+          // Continue despite logging error
+        }
+        
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
         res.status(200).json(userWithoutPassword);
@@ -167,8 +221,28 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
+    // Store user id before logging out
+    const userId = req.user?.id;
+    
+    req.logout(async (err) => {
       if (err) return next(err);
+      
+      // Log logout activity if the user was authenticated
+      if (userId) {
+        try {
+          await storage.logUserActivity({
+            userId: userId,
+            activityType: 'logout',
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+            metadata: { success: true }
+          });
+        } catch (error) {
+          console.error('Error logging user activity:', error);
+          // Continue despite logging error
+        }
+      }
+      
       res.sendStatus(200);
     });
   });

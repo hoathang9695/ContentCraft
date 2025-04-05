@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -42,3 +42,22 @@ export const loginSchema = insertUserSchema.pick({
 });
 
 export type LoginData = z.infer<typeof loginSchema>;
+
+// User activity log for tracking login/logout/registration
+export const userActivities = pgTable("user_activities", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  activityType: text("activity_type").notNull(), // 'login', 'logout', 'register'
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  metadata: jsonb("metadata"), // Additional info like device, browser, etc
+});
+
+export const insertUserActivitySchema = createInsertSchema(userActivities).omit({ 
+  id: true,
+  timestamp: true 
+});
+
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
+export type UserActivity = typeof userActivities.$inferSelect;

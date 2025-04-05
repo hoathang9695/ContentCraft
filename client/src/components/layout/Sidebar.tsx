@@ -5,7 +5,10 @@ import {
   Image, 
   Users, 
   User,
+  ActivitySquare,
+  History
 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -43,6 +46,9 @@ function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarI
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
+  const { user } = useAuth();
+  
+  const isAdmin = user?.role === 'admin';
 
   const isActivePath = (path: string) => {
     if (path === '/') {
@@ -102,6 +108,24 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             >
               Users
             </SidebarItem>
+
+            {/* Admin only menu items */}
+            {isAdmin && (
+              <>
+                <div className="mt-4 mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Admin Functions
+                </div>
+                
+                <SidebarItem
+                  href="/user-activities"
+                  icon={History}
+                  isActive={isActivePath('/user-activities')}
+                  onClick={handleItemClick}
+                >
+                  Hoạt động người dùng
+                </SidebarItem>
+              </>
+            )}
           </div>
         </div>
         
