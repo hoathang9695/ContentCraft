@@ -39,12 +39,36 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Improved error handling for unhandled promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Application continues running despite unhandled promise rejections
+  });
+
+  // Global error handler for uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    // Log the error but don't exit the process
+  });
+
+  // Error handling middleware - improved with more specific error types
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Log the error for debugging
+    console.error('Application error:', err);
+    
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    let message = err.message || "Internal Server Error";
+    
+    // Database connection errors
+    if (err.code && (err.code.startsWith('57') || err.code === '08006' || err.code === '08001')) {
+      message = "Database service unavailable. Please try again later.";
+      log(`Database connection error: ${err.message}`, "error");
+    } else {
+      log(`Error: ${err.message}`, "error");
+    }
 
     res.status(status).json({ message });
-    throw err;
+    // DO NOT throw error here as it will crash the application
   });
 
   // importantly only setup vite in development and after

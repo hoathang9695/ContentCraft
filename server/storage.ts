@@ -1,14 +1,8 @@
 import { users, type User, type InsertUser, contents, type Content, type InsertContent } from "@shared/schema";
 import expressSession from "express-session";
-import pg from "pg";
 import connectPgSimple from "connect-pg-simple";
-import { db } from "./db";
+import { db, pool } from "./db"; // Import pool from db.ts
 import { eq, desc } from "drizzle-orm";
-
-// Create a PostgreSQL connection pool
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-});
 
 // Create a PostgreSQL session store with proper types for ESM
 const PgSession = connectPgSimple(expressSession);

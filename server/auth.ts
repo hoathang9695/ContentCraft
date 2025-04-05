@@ -29,7 +29,7 @@ export async function comparePasswords(supplied: string, stored: string) {
 }
 
 // Create admin user if it doesn't exist
-async function createAdminUser() {
+export async function createAdminUser() {
   try {
     const existingAdmin = await storage.getUserByUsername('admin');
     if (!existingAdmin) {
@@ -39,12 +39,25 @@ async function createAdminUser() {
         password: hashedPassword,
         name: 'Administrator',
         email: 'admin@example.com',
-        role: 'admin'
+        role: 'admin',
+        status: 'active'
       });
       console.log('Admin user created successfully');
     }
   } catch (error) {
     console.error('Error creating admin user:', error);
+    // Don't rethrow the error, let the application continue
+    
+    // Try again after a delay if this is a database connection issue
+    const isConnectionError = error instanceof Error && 
+      (error.message.includes('connection') || 
+       error.message.includes('timeout') ||
+       (error as any).code === '57P01');
+       
+    if (isConnectionError) {
+      console.log('Will try to create admin user again in 5 seconds...');
+      setTimeout(createAdminUser, 5000);
+    }
   }
 }
 
@@ -69,27 +82,38 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
-      
-      // Check if user exists and password is correct
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false, { message: "Invalid username or password" });
+      try {
+        const user = await storage.getUserByUsername(username);
+        
+        // Check if user exists and password is correct
+        if (!user || !(await comparePasswords(password, user.password))) {
+          return done(null, false, { message: "Invalid username or password" });
+        }
+        
+        // Check if user is active
+        if (user.status !== 'active' && user.role !== 'admin') {
+          return done(null, false, { message: "Your account is pending approval. Please contact an administrator." });
+        }
+        
+        // User exists, password is correct, and status is active (or user is admin)
+        return done(null, user);
+      } catch (error) {
+        console.error('Error during authentication:', error);
+        // Return a generic error message to avoid leaking information
+        return done(null, false, { message: "Authentication failed. Please try again later." });
       }
-      
-      // Check if user is active
-      if (user.status !== 'active' && user.role !== 'admin') {
-        return done(null, false, { message: "Your account is pending approval. Please contact an administrator." });
-      }
-      
-      // User exists, password is correct, and status is active (or user is admin)
-      return done(null, user);
     }),
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      console.error('Error during user deserialization:', error);
+      done(null, null); // Return null instead of error to prevent app crash
+    }
   });
 
   app.post("/api/register", async (req, res, next) => {
