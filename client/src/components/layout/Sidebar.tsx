@@ -7,6 +7,7 @@ import {
   Settings, 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -28,12 +29,12 @@ function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarI
         className={cn(
           "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
           isActive
-            ? "bg-primary text-white"
-            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            ? "bg-primary text-primary-foreground"
+            : "text-foreground hover:bg-muted hover:text-foreground"
         )}
         onClick={onClick}
       >
-        <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-white" : "text-gray-500")} />
+        <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
         {children}
       </a>
     </Link>
@@ -59,7 +60,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <div
       className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transition-transform md:relative md:translate-x-0 transform",
+        "fixed inset-y-0 left-0 z-40 w-64 bg-background border-r border-border transition-transform md:relative md:translate-x-0 transform dark:text-foreground",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
@@ -110,6 +111,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             >
               Settings
             </SidebarItem>
+          </div>
+        </div>
+        
+        {/* Theme toggle footer */}
+        <div className="p-4 border-t border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">Theme</span>
+            <ThemeToggle />
           </div>
         </div>
       </div>
