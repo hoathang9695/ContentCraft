@@ -87,18 +87,10 @@ export function ContentTable({
   }
   
   // Filter by source verification status
-  if (sourceVerification) {
-    // Ở đây chúng ta giả định rằng trạng thái xác minh nguồn được lưu trong trường metadata của content
-    // Vì không có trường này trong dữ liệu hiện tại, tôi sẽ sử dụng logic tạm thời để mô phỏng
-    // Trong môi trường thực, hãy thay thế phần này bằng logic lọc thực tế dựa trên dữ liệu của bạn
-    const isVerified = sourceVerification === 'verified';
-    
-    // Giả sử nội dung có ID chẵn là "đã xác minh" và ID lẻ là "chưa xác minh"
-    filteredContents = filteredContents.filter(content => {
-      const contentIsVerified = content.id % 2 === 0;
-      return isVerified ? contentIsVerified : !contentIsVerified;
-    });
-  }
+  // Hiện tại chúng ta sẽ bỏ qua việc lọc theo trạng thái xác minh nguồn
+  // Trong tương lai, khi có trường dữ liệu chính thức, chúng ta sẽ cập nhật lại
+  // Logic này để có thể lọc theo trạng thái xác minh thực tế
+  // Ví dụ: filteredContents.filter(content => content.isVerified === (sourceVerification === 'verified'))
   
   // Pagination
   const itemsPerPage = 10;

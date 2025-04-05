@@ -105,18 +105,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const contentId = Number(req.params.id);
       const existingContent = await storage.getContent(contentId);
+      const user = req.user as Express.User;
       
       if (!existingContent) {
         return res.status(404).json({ message: "Content not found" });
       }
       
-      // Check if user is the author of the content
-      if (existingContent.authorId !== (req.user as Express.User).id) {
+      // Check if user is the author of the content or an admin
+      if (existingContent.authorId !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only edit your own content" });
       }
       
       // Validate request body (partial validation)
       const validatedData = insertContentSchema.partial().parse(req.body);
+      
+      // If admin is approving content, add approval information
+      if (user.role === 'admin' && validatedData.status === 'published') {
+        validatedData.approverId = user.id;
+        validatedData.approveTime = new Date();
+      }
       
       const updatedContent = await storage.updateContent(contentId, validatedData);
       res.json(updatedContent);
@@ -135,13 +142,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const contentId = Number(req.params.id);
       const existingContent = await storage.getContent(contentId);
+      const user = req.user as Express.User;
       
       if (!existingContent) {
         return res.status(404).json({ message: "Content not found" });
       }
       
-      // Check if user is the author of the content
-      if (existingContent.authorId !== (req.user as Express.User).id) {
+      // Check if user is the author of the content or an admin
+      if (existingContent.authorId !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only delete your own content" });
       }
       
@@ -170,15 +178,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats", isAuthenticated, async (req, res) => {
     try {
       const allContents = await storage.getAllContents();
-      const userContents = allContents.filter(c => c.authorId === (req.user as Express.User).id);
+      const user = req.user as Express.User;
+      
+      // If user is admin, show stats for all content, otherwise filter by user
+      const filteredContents = user.role === 'admin' ? allContents : allContents.filter(c => c.authorId === user.id);
       
       // Count contents by status
-      const published = userContents.filter(c => c.status === 'published').length;
-      const draft = userContents.filter(c => c.status === 'draft').length;
-      const review = userContents.filter(c => c.status === 'review').length;
+      const published = filteredContents.filter(c => c.status === 'published').length;
+      const draft = filteredContents.filter(c => c.status === 'draft').length;
+      const review = filteredContents.filter(c => c.status === 'review').length;
       
       res.json({
-        totalContent: userContents.length,
+        totalContent: filteredContents.length,
         published,
         draft,
         review
