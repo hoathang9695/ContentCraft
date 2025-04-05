@@ -70,11 +70,19 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       const user = await storage.getUserByUsername(username);
+      
+      // Check if user exists and password is correct
       if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
-      } else {
-        return done(null, user);
+        return done(null, false, { message: "Invalid username or password" });
       }
+      
+      // Check if user is active
+      if (user.status !== 'active' && user.role !== 'admin') {
+        return done(null, false, { message: "Your account is pending approval. Please contact an administrator." });
+      }
+      
+      // User exists, password is correct, and status is active (or user is admin)
+      return done(null, user);
     }),
   );
 
@@ -109,13 +117,11 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: Error | null, user: Express.User | false) => {
+    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: any) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid username or password" });
-      
-      // Check if user status is pending
-      if (user.status === "pending") {
-        return res.status(403).json({ message: "Your account is pending approval. Please try again later." });
+      if (!user) {
+        // Use the message from the LocalStrategy if available
+        return res.status(401).json({ message: info?.message || "Invalid username or password" });
       }
       
       req.login(user, (err) => {

@@ -50,21 +50,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome back, ${user.name}!`,
       });
     },
-    onError: (error: Error) => {
-      // Check if it's a status-related error
-      if (error.message.includes("pending")) {
-        toast({
-          title: "Account pending approval",
-          description: "Your account is waiting for administrator approval. Please try again later.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
+    onError: (error: any) => {
+      // Error message is now handled directly by throwIfResNotOk
+      let errorMessage = error.message || "An unknown error occurred";
+      let errorTitle = "Login failed";
+      
+      // Set appropriate title based on the error message
+      if (errorMessage.includes("pending") || errorMessage.includes("approval")) {
+        errorTitle = "Account pending approval";
+      } else if (errorMessage.includes("blocked")) {
+        errorTitle = "Account blocked";
       }
+      
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive",
+      });
     },
   });
 

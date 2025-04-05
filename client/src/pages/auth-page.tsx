@@ -319,6 +319,10 @@ export default function AuthPage() {
                         )}
                       />
                       
+                      <div className="mb-4 text-sm text-amber-600 p-3 border border-amber-200 rounded-md bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+                        Note: After registration, your account will need administrator approval before you can log in.
+                      </div>
+                      
                       <Button 
                         type="submit" 
                         className="w-full" 
