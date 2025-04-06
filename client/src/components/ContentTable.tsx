@@ -95,81 +95,96 @@ export function ContentTable({
   
   console.log("Contents matching BOTH processing AND unverified:", contentsWithBoth.length);
   
-  // Áp dụng tất cả các bộ lọc cùng lúc để đảm bảo kết quả chính xác
-  // Thay đổi logic filter để đảm bảo so sánh chính xác với giá trị trong database
-  filteredContents = allContents.filter(content => {
-    // Kiểm tra lọc theo trạng thái - PHẢI KHỚP CHÍNH XÁC với giá trị 'processing' hoặc 'completed'
-    let statusMatch = true;
-    if (statusFilter) {
-      statusMatch = content.status === statusFilter;
-    }
+  // In thông tin trước khi áp dụng lọc
+  console.log("Filter settings:", { statusFilter, sourceVerification });
+  
+  if (statusFilter === 'processing' && sourceVerification === 'unverified') {
+    // Trường hợp đặc biệt: Chưa xử lý và Chưa xác minh - cần đảm bảo kết quả đúng
+    console.log("Applying special filter: Chưa xử lý + Chưa xác minh");
     
-    // Kiểm tra lọc theo trạng thái xác minh nguồn - KHỚP CHÍNH XÁC với 'verified' hoặc 'unverified'
-    let verificationMatch = true;
-    if (sourceVerification) {
-      verificationMatch = content.sourceVerification === sourceVerification;
-    }
+    // Áp dụng trực tiếp cả hai bộ lọc
+    filteredContents = allContents.filter(content => {
+      console.log(`Content ID ${content.id} - Status: [${content.status}], Verification: [${content.sourceVerification}]`);
+      return content.status === 'processing' && content.sourceVerification === 'unverified';
+    });
     
-    // Kiểm tra lọc theo từ khóa tìm kiếm
-    let searchMatch = true;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const sourceMention = content.source && content.source.toLowerCase().includes(query);
-      const categoriesMention = content.categories && content.categories.toLowerCase().includes(query);
-      const labelsMention = content.labels && content.labels.toLowerCase().includes(query);
+    console.log("Filtered results:", filteredContents.length);
+  } else {
+    // Áp dụng bộ lọc thông thường cho các trường hợp khác
+    filteredContents = allContents.filter(content => {
+      // Kiểm tra lọc theo trạng thái
+      let statusMatch = true;
+      if (statusFilter) {
+        statusMatch = content.status === statusFilter;
+      }
       
-      // Áp dụng Boolean cho đảm bảo trả về giá trị boolean
-      searchMatch = Boolean(sourceMention || categoriesMention || labelsMention);
-    }
-    
-    // Kiểm tra lọc theo ngày tháng
-    let dateMatch = true;
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      // Kiểm tra lọc theo trạng thái xác minh nguồn
+      let verificationMatch = true;
+      if (sourceVerification) {
+        verificationMatch = content.sourceVerification === sourceVerification;
+      }
       
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      // Kiểm tra lọc theo từ khóa tìm kiếm
+      let searchMatch = true;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const sourceMention = content.source && content.source.toLowerCase().includes(query);
+        const categoriesMention = content.categories && content.categories.toLowerCase().includes(query);
+        const labelsMention = content.labels && content.labels.toLowerCase().includes(query);
+        
+        // Áp dụng Boolean cho đảm bảo trả về giá trị boolean
+        searchMatch = Boolean(sourceMention || categoriesMention || labelsMention);
+      }
       
-      const isSameDay = start.getDate() === end.getDate() && 
-                        start.getMonth() === end.getMonth() && 
-                        start.getFullYear() === start.getFullYear();
-      
-      if (isSameDay || start < end) {
-        if (!content.createdAt) {
-          dateMatch = false;
-        } else {
-          const contentDate = new Date(content.createdAt);
-          
-          // Convert to UTC for comparison
-          const contentDay = new Date(Date.UTC(
-            contentDate.getFullYear(),
-            contentDate.getMonth(),
-            contentDate.getDate()
-          ));
-          const startDay = new Date(Date.UTC(
-            start.getFullYear(),
-            start.getMonth(),
-            start.getDate()
-          ));
-          const endDay = new Date(Date.UTC(
-            end.getFullYear(),
-            end.getMonth(),
-            end.getDate()
-          ));
-
-          if (isSameDay) {
-            dateMatch = contentDay.getTime() === startDay.getTime();
+      // Kiểm tra lọc theo ngày tháng
+      let dateMatch = true;
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        
+        const isSameDay = start.getDate() === end.getDate() && 
+                          start.getMonth() === end.getMonth() && 
+                          start.getFullYear() === start.getFullYear();
+        
+        if (isSameDay || start < end) {
+          if (!content.createdAt) {
+            dateMatch = false;
           } else {
-            dateMatch = contentDay >= startDay && contentDay <= endDay;
+            const contentDate = new Date(content.createdAt);
+            
+            // Convert to UTC for comparison
+            const contentDay = new Date(Date.UTC(
+              contentDate.getFullYear(),
+              contentDate.getMonth(),
+              contentDate.getDate()
+            ));
+            const startDay = new Date(Date.UTC(
+              start.getFullYear(),
+              start.getMonth(),
+              start.getDate()
+            ));
+            const endDay = new Date(Date.UTC(
+              end.getFullYear(),
+              end.getMonth(),
+              end.getDate()
+            ));
+
+            if (isSameDay) {
+              dateMatch = contentDay.getTime() === startDay.getTime();
+            } else {
+              dateMatch = contentDay >= startDay && contentDay <= endDay;
+            }
           }
         }
       }
-    }
-    
-    // Nội dung phải thỏa mãn tất cả các điều kiện lọc
-    return statusMatch && verificationMatch && searchMatch && dateMatch;
-  });
+      
+      // Nội dung phải thỏa mãn tất cả các điều kiện lọc
+      return statusMatch && verificationMatch && searchMatch && dateMatch;
+    });
+  }
   
   console.log("Final filtered contents count:", filteredContents.length);
   
