@@ -162,13 +162,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Cập nhật trạng thái dựa vào giá trị categories
       const status = categories && categories.trim() !== '' ? 'completed' : 'pending';
       
-      // Cập nhật nội dung
-      const updatedContent = await storage.updateContent(contentId, { 
+      // Cập nhật trạng thái phê duyệt và thời gian nếu status là completed
+      const updateData: Record<string, any> = {
         categories, 
         labels, 
         status,
         safe: safe === null ? null : Boolean(safe)
-      });
+      };
+      
+      // Nếu status là completed và trước đó chưa được hoàn thành, cập nhật người phê duyệt và thời gian
+      if (status === 'completed' && existingContent.status !== 'completed') {
+        updateData.approver_id = user.id;
+        updateData.approveTime = new Date();
+      }
+      
+      // Cập nhật nội dung
+      const updatedContent = await storage.updateContent(contentId, updateData);
       
       if (!updatedContent) {
         return res.status(404).json({ message: "Content update failed" });
