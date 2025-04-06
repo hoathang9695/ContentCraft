@@ -204,10 +204,15 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         <DialogFooter>
           <Button 
             onClick={handleSubmit} 
-            disabled={isLoading || updateMutation.isPending}
+            disabled={isLoading || updateMutation.isPending || isSafe === null}
             className="bg-indigo-600 hover:bg-indigo-700"
           >
-            {updateMutation.isPending ? 'Đang lưu...' : 'Lưu'}
+            {updateMutation.isPending 
+              ? 'Đang lưu...' 
+              : isSafe === null 
+                ? 'Hãy chọn trạng thái an toàn' 
+                : 'Lưu'
+            }
           </Button>
         </DialogFooter>
       </DialogContent>
