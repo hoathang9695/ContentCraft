@@ -175,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only update content assigned to you" });
       }
       
-      const { categories, labels, safe } = req.body;
+      const { categories, labels, safe, sourceVerification } = req.body;
       
       // Cập nhật trạng thái dựa vào giá trị categories
       const status = categories && categories.trim() !== '' ? 'completed' : 'pending';
@@ -187,6 +187,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status,
         safe: safe === null ? null : Boolean(safe)
       };
+      
+      // Thêm trạng thái xác minh nguồn nếu được cung cấp
+      if (sourceVerification) {
+        updateData.sourceVerification = sourceVerification;
+      }
       
       // Luôn cập nhật người phê duyệt và thời gian phê duyệt khi có bất kỳ thay đổi nào
       updateData.approver_id = user.id;
@@ -500,7 +505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to send content updates to Gorse service
   app.post("/api/kafka/send", isAuthenticated, async (req, res) => {
     try {
-      const { itemId, categories, labels, safe } = req.body;
+      const { itemId, categories, labels, safe, sourceVerification } = req.body;
       
       if (!itemId) {
         return res.status(400).json({ message: "Item ID is required" });
@@ -509,12 +514,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Here you would normally send this to your Gorse service using Kafka
       // For now, we'll simulate a successful response
       log(`Sending update to Gorse service for item ${itemId}`, 'kafka');
-      log(`Data: categories=${categories}, labels=${labels}, safe=${safe}`, 'kafka');
+      log(`Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || 'unverified'}`, 'kafka');
       
       res.json({
         success: true,
         message: "Successfully sent content update to Gorse service",
-        data: { itemId, categories, labels, safe }
+        data: { itemId, categories, labels, safe, sourceVerification }
       });
     } catch (error) {
       res.status(500).json({
