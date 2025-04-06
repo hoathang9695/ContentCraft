@@ -22,98 +22,109 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const [isSafe, setIsSafe] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<string>("all");
   
-  // Prefetch all categories and labels when dialog opens to have them ready
+  // Prefetch dữ liệu labels và categories sẵn khi app bắt đầu
   useEffect(() => {
-    if (open) {
-      // Prefetch categories
-      queryClient.prefetchQuery({
-        queryKey: ['/api/categories'],
-        queryFn: async () => await apiRequest('GET', '/api/categories')
-      });
-      
-      // Prefetch all labels
-      queryClient.prefetchQuery({
-        queryKey: ['/api/labels'],
-        queryFn: async () => await apiRequest('GET', '/api/labels')
-      });
-    }
-  }, [open]);
+    // Prefetch categories - Dù dialog có mở hay không
+    queryClient.prefetchQuery({
+      queryKey: ['/api/categories'],
+      queryFn: async () => await apiRequest('GET', '/api/categories'),
+      staleTime: 30 * 60 * 1000, // Cache lâu hơn - 30 phút
+    });
+    
+    // Prefetch all labels - Dù dialog có mở hay không
+    queryClient.prefetchQuery({
+      queryKey: ['/api/labels'],
+      queryFn: async () => await apiRequest('GET', '/api/labels'),
+      staleTime: 30 * 60 * 1000, // Cache lâu hơn - 30 phút
+    });
+  }, []);
   
-  // Fetch content data with lower priority (staleTime)
+  // Chỉ tải dữ liệu content khi cần thiết
   const { data: content, isLoading: contentLoading } = useQuery<any>({
     queryKey: [contentId ? `/api/contents/${contentId}` : 'empty'],
     enabled: !!contentId && open,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 2 * 60 * 1000, // 2 phút - đủ để không phải tải lại quá nhiều
+    refetchOnWindowFocus: false, // Không tải lại khi focus vào cửa sổ
+    refetchOnMount: false, // Chỉ tải một lần khi component được mount
     queryFn: async () => {
       if (!contentId) return {};
       return await apiRequest('GET', `/api/contents/${contentId}`);
     }
   });
   
-  // Fetch categories with caching
+  // Sử dụng kết quả từ cache cho categories
   const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
-    enabled: open,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    queryFn: async () => {
-      return await apiRequest('GET', '/api/categories');
-    }
+    staleTime: 30 * 60 * 1000, // Tăng thời gian cache - 30 phút 
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
   
-  // Fetch all labels with caching
+  // Sử dụng kết quả từ cache cho labels
   const { data: allLabels, isLoading: allLabelsLoading } = useQuery<LabelType[]>({
     queryKey: ['/api/labels'],
-    enabled: open,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    queryFn: async () => {
-      return await apiRequest('GET', '/api/labels');
-    }
+    staleTime: 30 * 60 * 1000, // Tăng thời gian cache - 30 phút
+    refetchOnWindowFocus: false, 
+    refetchOnMount: false,
   });
   
-  // Create a map of category ID to labels for fast access
+  // Tạo một map hiệu suất cao lưu trữ ánh xạ từ category ID đến danh sách labels
   const categoryLabelsMap = useMemo(() => {
     if (!allLabels) return new Map<number, LabelType[]>();
     
-    const map = new Map<number, LabelType[]>();
-    allLabels.forEach(label => {
+    // Sử dụng reduce để tạo map nhanh hơn với ít lần truy cập
+    return allLabels.reduce((map, label) => {
       if (!map.has(label.categoryId)) {
         map.set(label.categoryId, []);
       }
       map.get(label.categoryId)?.push(label);
-    });
-    
-    return map;
+      return map;
+    }, new Map<number, LabelType[]>());
   }, [allLabels]);
   
-  // Filter labels based on selected categories
+  // Tạo một map nhanh ánh xạ từ category name đến id
+  const categoryNameToIdMap = useMemo(() => {
+    if (!categories) return new Map<string, number>();
+    return new Map(categories.map(c => [c.name, c.id]));
+  }, [categories]);
+  
+  // Lọc danh sách nhãn dựa trên danh mục đã chọn
   const relevantLabels = useMemo(() => {
     if (!categories || !allLabels) return [];
     
-    // No categories selected - show all labels
+    // Không có danh mục nào được chọn
     if (selectedCategories.length === 0) return allLabels;
     
-    if (activeTab === "all") {
-      // Show all labels
-      return allLabels;
-    } else {
-      // Filter labels for the selected categories only
-      const selectedCategoryIds = categories
-        .filter(c => selectedCategories.includes(c.name))
-        .map(c => c.id);
-      
-      return allLabels.filter(label => selectedCategoryIds.includes(label.categoryId));
-    }
-  }, [allLabels, categories, selectedCategories, activeTab]);
+    // Hiển thị tất cả nhãn
+    if (activeTab === "all") return allLabels;
+    
+    // Sử dụng Set để tìm kiếm nhanh
+    const selectedCategoryIds = new Set(
+      selectedCategories.map(name => categoryNameToIdMap.get(name)).filter(Boolean)
+    );
+    
+    // Lọc nhãn chỉ cho danh mục đã chọn
+    return allLabels.filter(label => selectedCategoryIds.has(label.categoryId));
+  }, [allLabels, categories, selectedCategories, activeTab, categoryNameToIdMap]);
   
-  // Group labels by category for display
+  // Nhóm các nhãn theo danh mục để hiển thị, sử dụng cấu trúc Map từ categoryId đến labels
   const labelsByCategory = useMemo(() => {
     if (!categories || !relevantLabels) return new Map<string, LabelType[]>();
     
+    // Tạo map từ categoryId đến danh sách labels - hiệu quả hơn dùng filter nhiều lần
+    const labelsMap = relevantLabels.reduce((map, label) => {
+      if (!map.has(label.categoryId)) {
+        map.set(label.categoryId, []);
+      }
+      map.get(label.categoryId)?.push(label);
+      return map;
+    }, new Map<number, LabelType[]>());
+    
+    // Ánh xạ map từ categoryId sang map từ tên danh mục để hiển thị
     const result = new Map<string, LabelType[]>();
     
-    // Create entry for each category that has labels
     categories.forEach(category => {
-      const categoryLabels = relevantLabels.filter(l => l.categoryId === category.id);
+      const categoryLabels = labelsMap.get(category.id) || [];
       if (categoryLabels.length > 0) {
         result.set(category.name, categoryLabels);
       }
