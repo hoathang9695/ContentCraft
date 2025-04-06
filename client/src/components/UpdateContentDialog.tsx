@@ -258,9 +258,9 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       safe: isSafe
     };
     
-    // Thêm trạng thái xác minh nếu người dùng chọn xác minh và nội dung đủ điều kiện
-    if (content?.sourceVerification === 'unverified' && isSafe === true && isVerified) {
-      payload.sourceVerification = 'verified';
+    // Thêm trạng thái xác minh dựa vào checkbox và nội dung phải an toàn
+    if (isSafe === true) {
+      payload.sourceVerification = isVerified ? 'verified' : 'unverified';
     }
     
     updateMutation.mutate(payload);
@@ -377,8 +377,8 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   <Label htmlFor="safe-no" className="cursor-pointer w-full">Không an toàn</Label>
                 </div>
                 
-                {/* Chỉ hiển thị checkbox Xác minh khi nội dung chưa được xác minh và đã chọn An toàn */}
-                {content?.sourceVerification === 'unverified' && isSafe === true && (
+                {/* Hiển thị checkbox Xác minh khi nội dung đã chọn An toàn */}
+                {isSafe === true && (
                   <div 
                     className="flex items-center space-x-2 mt-4 pt-4 border-t p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                     onClick={() => setIsVerified(!isVerified)}
@@ -423,8 +423,8 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     </div>
                   </div>
                   
-                  {/* Hiển thị trạng thái xác minh nếu cần thiết */}
-                  {content?.sourceVerification === 'unverified' && isSafe === true && (
+                  {/* Hiển thị trạng thái xác minh cho nội dung an toàn */}
+                  {isSafe === true && (
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Xác minh:</div>
                       <div className="text-sm">
