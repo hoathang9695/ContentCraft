@@ -159,10 +159,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { categories, labels, safe } = req.body;
       
+      // Cập nhật trạng thái dựa vào giá trị categories
+      const status = categories && categories.trim() !== '' ? 'completed' : 'pending';
+      
       // Cập nhật nội dung
       const updatedContent = await storage.updateContent(contentId, { 
         categories, 
         labels, 
+        status,
         safe: safe === null ? null : Boolean(safe)
       });
       
