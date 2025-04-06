@@ -390,7 +390,11 @@ export function ContentTable({
               header: 'Người phê duyệt',
               render: (row: Content) => {
                 if (row.approver_id) {
-                  return <span className="text-muted-foreground">Admin</span>;
+                  // Hiển thị tên người phê duyệt nếu có
+                  if ((row as any).approver && (row as any).approver.name) {
+                    return <span className="text-muted-foreground">{(row as any).approver.name}</span>;
+                  }
+                  return <span className="text-muted-foreground">Người dùng ID: {row.approver_id}</span>;
                 }
                 return <span className="text-muted-foreground">Chưa phê duyệt</span>;
               },

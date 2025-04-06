@@ -195,7 +195,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getContentsByAssignee(assigneeId: number): Promise<(Content & { processor?: { username: string, name: string } })[]> {
+  async getContentsByAssignee(assigneeId: number): Promise<(Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[]> {
     const results = await db
       .select({
         content: contents,
@@ -209,10 +209,33 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contents.assigned_to_id, assigneeId))
       .orderBy(desc(contents.createdAt));
     
-    // Format results to include processor as a nested object
+    // Get approver information in a separate query to avoid column naming conflicts
+    const contentIds = results.map(item => item.content.id);
+    
+    const approverInfo = contentIds.length > 0 
+      ? await db
+          .select({
+            contentId: contents.id,
+            approver: {
+              username: users.username,
+              name: users.name
+            }
+          })
+          .from(contents)
+          .leftJoin(users, eq(contents.approver_id, users.id))
+          .where(inArray(contents.id, contentIds))
+      : [];
+    
+    // Create a map of content IDs to approver info
+    const approverMap = new Map(
+      approverInfo.map(item => [item.contentId, item.approver])
+    );
+    
+    // Format results to include processor and approver as nested objects
     return results.map(item => ({
       ...item.content,
-      processor: item.processor || undefined
+      processor: item.processor || undefined,
+      approver: approverMap.get(item.content.id) || undefined
     }));
   }
   
