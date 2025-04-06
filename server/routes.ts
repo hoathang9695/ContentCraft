@@ -64,7 +64,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Content CRUD API
   app.get("/api/contents", isAuthenticated, async (req, res) => {
     try {
-      const contents = await storage.getAllContents();
+      const user = req.user as Express.User;
+      let contents;
+      
+      // Chỉ admin thấy tất cả nội dung, người dùng khác chỉ thấy nội dung được gán
+      if (user.role === 'admin') {
+        contents = await storage.getAllContents();
+      } else {
+        contents = await storage.getContentsByAssignee(user.id);
+      }
+      
       res.json(contents);
     } catch (error) {
       res.status(500).json({ message: "Error fetching contents" });
@@ -73,10 +82,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/contents/:id", isAuthenticated, async (req, res) => {
     try {
-      const content = await storage.getContent(Number(req.params.id));
+      const contentId = Number(req.params.id);
+      const content = await storage.getContent(contentId);
+      const user = req.user as Express.User;
+      
       if (!content) {
         return res.status(404).json({ message: "Content not found" });
       }
+      
+      // Kiểm tra nếu người dùng không phải admin và không được phân công nội dung này
+      if (user.role !== 'admin' && content.assigned_to_id !== user.id) {
+        return res.status(403).json({ message: "You can only view content assigned to you" });
+      }
+      
       res.json(content);
     } catch (error) {
       res.status(500).json({ message: "Error fetching content" });
