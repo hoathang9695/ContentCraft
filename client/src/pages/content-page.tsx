@@ -216,7 +216,7 @@ export default function ContentPage() {
       {activeTab === 'unprocessed' && (
         <ContentTable 
           title="Nội dung chưa xử lý" 
-          statusFilter="processing" // Sửa từ "pending" thành "processing" để khớp với trạng thái trong database
+          statusFilter="processing" // "processing" là giá trị trong database cho nội dung chưa xử lý
           startDate={startDate}
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}

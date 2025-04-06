@@ -70,23 +70,56 @@ export function ContentTable({
   // Filter content based on search, status, and date range
   let filteredContents = [...allContents];
   
+  // Xem trạng thái của bộ lọc
+  console.log("Total contents before filter:", allContents.length);
+  console.log("Status filter:", statusFilter);
+  console.log("Source verification filter:", sourceVerification);
+  
+  // Kiểm tra dữ liệu thoả mãn từng bộ lọc riêng biệt
+  const contentsWithProcessingStatus = allContents.filter(content => 
+    content.status === 'processing'
+  );
+  
+  const contentsWithUnverifiedSource = allContents.filter(content => 
+    content.sourceVerification === 'unverified'
+  );
+  
+  console.log("Contents with processing status:", contentsWithProcessingStatus.length);
+  console.log("Contents with unverified source:", contentsWithUnverifiedSource.length);
+  
+  // Kiểm tra dữ liệu thỏa mãn cả hai điều kiện cùng lúc
+  const contentsWithBoth = allContents.filter(content => 
+    content.status === 'processing' && 
+    content.sourceVerification === 'unverified'
+  );
+  
+  console.log("Contents matching BOTH processing AND unverified:", contentsWithBoth.length);
+  
   // Áp dụng tất cả các bộ lọc cùng lúc để đảm bảo kết quả chính xác
-  filteredContents = filteredContents.filter(content => {
-    // Kiểm tra lọc theo trạng thái
-    const statusMatch = !statusFilter || content.status.toLowerCase() === statusFilter.toLowerCase();
+  // Thay đổi logic filter để đảm bảo so sánh chính xác với giá trị trong database
+  filteredContents = allContents.filter(content => {
+    // Kiểm tra lọc theo trạng thái - PHẢI KHỚP CHÍNH XÁC với giá trị 'processing' hoặc 'completed'
+    let statusMatch = true;
+    if (statusFilter) {
+      statusMatch = content.status === statusFilter;
+    }
     
-    // Kiểm tra lọc theo trạng thái xác minh nguồn
-    const verificationMatch = !sourceVerification || content.sourceVerification === sourceVerification;
+    // Kiểm tra lọc theo trạng thái xác minh nguồn - KHỚP CHÍNH XÁC với 'verified' hoặc 'unverified'
+    let verificationMatch = true;
+    if (sourceVerification) {
+      verificationMatch = content.sourceVerification === sourceVerification;
+    }
     
     // Kiểm tra lọc theo từ khóa tìm kiếm
     let searchMatch = true;
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      searchMatch = (
-        (content.source?.toLowerCase().includes(query)) || 
-        (content.categories?.toLowerCase().includes(query)) ||
-        (content.labels?.toLowerCase().includes(query))
-      );
+      const sourceMention = content.source && content.source.toLowerCase().includes(query);
+      const categoriesMention = content.categories && content.categories.toLowerCase().includes(query);
+      const labelsMention = content.labels && content.labels.toLowerCase().includes(query);
+      
+      // Áp dụng Boolean cho đảm bảo trả về giá trị boolean
+      searchMatch = Boolean(sourceMention || categoriesMention || labelsMention);
     }
     
     // Kiểm tra lọc theo ngày tháng
@@ -137,6 +170,8 @@ export function ContentTable({
     // Nội dung phải thỏa mãn tất cả các điều kiện lọc
     return statusMatch && verificationMatch && searchMatch && dateMatch;
   });
+  
+  console.log("Final filtered contents count:", filteredContents.length);
   
   // Thông tin cho toast thông báo không có kết quả
   let beforeFilterCount = 0;
