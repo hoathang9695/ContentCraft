@@ -125,8 +125,13 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   // Update form state when content data changes
   useEffect(() => {
     if (content) {
-      setSelectedCategories(content.categories ? content.categories.split(',').map((c: string) => c.trim()).filter(Boolean) : []);
-      setSelectedLabels(content.labels ? content.labels.split(',').map((l: string) => l.trim()).filter(Boolean) : []);
+      // Loại bỏ các giá trị trùng lặp khi khởi tạo
+      const initialCategories = content.categories ? content.categories.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+      const initialLabels = content.labels ? content.labels.split(',').map((l: string) => l.trim()).filter(Boolean) : [];
+      
+      // Sử dụng Set để loại bỏ các giá trị trùng lặp
+      setSelectedCategories(Array.from(new Set(initialCategories)));
+      setSelectedLabels(Array.from(new Set(initialLabels)));
       setIsSafe(content.safe as boolean | null);
     }
   }, [content]);
@@ -174,7 +179,10 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   
   const handleCategoryChange = (category: string, checked: boolean) => {
     if (checked) {
-      setSelectedCategories(prev => [...prev, category]);
+      // Kiểm tra xem category đã tồn tại trong danh sách chưa
+      if (!selectedCategories.includes(category)) {
+        setSelectedCategories(prev => [...prev, category]);
+      }
     } else {
       setSelectedCategories(prev => prev.filter(c => c !== category));
     }
@@ -182,7 +190,10 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   
   const handleLabelChange = (label: string, checked: boolean) => {
     if (checked) {
-      setSelectedLabels(prev => [...prev, label]);
+      // Kiểm tra xem label đã tồn tại trong danh sách chưa
+      if (!selectedLabels.includes(label)) {
+        setSelectedLabels(prev => [...prev, label]);
+      }
     } else {
       setSelectedLabels(prev => prev.filter(l => l !== label));
     }
@@ -191,10 +202,14 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const handleSubmit = () => {
     if (!contentId) return;
     
+    // Loại bỏ các labels trùng lặp trước khi lưu
+    const uniqueCategories = Array.from(new Set(selectedCategories));
+    const uniqueLabels = Array.from(new Set(selectedLabels));
+    
     updateMutation.mutate({
       id: contentId,
-      categories: selectedCategories.join(', '),
-      labels: selectedLabels.join(', '),
+      categories: uniqueCategories.join(', '),
+      labels: uniqueLabels.join(', '),
       safe: isSafe
     });
   };
@@ -336,7 +351,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     <div className="text-xs text-muted-foreground mb-1">Danh mục:</div>
                     <div className="text-sm">
                       {selectedCategories.length > 0 
-                        ? selectedCategories.join(', ') 
+                        ? Array.from(new Set(selectedCategories)).join(', ') 
                         : <span className="text-slate-400">Chưa chọn danh mục</span>}
                     </div>
                   </div>
@@ -344,7 +359,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     <div className="text-xs text-muted-foreground mb-1">Nhãn:</div> 
                     <div className="text-sm">
                       {selectedLabels.length > 0 
-                        ? selectedLabels.join(', ') 
+                        ? Array.from(new Set(selectedLabels)).join(', ') 
                         : <span className="text-slate-400">Chưa chọn nhãn</span>}
                     </div>
                   </div>
