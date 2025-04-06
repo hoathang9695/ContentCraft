@@ -47,8 +47,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      // Sử dụng fetch trực tiếp thay vì apiRequest
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+        credentials: "include"
+      });
+      
+      // Kiểm tra lỗi HTTP
+      if (!res.ok) {
+        let errorMessage = res.statusText;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Nếu không phải JSON, sử dụng text thô
+          const text = await res.text();
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      // Parse phản hồi JSON
+      return await res.json() as AuthResponse;
     },
     onSuccess: (user: AuthResponse) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -91,8 +113,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (userData: InsertUser) => {
       // Validate data before sending
       registerUserSchema.parse(userData);
-      const res = await apiRequest("POST", "/api/register", userData);
-      return await res.json();
+      
+      // Sử dụng fetch trực tiếp thay vì apiRequest
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+        credentials: "include"
+      });
+      
+      // Kiểm tra lỗi HTTP
+      if (!res.ok) {
+        let errorMessage = res.statusText;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Nếu không phải JSON, sử dụng text thô
+          const text = await res.text();
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      // Parse phản hồi JSON
+      return await res.json() as AuthResponse;
     },
     onSuccess: (user: AuthResponse) => {
       // If the user has message and is pending, don't set them as logged in
