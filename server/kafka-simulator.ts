@@ -15,7 +15,8 @@ export async function simulateKafkaMessage(contentId: string): Promise<ContentMe
     externalId: contentId,
     source: 'Kafka Simulator',
     categories: 'Test Category',
-    labels: 'test,simulator,kafka'
+    labels: 'test,simulator,kafka',
+    sourceVerification: 'unverified'
   };
   
   // Ghi log

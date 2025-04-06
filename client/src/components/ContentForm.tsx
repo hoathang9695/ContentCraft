@@ -29,6 +29,7 @@ const contentSchema = insertContentSchema.extend({
   source: z.string().optional(),
   categories: z.string().optional(),
   labels: z.string().optional(),
+  sourceVerification: z.string().optional(),
 });
 
 export type ContentFormValues = z.infer<typeof contentSchema>;
@@ -54,7 +55,7 @@ export function ContentForm({
       categories: defaultValues?.categories || '',
       labels: defaultValues?.labels || '',
       status: defaultValues?.status || 'draft',
-      authorId: user?.id || 0
+      sourceVerification: defaultValues?.sourceVerification || 'unverified'
     }
   });
   
@@ -133,6 +134,31 @@ export function ContentForm({
                   {...field} 
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="sourceVerification"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Trạng thái xác minh</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn trạng thái xác minh" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="unverified">Chưa xác minh</SelectItem>
+                  <SelectItem value="verified">Đã xác minh</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

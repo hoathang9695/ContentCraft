@@ -23,6 +23,7 @@ export const contents = pgTable("contents", {
   categories: text("categories"), // Danh mục
   labels: text("labels"), // Nhãn
   status: text("status").notNull().default("pending"), // 'pending', 'processing', 'completed'
+  sourceVerification: text("source_verification").notNull().default("unverified"), // 'verified', 'unverified'
   assigned_to_id: integer("assigned_to_id").references(() => users.id), // Người được phân công xử lý
   assignedAt: timestamp("assigned_at"), // Thời điểm phân công
   approver_id: integer("approver_id").references(() => users.id), // Người phê duyệt

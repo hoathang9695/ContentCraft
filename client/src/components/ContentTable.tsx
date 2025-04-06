@@ -134,10 +134,10 @@ export function ContentTable({
     }
   }
   
-  // Source verification filter (admin only)
-  if (user?.role === 'admin' && sourceVerification === 'unverified') {
+  // Source verification filter
+  if (sourceVerification) {
     filteredContents = filteredContents.filter(content => 
-      content.source === 'Kafka Simulator'
+      content.sourceVerification === sourceVerification
     );
   }
   
@@ -287,6 +287,19 @@ export function ContentTable({
                     : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
                 }`}>
                   {row.status === 'published' ? 'Đã xử lý' : 'Chưa xử lý'}
+                </span>
+              ),
+            },
+            {
+              key: 'sourceVerification',
+              header: 'Trạng thái xác minh',
+              render: (row: Content) => (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  row.sourceVerification === 'verified' 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
+                }`}>
+                  {row.sourceVerification === 'verified' ? 'Đã xác minh' : 'Chưa xác minh'}
                 </span>
               ),
             },

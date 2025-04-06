@@ -11,6 +11,7 @@ export interface ContentMessage {
   source?: string;
   categories?: string;
   labels?: string;
+  sourceVerification?: 'verified' | 'unverified';
 }
 
 /**
@@ -99,6 +100,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
         categories: contentMessage.categories || null,
         labels: contentMessage.labels || null,
         status: 'pending',
+        sourceVerification: contentMessage.sourceVerification || 'unverified',
       });
       return;
     }
@@ -137,11 +139,12 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       categories: contentMessage.categories || null,
       labels: contentMessage.labels || null,
       status: 'pending',
+      sourceVerification: contentMessage.sourceVerification || 'unverified',
       assigned_to_id,
       assignedAt: now,
     });
     
-    log(`Content ${contentMessage.externalId} assigned to user ID ${assigned_to_id}`, 'kafka');
+    log(`Content ${contentMessage.externalId} assigned to user ID ${assigned_to_id} (${editorUsers[nextAssigneeIndex].username})`, 'kafka');
   } catch (error) {
     log(`Error processing content message: ${error}`, 'kafka-error');
   }
