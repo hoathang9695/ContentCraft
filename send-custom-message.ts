@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 
 async function sendCustomMessage() {
   // Tạo ID cho nội dung
-  const contentId = '100';
+  const contentId = '101';
   
   // Tạo thông điệp tùy chỉnh
   const message: ContentMessage = {
