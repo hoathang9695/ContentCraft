@@ -58,6 +58,7 @@ export function ContentTable({
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [contentToUpdate, setContentToUpdate] = useState<number | null>(null);
+  const [authError, setAuthError] = useState(false);
   
   // Toast hiển thị khi không tìm thấy dữ liệu nào
   const toastShownRef = useRef(false);
@@ -66,11 +67,30 @@ export function ContentTable({
   const apiEndpoint = user?.role === 'admin' ? '/api/contents' : '/api/my-contents';
   
   // Properly typed query for content data
-  const { data: allContents = [], isLoading }: UseQueryResult<Content[], Error> = useQuery({
+  const { 
+    data: allContents = [], 
+    isLoading, 
+    error 
+  } = useQuery<Content[], Error>({
     queryKey: [apiEndpoint],
     staleTime: 60000, // Reduce refetching (1 min)
     refetchOnWindowFocus: true
   });
+  
+  // Xử lý lỗi từ query khi có cập nhật
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching content:", error);
+      if (error instanceof Error && error.message.includes("Unauthorized")) {
+        setAuthError(true);
+        toast({
+          title: "Vui lòng đăng nhập",
+          description: "Bạn cần đăng nhập để xem nội dung này. Nếu đã đăng nhập, hãy thử làm mới trang.",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [error, toast]);
   
   // Add logging for debugging
   useEffect(() => {
@@ -356,6 +376,28 @@ export function ContentTable({
                 New Content
               </Button>
             )}
+          </div>
+        )}
+        
+        {authError && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">
+                  Vui lòng đăng nhập để xem nội dung. Nếu đã đăng nhập, hãy thử làm mới trang hoặc đăng nhập lại.
+                </p>
+                <p className="mt-2 text-sm text-red-700">
+                  <Button size="sm" variant="outline" onClick={() => navigate("/auth")}>
+                    Đi tới trang đăng nhập
+                  </Button>
+                </p>
+              </div>
+            </div>
           </div>
         )}
         
