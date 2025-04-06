@@ -140,6 +140,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error updating content" });
     }
   });
+  
+  // Cập nhật thông tin phân loại và nhãn cho nội dung
+  app.patch("/api/contents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const contentId = Number(req.params.id);
+      const existingContent = await storage.getContent(contentId);
+      const user = req.user as Express.User;
+      
+      if (!existingContent) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      // Check if user is assigned to the content or an admin
+      if (existingContent.assigned_to_id !== user.id && user.role !== 'admin') {
+        return res.status(403).json({ message: "You can only update content assigned to you" });
+      }
+      
+      const { categories, labels, safe } = req.body;
+      
+      // Cập nhật nội dung
+      const updatedContent = await storage.updateContent(contentId, { 
+        categories, 
+        labels, 
+        safe: safe === null ? null : Boolean(safe)
+      });
+      
+      if (!updatedContent) {
+        return res.status(404).json({ message: "Content update failed" });
+      }
+      
+      res.json({
+        ...updatedContent,
+        externalId: existingContent.externalId
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error updating content metadata",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   app.delete("/api/contents/:id", isAuthenticated, async (req, res) => {
     try {
@@ -426,6 +467,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Kafka simulation endpoints
+  
+  // API endpoint to send content updates to Gorse service
+  app.post("/api/kafka/send", isAuthenticated, async (req, res) => {
+    try {
+      const { itemId, categories, labels, safe } = req.body;
+      
+      if (!itemId) {
+        return res.status(400).json({ message: "Item ID is required" });
+      }
+      
+      // Here you would normally send this to your Gorse service using Kafka
+      // For now, we'll simulate a successful response
+      log(`Sending update to Gorse service for item ${itemId}`, 'kafka');
+      log(`Data: categories=${categories}, labels=${labels}, safe=${safe}`, 'kafka');
+      
+      res.json({
+        success: true,
+        message: "Successfully sent content update to Gorse service",
+        data: { itemId, categories, labels, safe }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Error sending content update to Gorse service",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
   
   // Tạo endpoint test dành cho public để kiểm thử kafka
   app.post("/api/kafka/test", async (req, res) => {

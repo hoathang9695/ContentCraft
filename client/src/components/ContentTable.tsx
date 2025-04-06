@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/use-auth';
+import { UpdateContentDialog } from './UpdateContentDialog';
 
 type ContentTableProps = {
   title?: string;
@@ -55,6 +56,8 @@ export function ContentTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [contentToUpdate, setContentToUpdate] = useState<number | null>(null);
   
   // Toast hiển thị khi không tìm thấy dữ liệu nào
   const toastShownRef = useRef(false);
@@ -249,7 +252,10 @@ export function ContentTable({
   });
 
   const handleCreateContent = () => navigate('/contents/new');
-  const handleEditContent = (id: number) => navigate(`/contents/${id}/edit`);
+  const handleEditContent = (id: number) => {
+    setContentToUpdate(id);
+    setIsUpdateDialogOpen(true);
+  };
   const handleViewContent = (id: number) => navigate(`/contents/${id}/edit`);
   
   const handleDeleteClick = (id: number) => {
@@ -496,6 +502,13 @@ export function ContentTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Update Content Dialog */}
+      <UpdateContentDialog 
+        open={isUpdateDialogOpen}
+        onOpenChange={setIsUpdateDialogOpen}
+        contentId={contentToUpdate}
+      />
     </>
   );
 }

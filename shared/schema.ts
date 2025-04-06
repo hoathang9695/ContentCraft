@@ -31,6 +31,7 @@ export const contents = pgTable("contents", {
   comments: integer("comments").default(0), // Số lượng comment
   reactions: integer("reactions").default(0), // Số lượng reaction
   processingResult: text("processing_result"), // Kết quả xử lý
+  safe: boolean("safe"), // Trạng thái an toàn (true: an toàn, false: không an toàn, null: chưa đánh giá)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
