@@ -207,7 +207,7 @@ export default function ContentPage() {
         <TabsContent value="processed">
           <ContentTable 
             title="Nội dung đã xử lý" 
-            statusFilter="published" // Cập nhật trạng thái khi database có bản ghi đã xử lý
+            statusFilter="completed" // Trạng thái "completed" trong database
             startDate={startDate}
             endDate={endDate}
             sourceVerification={sourceStatus as 'verified' | 'unverified'}
