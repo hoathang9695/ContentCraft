@@ -121,7 +121,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      // Sử dụng fetch trực tiếp thay vì apiRequest để tránh phân tích JSON
+      const res = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+      
+      // Kiểm tra lỗi HTTP
+      if (!res.ok) {
+        let errorMessage = res.statusText;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Nếu không phải JSON, sử dụng text thô
+          const text = await res.text();
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      return; // Không phân tích bất kỳ dữ liệu nào
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
