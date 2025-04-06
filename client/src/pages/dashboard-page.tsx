@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -5,6 +6,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
+import { Calendar as CalendarIcon } from "lucide-react";
 import {
   LayoutDashboard,
   Edit,
@@ -14,28 +16,59 @@ import {
   FileEdit,
   Users,
   Plus,
+  FilePenLine,
+  VerifiedIcon
 } from 'lucide-react';
 import { Content } from '@shared/schema';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { addDays } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(); 
+  
+  // Chuyển đổi khoảng ngày để truyền vào query
+  const dateParams = dateRange?.from && dateRange?.to 
+    ? { 
+        startDate: format(dateRange.from, 'yyyy-MM-dd'),
+        endDate: format(dateRange.to, 'yyyy-MM-dd') 
+      } 
+    : {};
   
   // Fetch content based on user role (all for admin, only user's content for regular users)
   const { data: contents = [], isLoading: isLoadingContents } = useQuery<Content[]>({
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
   
-  // Fetch dashboard stats
+  // Fetch dashboard stats với params khoảng thời gian
   const { data: stats, isLoading: isLoadingStats } = useQuery<{
     totalContent: number;
-    published: number;
-    draft: number;
-    review: number;
+    pending: number;
+    completed: number;
+    verified: number;
+    unverified: number;
+    safe: number;
+    unsafe: number;
+    unchecked: number;
+    assigned: number;
+    unassigned: number;
+    period: { start: string; end: string } | null;
   }>({
-    queryKey: ['/api/stats'],
+    queryKey: ['/api/stats', dateParams],
+    queryFn: async () => {
+      const queryString = dateRange?.from && dateRange?.to 
+        ? `?startDate=${dateParams.startDate}&endDate=${dateParams.endDate}` 
+        : '';
+      const response = await fetch(`/api/stats${queryString}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats');
+      }
+      return response.json();
+    }
   });
   
   const handleCreateContent = () => {
@@ -62,12 +95,41 @@ export default function DashboardPage() {
   
   return (
     <DashboardLayout>
-      <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        
+        {/* Bộ lọc ngày tháng */}
+        <div>
+          <DateRangePicker 
+            dateRange={dateRange} 
+            onDateRangeChange={setDateRange} 
+          />
+        </div>
+      </div>
+      
+      {/* Thông tin khoảng thời gian đã chọn */}
+      {stats?.period && (
+        <div className="bg-muted p-2 rounded-md mb-4 text-sm flex items-center justify-between">
+          <span className="font-medium">
+            Đang hiển thị dữ liệu từ {stats.period.start} đến {stats.period.end}
+          </span>
+          {dateRange && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setDateRange(undefined)}
+              className="h-8"
+            >
+              Xoá bộ lọc
+            </Button>
+          )}
+        </div>
+      )}
       
       {/* Stats Section */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
-          title="Total Content"
+          title="Tổng số nội dung"
           value={isLoadingStats ? '...' : stats?.totalContent || 0}
           icon={LayoutDashboard}
           iconBgColor="bg-primary"
@@ -75,37 +137,72 @@ export default function DashboardPage() {
         />
         
         <StatCard
-          title="Published"
-          value={isLoadingStats ? '...' : stats?.published || 0}
+          title="Đã xử lý"
+          value={isLoadingStats ? '...' : stats?.completed || 0}
           icon={CheckCircle}
           iconBgColor="bg-green-500"
-          onViewAll={() => navigate('/contents?status=published')}
+          onViewAll={() => navigate('/contents?status=completed')}
         />
         
         <StatCard
-          title="Drafts"
-          value={isLoadingStats ? '...' : stats?.draft || 0}
-          icon={FileEdit}
+          title="Chưa xử lý"
+          value={isLoadingStats ? '...' : stats?.pending || 0}
+          icon={FilePenLine}
           iconBgColor="bg-amber-500"
-          onViewAll={() => navigate('/contents?status=draft')}
+          onViewAll={() => navigate('/contents?status=pending')}
         />
         
         <StatCard
-          title="Active Users"
-          value={isLoadingStats ? '...' : '1'} // Placeholder, would come from a real API
+          title="Phân công hoạt động"
+          value={isLoadingStats ? '...' : stats?.assigned || 0}
           icon={Users}
           iconBgColor="bg-blue-500"
-          onViewAll={() => navigate('/users')}
+          onViewAll={() => navigate('/contents')}
+        />
+      </div>
+      
+      {/* Additional Stats Section */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <StatCard
+          title="Đã xác minh"
+          value={isLoadingStats ? '...' : stats?.verified || 0}
+          icon={CheckCircle}
+          iconBgColor="bg-emerald-500"
+          onViewAll={() => navigate('/contents?sourceVerification=verified')}
+        />
+        
+        <StatCard
+          title="Chưa xác minh"
+          value={isLoadingStats ? '...' : stats?.unverified || 0}
+          icon={FileEdit}
+          iconBgColor="bg-orange-500"
+          onViewAll={() => navigate('/contents?sourceVerification=unverified')}
+        />
+        
+        <StatCard
+          title="Nội dung an toàn"
+          value={isLoadingStats ? '...' : stats?.safe || 0}
+          icon={CheckCircle}
+          iconBgColor="bg-green-600"
+          onViewAll={() => navigate('/contents?result=safe')}
+        />
+        
+        <StatCard
+          title="Nội dung không an toàn"
+          value={isLoadingStats ? '...' : stats?.unsafe || 0}
+          icon={FileEdit}
+          iconBgColor="bg-red-500"
+          onViewAll={() => navigate('/contents?result=unsafe')}
         />
       </div>
       
       {/* Recent Content Section */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium">Recent Content</h2>
+          <h2 className="text-lg font-medium">Nội dung gần đây</h2>
           <Button onClick={handleCreateContent}>
             <Plus className="h-4 w-4 mr-2" />
-            New Content
+            Thêm nội dung mới
           </Button>
         </div>
         
@@ -115,9 +212,18 @@ export default function DashboardPage() {
           columns={[
             {
               key: 'id',
-              header: 'ID Post',
+              header: 'ID',
               render: (row: Content) => (
                 <div className="font-medium">#{row.id}</div>
+              ),
+            },
+            {
+              key: 'externalId',
+              header: 'ID Ngoài',
+              render: (row: Content) => (
+                <div className="font-medium text-xs max-w-[100px] truncate">
+                  {row.externalId || 'N/A'}
+                </div>
               ),
             },
             {
@@ -131,7 +237,7 @@ export default function DashboardPage() {
             },
             {
               key: 'status',
-              header: 'Status',
+              header: 'Trạng thái',
               render: (row: Content) => <StatusBadge status={row.status} />,
             },
             {
@@ -148,7 +254,7 @@ export default function DashboardPage() {
             },
             {
               key: 'updatedAt',
-              header: 'Last Updated',
+              header: 'Cập nhật',
               render: (row: Content) => (
                 <span className="text-muted-foreground">
                   {formatDistanceToNow(new Date(row.updatedAt), { addSuffix: true })}
@@ -157,7 +263,7 @@ export default function DashboardPage() {
             },
             {
               key: 'actions',
-              header: 'Actions',
+              header: 'Thao tác',
               className: 'text-right',
               render: (row: Content) => (
                 <div className="flex justify-end space-x-2">
@@ -191,7 +297,7 @@ export default function DashboardPage() {
           ]}
           caption={
             contents.length === 0 && !isLoadingContents
-              ? "You haven't created any content yet. Click 'New Content' to get started."
+              ? "Bạn chưa có nội dung nào. Nhấn 'Thêm nội dung mới' để bắt đầu."
               : undefined
           }
         />
@@ -199,7 +305,7 @@ export default function DashboardPage() {
         {contents.length > 5 && (
           <div className="mt-4 text-center">
             <Button variant="outline" onClick={handleViewAllContent}>
-              View All Content
+              Xem tất cả nội dung
             </Button>
           </div>
         )}

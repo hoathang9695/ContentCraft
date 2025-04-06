@@ -333,23 +333,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allContents = await storage.getAllContents();
       const user = req.user as Express.User;
+      const { startDate, endDate } = req.query;
       
       // If user is admin, show stats for all content, otherwise filter by assigned to user
-      const filteredContents = user.role === 'admin' 
+      let filteredContents = user.role === 'admin' 
         ? allContents 
         : allContents.filter(c => c.assigned_to_id === user.id);
+      
+      // Lọc theo ngày nếu có
+      if (startDate && endDate) {
+        const start = new Date(startDate as string);
+        start.setHours(0, 0, 0, 0);
+        
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        
+        filteredContents = filteredContents.filter(content => {
+          if (!content.createdAt) return false;
+          const createdAt = new Date(content.createdAt);
+          return createdAt >= start && createdAt <= end;
+        });
+      }
       
       // Count contents by status
       const pending = filteredContents.filter(c => c.status === 'pending').length;
       // Không có trạng thái 'processing' trong database, chỉ có 'pending' và 'completed'
       const completed = filteredContents.filter(c => c.status === 'completed').length;
       
+      // Count by source verification
+      const verified = filteredContents.filter(c => c.sourceVerification === 'verified').length;
+      const unverified = filteredContents.filter(c => c.sourceVerification === 'unverified').length;
+      
+      // Đếm số lượng theo safe (an toàn)
+      const safe = filteredContents.filter(c => c.safe === true).length;
+      const unsafe = filteredContents.filter(c => c.safe === false).length;
+      const unchecked = filteredContents.filter(c => c.safe === null).length;
+      
       res.json({
         totalContent: filteredContents.length,
         pending,
-        // Gửi 0 cho processing vì chúng ta không còn dùng trạng thái này
-        processing: 0,
-        completed
+        completed,
+        // Thông tin trạng thái xác minh nguồn
+        verified,
+        unverified,
+        // Thông tin trạng thái an toàn
+        safe,
+        unsafe,
+        unchecked,
+        // Số lượng bài viết đã được phân công
+        assigned: filteredContents.filter(c => c.assigned_to_id !== null).length,
+        // Số lượng bài viết chưa được phân công
+        unassigned: filteredContents.filter(c => c.assigned_to_id === null).length,
+        // Thông tin khoảng thời gian nếu có lọc
+        period: startDate && endDate ? {
+          start: startDate,
+          end: endDate
+        } : null
       });
     } catch (error) {
       res.status(500).json({ message: "Error fetching statistics" });
