@@ -59,8 +59,8 @@ export function ContentTable({
   // Filter content based on search, status, and date range
   let filteredContents = [...allContents];
   
-  // Status filter (admin only)
-  if (statusFilter && user?.role === 'admin') {
+  // Status filter - áp dụng cho tất cả các vai trò
+  if (statusFilter) {
     filteredContents = filteredContents.filter(
       content => content.status.toLowerCase() === statusFilter.toLowerCase()
     );
