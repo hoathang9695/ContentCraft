@@ -5,10 +5,18 @@ import { Content } from '@shared/schema';
 import { DataTable } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Eye, Trash2, Plus } from 'lucide-react';
+import { Edit, Eye, Trash2, Plus, MoreHorizontal, MessageSquare, ThumbsUp, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -197,6 +205,49 @@ export function ContentTable({
     },
   });
   
+  // Mutations for comment and reaction updates
+  const commentMutation = useMutation({
+    mutationFn: async ({ id, count }: { id: number, count: number }) => {
+      return await apiRequest('PATCH', `/api/contents/${id}/comments`, { count });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+      toast({
+        title: 'Cập nhật thành công',
+        description: 'Đã thêm comment vào nội dung.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Lỗi khi cập nhật comment',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const reactionMutation = useMutation({
+    mutationFn: async ({ id, count }: { id: number, count: number }) => {
+      return await apiRequest('PATCH', `/api/contents/${id}/reactions`, { count });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+      toast({
+        title: 'Cập nhật thành công',
+        description: 'Đã thêm reaction vào nội dung.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Lỗi khi cập nhật reaction',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleCreateContent = () => navigate('/contents/new');
   const handleEditContent = (id: number) => navigate(`/contents/${id}/edit`);
   const handleViewContent = (id: number) => navigate(`/contents/${id}/edit`);
@@ -204,6 +255,16 @@ export function ContentTable({
   const handleDeleteClick = (id: number) => {
     setContentToDelete(id);
     setIsDeleteDialogOpen(true);
+  };
+  
+  const handlePushComment = (id: number) => {
+    // Add 1 comment to the content
+    commentMutation.mutate({ id, count: 1 });
+  };
+  
+  const handlePushReaction = (id: number) => {
+    // Add 1 reaction to the content
+    reactionMutation.mutate({ id, count: 1 });
   };
   
   const confirmDelete = () => {
@@ -359,43 +420,39 @@ export function ContentTable({
               className: 'text-right',
               render: (row: Content) => (
                 <div className="flex justify-end">
-                  {user?.role === 'admin' ? (
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditContent(row.id)}
-                        className="text-primary hover:text-primary/90"
-                      >
-                        <Edit className="h-4 w-4" />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewContent(row.id)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(row.id)}
-                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleViewContent(row.id)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEditContent(row.id)}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        <span>Cập nhật thông tin</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePushComment(row.id)}>
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        <span>Push Comment</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePushReaction(row.id)}>
+                        <ThumbsUp className="mr-2 h-4 w-4" />
+                        <span>Push Reactions</span>
+                      </DropdownMenuItem>
+                      {user?.role === 'admin' && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteClick(row.id)}
+                            className="text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-950"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Xóa post</span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ),
             },

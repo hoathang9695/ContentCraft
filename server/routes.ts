@@ -634,6 +634,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API để tăng số lượng comment
+  app.patch("/api/contents/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const contentId = Number(req.params.id);
+      const { count = 1 } = req.body;
+      
+      // Lấy thông tin nội dung
+      const content = await storage.getContent(contentId);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      // Tính toán số lượng comments mới
+      const currentCount = content.comments || 0;
+      const newCount = currentCount + count;
+      
+      // Cập nhật nội dung
+      const updated = await storage.updateContent(contentId, { comments: newCount });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Content update failed" });
+      }
+      
+      res.json({
+        success: true,
+        message: "Comments count updated successfully",
+        data: updated
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error updating comments count",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // API để tăng số lượng reactions
+  app.patch("/api/contents/:id/reactions", isAuthenticated, async (req, res) => {
+    try {
+      const contentId = Number(req.params.id);
+      const { count = 1 } = req.body;
+      
+      // Lấy thông tin nội dung
+      const content = await storage.getContent(contentId);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      // Tính toán số lượng reactions mới
+      const currentCount = content.reactions || 0;
+      const newCount = currentCount + count;
+      
+      // Cập nhật nội dung
+      const updated = await storage.updateContent(contentId, { reactions: newCount });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Content update failed" });
+      }
+      
+      res.json({
+        success: true,
+        message: "Reactions count updated successfully",
+        data: updated
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error updating reactions count",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
