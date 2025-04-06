@@ -170,11 +170,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         safe: safe === null ? null : Boolean(safe)
       };
       
-      // Nếu status là completed và trước đó chưa được hoàn thành, cập nhật người phê duyệt và thời gian
-      if (status === 'completed' && existingContent.status !== 'completed') {
-        updateData.approver_id = user.id;
-        updateData.approveTime = new Date();
-      }
+      // Luôn cập nhật người phê duyệt và thời gian phê duyệt khi có bất kỳ thay đổi nào
+      updateData.approver_id = user.id;
+      updateData.approveTime = new Date();
       
       // Cập nhật nội dung
       const updatedContent = await storage.updateContent(contentId, updateData);
