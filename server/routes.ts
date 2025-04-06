@@ -8,6 +8,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { simulateKafkaMessage, simulateMultipleMessages, simulateMassMessages } from "./kafka-simulator";
+import { log } from "./vite";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -424,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Kafka simulation endpoints (admin only)
+  // Kafka simulation endpoints
   
   // Tạo endpoint test dành cho public để kiểm thử kafka
   app.post("/api/kafka/test", async (req, res) => {
@@ -442,6 +443,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Error simulating Kafka message",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Endpoint không cần xác thực để tạo nhiều nội dung (chỉ cho môi trường phát triển)
+  app.post("/api/kafka/dev-simulate", async (req, res) => {
+    try {
+      const { count = 5 } = req.body;
+      
+      // Giới hạn số lượng tin nhắn từ 1 đến 50
+      const messageCount = Math.min(Math.max(1, Number(count)), 50);
+      
+      log(`Development mode: Simulating ${messageCount} Kafka messages without authentication`, 'kafka-simulator');
+      
+      const messages = await simulateMultipleMessages(messageCount);
+      
+      res.json({ 
+        success: true, 
+        message: `${messages.length} Kafka messages simulated successfully`,
+        data: messages
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error simulating Kafka messages",
         error: error instanceof Error ? error.message : String(error)
       });
     }
