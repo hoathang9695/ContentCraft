@@ -70,86 +70,84 @@ export function ContentTable({
   // Filter content based on search, status, and date range
   let filteredContents = [...allContents];
   
-  // Status filter - áp dụng cho tất cả các vai trò
-  if (statusFilter) {
-    filteredContents = filteredContents.filter(
-      content => content.status.toLowerCase() === statusFilter.toLowerCase()
-    );
-  }
-  
-  // Search filter
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
-    filteredContents = filteredContents.filter(
-      content => (
+  // Áp dụng tất cả các bộ lọc cùng lúc để đảm bảo kết quả chính xác
+  filteredContents = filteredContents.filter(content => {
+    // Kiểm tra lọc theo trạng thái
+    const statusMatch = !statusFilter || content.status.toLowerCase() === statusFilter.toLowerCase();
+    
+    // Kiểm tra lọc theo trạng thái xác minh nguồn
+    const verificationMatch = !sourceVerification || content.sourceVerification === sourceVerification;
+    
+    // Kiểm tra lọc theo từ khóa tìm kiếm
+    let searchMatch = true;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      searchMatch = (
         (content.source?.toLowerCase().includes(query)) || 
         (content.categories?.toLowerCase().includes(query)) ||
         (content.labels?.toLowerCase().includes(query))
-      )
-    );
-  }
+      );
+    }
+    
+    // Kiểm tra lọc theo ngày tháng
+    let dateMatch = true;
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      const isSameDay = start.getDate() === end.getDate() && 
+                        start.getMonth() === end.getMonth() && 
+                        start.getFullYear() === start.getFullYear();
+      
+      if (isSameDay || start < end) {
+        if (!content.createdAt) {
+          dateMatch = false;
+        } else {
+          const contentDate = new Date(content.createdAt);
+          
+          // Convert to UTC for comparison
+          const contentDay = new Date(Date.UTC(
+            contentDate.getFullYear(),
+            contentDate.getMonth(),
+            contentDate.getDate()
+          ));
+          const startDay = new Date(Date.UTC(
+            start.getFullYear(),
+            start.getMonth(),
+            start.getDate()
+          ));
+          const endDay = new Date(Date.UTC(
+            end.getFullYear(),
+            end.getMonth(),
+            end.getDate()
+          ));
+
+          if (isSameDay) {
+            dateMatch = contentDay.getTime() === startDay.getTime();
+          } else {
+            dateMatch = contentDay >= startDay && contentDay <= endDay;
+          }
+        }
+      }
+    }
+    
+    // Nội dung phải thỏa mãn tất cả các điều kiện lọc
+    return statusMatch && verificationMatch && searchMatch && dateMatch;
+  });
   
-  // Date range filter
+  // Thông tin cho toast thông báo không có kết quả
   let beforeFilterCount = 0;
   let dateFilterApplied = false;
   let filterStart: Date | null = null;
   let filterEnd: Date | null = null;
   
   if (startDate && endDate) {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    
-    const isSameDay = start.getDate() === end.getDate() && 
-                      start.getMonth() === end.getMonth() && 
-                      start.getFullYear() === start.getFullYear();
-    
-    if (isSameDay || start < end) {
-      // Store date range info for toast
-      beforeFilterCount = filteredContents.length;
-      filterStart = start;
-      filterEnd = end;
-      
-      // Apply filter
-      filteredContents = filteredContents.filter(content => {
-        if (!content.createdAt) return false;
-        
-        const contentDate = new Date(content.createdAt);
-        
-        // Convert to UTC for comparison
-        const contentDay = new Date(Date.UTC(
-          contentDate.getFullYear(),
-          contentDate.getMonth(),
-          contentDate.getDate()
-        ));
-        const startDay = new Date(Date.UTC(
-          start.getFullYear(),
-          start.getMonth(),
-          start.getDate()
-        ));
-        const endDay = new Date(Date.UTC(
-          end.getFullYear(),
-          end.getMonth(),
-          end.getDate()
-        ));
-
-        if (isSameDay) {
-          return contentDay.getTime() === startDay.getTime();
-        }
-        return contentDay >= startDay && contentDay <= endDay;
-      });
-      
-      dateFilterApplied = true;
-    }
-  }
-  
-  // Source verification filter
-  if (sourceVerification) {
-    filteredContents = filteredContents.filter(content => 
-      content.sourceVerification === sourceVerification
-    );
+    filterStart = new Date(startDate);
+    filterEnd = new Date(endDate);
+    dateFilterApplied = true;
   }
   
   // Pagination
