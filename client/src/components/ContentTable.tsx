@@ -349,11 +349,11 @@ export function ContentTable({
               header: 'Trạng thái phê duyệt',
               render: (row: Content) => (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  row.status === 'published' 
+                  row.status === 'completed' 
                     ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
                     : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
                 }`}>
-                  {row.status === 'published' ? 'Đã xử lý' : 'Chưa xử lý'}
+                  {row.status === 'completed' ? 'Đã xử lý' : 'Chưa xử lý'}
                 </span>
               ),
             },
