@@ -76,36 +76,36 @@ export function ContentTable({
   console.log("Source verification filter:", sourceVerification);
   
   // Kiểm tra dữ liệu thoả mãn từng bộ lọc riêng biệt
-  const contentsWithProcessingStatus = allContents.filter(content => 
-    content.status === 'processing'
+  const contentsWithPendingStatus = allContents.filter(content => 
+    content.status === 'pending'
   );
   
   const contentsWithUnverifiedSource = allContents.filter(content => 
     content.sourceVerification === 'unverified'
   );
   
-  console.log("Contents with processing status:", contentsWithProcessingStatus.length);
+  console.log("Contents with pending status:", contentsWithPendingStatus.length);
   console.log("Contents with unverified source:", contentsWithUnverifiedSource.length);
   
   // Kiểm tra dữ liệu thỏa mãn cả hai điều kiện cùng lúc
   const contentsWithBoth = allContents.filter(content => 
-    content.status === 'processing' && 
+    content.status === 'pending' && 
     content.sourceVerification === 'unverified'
   );
   
-  console.log("Contents matching BOTH processing AND unverified:", contentsWithBoth.length);
+  console.log("Contents matching BOTH pending AND unverified:", contentsWithBoth.length);
   
   // In thông tin trước khi áp dụng lọc
   console.log("Filter settings:", { statusFilter, sourceVerification });
   
-  if (statusFilter === 'processing' && sourceVerification === 'unverified') {
+  if (statusFilter === 'pending' && sourceVerification === 'unverified') {
     // Trường hợp đặc biệt: Chưa xử lý và Chưa xác minh - cần đảm bảo kết quả đúng
     console.log("Applying special filter: Chưa xử lý + Chưa xác minh");
     
     // Áp dụng trực tiếp cả hai bộ lọc
     filteredContents = allContents.filter(content => {
       console.log(`Content ID ${content.id} - Status: [${content.status}], Verification: [${content.sourceVerification}]`);
-      return content.status === 'processing' && content.sourceVerification === 'unverified';
+      return content.status === 'pending' && content.sourceVerification === 'unverified';
     });
     
     console.log("Filtered results:", filteredContents.length);

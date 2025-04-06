@@ -245,9 +245,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get contents assigned to current user
   app.get("/api/my-contents", isAuthenticated, async (req, res) => {
     try {
+      // Log thông tin để debug
+      console.log("User ID requesting contents:", (req.user as Express.User).id);
+      console.log("User role:", (req.user as Express.User).role);
+      
       const contents = await storage.getContentsByAssignee((req.user as Express.User).id);
+      
+      // Thêm log để kiểm tra số lượng và trạng thái nội dung đang trả về
+      console.log("Total contents returned:", contents.length);
+      console.log("Contents with 'processing' status:", 
+        contents.filter(c => c.status === 'processing').length);
+      console.log("Contents with 'unverified' source:", 
+        contents.filter(c => c.sourceVerification === 'unverified').length);
+      console.log("Contents with BOTH 'processing' AND 'unverified':", 
+        contents.filter(c => c.status === 'processing' && c.sourceVerification === 'unverified').length);
+      
+      // Kiểm tra và in thông tin nội dung đầu tiên để debug
+      if (contents.length > 0) {
+        console.log("First content example:", {
+          id: contents[0].id,
+          status: contents[0].status,
+          verification: contents[0].sourceVerification
+        });
+      }
+      
       res.json(contents);
     } catch (error) {
+      console.error("Error fetching contents:", error);
       res.status(500).json({ message: "Error fetching your assigned contents" });
     }
   });
@@ -265,13 +289,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Count contents by status
       const pending = filteredContents.filter(c => c.status === 'pending').length;
-      const processing = filteredContents.filter(c => c.status === 'processing').length;
+      // Không có trạng thái 'processing' trong database, chỉ có 'pending' và 'completed'
       const completed = filteredContents.filter(c => c.status === 'completed').length;
       
       res.json({
         totalContent: filteredContents.length,
         pending,
-        processing,
+        // Gửi 0 cho processing vì chúng ta không còn dùng trạng thái này
+        processing: 0,
         completed
       });
     } catch (error) {
