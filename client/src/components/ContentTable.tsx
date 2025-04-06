@@ -303,10 +303,10 @@ export function ContentTable({
           onSearch={setSearchQuery}
           columns={[
             {
-              key: 'id',
-              header: 'ID Post',
+              key: 'externalId',
+              header: 'External ID',
               render: (row: Content) => (
-                <div className="font-medium text-xs">{row.id}</div>
+                <div className="font-medium text-xs">{row.externalId || `ID-${row.id}`}</div>
               ),
             },
             {
