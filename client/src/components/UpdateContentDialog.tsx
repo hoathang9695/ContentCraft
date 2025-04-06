@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Content } from '@shared/schema';
+import { Content, Category, Label as LabelType } from '@shared/schema';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -7,28 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useMutation, useQuery } from '@tanstack/react-query';
-
-const CATEGORIES = [
-  'News',
-  'Technology',
-  'Life Style',
-  'Health',
-  'Sports',
-  'Education',
-  'Finance',
-  'Gaming',
-  'Travel',
-  'Food',
-  'Business'
-];
-
-const LABELS = [
-  'AI',
-  'Cybersecurity',
-  'Blockchain',
-  'Startups',
-  'Gadgets'
-];
 
 interface UpdateContentDialogProps {
   open: boolean;
@@ -41,9 +19,10 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [isSafe, setIsSafe] = useState<boolean | null>(null);
+  const [activeCategory, setActiveCategory] = useState<number | null>(null);
   
   // Fetch content data
-  const { data: content, isLoading } = useQuery<any>({
+  const { data: content, isLoading: contentLoading } = useQuery<any>({
     queryKey: [contentId ? `/api/contents/${contentId}` : 'empty'],
     enabled: !!contentId && open,
     queryFn: async () => {
@@ -52,6 +31,49 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     }
   });
   
+  // Fetch categories
+  const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+    enabled: open,
+    queryFn: async () => {
+      return await apiRequest('GET', '/api/categories');
+    }
+  });
+  
+  // Fetch all labels
+  const { data: allLabels, isLoading: allLabelsLoading } = useQuery<LabelType[]>({
+    queryKey: ['/api/labels'],
+    enabled: open,
+    queryFn: async () => {
+      return await apiRequest('GET', '/api/labels');
+    }
+  });
+  
+  // Fetch labels for the active category
+  const { data: categoryLabels, isLoading: categoryLabelsLoading } = useQuery<LabelType[]>({
+    queryKey: [activeCategory ? `/api/categories/${activeCategory}/labels` : 'no-category'],
+    enabled: open && activeCategory !== null,
+    queryFn: async () => {
+      if (!activeCategory) return [];
+      return await apiRequest('GET', `/api/categories/${activeCategory}/labels`);
+    }
+  });
+  
+  // Khi mở dialog và chọn một category, tự động cập nhật activeCategory
+  useEffect(() => {
+    if (open && categories && categories.length > 0) {
+      const firstCategory = selectedCategories.length > 0 
+        ? categories.find(c => selectedCategories.includes(c.name))
+        : null;
+      
+      if (firstCategory) {
+        setActiveCategory(firstCategory.id);
+      } else if (categories.length > 0) {
+        setActiveCategory(categories[0].id);
+      }
+    }
+  }, [open, categories, selectedCategories]);
+
   // Update form state when content data changes
   useEffect(() => {
     if (content) {
@@ -129,6 +151,14 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     });
   };
   
+  // Kiểm tra trạng thái loading
+  const isLoading = contentLoading || categoriesLoading || allLabelsLoading;
+  
+  // Tạo hàm xử lý sự kiện khi click vào category để lọc labels
+  const handleCategoryClick = (categoryId: number) => {
+    setActiveCategory(categoryId);
+  };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -146,14 +176,23 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             <div className="space-y-4">
               <h3 className="font-bold text-lg">Categories</h3>
               <div className="space-y-2">
-                {CATEGORIES.map(category => (
-                  <div key={category} className="flex items-center space-x-2">
+                {categories && categories.map((category) => (
+                  <div 
+                    key={category.id} 
+                    className="flex items-center space-x-2"
+                    onClick={() => handleCategoryClick(category.id)}
+                  >
                     <Checkbox 
-                      id={`category-${category}`} 
-                      checked={selectedCategories.includes(category)}
-                      onCheckedChange={(checked) => handleCategoryChange(category, checked === true)}
+                      id={`category-${category.id}`} 
+                      checked={selectedCategories.includes(category.name)}
+                      onCheckedChange={(checked) => handleCategoryChange(category.name, checked === true)}
                     />
-                    <Label htmlFor={`category-${category}`}>{category}</Label>
+                    <Label 
+                      htmlFor={`category-${category.id}`}
+                      className={activeCategory === category.id ? "font-bold text-primary" : ""}
+                    >
+                      {category.name}
+                    </Label>
                   </div>
                 ))}
               </div>
@@ -163,16 +202,37 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             <div className="space-y-4">
               <h3 className="font-bold text-lg">Label</h3>
               <div className="space-y-2">
-                {LABELS.map(label => (
-                  <div key={label} className="flex items-center space-x-2">
+                {activeCategory && (
+                  <div className="text-sm text-muted-foreground mb-2">
+                    {categories?.find(c => c.id === activeCategory)?.name || 'Vui lòng chọn danh mục'}
+                  </div>
+                )}
+                
+                {/* Labels from selected category */}
+                {!categoryLabelsLoading && categoryLabels && categoryLabels.map((label) => (
+                  <div key={label.id} className="flex items-center space-x-2">
                     <Checkbox 
-                      id={`label-${label}`} 
-                      checked={selectedLabels.includes(label)}
-                      onCheckedChange={(checked) => handleLabelChange(label, checked === true)}
+                      id={`label-${label.id}`} 
+                      checked={selectedLabels.includes(label.name)}
+                      onCheckedChange={(checked) => handleLabelChange(label.name, checked === true)}
                     />
-                    <Label htmlFor={`label-${label}`}>{label}</Label>
+                    <Label htmlFor={`label-${label.id}`}>{label.name}</Label>
                   </div>
                 ))}
+                
+                {/* Show "No labels" if the category has no labels */}
+                {!categoryLabelsLoading && (!categoryLabels || categoryLabels.length === 0) && (
+                  <div className="text-sm text-muted-foreground">
+                    Không có nhãn nào cho danh mục này
+                  </div>
+                )}
+                
+                {/* Loading state for category labels */}
+                {categoryLabelsLoading && (
+                  <div className="text-sm text-muted-foreground">
+                    Đang tải nhãn...
+                  </div>
+                )}
               </div>
             </div>
             

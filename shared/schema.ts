@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -71,3 +71,42 @@ export const insertUserActivitySchema = createInsertSchema(userActivities).omit(
 
 export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
 export type UserActivity = typeof userActivities.$inferSelect;
+
+// Bảng danh mục (Categories)
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(), // Tên danh mục
+  description: text("description"), // Mô tả danh mục (tùy chọn)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Bảng nhãn (Labels)
+export const labels = pgTable("labels", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // Tên nhãn
+  categoryId: integer("category_id").notNull().references(() => categories.id), // ID của danh mục cha
+  description: text("description"), // Mô tả nhãn (tùy chọn)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Schema để insert Category
+export const insertCategorySchema = createInsertSchema(categories).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+// Schema để insert Label
+export const insertLabelSchema = createInsertSchema(labels).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type Category = typeof categories.$inferSelect;
+
+export type InsertLabel = z.infer<typeof insertLabelSchema>;
+export type Label = typeof labels.$inferSelect;

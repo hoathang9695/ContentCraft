@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { insertContentSchema } from "@shared/schema";
+import { insertContentSchema, insertCategorySchema, insertLabelSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -819,6 +819,253 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Error updating reactions count",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // ===== Categories and Labels API =====
+  
+  // Get all categories
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const allCategories = await storage.getAllCategories();
+      res.json(allCategories);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching categories",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Get single category
+  app.get("/api/categories/:id", async (req, res) => {
+    try {
+      const categoryId = Number(req.params.id);
+      const category = await storage.getCategory(categoryId);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      res.json(category);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching category",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Create new category (admin only)
+  app.post("/api/categories", isAdmin, async (req, res) => {
+    try {
+      const validatedData = insertCategorySchema.parse(req.body);
+      const newCategory = await storage.createCategory(validatedData);
+      res.status(201).json(newCategory);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        message: "Error creating category",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Update category (admin only)
+  app.put("/api/categories/:id", isAdmin, async (req, res) => {
+    try {
+      const categoryId = Number(req.params.id);
+      const existingCategory = await storage.getCategory(categoryId);
+      
+      if (!existingCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      const validatedData = insertCategorySchema.parse(req.body);
+      const updatedCategory = await storage.updateCategory(categoryId, validatedData);
+      
+      res.json(updatedCategory);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        message: "Error updating category",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Delete category (admin only)
+  app.delete("/api/categories/:id", isAdmin, async (req, res) => {
+    try {
+      const categoryId = Number(req.params.id);
+      const existingCategory = await storage.getCategory(categoryId);
+      
+      if (!existingCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      const deleted = await storage.deleteCategory(categoryId);
+      
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(500).json({ message: "Error deleting category" });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error deleting category",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Get all labels
+  app.get("/api/labels", async (req, res) => {
+    try {
+      const allLabels = await storage.getAllLabels();
+      res.json(allLabels);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching labels",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Get labels by category
+  app.get("/api/categories/:categoryId/labels", async (req, res) => {
+    try {
+      const categoryId = Number(req.params.categoryId);
+      const category = await storage.getCategory(categoryId);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      const labels = await storage.getLabelsByCategory(categoryId);
+      res.json(labels);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching labels for category",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Get single label
+  app.get("/api/labels/:id", async (req, res) => {
+    try {
+      const labelId = Number(req.params.id);
+      const label = await storage.getLabel(labelId);
+      
+      if (!label) {
+        return res.status(404).json({ message: "Label not found" });
+      }
+      
+      res.json(label);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching label",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Create new label (admin only)
+  app.post("/api/labels", isAdmin, async (req, res) => {
+    try {
+      const validatedData = insertLabelSchema.parse(req.body);
+      
+      // Verify the category exists
+      const category = await storage.getCategory(validatedData.categoryId);
+      if (!category) {
+        return res.status(400).json({ message: "Category not found" });
+      }
+      
+      const newLabel = await storage.createLabel(validatedData);
+      res.status(201).json(newLabel);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        message: "Error creating label",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Update label (admin only)
+  app.put("/api/labels/:id", isAdmin, async (req, res) => {
+    try {
+      const labelId = Number(req.params.id);
+      const existingLabel = await storage.getLabel(labelId);
+      
+      if (!existingLabel) {
+        return res.status(404).json({ message: "Label not found" });
+      }
+      
+      const validatedData = insertLabelSchema.parse(req.body);
+      
+      // Verify the category exists if categoryId is being changed
+      if (validatedData.categoryId && validatedData.categoryId !== existingLabel.categoryId) {
+        const category = await storage.getCategory(validatedData.categoryId);
+        if (!category) {
+          return res.status(400).json({ message: "Category not found" });
+        }
+      }
+      
+      const updatedLabel = await storage.updateLabel(labelId, validatedData);
+      res.json(updatedLabel);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        message: "Error updating label",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Delete label (admin only)
+  app.delete("/api/labels/:id", isAdmin, async (req, res) => {
+    try {
+      const labelId = Number(req.params.id);
+      const existingLabel = await storage.getLabel(labelId);
+      
+      if (!existingLabel) {
+        return res.status(404).json({ message: "Label not found" });
+      }
+      
+      const deleted = await storage.deleteLabel(labelId);
+      
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(500).json({ message: "Error deleting label" });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error deleting label",
         error: error instanceof Error ? error.message : String(error)
       });
     }

@@ -1,7 +1,9 @@
 import { 
   users, type User, type InsertUser, 
   contents, type Content, type InsertContent,
-  userActivities, type UserActivity, type InsertUserActivity
+  userActivities, type UserActivity, type InsertUserActivity,
+  categories, type Category, type InsertCategory,
+  labels, type Label, type InsertLabel
 } from "@shared/schema";
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -36,6 +38,21 @@ export interface IStorage {
   logUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
   getUserActivities(userId?: number): Promise<UserActivity[]>;
   getRecentActivities(limit?: number): Promise<UserActivity[]>;
+  
+  // Categories management operations
+  getAllCategories(): Promise<Category[]>;
+  getCategory(id: number): Promise<Category | undefined>;
+  createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category | undefined>;
+  deleteCategory(id: number): Promise<boolean>;
+  
+  // Labels management operations
+  getAllLabels(): Promise<Label[]>;
+  getLabelsByCategory(categoryId: number): Promise<Label[]>;
+  getLabel(id: number): Promise<Label | undefined>;
+  createLabel(label: InsertLabel): Promise<Label>;
+  updateLabel(id: number, label: Partial<InsertLabel>): Promise<Label | undefined>;
+  deleteLabel(id: number): Promise<boolean>;
   
   sessionStore: any; // Using 'any' as a workaround for ESM compatibility
 }
@@ -319,6 +336,92 @@ export class DatabaseStorage implements IStorage {
       .from(userActivities)
       .orderBy(desc(userActivities.timestamp))
       .limit(limit);
+  }
+
+  // Categories management implementations
+  async getAllCategories(): Promise<Category[]> {
+    return await db.select().from(categories).orderBy(categories.name);
+  }
+
+  async getCategory(id: number): Promise<Category | undefined> {
+    const result = await db.select().from(categories).where(eq(categories.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async createCategory(category: InsertCategory): Promise<Category> {
+    const result = await db.insert(categories).values(category).returning();
+    return result[0];
+  }
+
+  async updateCategory(id: number, categoryUpdate: Partial<InsertCategory>): Promise<Category | undefined> {
+    const result = await db
+      .update(categories)
+      .set({
+        ...categoryUpdate,
+        updatedAt: new Date(),
+      })
+      .where(eq(categories.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteCategory(id: number): Promise<boolean> {
+    // Xóa labels trước (vì có khóa ngoại)
+    await db.delete(labels).where(eq(labels.categoryId, id));
+    
+    // Sau đó xóa category
+    const result = await db
+      .delete(categories)
+      .where(eq(categories.id, id))
+      .returning({ id: categories.id });
+    
+    return result.length > 0;
+  }
+
+  // Labels management implementations
+  async getAllLabels(): Promise<Label[]> {
+    return await db.select().from(labels).orderBy(labels.name);
+  }
+
+  async getLabelsByCategory(categoryId: number): Promise<Label[]> {
+    return await db
+      .select()
+      .from(labels)
+      .where(eq(labels.categoryId, categoryId))
+      .orderBy(labels.name);
+  }
+
+  async getLabel(id: number): Promise<Label | undefined> {
+    const result = await db.select().from(labels).where(eq(labels.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async createLabel(label: InsertLabel): Promise<Label> {
+    const result = await db.insert(labels).values(label).returning();
+    return result[0];
+  }
+
+  async updateLabel(id: number, labelUpdate: Partial<InsertLabel>): Promise<Label | undefined> {
+    const result = await db
+      .update(labels)
+      .set({
+        ...labelUpdate,
+        updatedAt: new Date(),
+      })
+      .where(eq(labels.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteLabel(id: number): Promise<boolean> {
+    const result = await db
+      .delete(labels)
+      .where(eq(labels.id, id))
+      .returning({ id: labels.id });
+    
+    return result.length > 0;
   }
 }
 
