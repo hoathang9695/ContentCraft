@@ -237,21 +237,26 @@ export function ContentTable({
   };
   
   // Hiển thị thông báo cho người dùng nếu không có dữ liệu phù hợp
+  // Sử dụng useRef để tránh vòng lặp vô hạn
+  const hasShownToast = useRef(false);
+  
   useEffect(() => {
     if (filteredCount !== null && preFilterCount !== null && dateRange.start && dateRange.end) {
-      if (filteredCount === 0 && preFilterCount > 0) {
+      if (filteredCount === 0 && preFilterCount > 0 && !hasShownToast.current) {
         // Đảm bảo chỉ hiển thị thông báo khi có dữ liệu trước khi lọc nhưng không có dữ liệu sau khi lọc
         toast({
           title: "Không tìm thấy dữ liệu",
           description: `Không có dữ liệu nào trong khoảng từ ${dateRange.start.getDate()}/${dateRange.start.getMonth() + 1}/${dateRange.start.getFullYear()} đến ${dateRange.end.getDate()}/${dateRange.end.getMonth() + 1}/${dateRange.end.getFullYear()}`,
           variant: "destructive"
         });
+        hasShownToast.current = true;
       }
-      
-      // Reset các state liên quan đến thông báo để tránh hiển thị nhiều lần
-      setFilteredCount(null);
-      setPreFilterCount(null);
     }
+    
+    // Thiết lập lại cờ khi thay đổi khoảng ngày
+    return () => {
+      hasShownToast.current = false;
+    };
   }, [filteredCount, preFilterCount, dateRange, toast]);
   
   return (
