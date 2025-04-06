@@ -37,7 +37,7 @@ export function ContentTable({
   statusFilter,
   startDate,
   endDate,
-  sourceVerification = 'unverified',
+  sourceVerification = 'unverified', // Mặc định là 'chưa xác minh'
   limit
 }: ContentTableProps) {
   const { user } = useAuth();
@@ -48,129 +48,150 @@ export function ContentTable({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
   
-  // Toast hiển thị khi không tìm thấy dữ liệu nào
+  // Refs để tránh vòng lặp vô hạn
   const toastShownRef = useRef(false);
+  const prevDateRangeRef = useRef<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   
-  // Fetch content list
+  // Fetch content list - Admin sẽ thấy tất cả nội dung, người dùng thông thường chỉ xem được nội dung được phân công
   const { data: allContents = [], isLoading } = useQuery<Content[]>({
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
   
-  // Filter content based on search, status, and date range
-  let filteredContents = [...allContents];
-  
-  // Status filter (admin only)
-  if (statusFilter && user?.role === 'admin') {
-    filteredContents = filteredContents.filter(
-      content => content.status.toLowerCase() === statusFilter.toLowerCase()
-    );
-  }
-  
-  // Search filter
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
-    filteredContents = filteredContents.filter(
-      content => (
-        (content.source?.toLowerCase().includes(query)) || 
-        (content.categories?.toLowerCase().includes(query)) ||
-        (content.labels?.toLowerCase().includes(query))
-      )
-    );
-  }
-  
-  // Date range filter
-  let beforeFilterCount = 0;
-  let dateFilterApplied = false;
-  let filterStart: Date | null = null;
-  let filterEnd: Date | null = null;
-  
-  if (startDate && endDate) {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
+  // Sử dụng useMemo để tính toán filteredContents - tránh tính toán lại trong mỗi lần render
+  const filteredContents = useMemo(() => {
+    console.log("Dữ liệu nội dung đã tải:", allContents.length, "items, role:", user?.role);
     
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    // Clone mảng để tránh các vấn đề tham chiếu
+    let results = [...allContents];
+    console.log("Trước khi lọc:", results.length, "items");
     
-    const isSameDay = start.getDate() === end.getDate() && 
-                      start.getMonth() === end.getMonth() && 
-                      start.getFullYear() === start.getFullYear();
+    // Bỏ qua bộ lọc trạng thái đối với người dùng thông thường để đảm bảo họ luôn thấy công việc 
+    if (statusFilter && user?.role === 'admin') {
+      results = results.filter(
+        content => content.status.toLowerCase() === statusFilter.toLowerCase()
+      );
+      console.log("Sau khi lọc trạng thái:", results.length, "items");
+    }
     
-    if (isSameDay || start < end) {
-      // Store date range info for toast
-      beforeFilterCount = filteredContents.length;
-      filterStart = start;
-      filterEnd = end;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      results = results.filter(
+        content => (
+          (content.source?.toLowerCase().includes(query)) || 
+          (content.categories?.toLowerCase().includes(query)) ||
+          (content.labels?.toLowerCase().includes(query))
+        )
+      );
+      console.log("Sau khi lọc từ khóa:", results.length, "items");
+    }
+    
+    // Lọc theo khoảng ngày nếu có
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
       
-      // Apply filter
-      filteredContents = filteredContents.filter(content => {
-        if (!content.createdAt) return false;
-        
-        const contentDate = new Date(content.createdAt);
-        
-        // Convert to UTC for comparison
-        const contentDay = new Date(Date.UTC(
-          contentDate.getFullYear(),
-          contentDate.getMonth(),
-          contentDate.getDate()
-        ));
-        const startDay = new Date(Date.UTC(
-          start.getFullYear(),
-          start.getMonth(),
-          start.getDate()
-        ));
-        const endDay = new Date(Date.UTC(
-          end.getFullYear(),
-          end.getMonth(),
-          end.getDate()
-        ));
-
-        if (isSameDay) {
-          return contentDay.getTime() === startDay.getTime();
-        }
-        return contentDay >= startDay && contentDay <= endDay;
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      // Kiểm tra ngày hợp lệ
+      const isSameDay = start.getDate() === end.getDate() && 
+                        start.getMonth() === end.getMonth() && 
+                        start.getFullYear() === end.getFullYear();
+      
+      console.log("Đang lọc theo khoảng ngày:", {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        isSameDay
       });
       
-      dateFilterApplied = true;
-    }
-  }
+      // Kiểm tra xem khoảng ngày đã thay đổi so với lần trước chưa
+      const dateChanged = 
+        !prevDateRangeRef.current.start || 
+        !prevDateRangeRef.current.end ||
+        prevDateRangeRef.current.start.getTime() !== start.getTime() ||
+        prevDateRangeRef.current.end.getTime() !== end.getTime();
+        
+      if (dateChanged) {
+        // Cập nhật khoảng ngày mới
+        prevDateRangeRef.current = { start, end };
+        // Reset trạng thái toast
+        toastShownRef.current = false;
+      }
+      
+      if (isSameDay || start < end) {
+        // Lưu lại số lượng trước khi lọc
+        const beforeFilterCount = results.length;
+        
+        results = results.filter(content => {
+          if (!content.createdAt) return false;
+          
+          const contentDate = new Date(content.createdAt);
+          
+          // Chuyển đổi thành UTC để so sánh chính xác
+          const contentDay = new Date(Date.UTC(
+            contentDate.getFullYear(),
+            contentDate.getMonth(),
+            contentDate.getDate()
+          ));
+          const startDay = new Date(Date.UTC(
+            start.getFullYear(),
+            start.getMonth(),
+            start.getDate()
+          ));
+          const endDay = new Date(Date.UTC(
+            end.getFullYear(),
+            end.getMonth(),
+            end.getDate()
+          ));
   
-  // Source verification filter (admin only)
-  if (user?.role === 'admin' && sourceVerification === 'unverified') {
-    filteredContents = filteredContents.filter(content => 
-      content.source === 'Kafka Simulator'
-    );
+          // Nếu là cùng ngày, chỉ cần kiểm tra ngày tháng năm
+          if (isSameDay) {
+            return contentDay.getTime() === startDay.getTime();
+          }
+          // Ngược lại kiểm tra trong khoảng
+          return contentDay >= startDay && contentDay <= endDay;
+        });
+        
+        console.log("Sau khi lọc ngày:", results.length, "items");
+        
+        // Hiển thị thông báo nếu lọc về 0 kết quả và chưa hiển thị thông báo
+        if (results.length === 0 && beforeFilterCount > 0 && !toastShownRef.current) {
+          // Dùng setTimeout để đảm bảo việc hiển thị toast diễn ra sau khi component được render
+          setTimeout(() => {
+            toast({
+              title: "Không tìm thấy dữ liệu",
+              description: `Không có dữ liệu nào trong khoảng từ ${start.getDate()}/${start.getMonth() + 1}/${start.getFullYear()} đến ${end.getDate()}/${end.getMonth() + 1}/${end.getFullYear()}`,
+              variant: "destructive"
+            });
+            toastShownRef.current = true;
+          }, 0);
+        }
+      } else {
+        console.log("Bỏ qua lọc ngày: ngày bắt đầu lớn hơn ngày kết thúc");
+      }
+    }
+  
+  // Filter by source verification status - chỉ áp dụng cho admin
+  if (user?.role === 'admin') {
+    if (sourceVerification === 'verified') {
+      // Không lọc vì hiện tại không có dữ liệu nguồn 'verified'
+      // Hoặc có thể sửa thành các nguồn khác nếu cần thiết
+      console.log("Bỏ qua bộ lọc 'verified' vì không có dữ liệu phù hợp");
+    } else if (sourceVerification === 'unverified') {
+      // Lọc theo nguồn thực tế trong cơ sở dữ liệu
+      filteredContents = filteredContents.filter(content => content.source === 'Kafka Simulator');
+    }
+    console.log("Sau khi lọc nguồn:", filteredContents.length, "items");
   }
   
   // Pagination
   const itemsPerPage = 10;
   const totalPages = Math.ceil(filteredContents.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedContents = filteredContents.slice(
-    startIndex, 
-    limit ? Math.min(startIndex + itemsPerPage, startIndex + limit) : startIndex + itemsPerPage
-  );
   
-  // Show toast for empty date filter results
-  useEffect(() => {
-    if (dateFilterApplied && filterStart && filterEnd) {
-      if (filteredContents.length === 0 && beforeFilterCount > 0 && !toastShownRef.current) {
-        setTimeout(() => {
-          toast({
-            title: "Không tìm thấy dữ liệu",
-            description: `Không có dữ liệu nào trong khoảng từ ${filterStart.getDate()}/${filterStart.getMonth() + 1}/${filterStart.getFullYear()} đến ${filterEnd.getDate()}/${filterEnd.getMonth() + 1}/${filterEnd.getFullYear()}`,
-            variant: "destructive"
-          });
-          toastShownRef.current = true;
-        }, 0);
-      }
-    }
-    // Reset toast state when date range changes
-    return () => {
-      if (startDate || endDate) {
-        toastShownRef.current = false;
-      }
-    };
-  }, [filteredContents.length, toast, startDate, endDate]);
+  // Get paginated data
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedContents = filteredContents
+    .slice(startIndex, limit ? Math.min(startIndex + itemsPerPage, startIndex + limit) : startIndex + itemsPerPage);
   
   // Delete mutation
   const deleteMutation = useMutation({
@@ -197,9 +218,17 @@ export function ContentTable({
     },
   });
   
-  const handleCreateContent = () => navigate('/contents/new');
-  const handleEditContent = (id: number) => navigate(`/contents/${id}/edit`);
-  const handleViewContent = (id: number) => navigate(`/contents/${id}/edit`);
+  const handleCreateContent = () => {
+    navigate('/contents/new');
+  };
+  
+  const handleEditContent = (id: number) => {
+    navigate(`/contents/${id}/edit`);
+  };
+  
+  const handleViewContent = (id: number) => {
+    navigate(`/contents/${id}/edit`);
+  };
   
   const handleDeleteClick = (id: number) => {
     setContentToDelete(id);
@@ -211,6 +240,29 @@ export function ContentTable({
       deleteMutation.mutate(contentToDelete);
     }
   };
+  
+  // Hiển thị thông báo cho người dùng nếu không có dữ liệu phù hợp
+  // Sử dụng useRef để tránh vòng lặp vô hạn
+  const hasShownToast = useRef(false);
+  
+  useEffect(() => {
+    if (filteredCount !== null && preFilterCount !== null && dateRange.start && dateRange.end) {
+      if (filteredCount === 0 && preFilterCount > 0 && !hasShownToast.current) {
+        // Đảm bảo chỉ hiển thị thông báo khi có dữ liệu trước khi lọc nhưng không có dữ liệu sau khi lọc
+        toast({
+          title: "Không tìm thấy dữ liệu",
+          description: `Không có dữ liệu nào trong khoảng từ ${dateRange.start.getDate()}/${dateRange.start.getMonth() + 1}/${dateRange.start.getFullYear()} đến ${dateRange.end.getDate()}/${dateRange.end.getMonth() + 1}/${dateRange.end.getFullYear()}`,
+          variant: "destructive"
+        });
+        hasShownToast.current = true;
+      }
+    }
+    
+    // Thiết lập lại cờ khi thay đổi khoảng ngày
+    return () => {
+      hasShownToast.current = false;
+    };
+  }, [filteredCount, preFilterCount, dateRange, toast]);
   
   return (
     <>
