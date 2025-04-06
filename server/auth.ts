@@ -62,13 +62,15 @@ export async function createAdminUser() {
 }
 
 export function setupAuth(app: Express) {
-  const sessionSettings = {
+  const sessionSettings: expressSession.SessionOptions = {
     secret: process.env.SESSION_SECRET || "very-secure-secret-key",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 1 day
+      sameSite: 'lax' as const, // TypeScript needs this to be properly typed
+      secure: false // Setting to false since we're running on http in development
     }
   };
 
