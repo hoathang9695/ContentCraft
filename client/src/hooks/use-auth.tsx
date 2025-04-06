@@ -73,7 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json() as AuthResponse;
     },
     onSuccess: (user: AuthResponse) => {
+      // Xóa toàn bộ cache từ React Query trước để đảm bảo không còn dữ liệu cũ
+      queryClient.clear();
+      
+      // Cập nhật thông tin người dùng hiện tại
       queryClient.setQueryData(["/api/user"], user);
+      
       // Hiển thị thông báo thành công
       toast({
         title: "Login successful",
@@ -140,6 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json() as AuthResponse;
     },
     onSuccess: (user: AuthResponse) => {
+      // Xóa toàn bộ cache trước
+      queryClient.clear();
+      
       // If the user has message and is pending, don't set them as logged in
       if (user.message) {
         // Clear any existing user data
@@ -189,7 +197,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return; // Không phân tích bất kỳ dữ liệu nào
     },
     onSuccess: () => {
+      // Xóa cache của người dùng hiện tại
       queryClient.setQueryData(["/api/user"], null);
+      
+      // Xóa toàn bộ cache từ React Query để tránh hiển thị dữ liệu của người dùng cũ
+      queryClient.clear();
+      
       toast({
         title: "Logged out",
         description: "You've been successfully logged out.",
