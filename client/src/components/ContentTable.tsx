@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, UseQueryResult } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Content } from '@shared/schema';
 import { DataTable } from '@/components/ui/data-table';
@@ -62,27 +62,27 @@ export function ContentTable({
   // Toast hiển thị khi không tìm thấy dữ liệu nào
   const toastShownRef = useRef(false);
   
-  // Fetch content list
-  const { data: allContents = [], isLoading } = useQuery<Content[]>({
-    // Force loading data directly from API based on role
-    queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
-    // Debug empty data problem
-    onSuccess: (data) => {
-      console.log("API returned data:", {
-        endpointCalled: user?.role === 'admin' ? '/api/contents' : '/api/my-contents',
-        count: data.length,
-        isArray: Array.isArray(data),
-        firstItem: data.length > 0 ? {...data[0]} : null
-      });
-    },
-    onError: (error) => {
-      console.error("API call error:", {
-        endpointCalled: user?.role === 'admin' ? '/api/contents' : '/api/my-contents',
-        error
-      });
-    },
-    retry: 1, // Retry once in case of network issues
+  // Simplify query to avoid TypeScript errors
+  const apiEndpoint = user?.role === 'admin' ? '/api/contents' : '/api/my-contents';
+  
+  // Properly typed query for content data
+  const { data: allContents = [], isLoading }: UseQueryResult<Content[], Error> = useQuery({
+    queryKey: [apiEndpoint],
+    staleTime: 60000, // Reduce refetching (1 min)
+    refetchOnWindowFocus: true
   });
+  
+  // Add logging for debugging
+  useEffect(() => {
+    if (allContents && Array.isArray(allContents)) {
+      console.log("API returned data:", {
+        endpointCalled: apiEndpoint,
+        count: allContents.length,
+        isArray: Array.isArray(allContents),
+        firstItem: allContents.length > 0 ? {...allContents[0]} : null
+      });
+    }
+  }, [allContents, apiEndpoint]);
   
   // Filter content based on search, status, and date range
   let filteredContents = [...allContents];

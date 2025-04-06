@@ -36,13 +36,18 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  // Improved auth user state management for better auth persistence
   const {
     data: user,
     error,
     isLoading,
+    refetch: refetchUser
   } = useQuery<AuthResponse | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true, // Refetch when window gets focus
+    refetchOnMount: true // Refetch when component mounts
   });
 
   const loginMutation = useMutation({
