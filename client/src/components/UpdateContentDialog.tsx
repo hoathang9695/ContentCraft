@@ -191,6 +191,24 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         setSelectedCategories(prev => [...prev, category]);
       }
     } else {
+      // Khi bỏ chọn một danh mục, cần lọc ra các nhãn thuộc danh mục đó và bỏ chọn chúng
+      const categoryId = categoryNameToIdMap.get(category);
+      
+      if (categoryId && allLabels) {
+        // Tìm tất cả các nhãn thuộc danh mục này
+        const labelsInCategory = allLabels
+          .filter(label => label.categoryId === categoryId)
+          .map(label => label.name);
+          
+        // Loại bỏ các nhãn thuộc danh mục này khỏi danh sách đã chọn
+        if (labelsInCategory.length > 0) {
+          setSelectedLabels(prev => 
+            prev.filter(labelName => !labelsInCategory.includes(labelName))
+          );
+        }
+      }
+      
+      // Loại bỏ danh mục khỏi danh sách đã chọn
       setSelectedCategories(prev => prev.filter(c => c !== category));
     }
   };
