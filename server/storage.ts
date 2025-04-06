@@ -30,6 +30,7 @@ export interface IStorage {
   completeProcessing(id: number, result: string, approverId: number): Promise<Content | undefined>;
   updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined>;
   deleteContent(id: number): Promise<boolean>;
+  updateAllContentStatuses(): Promise<number>; // Adds a method to update all content statuses
   
   // User activity tracking operations
   logUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
@@ -47,6 +48,34 @@ export class DatabaseStorage implements IStorage {
       pool,
       createTableIfMissing: true, // Automatically create the session table if it doesn't exist
     });
+  }
+  
+  // Update all content statuses based on categories
+  async updateAllContentStatuses(): Promise<number> {
+    // Get all contents
+    const allContents = await db.select().from(contents);
+    let updatedCount = 0;
+    
+    // Process each content and update status based on categories
+    for (const content of allContents) {
+      const hasCategories = content.categories && content.categories.trim() !== '';
+      const newStatus = hasCategories ? 'completed' : 'pending';
+      
+      // Only update if status has changed
+      if (content.status !== newStatus) {
+        await db
+          .update(contents)
+          .set({ 
+            status: newStatus,
+            updatedAt: new Date()
+          })
+          .where(eq(contents.id, content.id));
+        
+        updatedCount++;
+      }
+    }
+    
+    return updatedCount;
   }
 
   async getUser(id: number): Promise<User | undefined> {

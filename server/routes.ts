@@ -521,6 +521,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint tạm thời để cập nhật trạng thái tất cả nội dung dựa trên Categories - Không yêu cầu xác thực
+  app.post("/api/public/update-statuses", async (req, res) => {
+    try {
+      const count = await storage.updateAllContentStatuses();
+      res.json({
+        success: true,
+        message: `Đã cập nhật trạng thái cho ${count} nội dung dựa trên Categories.`,
+        updatedCount: count
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Lỗi khi cập nhật trạng thái nội dung",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Endpoint không cần xác thực để tạo nhiều nội dung (chỉ cho môi trường phát triển)
   app.post("/api/kafka/dev-simulate", async (req, res) => {
     try {
