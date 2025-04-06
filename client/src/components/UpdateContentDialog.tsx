@@ -20,6 +20,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [isSafe, setIsSafe] = useState<boolean | null>(null);
+  const [isVerified, setIsVerified] = useState<boolean>(false);
   
   // Prefetch dữ liệu labels và categories sẵn khi app bắt đầu
   useEffect(() => {
@@ -140,17 +141,28 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       setSelectedCategories(Array.from(new Set(initialCategories)));
       setSelectedLabels(Array.from(new Set(initialLabels)));
       setIsSafe(content.safe as boolean | null);
+      
+      // Kiểm tra nếu nội dung đã được xác minh hay chưa
+      const verification = content.sourceVerification || 'unverified';
+      setIsVerified(verification === 'verified');
     }
   }, [content]);
   
   // Update content mutation
   const updateMutation = useMutation({
-    mutationFn: async (data: { id: number, categories: string, labels: string, safe: boolean | null }) => {
+    mutationFn: async (data: { 
+      id: number, 
+      categories: string, 
+      labels: string, 
+      safe: boolean | null,
+      sourceVerification?: string 
+    }) => {
       // 1. Update content in our database
       const updatedContent = await apiRequest('PATCH', `/api/contents/${data.id}`, {
         categories: data.categories,
         labels: data.labels,
-        safe: data.safe
+        safe: data.safe,
+        sourceVerification: data.sourceVerification
       });
       
       // 2. Send to Gorse service via Kafka
@@ -158,7 +170,8 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         itemId: updatedContent.externalId,
         categories: data.categories,
         labels: data.labels,
-        safe: data.safe
+        safe: data.safe,
+        sourceVerification: data.sourceVerification
       });
       
       return updatedContent;
@@ -231,12 +244,26 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     const uniqueCategories = Array.from(new Set(selectedCategories));
     const uniqueLabels = Array.from(new Set(selectedLabels));
     
-    updateMutation.mutate({
+    // Tạo payload để gửi đi
+    const payload: {
+      id: number,
+      categories: string,
+      labels: string,
+      safe: boolean | null,
+      sourceVerification?: string
+    } = {
       id: contentId,
       categories: uniqueCategories.join(', '),
       labels: uniqueLabels.join(', '),
       safe: isSafe
-    });
+    };
+    
+    // Thêm trạng thái xác minh nếu người dùng chọn xác minh và nội dung đủ điều kiện
+    if (content?.sourceVerification === 'unverified' && isSafe === true && isVerified) {
+      payload.sourceVerification = 'verified';
+    }
+    
+    updateMutation.mutate(payload);
   };
   
   // Kiểm tra trạng thái loading
@@ -349,6 +376,24 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   />
                   <Label htmlFor="safe-no" className="cursor-pointer w-full">Không an toàn</Label>
                 </div>
+                
+                {/* Chỉ hiển thị checkbox Xác minh khi nội dung chưa được xác minh và đã chọn An toàn */}
+                {content?.sourceVerification === 'unverified' && isSafe === true && (
+                  <div 
+                    className="flex items-center space-x-2 mt-4 pt-4 border-t p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    onClick={() => setIsVerified(!isVerified)}
+                  >
+                    <Checkbox 
+                      id="verified" 
+                      checked={isVerified}
+                      onCheckedChange={(checked) => setIsVerified(checked === true)}
+                    />
+                    <Label htmlFor="verified" className="cursor-pointer w-full">
+                      <span>Xác minh</span>
+                      <p className="text-xs text-muted-foreground mt-1">Nguồn dữ liệu này đã được xác minh</p>
+                    </Label>
+                  </div>
+                )}
               </div>
               
               {/* Selected summary */}
@@ -377,6 +422,18 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                       {isSafe === true ? 'An toàn' : isSafe === false ? 'Không an toàn' : <span className="text-slate-400">Chưa xác định</span>}
                     </div>
                   </div>
+                  
+                  {/* Hiển thị trạng thái xác minh nếu cần thiết */}
+                  {content?.sourceVerification === 'unverified' && isSafe === true && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Xác minh:</div>
+                      <div className="text-sm">
+                        {isVerified 
+                          ? <span className="text-green-600">Đã xác minh</span> 
+                          : <span className="text-orange-500">Chưa xác minh</span>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
