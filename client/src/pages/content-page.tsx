@@ -8,7 +8,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -50,159 +49,181 @@ export default function ContentPage() {
   return (
     <DashboardLayout onSearch={handleSearch}>
       <div className="mb-4">
-        <div className="flex flex-wrap gap-2 items-center">
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mr-2">
-            <TabsList>
-              <TabsTrigger value="all">Tất cả</TabsTrigger>
-              <TabsTrigger value="processed">Đã xử lý</TabsTrigger>
-              <TabsTrigger value="unprocessed">Chưa xử lý</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="flex justify-between items-center">
+          <div className="flex-shrink-0">
+            <div className="bg-background border rounded-md p-1">
+              <div className="flex space-x-1">
+                <Button 
+                  variant={activeTab === 'all' ? 'default' : 'ghost'} 
+                  size="sm"
+                  onClick={() => setActiveTab('all')}
+                >
+                  Tất cả
+                </Button>
+                <Button 
+                  variant={activeTab === 'processed' ? 'default' : 'ghost'} 
+                  size="sm"
+                  onClick={() => setActiveTab('processed')}
+                >
+                  Đã xử lý
+                </Button>
+                <Button 
+                  variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
+                  size="sm"
+                  onClick={() => setActiveTab('unprocessed')}
+                >
+                  Chưa xử lý
+                </Button>
+              </div>
+            </div>
+          </div>
           
-          <Button
-            variant="outline"
-            className={cn(
-              "whitespace-nowrap h-10 px-4 py-2",
-              sourceStatus === 'unverified' ? "bg-muted" : ""
-            )}
-            onClick={toggleSourceStatus}
-          >
-            {sourceStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
-          </Button>
+          <div className="flex-shrink-0 mx-auto">
+            <Button
+              variant="outline"
+              className={cn(
+                "whitespace-nowrap h-10 px-4 py-2",
+                sourceStatus === 'unverified' ? "bg-muted" : ""
+              )}
+              onClick={toggleSourceStatus}
+            >
+              {sourceStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
+            </Button>
+          </div>
 
           <div className="flex gap-2 items-center">
-            <div className="grid items-center">
-              <Label htmlFor="startDate" className="text-xs">Ngày bắt đầu</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        setStartDate(date);
-                        if (date > endDate) {
-                          setEndDate(date);
-                        }
-                      }
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="grid items-center">
-              <Label htmlFor="endDate" className="text-xs">Ngày kết thúc</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        setEndDate(date);
-                        if (date < startDate) {
+            <div className="flex items-center gap-2">
+              <div>
+                <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-10 justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        if (date) {
                           setStartDate(date);
+                          if (date > endDate) {
+                            setEndDate(date);
+                          }
                         }
-                      }
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="flex items-end gap-1">
-              <Button 
-                variant="default" 
-                className="h-10 bg-green-600 hover:bg-green-700 text-white" 
-                onClick={() => {
-                  handleDateFilter();
-                  toast({
-                    title: "Đã áp dụng bộ lọc",
-                    description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
-                  });
-                }}
-              >
-                Áp dụng
-              </Button>
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
               
-              <Button 
-                variant="outline" 
-                className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
-                onClick={() => {
-                  const today = new Date();
-                  setStartDate(today);
-                  setEndDate(today);
-                  toast({
-                    title: "Đã đặt lại bộ lọc",
-                    description: "Hiển thị tất cả dữ liệu cho ngày hiện tại",
-                  });
-                  setTimeout(handleDateFilter, 100);
-                }}
-              >
-                Xóa bộ lọc
-              </Button>
+              <div>
+                <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-10 justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setEndDate(date);
+                          if (date < startDate) {
+                            setStartDate(date);
+                          }
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="flex items-end gap-2 h-[74px]">
+                <Button 
+                  variant="default" 
+                  className="h-10 bg-green-600 hover:bg-green-700 text-white" 
+                  onClick={() => {
+                    handleDateFilter();
+                    toast({
+                      title: "Đã áp dụng bộ lọc",
+                      description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+                    });
+                  }}
+                >
+                  Áp dụng
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
+                  onClick={() => {
+                    const today = new Date();
+                    setStartDate(today);
+                    setEndDate(today);
+                    toast({
+                      title: "Đã đặt lại bộ lọc",
+                      description: "Hiển thị tất cả dữ liệu cho ngày hiện tại",
+                    });
+                    setTimeout(handleDateFilter, 100);
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
       
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsContent value="all">
-          <ContentTable 
-            title="Tất cả nội dung" 
-            startDate={startDate}
-            endDate={endDate}
-            sourceVerification={sourceStatus as 'verified' | 'unverified'}
-          />
-        </TabsContent>
-        
-        <TabsContent value="processed">
-          <ContentTable 
-            title="Nội dung đã xử lý" 
-            statusFilter="completed" // Trạng thái "completed" trong database
-            startDate={startDate}
-            endDate={endDate}
-            sourceVerification={sourceStatus as 'verified' | 'unverified'}
-          />
-        </TabsContent>
-        
-        <TabsContent value="unprocessed">
-          <ContentTable 
-            title="Nội dung chưa xử lý" 
-            statusFilter="processing" // Sửa từ "pending" thành "processing" để khớp với trạng thái trong database
-            startDate={startDate}
-            endDate={endDate}
-            sourceVerification={sourceStatus as 'verified' | 'unverified'}
-          />
-        </TabsContent>
-      </Tabs>
+      {activeTab === 'all' && (
+        <ContentTable 
+          title="Tất cả nội dung" 
+          startDate={startDate}
+          endDate={endDate}
+          sourceVerification={sourceStatus as 'verified' | 'unverified'}
+        />
+      )}
+      
+      {activeTab === 'processed' && (
+        <ContentTable 
+          title="Nội dung đã xử lý" 
+          statusFilter="completed" // Trạng thái "completed" trong database
+          startDate={startDate}
+          endDate={endDate}
+          sourceVerification={sourceStatus as 'verified' | 'unverified'}
+        />
+      )}
+      
+      {activeTab === 'unprocessed' && (
+        <ContentTable 
+          title="Nội dung chưa xử lý" 
+          statusFilter="processing" // Sửa từ "pending" thành "processing" để khớp với trạng thái trong database
+          startDate={startDate}
+          endDate={endDate}
+          sourceVerification={sourceStatus as 'verified' | 'unverified'}
+        />
+      )}
     </DashboardLayout>
   );
 }
