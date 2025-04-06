@@ -49,8 +49,8 @@ export default function ContentPage() {
   return (
     <DashboardLayout onSearch={handleSearch}>
       <div className="mb-4">
-        <div className="flex justify-between items-center">
-          <div className="flex-shrink-0">
+        <div className="flex items-center">
+          <div className="flex-shrink-0 mr-auto">
             <div className="bg-background border rounded-md p-1">
               <div className="flex space-x-1">
                 <Button 
@@ -78,20 +78,18 @@ export default function ContentPage() {
             </div>
           </div>
           
-          <div className="flex-shrink-0 mx-auto">
+          <div className="flex items-center">
             <Button
               variant="outline"
               className={cn(
-                "whitespace-nowrap h-10 px-4 py-2",
+                "whitespace-nowrap h-10 px-4 py-2 mr-5",
                 sourceStatus === 'unverified' ? "bg-muted" : ""
               )}
               onClick={toggleSourceStatus}
             >
               {sourceStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
             </Button>
-          </div>
 
-          <div className="flex gap-2 items-center">
             <div className="flex items-center gap-2">
               <div>
                 <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
