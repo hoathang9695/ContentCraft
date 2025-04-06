@@ -217,7 +217,7 @@ export default function ContentPage() {
         <TabsContent value="unprocessed">
           <ContentTable 
             title="Nội dung chưa xử lý" 
-            statusFilter="pending" // Sửa thành "pending" để khớp với trạng thái trong database
+            statusFilter="processing" // Sửa từ "pending" thành "processing" để khớp với trạng thái trong database
             startDate={startDate}
             endDate={endDate}
             sourceVerification={sourceStatus as 'verified' | 'unverified'}
