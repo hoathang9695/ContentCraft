@@ -60,12 +60,12 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      refetchOnWindowFocus: true, // Cập nhật khi cửa sổ có focus
+      staleTime: 60000, // 1 phút thay vì Infinity để đảm bảo dữ liệu fresh
+      retry: 1, // Thử lại 1 lần nếu thất bại
     },
     mutations: {
-      retry: false,
+      retry: 1, // Thử lại 1 lần nếu thất bại
     },
   },
 });

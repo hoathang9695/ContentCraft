@@ -64,13 +64,13 @@ export async function createAdminUser() {
 export function setupAuth(app: Express) {
   const sessionSettings: expressSession.SessionOptions = {
     secret: process.env.SESSION_SECRET || "very-secure-secret-key",
-    resave: false,
-    saveUninitialized: false,
+    resave: true, // Thay đổi thành true để đảm bảo session được lưu trữ
+    saveUninitialized: true, // Thay đổi thành true để đảm bảo tất cả session được lưu trữ
     store: storage.sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 1 day
-      sameSite: 'lax' as const, // TypeScript needs this to be properly typed
-      secure: false, // Setting to false since we're running on http in development
+      sameSite: 'lax' as const, // Lax phù hợp cho development 
+      secure: false, // Dev environment không dùng HTTPS
       httpOnly: true,
       path: '/'
     }

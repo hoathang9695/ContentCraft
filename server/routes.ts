@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
 
-  // Check if user is authenticated middleware
+  // Check if user is authenticated middleware with extended debug
   const isAuthenticated = (req: Request, res: Response, next: Function) => {
     // Debug info to check session
     console.log(`Session check for ${req.path}:`, {
@@ -67,16 +67,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } : 'Not authenticated'
     });
     
+    // Ghi log chi tiết thông tin session
+    console.log("Session details:", {
+      session: req.session ? 'Session exists' : 'No session',
+      cookie: req.session?.cookie,
+      passport: req.session ? (req.session as any).passport : null,
+      headers: {
+        cookie: req.headers.cookie,
+        referer: req.headers.referer,
+        origin: req.headers.origin
+      },
+      method: req.method
+    });
+    
     if (req.isAuthenticated()) {
       return next();
     }
     
-    console.log("Authentication check failed", {
-      sessionID: req.sessionID,
-      hasSession: !!req.session,
-      cookies: req.headers.cookie
-    });
+    // Kiểm tra đặc biệt cho trường hợp cookie bị mất
+    if (!req.headers.cookie || !req.headers.cookie.includes('connect.sid')) {
+      console.log("Missing session cookie in request!");
+    }
     
+    // Từ chối truy cập nếu không được xác thực
     res.status(401).json({ message: "Unauthorized" });
   };
 
