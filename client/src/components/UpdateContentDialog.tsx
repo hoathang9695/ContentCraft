@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 interface UpdateContentDialogProps {
   open: boolean;
@@ -20,7 +20,6 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [isSafe, setIsSafe] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("all");
   
   // Prefetch dữ liệu labels và categories sẵn khi app bắt đầu
   useEffect(() => {
@@ -92,11 +91,8 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const relevantLabels = useMemo(() => {
     if (!categories || !allLabels) return [];
     
-    // Không có danh mục nào được chọn
-    if (selectedCategories.length === 0) return allLabels;
-    
-    // Hiển thị tất cả nhãn
-    if (activeTab === "all") return allLabels;
+    // Không có danh mục nào được chọn - trả về mảng rỗng
+    if (selectedCategories.length === 0) return [];
     
     // Sử dụng Set để tìm kiếm nhanh
     const selectedCategoryIds = new Set(
@@ -105,7 +101,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     
     // Lọc nhãn chỉ cho danh mục đã chọn
     return allLabels.filter(label => selectedCategoryIds.has(label.categoryId));
-  }, [allLabels, categories, selectedCategories, activeTab, categoryNameToIdMap]);
+  }, [allLabels, categories, selectedCategories, categoryNameToIdMap]);
   
   // Nhóm các nhãn theo danh mục để hiển thị, sử dụng cấu trúc Map từ categoryId đến labels
   const labelsByCategory = useMemo(() => {
@@ -271,25 +267,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             
             {/* Labels */}
             <div className="flex flex-col h-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Label</h3>
-                <div className="w-28 border rounded-md">
-                  <div className="grid w-full grid-cols-2">
-                    <button 
-                      className={`px-2 py-1 text-sm font-medium ${activeTab === 'all' ? 'bg-slate-200 dark:bg-slate-700' : ''}`}
-                      onClick={() => setActiveTab('all')}
-                    >
-                      Tất cả
-                    </button>
-                    <button 
-                      className={`px-2 py-1 text-sm font-medium ${activeTab === 'filtered' ? 'bg-slate-200 dark:bg-slate-700' : ''}`}
-                      onClick={() => setActiveTab('filtered')}
-                    >
-                      Đã chọn
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <h3 className="font-bold text-lg mb-4">Label</h3>
               
               <div className="flex-1 border rounded-md p-2 overflow-auto">
                 {labelsByCategory.size > 0 ? (
@@ -317,10 +295,11 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-muted-foreground p-2">
-                    {activeTab === "filtered" && selectedCategories.length === 0 
-                      ? "Vui lòng chọn danh mục trước"
-                      : "Không có nhãn nào cho lựa chọn này"}
+                  <div className="text-sm text-muted-foreground p-4 flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <p>Vui lòng chọn danh mục trước</p>
+                      <ArrowLeft className="mx-auto mt-2 text-muted-foreground" />
+                    </div>
                   </div>
                 )}
               </div>
