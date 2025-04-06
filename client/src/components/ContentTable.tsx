@@ -64,7 +64,24 @@ export function ContentTable({
   
   // Fetch content list
   const { data: allContents = [], isLoading } = useQuery<Content[]>({
+    // Force loading data directly from API based on role
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
+    // Debug empty data problem
+    onSuccess: (data) => {
+      console.log("API returned data:", {
+        endpointCalled: user?.role === 'admin' ? '/api/contents' : '/api/my-contents',
+        count: data.length,
+        isArray: Array.isArray(data),
+        firstItem: data.length > 0 ? {...data[0]} : null
+      });
+    },
+    onError: (error) => {
+      console.error("API call error:", {
+        endpointCalled: user?.role === 'admin' ? '/api/contents' : '/api/my-contents',
+        error
+      });
+    },
+    retry: 1, // Retry once in case of network issues
   });
   
   // Filter content based on search, status, and date range

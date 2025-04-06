@@ -65,17 +65,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/contents", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as Express.User;
+      console.log("GET /api/contents - User authenticated:", { 
+        id: user.id, 
+        username: user.username, 
+        role: user.role 
+      });
+      
       let contents;
       
       // Chỉ admin thấy tất cả nội dung, người dùng khác chỉ thấy nội dung được gán
       if (user.role === 'admin') {
+        console.log("Admin user - fetching ALL contents");
         contents = await storage.getAllContents();
       } else {
+        console.log(`Regular user - fetching contents assigned to user ID ${user.id}`);
         contents = await storage.getContentsByAssignee(user.id);
+      }
+      
+      console.log(`Returning ${contents.length} content items`);
+      
+      // First content example for debugging
+      if (contents.length > 0) {
+        console.log("First content example:", { 
+          id: contents[0].id,
+          status: contents[0].status,
+          verification: contents[0].sourceVerification
+        });
       }
       
       res.json(contents);
     } catch (error) {
+      console.error("Error fetching contents:", error);
       res.status(500).json({ message: "Error fetching contents" });
     }
   });

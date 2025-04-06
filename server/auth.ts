@@ -70,9 +70,20 @@ export function setupAuth(app: Express) {
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 1 day
       sameSite: 'lax' as const, // TypeScript needs this to be properly typed
-      secure: false // Setting to false since we're running on http in development
+      secure: false, // Setting to false since we're running on http in development
+      httpOnly: true,
+      path: '/'
     }
   };
+  
+  // Add debugging for session
+  console.log("Session settings configured with:", {
+    secret: (sessionSettings.secret as string).substring(0, 3) + '...',
+    resave: sessionSettings.resave,
+    saveUninitialized: sessionSettings.saveUninitialized,
+    store: !!sessionSettings.store,
+    cookie: sessionSettings.cookie
+  });
 
   app.set("trust proxy", 1);
   app.use(expressSession(sessionSettings));
