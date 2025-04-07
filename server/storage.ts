@@ -8,7 +8,7 @@ import {
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db, pool } from "./db"; // Import pool from db.ts
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and, ne } from "drizzle-orm";
 
 // Create a PostgreSQL session store with proper types for ESM
 const PgSession = connectPgSimple(expressSession);
@@ -22,6 +22,8 @@ export interface IStorage {
   updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   updateUserStatus(id: number, status: string): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>; // Add method to delete a user
+  reassignUserContents(userId: number): Promise<number>; // Add method to reassign contents when deleting a user
   
   // Content management operations
   createContent(content: InsertContent): Promise<Content>;
@@ -144,6 +146,102 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    // First, reassign any content assigned to this user
+    await this.reassignUserContents(id);
+    
+    // Delete user activities related to this user
+    await db.delete(userActivities).where(eq(userActivities.userId, id));
+    
+    // Delete the user
+    const result = await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
+    
+    return result.length > 0;
+  }
+  
+  async reassignUserContents(userId: number): Promise<number> {
+    // Get the user to find their role and department
+    const user = await this.getUser(userId);
+    if (!user) return 0;
+    
+    // Get all contents assigned to this user
+    const userContents = await db
+      .select()
+      .from(contents)
+      .where(eq(contents.assigned_to_id, userId));
+    
+    if (userContents.length === 0) return 0;
+    
+    // Find suitable users to reassign content to - users with the same role and department
+    const suitableUsers = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          ne(users.id, userId), // Not the user being deleted
+          eq(users.role, user.role), // Same role
+          eq(users.status, 'active'), // Only active users
+          user.department ? eq(users.department, user.department) : undefined // Same department if specified
+        )
+      );
+    
+    // If there are no suitable users, find any active users with the same role
+    let reassignUsers = suitableUsers;
+    if (reassignUsers.length === 0) {
+      reassignUsers = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            ne(users.id, userId), // Not the user being deleted
+            eq(users.role, user.role), // Same role
+            eq(users.status, 'active') // Only active users
+          )
+        );
+    }
+    
+    // If there are still no suitable users, find any active user
+    if (reassignUsers.length === 0) {
+      reassignUsers = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            ne(users.id, userId), // Not the user being deleted
+            eq(users.status, 'active') // Only active users
+          )
+        );
+    }
+    
+    // If there are no users to reassign to, just return 0
+    if (reassignUsers.length === 0) return 0;
+    
+    // Start reassigning contents
+    let reassignedCount = 0;
+    
+    for (const content of userContents) {
+      // Round-robin assignment - get user index based on content position in list
+      const assigneeIndex = reassignedCount % reassignUsers.length;
+      const newAssigneeId = reassignUsers[assigneeIndex].id;
+      
+      // Update the content assignment
+      await db
+        .update(contents)
+        .set({
+          assigned_to_id: newAssigneeId,
+          updatedAt: new Date()
+        })
+        .where(eq(contents.id, content.id));
+      
+      reassignedCount++;
+    }
+    
+    return reassignedCount;
   }
 
   // Content management implementations

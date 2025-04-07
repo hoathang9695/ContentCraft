@@ -454,6 +454,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Delete user (admin only)
+  app.delete("/api/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      
+      // Không cho phép xóa admin đầu tiên (id=1)
+      if (userId === 1) {
+        return res.status(400).json({ 
+          message: "Cannot delete the main administrator account" 
+        });
+      }
+      
+      // Kiểm tra người dùng tồn tại
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Ghi log hoạt động xóa user
+      await storage.logUserActivity({
+        userId: (req.user as Express.User).id,
+        activityType: "delete_user",
+        metadata: {
+          details: `Deleted user ${user.username} (ID: ${userId}) and reassigned their content`
+        }
+      });
+      
+      // Thực hiện xóa user
+      const deleted = await storage.deleteUser(userId);
+      
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete user" });
+      }
+      
+      res.json({ 
+        message: "User deleted successfully",
+        success: true
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error deleting user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Update user details (admin only)
   app.patch("/api/users/:id", isAdmin, async (req, res) => {
     try {

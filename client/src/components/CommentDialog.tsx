@@ -52,17 +52,57 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   const externalCommentMutation = useMutation({
     mutationFn: async ({ postId, comments }: { postId: string, comments: string[] }) => {
       try {
+        // Token để xác thực với API bên ngoài
+        const token = "81DIz11M_VLcNsCsO5pEyN0A2m5kPRYSH5dZ7MWwQ44";
+        
         // Gửi comments đến API bên ngoài
+        // Thử nhiều định dạng khác nhau vì API có thể yêu cầu định dạng cụ thể
         const results = await Promise.all(
-          comments.map(comment => 
-            fetch(`https://prod-sn.emso.vn/api/v1/statuses/${postId}/comments`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ content: comment }),
-            }).then(res => res.json())
-          )
+          comments.map(async (comment) => {
+            // Chuẩn bị nhiều định dạng dữ liệu khác nhau để thử
+            const formats = [
+              { content: comment },
+              { text: comment },
+              { comment: comment },
+              { body: comment },
+              { message: comment }
+            ];
+            
+            // Thử từng định dạng cho đến khi thành công hoặc hết định dạng
+            for (const format of formats) {
+              try {
+                const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${postId}/comments`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify(format),
+                });
+                
+                const result = await response.json();
+                console.log('Kết quả API:', result);
+                
+                // Nếu API không trả về lỗi, coi như thành công
+                if (!result.error) {
+                  return result;
+                }
+                
+                // Log lỗi để debug
+                console.error('Định dạng', format, 'trả về lỗi:', result.error);
+                
+                // Nếu lỗi không phải do định dạng, thoát khỏi vòng lặp
+                if (result.error !== "Nội dung không thể để trắng") {
+                  return result;
+                }
+              } catch (err) {
+                console.error('Lỗi khi gửi với định dạng', format, ':', err);
+              }
+            }
+            
+            // Nếu tất cả các định dạng đều thất bại, trả về thông báo lỗi
+            return { error: "Không thể gửi comment với bất kỳ định dạng nào" };
+          })
         );
         return results;
       } catch (error) {
@@ -117,7 +157,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           console.error('Lỗi khi gửi comments đến API bên ngoài:', error);
           toast({
             title: 'Lưu ý',
-            description: 'Đã cập nhật số lượng comment nhưng không thể gửi nội dung đến hệ thống bên ngoài.',
+            description: 'Đã cập nhật số lượng comment trong hệ thống nội bộ thành công, nhưng API bên ngoài báo lỗi "Nội dung không thể để trắng". Vui lòng kiểm tra định dạng API.',
             variant: 'destructive',
           });
         }

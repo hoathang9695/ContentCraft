@@ -7,6 +7,17 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 // Define the schema for the form
 const userUpdateSchema = z.object({
@@ -50,6 +61,7 @@ interface UserEditDialogProps {
 export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Set up the form with user data
   const form = useForm<UserUpdateFormValues>({
@@ -87,10 +99,42 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
       setIsSubmitting(false);
     },
   });
+  
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("No user selected");
+      const res = await apiRequest("DELETE", `/api/users/${user.id}`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "User deleted",
+        description: data.message || "User has been deleted successfully.",
+      });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete failed",
+        description: error.message || "Failed to delete user.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsDeleting(false);
+    },
+  });
 
   const onSubmit = (data: UserUpdateFormValues) => {
     setIsSubmitting(true);
     updateUserMutation.mutate(data);
+  };
+  
+  const handleDeleteUser = () => {
+    setIsDeleting(true);
+    deleteUserMutation.mutate();
   };
 
   return (
@@ -184,24 +228,67 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
+            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
+              <div className="flex mt-4 sm:mt-0">
+                {/* Chỉ hiển thị nút xóa nếu user không phải là admin chính (id=1) */}
+                {user && user.id !== 1 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="destructive"
+                        className="flex items-center"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Xóa người dùng
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Bạn có chắc chắn muốn xóa người dùng này?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Người dùng <b>{user?.name}</b> sẽ bị xóa khỏi hệ thống. Các nội dung mà họ đang xử lý 
+                          sẽ được phân công lại cho những người dùng khác có cùng vai trò và phòng ban.
+                          <p className="mt-2 text-destructive font-semibold">Hành động này không thể khôi phục lại!</p>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteUser} disabled={isDeleting}>
+                          {isDeleting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Đang xóa...
+                            </>
+                          ) : (
+                            "Xác nhận xóa"
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
-              </Button>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang lưu...
+                    </>
+                  ) : (
+                    "Lưu thay đổi"
+                  )}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
