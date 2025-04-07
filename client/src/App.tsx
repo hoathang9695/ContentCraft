@@ -11,6 +11,7 @@ import UsersPage from "@/pages/users-page";
 import ProfilePage from "@/pages/profile-page";
 import UserActivitiesPage from "@/pages/user-activities-page";
 import CategoriesPage from "@/pages/categories-page";
+import FakeUsersPage from "@/pages/fake-users-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -26,6 +27,7 @@ function Router() {
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/user-activities" component={UserActivitiesPage} adminOnly={true} />
       <ProtectedRoute path="/categories" component={CategoriesPage} adminOnly={true} />
+      <ProtectedRoute path="/fake-users" component={FakeUsersPage} adminOnly={true} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

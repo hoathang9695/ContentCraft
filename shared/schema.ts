@@ -110,3 +110,25 @@ export type Category = typeof categories.$inferSelect;
 
 export type InsertLabel = z.infer<typeof insertLabelSchema>;
 export type Label = typeof labels.$inferSelect;
+
+// Bảng người dùng ảo (FakeUsers) cho việc đẩy comment
+export const fakeUsers = pgTable("fake_users", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // Tên người dùng ảo
+  token: text("token").notNull().unique(), // Token/ID đại diện cho người dùng
+  description: text("description"), // Mô tả về người dùng ảo
+  avatarUrl: text("avatar_url"), // URL avatar (tùy chọn)
+  status: text("status").notNull().default("active"), // active, inactive
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Schema để insert FakeUser
+export const insertFakeUserSchema = createInsertSchema(fakeUsers).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertFakeUser = z.infer<typeof insertFakeUserSchema>;
+export type FakeUser = typeof fakeUsers.$inferSelect;

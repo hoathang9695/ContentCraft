@@ -67,8 +67,8 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
           </Button>
           
           <div className="ml-2 md:ml-0 flex items-center">
-            <FileText className="h-6 w-6 text-primary mr-2" />
-            <span className="text-lg font-medium text-foreground">CMS Portal</span>
+            <img src="/images/logo.jpg" alt="EMSO Logo" className="h-6 w-6 mr-2 rounded-full" />
+            <span className="text-lg font-medium text-foreground">EMSO</span>
           </div>
         </div>
         

@@ -7,7 +7,8 @@ import {
   ActivitySquare,
   History,
   Folder,
-  Tag
+  Tag,
+  UserCog
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -123,6 +124,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={handleItemClick}
                 >
                   Quản lý Categories
+                </SidebarItem>
+                
+                <SidebarItem
+                  href="/fake-users"
+                  icon={UserCog}
+                  isActive={isActivePath('/fake-users')}
+                  onClick={handleItemClick}
+                >
+                  Người dùng ảo
                 </SidebarItem>
               </>
             )}

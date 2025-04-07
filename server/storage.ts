@@ -3,7 +3,8 @@ import {
   contents, type Content, type InsertContent,
   userActivities, type UserActivity, type InsertUserActivity,
   categories, type Category, type InsertCategory,
-  labels, type Label, type InsertLabel
+  labels, type Label, type InsertLabel,
+  fakeUsers, type FakeUser, type InsertFakeUser
 } from "@shared/schema";
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -55,6 +56,14 @@ export interface IStorage {
   createLabel(label: InsertLabel): Promise<Label>;
   updateLabel(id: number, label: Partial<InsertLabel>): Promise<Label | undefined>;
   deleteLabel(id: number): Promise<boolean>;
+  
+  // Fake User operations
+  getAllFakeUsers(): Promise<FakeUser[]>;
+  getFakeUser(id: number): Promise<FakeUser | undefined>;
+  createFakeUser(fakeUser: InsertFakeUser): Promise<FakeUser>;
+  updateFakeUser(id: number, fakeUser: Partial<InsertFakeUser>): Promise<FakeUser | undefined>;
+  deleteFakeUser(id: number): Promise<boolean>;
+  getRandomFakeUser(): Promise<FakeUser | undefined>; // Get a random fake user for comments
   
   sessionStore: any; // Using 'any' as a workaround for ESM compatibility
 }
@@ -525,6 +534,57 @@ export class DatabaseStorage implements IStorage {
       .returning({ id: labels.id });
     
     return result.length > 0;
+  }
+
+  // FakeUser management implementations
+  async getAllFakeUsers(): Promise<FakeUser[]> {
+    return await db.select().from(fakeUsers).orderBy(fakeUsers.name);
+  }
+
+  async getFakeUser(id: number): Promise<FakeUser | undefined> {
+    const result = await db.select().from(fakeUsers).where(eq(fakeUsers.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async createFakeUser(insertFakeUser: InsertFakeUser): Promise<FakeUser> {
+    const result = await db.insert(fakeUsers).values(insertFakeUser).returning();
+    return result[0];
+  }
+
+  async updateFakeUser(id: number, fakeUserUpdate: Partial<InsertFakeUser>): Promise<FakeUser | undefined> {
+    const result = await db
+      .update(fakeUsers)
+      .set({
+        ...fakeUserUpdate,
+        updatedAt: new Date(),
+      })
+      .where(eq(fakeUsers.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteFakeUser(id: number): Promise<boolean> {
+    const result = await db
+      .delete(fakeUsers)
+      .where(eq(fakeUsers.id, id))
+      .returning({ id: fakeUsers.id });
+    
+    return result.length > 0;
+  }
+
+  async getRandomFakeUser(): Promise<FakeUser | undefined> {
+    // Lấy danh sách tất cả người dùng ảo đang hoạt động
+    const activeFakeUsers = await db
+      .select()
+      .from(fakeUsers)
+      .where(eq(fakeUsers.status, 'active'));
+    
+    if (activeFakeUsers.length === 0) return undefined;
+    
+    // Chọn ngẫu nhiên một người dùng ảo
+    const randomIndex = Math.floor(Math.random() * activeFakeUsers.length);
+    return activeFakeUsers[randomIndex];
   }
 }
 

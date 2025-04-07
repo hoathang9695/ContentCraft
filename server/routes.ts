@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { insertContentSchema, insertCategorySchema, insertLabelSchema } from "@shared/schema";
+import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -50,6 +50,9 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve static files from public directory
+  app.use('/images', express.static(path.join(process.cwd(), 'public/images')));
+  
   // Set up authentication routes
   setupAuth(app);
 
@@ -1273,6 +1276,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ 
         message: "Error deleting label",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Fake Users API (admin only)
+  // Get all fake users
+  app.get("/api/fake-users", isAdmin, async (req, res) => {
+    try {
+      const fakeUsers = await storage.getAllFakeUsers();
+      res.json(fakeUsers);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching fake users",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Get fake user by ID
+  app.get("/api/fake-users/:id", isAdmin, async (req, res) => {
+    try {
+      const fakeUserId = Number(req.params.id);
+      const fakeUser = await storage.getFakeUser(fakeUserId);
+      
+      if (!fakeUser) {
+        return res.status(404).json({ message: "Fake user not found" });
+      }
+      
+      res.json(fakeUser);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching fake user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Create fake user (admin only)
+  app.post("/api/fake-users", isAdmin, async (req, res) => {
+    try {
+      // Validate with insertFakeUserSchema
+      const validatedData = insertFakeUserSchema.parse({
+        ...req.body,
+        status: req.body.status || 'active' // Default status is active
+      });
+      
+      const newFakeUser = await storage.createFakeUser(validatedData);
+      res.status(201).json(newFakeUser);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        message: "Error creating fake user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Update fake user (admin only)
+  app.put("/api/fake-users/:id", isAdmin, async (req, res) => {
+    try {
+      const fakeUserId = Number(req.params.id);
+      const existingFakeUser = await storage.getFakeUser(fakeUserId);
+      
+      if (!existingFakeUser) {
+        return res.status(404).json({ message: "Fake user not found" });
+      }
+      
+      // Validate with insertFakeUserSchema.partial() to allow partial updates
+      const validatedData = insertFakeUserSchema.partial().parse(req.body);
+      
+      const updatedFakeUser = await storage.updateFakeUser(fakeUserId, validatedData);
+      res.json(updatedFakeUser);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        message: "Error updating fake user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Delete fake user (admin only)
+  app.delete("/api/fake-users/:id", isAdmin, async (req, res) => {
+    try {
+      const fakeUserId = Number(req.params.id);
+      const existingFakeUser = await storage.getFakeUser(fakeUserId);
+      
+      if (!existingFakeUser) {
+        return res.status(404).json({ message: "Fake user not found" });
+      }
+      
+      const deleted = await storage.deleteFakeUser(fakeUserId);
+      
+      if (deleted) {
+        res.status(204).send();
+      } else {
+        res.status(500).json({ message: "Error deleting fake user" });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error deleting fake user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Get random fake user (for generating comments)
+  app.get("/api/random-fake-user", isAuthenticated, async (req, res) => {
+    try {
+      const randomFakeUser = await storage.getRandomFakeUser();
+      
+      if (!randomFakeUser) {
+        return res.status(404).json({ message: "No active fake users found" });
+      }
+      
+      res.json(randomFakeUser);
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching random fake user",
         error: error instanceof Error ? error.message : String(error)
       });
     }
