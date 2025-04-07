@@ -23,9 +23,10 @@ import { useToast } from '@/hooks/use-toast';
 export default function ContentPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
-  // Sử dụng ngày hiện tại làm giá trị mặc định
+  // Thiết lập ngày bắt đầu là ngày 1 của tháng hiện tại và ngày kết thúc là ngày hiện tại
   const today = new Date();
-  const [startDate, setStartDate] = useState<Date>(today);
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
   const [endDate, setEndDate] = useState<Date>(today);
   // State cho bộ lọc trạng thái nguồn (mặc định là "Chưa xác minh")
   const [sourceStatus, setSourceStatus] = useState('unverified');
@@ -207,11 +208,12 @@ export default function ContentPage() {
                   className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
                   onClick={() => {
                     const today = new Date();
-                    setStartDate(today);
+                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                    setStartDate(firstDayOfMonth);
                     setEndDate(today);
                     toast({
                       title: "Đã đặt lại bộ lọc",
-                      description: "Hiển thị tất cả dữ liệu cho ngày hiện tại",
+                      description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, 'dd/MM/yyyy')} đến ${format(today, 'dd/MM/yyyy')}`,
                     });
                     setTimeout(handleDateFilter, 100);
                   }}
