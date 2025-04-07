@@ -1047,6 +1047,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API để gửi comment đến API bên ngoài
+  app.post("/api/contents/:externalId/send-comment", isAuthenticated, async (req, res) => {
+    try {
+      const { externalId } = req.params;
+      const { fakeUserId, comment } = req.body;
+      
+      if (!externalId) {
+        return res.status(400).json({ success: false, message: "External ID is required" });
+      }
+      
+      if (!fakeUserId) {
+        return res.status(400).json({ success: false, message: "Fake user ID is required" });
+      }
+      
+      if (!comment) {
+        return res.status(400).json({ success: false, message: "Comment content is required" });
+      }
+      
+      // Lấy thông tin fake user
+      const fakeUser = await storage.getFakeUser(Number(fakeUserId));
+      if (!fakeUser) {
+        return res.status(404).json({ success: false, message: "Fake user not found" });
+      }
+      
+      // Kiểm tra token của fake user
+      if (!fakeUser.token) {
+        return res.status(400).json({ success: false, message: "Fake user does not have a valid token" });
+      }
+      
+      // Tìm nội dung từ external ID
+      const contents = await storage.getAllContents();
+      const content = contents.find(c => c.externalId === externalId);
+      
+      if (!content) {
+        return res.status(404).json({ success: false, message: "Content with this external ID not found" });
+      }
+      
+      try {
+        // Gửi comment đến API bên ngoài
+        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/comments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${fakeUser.token}`
+          },
+          body: JSON.stringify({
+            status: comment
+          })
+        });
+        
+        // Kiểm tra kết quả từ API
+        if (response.ok) {
+          const apiResponse = await response.json();
+          
+          // Tăng số lượng comment trong database
+          const currentCount = content.comments || 0;
+          const updated = await storage.updateContent(content.id, { comments: currentCount + 1 });
+          
+          return res.json({
+            success: true,
+            message: "Comment sent successfully",
+            data: {
+              externalId,
+              contentId: content.id,
+              apiResponse
+            }
+          });
+        } else {
+          const errorData = await response.json();
+          return res.status(response.status).json({
+            success: false,
+            message: "Failed to send comment to external API",
+            error: errorData
+          });
+        }
+      } catch (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Error sending comment to external API",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        success: false,
+        message: "Error processing request",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // API để tăng số lượng reactions
   app.patch("/api/contents/:id/reactions", isAuthenticated, async (req, res) => {
     try {

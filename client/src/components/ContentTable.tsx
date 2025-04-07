@@ -358,8 +358,10 @@ export function ContentTable({
     // Kiểm tra để đảm bảo không có giá trị null
     if (content && content.externalId) {
       setExternalIdToComment(content.externalId);
+      console.log(`Gửi comment đến API ngoài cho externalId: ${content.externalId}`);
     } else {
       setExternalIdToComment(undefined);
+      console.log('Không có externalId, chỉ cập nhật số lượng comment trong database nội bộ');
     }
     
     setIsCommentDialogOpen(true);
@@ -590,11 +592,11 @@ export function ContentTable({
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handlePushComment(row.id)}>
                         <MessageSquare className="mr-2 h-4 w-4" />
-                        <span>Push Comment</span>
+                        <span>{row.externalId ? 'Gửi comment qua API' : 'Thêm comment'}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handlePushReaction(row.id)}>
                         <ThumbsUp className="mr-2 h-4 w-4" />
-                        <span>Push Reactions</span>
+                        <span>Thêm reaction</span>
                       </DropdownMenuItem>
                       {user?.role === 'admin' && (
                         <>

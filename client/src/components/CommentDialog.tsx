@@ -9,9 +9,16 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CommentDialogProps {
   open: boolean;
@@ -20,13 +27,25 @@ interface CommentDialogProps {
   externalId?: string; // Thêm externalId cho API bên ngoài
 }
 
+interface FakeUser {
+  id: number;
+  name: string;
+  token: string;
+  status: string;
+}
+
 export function CommentDialog({ open, onOpenChange, contentId, externalId }: CommentDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState<string>('');
   const [extractedComments, setExtractedComments] = useState<string[]>([]);
+  const [selectedFakeUser, setSelectedFakeUser] = useState<string>('');
   
-  // Removed predefined comments
+  // Fetch fake users
+  const { data: fakeUsers = [] } = useQuery<FakeUser[]>({
+    queryKey: ['/api/fake-users'],
+    enabled: open && !!externalId, // Only fetch when dialog is open and we have an externalId
+  });
   
   // Extract comments inside {} brackets
   const extractComments = (text: string): string[] => {
@@ -46,70 +65,39 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     setExtractedComments(comments);
   }, [commentText]);
   
-  // Removed predefined comment function
+  // Reset selected fake user when dialog opens
+  useEffect(() => {
+    if (open && fakeUsers.length > 0) {
+      setSelectedFakeUser(fakeUsers[0].id.toString());
+    } else if (!open) {
+      setSelectedFakeUser(''); // Đặt lại thành chuỗi rỗng khi đóng dialog
+      setCommentText('');
+    }
+  }, [open, fakeUsers]);
   
-  // Mutation để gửi comment đến API bên ngoài
-  const externalCommentMutation = useMutation({
-    mutationFn: async ({ postId, comments }: { postId: string, comments: string[] }) => {
-      try {
-        // Token để xác thực với API bên ngoài
-        const token = "81DIz11M_VLcNsCsO5pEyN0A2m5kPRYSH5dZ7MWwQ44";
-        
-        // Gửi comments đến API bên ngoài
-        // Thử nhiều định dạng khác nhau vì API có thể yêu cầu định dạng cụ thể
-        const results = await Promise.all(
-          comments.map(async (comment) => {
-            // Chuẩn bị nhiều định dạng dữ liệu khác nhau để thử
-            const formats = [
-              { content: comment },
-              { text: comment },
-              { comment: comment },
-              { body: comment },
-              { message: comment }
-            ];
-            
-            // Thử từng định dạng cho đến khi thành công hoặc hết định dạng
-            for (const format of formats) {
-              try {
-                const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${postId}/comments`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                  },
-                  body: JSON.stringify(format),
-                });
-                
-                const result = await response.json();
-                console.log('Kết quả API:', result);
-                
-                // Nếu API không trả về lỗi, coi như thành công
-                if (!result.error) {
-                  return result;
-                }
-                
-                // Log lỗi để debug
-                console.error('Định dạng', format, 'trả về lỗi:', result.error);
-                
-                // Nếu lỗi không phải do định dạng, thoát khỏi vòng lặp
-                if (result.error !== "Nội dung không thể để trắng") {
-                  return result;
-                }
-              } catch (err) {
-                console.error('Lỗi khi gửi với định dạng', format, ':', err);
-              }
-            }
-            
-            // Nếu tất cả các định dạng đều thất bại, trả về thông báo lỗi
-            return { error: "Không thể gửi comment với bất kỳ định dạng nào" };
-          })
-        );
-        return results;
-      } catch (error) {
-        console.error('Lỗi khi gửi comment đến API bên ngoài:', error);
-        throw error;
-      }
+  // Mutation để gửi comment đến API bên ngoài sử dụng API mới
+  const sendExternalCommentMutation = useMutation({
+    mutationFn: async ({ externalId, fakeUserId, comment }: { externalId: string, fakeUserId: number, comment: string }) => {
+      return await apiRequest('POST', `/api/contents/${externalId}/send-comment`, { 
+        fakeUserId, 
+        comment 
+      });
     },
+    onSuccess: (data) => {
+      console.log('Kết quả gửi comment API:', data);
+      toast({
+        title: 'Gửi comment thành công',
+        description: 'Comment đã được gửi tới API bên ngoài thành công.',
+      });
+    },
+    onError: (error) => {
+      console.error('Lỗi khi gửi comment thông qua API mới:', error);
+      toast({
+        title: 'Lỗi khi gửi comment',
+        description: error instanceof Error ? error.message : 'Lỗi không xác định khi gửi comment',
+        variant: 'destructive',
+      });
+    }
   });
 
   // Mutation để cập nhật số lượng comment trong DB nội bộ
@@ -124,13 +112,16 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         title: 'Cập nhật thành công',
         description: 'Đã thêm comment vào nội dung.',
       });
-      onOpenChange(false);
-      setCommentText('');
+      
+      if (!externalId) {
+        onOpenChange(false);
+        setCommentText('');
+      }
     },
     onError: (error) => {
       toast({
         title: 'Lỗi khi cập nhật comment',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Lỗi không xác định',
         variant: 'destructive',
       });
     },
@@ -141,33 +132,66 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     
     const commentCount = extractedComments.length;
     
-    if (commentCount > 0) {
-      // Đầu tiên cập nhật số lượng comment trong DB nội bộ
-      commentMutation.mutate({ id: contentId, count: commentCount });
-      
-      // Sau đó, nếu có externalId và có comments hợp lệ, gửi đến API bên ngoài
-      if (externalId) {
-        try {
-          await externalCommentMutation.mutateAsync({
-            postId: externalId,
-            comments: extractedComments
-          });
-          console.log('Đã gửi các comment đến API bên ngoài thành công');
-        } catch (error) {
-          console.error('Lỗi khi gửi comments đến API bên ngoài:', error);
-          toast({
-            title: 'Lưu ý',
-            description: 'Đã cập nhật số lượng comment trong hệ thống nội bộ thành công, nhưng API bên ngoài báo lỗi "Nội dung không thể để trắng". Vui lòng kiểm tra định dạng API.',
-            variant: 'destructive',
-          });
-        }
-      }
-    } else {
+    if (commentCount === 0) {
       toast({
         title: 'Lỗi',
         description: 'Vui lòng nhập ít nhất một comment',
         variant: 'destructive',
       });
+      return;
+    }
+    
+    // Cập nhật số lượng comment trong DB nội bộ
+    if (!externalId) {
+      commentMutation.mutate({ id: contentId, count: commentCount });
+      return;
+    }
+    
+    // Xử lý trường hợp gửi comment qua API bên ngoài
+    if (externalId) {
+      // Kiểm tra nếu người dùng đã chọn fake user
+      if (!selectedFakeUser) {
+        toast({
+          title: 'Lỗi',
+          description: 'Vui lòng chọn một người dùng ảo để gửi comment',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      const fakeUserId = parseInt(selectedFakeUser);
+      
+      // Gửi từng comment thông qua API mới
+      let successCount = 0;
+      for (const comment of extractedComments) {
+        try {
+          await sendExternalCommentMutation.mutateAsync({
+            externalId,
+            fakeUserId,
+            comment
+          });
+          successCount++;
+        } catch (error) {
+          console.error('Lỗi khi gửi comment:', error);
+        }
+      }
+      
+      if (successCount > 0) {
+        // Nếu có ít nhất một comment gửi thành công
+        toast({
+          title: 'Gửi comment thành công',
+          description: `Đã gửi thành công ${successCount}/${extractedComments.length} comment.`,
+        });
+        onOpenChange(false);
+        setCommentText('');
+      } else {
+        // Nếu không có comment nào gửi thành công
+        toast({
+          title: 'Lỗi',
+          description: 'Không thể gửi comment nào. Vui lòng kiểm tra kết nối hoặc thử lại sau.',
+          variant: 'destructive',
+        });
+      }
     }
   };
   
@@ -180,6 +204,35 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         </DialogHeader>
         
         <div className="space-y-4 my-4 flex-1 overflow-y-auto pr-2">
+          {/* Hiển thị danh sách fake users nếu có externalId */}
+          {externalId && (
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="fake-user-select" className="text-sm font-medium">
+                Chọn người dùng để gửi comment
+              </label>
+              <Select 
+                value={selectedFakeUser} 
+                onValueChange={setSelectedFakeUser}
+              >
+                <SelectTrigger id="fake-user-select" className="w-full">
+                  <SelectValue placeholder="Chọn người dùng ảo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fakeUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fakeUsers.length === 0 && (
+                <p className="text-xs text-red-500">
+                  Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý.
+                </p>
+              )}
+            </div>
+          )}
+          
           {/* Display extracted comments as buttons */}
           {extractedComments.length > 0 && commentText.includes('{') && commentText.includes('}') && (
             <div className="bg-gray-50 p-3 rounded-md">
@@ -224,6 +277,15 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           <div className="text-sm text-muted-foreground">
             Số comments sẽ được thêm: {extractedComments.length}
           </div>
+          
+          {externalId && (
+            <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm">
+              <p className="font-medium">Gửi comment tới API bên ngoài</p>
+              <p className="mt-1">
+                Comments sẽ được gửi đến API của nội dung có ID ngoài: <strong>{externalId}</strong>
+              </p>
+            </div>
+          )}
         </div>
         
         <DialogFooter>
@@ -231,9 +293,14 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             type="submit" 
             onClick={handleSubmit}
             className="w-24"
-            disabled={commentMutation.isPending || externalCommentMutation.isPending}
+            disabled={
+              commentMutation.isPending || 
+              sendExternalCommentMutation.isPending || 
+              (externalId && !selectedFakeUser) ||
+              (externalId && fakeUsers.length === 0)
+            }
           >
-            {commentMutation.isPending || externalCommentMutation.isPending ? "Đang lưu..." : "Lưu"}
+            {commentMutation.isPending || sendExternalCommentMutation.isPending ? "Đang gửi..." : "Gửi"}
           </Button>
         </DialogFooter>
       </DialogContent>
