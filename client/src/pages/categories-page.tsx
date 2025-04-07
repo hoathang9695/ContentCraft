@@ -364,7 +364,7 @@ export default function CategoriesPage() {
   const handleLabelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!labelForm.name) {
+    if (!labelForm.name.trim()) {
       toast({
         title: 'Validation Error',
         description: 'Label name is required',
@@ -383,6 +383,7 @@ export default function CategoriesPage() {
     }
     
     if (selectedLabelId) {
+      // Khi cập nhật, chỉ xử lý một label
       updateLabelMutation.mutate({
         id: selectedLabelId,
         labelData: {
@@ -391,10 +392,51 @@ export default function CategoriesPage() {
         },
       });
     } else {
-      createLabelMutation.mutate({
-        ...labelForm,
-        categoryId: Number(labelForm.categoryId),
-      });
+      // Xử lý tạo nhiều label nếu có dấu phẩy
+      const labelNames = labelForm.name.split(',').map(name => name.trim()).filter(name => name !== '');
+      
+      if (labelNames.length === 0) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter at least one valid label name',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Đếm số lượng label để hiển thị thông báo phù hợp
+      const labelCount = labelNames.length;
+      let createdCount = 0;
+      
+      // Tạo các label theo trình tự
+      const createLabelsSequentially = async () => {
+        for (const name of labelNames) {
+          try {
+            await createLabelMutation.mutateAsync({
+              name,
+              categoryId: Number(labelForm.categoryId),
+              description: labelForm.description,
+            });
+            createdCount++;
+          } catch (error) {
+            console.error(`Failed to create label "${name}":`, error);
+          }
+        }
+        
+        // Hiển thị thông báo kết quả
+        toast({
+          title: 'Labels created successfully',
+          description: `Created ${createdCount} out of ${labelCount} labels.`,
+          variant: createdCount === labelCount ? 'default' : 'destructive',
+        });
+        
+        // Đóng hộp thoại và reset form chỉ khi hoàn thành
+        setIsLabelDialogOpen(false);
+        setLabelForm({ name: '', categoryId: '', description: '' });
+      };
+      
+      // Bắt đầu quá trình tạo label
+      createLabelsSequentially();
     }
   };
 
@@ -803,13 +845,16 @@ export default function CategoriesPage() {
                 <Label htmlFor="labelName">Tên label</Label>
                 <Input
                   id="labelName"
-                  placeholder="Nhập tên label"
+                  placeholder="Nhập tên label (nhiều label cách nhau bởi dấu phẩy)"
                   value={labelForm.name}
                   onChange={(e) =>
                     setLabelForm({ ...labelForm, name: e.target.value })
                   }
                   required
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ví dụ: AI, Blockchain, Cybersecurity sẽ tạo 3 label riêng biệt
+                </p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="labelCategory">Chọn category</Label>
@@ -867,7 +912,7 @@ export default function CategoriesPage() {
                 ) : selectedLabelId ? (
                   <span>Cập nhật</span>
                 ) : (
-                  <span>Tạo mới</span>
+                  <span>Tạo Label</span>
                 )}
               </Button>
             </DialogFooter>
