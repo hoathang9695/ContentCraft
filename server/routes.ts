@@ -601,6 +601,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve uploaded files as static assets
   app.use('/uploads', express.static(uploadDir));
+  
+  // Serve robots.txt từ public directory
+  app.get('/robots.txt', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'public', 'robots.txt'));
+  });
 
   // Upload user avatar (authenticated user)
   app.post("/api/user/avatar/upload", isAuthenticated, upload.single('avatar'), async (req, res) => {
