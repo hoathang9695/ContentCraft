@@ -73,16 +73,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="flex flex-col h-full">
         <div className="pt-5 pb-4 overflow-y-auto flex-1">
           <div className="px-2 space-y-1">
-            {isAdmin && (
-              <SidebarItem
-                href="/"
-                icon={LayoutDashboard}
-                isActive={isActivePath('/')}
-                onClick={handleItemClick}
-              >
-                Dashboard
-              </SidebarItem>
-            )}
+            <SidebarItem
+              href="/"
+              icon={LayoutDashboard}
+              isActive={isActivePath('/')}
+              onClick={handleItemClick}
+            >
+              Dashboard
+            </SidebarItem>
             
             <SidebarItem
               href="/contents"

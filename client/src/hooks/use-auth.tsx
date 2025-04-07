@@ -90,14 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome back, ${user.name}!`,
       });
       
-      // Chuyển hướng người dùng dựa trên vai trò sử dụng wouter
-      if (user.role === 'admin') {
-        // Admin vào trang dashboard
-        navigate("/");
-      } else {
-        // Người dùng thường vào trang nội dung
-        navigate("/contents");
-      }
+      // Chuyển hướng tất cả người dùng đến trang dashboard
+      navigate("/");
     },
     onError: (error: any) => {
       // Error message is now handled directly by throwIfResNotOk
