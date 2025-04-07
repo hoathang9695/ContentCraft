@@ -9,20 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon } from "lucide-react";
 import {
   LayoutDashboard,
-  Edit,
   Eye,
-  Trash2,
   CheckCircle,
   FileEdit,
   Users,
-  Plus,
-  FilePenLine,
-  VerifiedIcon
+  FilePenLine
 } from 'lucide-react';
 import { Content } from '@shared/schema';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
-import { addDays } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
@@ -138,24 +133,7 @@ export default function DashboardPage() {
     }
   });
   
-  const handleCreateContent = () => {
-    navigate('/contents/new');
-  };
-  
-  const handleEditContent = (id: number) => {
-    navigate(`/contents/${id}/edit`);
-  };
-  
-  const handleViewContent = (id: number) => {
-    // For now, just navigate to edit page
-    navigate(`/contents/${id}/edit`);
-  };
-  
-  const handleDeleteContent = (id: number) => {
-    // This would be implemented with a confirmation dialog and API call
-    console.log('Delete content', id);
-  };
-  
+  // Hàm xử lý khi người dùng muốn xem tất cả nội dung
   const handleViewAllContent = () => {
     navigate('/contents');
   };
@@ -334,119 +312,17 @@ export default function DashboardPage() {
         />
       </div>
       
-      {/* Recent Content Section */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium">Nội dung gần đây</h2>
-          <Button onClick={handleCreateContent}>
-            <Plus className="h-4 w-4 mr-2" />
-            Thêm nội dung mới
-          </Button>
-        </div>
-        
-        <DataTable
-          data={contents.slice(0, 5)} // Show only the first 5 items
-          isLoading={isLoadingContents}
-          columns={[
-            {
-              key: 'id',
-              header: 'ID',
-              render: (row: Content) => (
-                <div className="font-medium">#{row.id}</div>
-              ),
-            },
-            {
-              key: 'externalId',
-              header: 'ID Ngoài',
-              render: (row: Content) => (
-                <div className="font-medium text-xs max-w-[100px] truncate">
-                  {row.externalId || 'N/A'}
-                </div>
-              ),
-            },
-            {
-              key: 'source',
-              header: 'Nguồn cấp',
-              render: (row: Content) => (
-                <div className="font-medium">
-                  {row.source || 'Không có nguồn'}
-                </div>
-              ),
-            },
-            {
-              key: 'status',
-              header: 'Trạng thái',
-              render: (row: Content) => <StatusBadge status={row.status} />,
-            },
-            {
-              key: 'processor',
-              header: 'Người xử lý',
-              render: (row: Content) => {
-                if (row.assigned_to_id) {
-                  return <span className="text-blue-600 font-medium">
-                    {row.assigned_to_id === user?.id ? 'Bạn' : `Nhân viên #${row.assigned_to_id}`}
-                  </span>
-                }
-                return <span className="text-muted-foreground">Chưa phân công</span>
-              },
-            },
-            {
-              key: 'updatedAt',
-              header: 'Cập nhật',
-              render: (row: Content) => (
-                <span className="text-muted-foreground">
-                  {formatDistanceToNow(new Date(row.updatedAt), { addSuffix: true })}
-                </span>
-              ),
-            },
-            {
-              key: 'actions',
-              header: 'Thao tác',
-              className: 'text-right',
-              render: (row: Content) => (
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEditContent(row.id)}
-                    className="text-primary hover:text-primary/90"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleViewContent(row.id)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteContent(row.id)}
-                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ),
-            },
-          ]}
-          caption={
-            contents.length === 0 && !isLoadingContents
-              ? "Bạn chưa có nội dung nào. Nhấn 'Thêm nội dung mới' để bắt đầu."
-              : undefined
-          }
-        />
-        
-        {contents.length > 5 && (
-          <div className="mt-4 text-center">
-            <Button variant="outline" onClick={handleViewAllContent}>
-              Xem tất cả nội dung
-            </Button>
-          </div>
-        )}
+      {/* Nút Xem tất cả nội dung */}
+      <div className="mb-8 mt-8 text-center">
+        <Button 
+          size="lg" 
+          variant="default" 
+          onClick={handleViewAllContent}
+          className="bg-primary hover:bg-primary/90 text-white font-medium"
+        >
+          <Eye className="h-4 w-4 mr-2" />
+          Xem tất cả nội dung
+        </Button>
       </div>
     </DashboardLayout>
   );
