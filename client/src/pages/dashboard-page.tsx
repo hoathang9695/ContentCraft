@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DataTable } from '@/components/ui/data-table';
@@ -47,10 +47,16 @@ export default function DashboardPage() {
     endDate: format(endDate, 'yyyy-MM-dd') 
   };
   
+  // Thêm key để xác định khi nào cần refetch
+  const dateFilterKey = `${dateParams.startDate}-${dateParams.endDate}`;
+  
   // Fetch content based on user role (all for admin, only user's content for regular users)
   const { data: contents = [], isLoading: isLoadingContents } = useQuery<Content[]>({
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
+  
+  // Sử dụng useQueryClient để lấy queryClient instance
+  const queryClient = useQueryClient();
   
   // Hàm xử lý khi thay đổi ngày
   const handleDateFilter = () => {
@@ -60,29 +66,50 @@ export default function DashboardPage() {
       endDate: endDate.toISOString()
     });
     
-    // Kích hoạt re-render để áp dụng bộ lọc
+    // Cập nhật state và buộc React Query refetch
+    const updatedStartDate = new Date(startDate);
+    const updatedEndDate = new Date(endDate);
+    
+    setStartDate(updatedStartDate);
+    setEndDate(updatedEndDate);
+    
+    // Kích hoạt re-render để áp dụng bộ lọc - cần invalidate queryCache để đảm bảo refresh
     setTimeout(() => {
-      setStartDate(new Date(startDate));
-      setEndDate(new Date(endDate));
+      // Force refetch bằng cách invalidate query
+      const nextDateFilterKey = `${format(updatedStartDate, 'yyyy-MM-dd')}-${format(updatedEndDate, 'yyyy-MM-dd')}`;
+      console.log('New date filter key:', nextDateFilterKey);
+      
+      // Invalidate query cache để buộc refetch
+      queryClient.invalidateQueries({
+        queryKey: ['/api/stats']
+      });
       
       toast({
         title: "Đã áp dụng bộ lọc",
-        description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+        description: `Hiển thị dữ liệu từ ${format(updatedStartDate, 'dd/MM/yyyy')} đến ${format(updatedEndDate, 'dd/MM/yyyy')}`,
       });
-    }, 0);
+    }, 100);
   };
   
   // Hàm xử lý khi nhấn nút xóa bộ lọc
   const handleResetDateFilter = () => {
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
     setStartDate(firstDayOfMonth);
     setEndDate(today);
     
-    toast({
-      title: "Đã đặt lại bộ lọc",
-      description: "Hiển thị dữ liệu từ đầu tháng đến thời điểm hiện tại",
-    });
+    // Force refetch bằng cách invalidate query sau khi cập nhật state
+    setTimeout(() => {
+      queryClient.invalidateQueries({
+        queryKey: ['/api/stats']
+      });
+      
+      toast({
+        title: "Đã đặt lại bộ lọc",
+        description: "Hiển thị dữ liệu từ đầu tháng đến thời điểm hiện tại",
+      });
+    }, 100);
   };
 
   // Fetch dashboard stats với params khoảng thời gian
@@ -99,9 +126,10 @@ export default function DashboardPage() {
     unassigned: number;
     period: { start: string; end: string } | null;
   }>({
-    queryKey: ['/api/stats', dateParams],
+    queryKey: ['/api/stats', dateFilterKey], // Sử dụng dateFilterKey thay vì dateParams
     queryFn: async () => {
       const queryString = `?startDate=${dateParams.startDate}&endDate=${dateParams.endDate}`;
+      console.log('Fetching stats with query:', queryString); // Debug
       const response = await fetch(`/api/stats${queryString}`);
       if (!response.ok) {
         throw new Error('Failed to fetch stats');
