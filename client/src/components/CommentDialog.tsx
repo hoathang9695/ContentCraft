@@ -17,9 +17,10 @@ interface CommentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contentId: number | null;
+  externalId?: string; // Thêm externalId cho API bên ngoài
 }
 
-export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogProps) {
+export function CommentDialog({ open, onOpenChange, contentId, externalId }: CommentDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState<string>('');
@@ -47,11 +48,36 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
   
   // Removed predefined comment function
   
+  // Mutation để gửi comment đến API bên ngoài
+  const externalCommentMutation = useMutation({
+    mutationFn: async ({ postId, comments }: { postId: string, comments: string[] }) => {
+      try {
+        // Gửi comments đến API bên ngoài
+        const results = await Promise.all(
+          comments.map(comment => 
+            fetch(`https://prod-sn.emso.vn/api/v1/statuses/${postId}/comments`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ content: comment }),
+            }).then(res => res.json())
+          )
+        );
+        return results;
+      } catch (error) {
+        console.error('Lỗi khi gửi comment đến API bên ngoài:', error);
+        throw error;
+      }
+    },
+  });
+
+  // Mutation để cập nhật số lượng comment trong DB nội bộ
   const commentMutation = useMutation({
     mutationFn: async ({ id, count }: { id: number, count: number }) => {
       return await apiRequest('PATCH', `/api/contents/${id}/comments`, { count });
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
       toast({
@@ -70,13 +96,32 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
     },
   });
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!contentId) return;
     
     const commentCount = extractedComments.length;
     
     if (commentCount > 0) {
+      // Đầu tiên cập nhật số lượng comment trong DB nội bộ
       commentMutation.mutate({ id: contentId, count: commentCount });
+      
+      // Sau đó, nếu có externalId và có comments hợp lệ, gửi đến API bên ngoài
+      if (externalId) {
+        try {
+          await externalCommentMutation.mutateAsync({
+            postId: externalId,
+            comments: extractedComments
+          });
+          console.log('Đã gửi các comment đến API bên ngoài thành công');
+        } catch (error) {
+          console.error('Lỗi khi gửi comments đến API bên ngoài:', error);
+          toast({
+            title: 'Lưu ý',
+            description: 'Đã cập nhật số lượng comment nhưng không thể gửi nội dung đến hệ thống bên ngoài.',
+            variant: 'destructive',
+          });
+        }
+      }
     } else {
       toast({
         title: 'Lỗi',
@@ -146,9 +191,9 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
             type="submit" 
             onClick={handleSubmit}
             className="w-24"
-            disabled={commentMutation.isPending}
+            disabled={commentMutation.isPending || externalCommentMutation.isPending}
           >
-            {commentMutation.isPending ? "Đang lưu..." : "Lưu"}
+            {commentMutation.isPending || externalCommentMutation.isPending ? "Đang lưu..." : "Lưu"}
           </Button>
         </DialogFooter>
       </DialogContent>

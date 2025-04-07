@@ -61,6 +61,7 @@ export function ContentTable({
   const [contentToUpdate, setContentToUpdate] = useState<number | null>(null);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [contentToComment, setContentToComment] = useState<number | null>(null);
+  const [externalIdToComment, setExternalIdToComment] = useState<string | undefined>(undefined);
   const [authError, setAuthError] = useState(false);
   
   // Toast hiển thị khi không tìm thấy dữ liệu nào
@@ -348,8 +349,19 @@ export function ContentTable({
   };
   
   const handlePushComment = (id: number) => {
+    // Tìm content trong danh sách để lấy externalId
+    const content = allContents.find(c => c.id === id);
+    
     // Open comment dialog instead of directly adding a comment
     setContentToComment(id);
+    
+    // Kiểm tra để đảm bảo không có giá trị null
+    if (content && content.externalId) {
+      setExternalIdToComment(content.externalId);
+    } else {
+      setExternalIdToComment(undefined);
+    }
+    
     setIsCommentDialogOpen(true);
   };
   
@@ -641,6 +653,7 @@ export function ContentTable({
         open={isCommentDialogOpen}
         onOpenChange={setIsCommentDialogOpen}
         contentId={contentToComment}
+        externalId={externalIdToComment}
       />
     </>
   );
