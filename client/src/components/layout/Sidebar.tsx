@@ -2,7 +2,6 @@ import { useLocation, Link } from 'wouter';
 import { 
   LayoutDashboard, 
   FileText, 
-  Image, 
   Users, 
   User,
   ActivitySquare,
@@ -93,15 +92,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             
             {isAdmin && (
               <>
-                <SidebarItem
-                  href="/media"
-                  icon={Image}
-                  isActive={isActivePath('/media')}
-                  onClick={handleItemClick}
-                >
-                  Media
-                </SidebarItem>
-                
                 <SidebarItem
                   href="/users"
                   icon={Users}
