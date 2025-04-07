@@ -103,16 +103,27 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
               </div>
               <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto">
                 {extractedComments.map((comment, index) => (
-                  <Button 
+                  <div 
                     key={index} 
-                    variant="outline" 
-                    size="sm"
-                    className="bg-white text-xs max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap"
+                    className="bg-white text-xs rounded-md border px-3 py-1.5 flex items-center gap-2 max-w-[300px] group"
                     title={comment}
-                    onClick={() => setCommentText(commentText + ` {${comment}}`)}
                   >
-                    {comment.length > 40 ? comment.substring(0, 40) + '...' : comment}
-                  </Button>
+                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                      {comment.length > 40 ? comment.substring(0, 40) + '...' : comment}
+                    </span>
+                    <button 
+                      type="button"
+                      className="text-red-500 hover:text-red-700 ml-auto opacity-70 hover:opacity-100"
+                      onClick={() => {
+                        // Xóa comment này khỏi chuỗi văn bản
+                        const regex = new RegExp(`\\{${comment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}`, 'g');
+                        setCommentText(commentText.replace(regex, ''));
+                      }}
+                      aria-label="Xóa comment"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
