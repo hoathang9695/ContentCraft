@@ -177,9 +177,9 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       for (let index = 0; index < extractedComments.length; index++) {
         const comment = extractedComments[index];
         try {
-          // Thêm độ trễ 1 giây giữa các lần gửi, trừ lần gửi đầu tiên
+          // Thêm độ trễ 1 phút giữa các lần gửi, trừ lần gửi đầu tiên
           if (index > 0) {
-            await delay(1000); // Đợi 1 giây trước khi gửi comment tiếp theo
+            await delay(60000); // Đợi 1 phút (60 giây) trước khi gửi comment tiếp theo
           }
           
           // Lấy ngẫu nhiên một người dùng ảo cho mỗi comment, không trùng với những người đã sử dụng
@@ -312,7 +312,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               </p>
               {extractedComments.length > 1 && (
                 <p className="mt-1 text-xs italic">
-                  Lưu ý: Khi gửi nhiều comment cùng lúc, hệ thống sẽ tự động thêm độ trễ 1 giây giữa các comment để tránh lỗi từ API bên ngoài.
+                  Lưu ý: Khi gửi nhiều comment cùng lúc, hệ thống sẽ tự động thêm độ trễ 1 phút giữa các comment để tránh lỗi từ API bên ngoài.
                 </p>
               )}
             </div>
