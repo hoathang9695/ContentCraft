@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 
 // Content schema with validation
 const contentSchema = insertContentSchema.extend({
@@ -31,6 +33,7 @@ const contentSchema = insertContentSchema.extend({
   categories: z.string().optional(),
   labels: z.string().optional(),
   sourceVerification: z.string().optional(),
+  assigned_to_id: z.number().optional(),
 });
 
 export type ContentFormValues = z.infer<typeof contentSchema>;
@@ -48,6 +51,12 @@ export function ContentForm({
 }: ContentFormProps) {
   const { user } = useAuth();
   
+  // Fetch active editors
+  const { data: editors = [], isLoading: isLoadingEditors } = useQuery<{id: number, name: string, username: string}[]>({
+    queryKey: ['/api/editors'],
+    enabled: user?.role === 'admin', // Only load if user is admin
+  });
+  
   // Form
   const form = useForm<ContentFormValues>({
     resolver: zodResolver(contentSchema),
@@ -57,7 +66,8 @@ export function ContentForm({
       categories: defaultValues?.categories || '',
       labels: defaultValues?.labels || '',
       status: defaultValues?.status || 'draft',
-      sourceVerification: defaultValues?.sourceVerification || 'unverified'
+      sourceVerification: defaultValues?.sourceVerification || 'unverified',
+      assigned_to_id: defaultValues?.assigned_to_id || undefined
     }
   });
   
@@ -182,6 +192,47 @@ export function ContentForm({
             </FormItem>
           )}
         />
+        
+        {/* Hiển thị select người xử lý chỉ khi người dùng là admin */}
+        {user?.role === 'admin' && (
+          <FormField
+            control={form.control}
+            name="assigned_to_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phân công xử lý cho</FormLabel>
+                <Select 
+                  onValueChange={(value) => field.onChange(Number(value))}
+                  value={field.value?.toString() || ''}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn người xử lý" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {isLoadingEditors ? (
+                      <SelectItem value="loading" disabled>
+                        Đang tải danh sách người dùng...
+                      </SelectItem>
+                    ) : editors.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        Không có người dùng nào khả dụng
+                      </SelectItem>
+                    ) : (
+                      editors.map((editor) => (
+                        <SelectItem key={editor.id} value={editor.id.toString()}>
+                          {editor.name} ({editor.username})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         
         <div className="flex justify-end space-x-2">
           <Button type="submit" disabled={isSubmitting}>

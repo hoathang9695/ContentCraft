@@ -158,22 +158,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/contents", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertContentSchema.parse({
-        ...req.body,
-        assigned_to_id: (req.user as Express.User).id,
-        assignedAt: new Date()
+      const user = req.user as Express.User;
+      let assigned_to_id = user.id;
+      
+      // Nếu là admin và chọn gán cho người khác
+      if (user.role === 'admin' && req.body.assigned_to_id) {
+        assigned_to_id = req.body.assigned_to_id;
+      }
+      
+      // Log thông tin để debug
+      console.log("Creating new content with data:", {
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        requestBody: req.body
       });
       
-      const newContent = await storage.createContent(validatedData);
-      res.status(201).json(newContent);
-    } catch (error) {
-      if (error instanceof ZodError) {
+      // Tạo một bản sao của dữ liệu đầu vào và đảm bảo assigned_to_id là số
+      const inputData = {
+        ...req.body,
+        assigned_to_id: Number(assigned_to_id),
+        assignedAt: new Date()
+      };
+      
+      // Ensure assigned_to_id is valid
+      if (isNaN(inputData.assigned_to_id)) {
         return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
+          message: "Invalid assigned_to_id value", 
+          value: req.body.assigned_to_id
         });
       }
-      res.status(500).json({ message: "Error creating content" });
+      
+      try {
+        const validatedData = insertContentSchema.parse(inputData);
+        const newContent = await storage.createContent(validatedData);
+        return res.status(201).json(newContent);
+      } catch (validationError) {
+        console.error("Validation error:", validationError);
+        if (validationError instanceof ZodError) {
+          return res.status(400).json({ 
+            message: "Validation error", 
+            errors: validationError.errors 
+          });
+        }
+        throw validationError; // Re-throw if not a ZodError
+      }
+    } catch (error) {
+      console.error("Error creating content:", error);
+      return res.status(500).json({ 
+        message: "Error creating content",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
@@ -887,6 +922,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(assignableUsers);
     } catch (error) {
       res.status(500).json({ message: "Error fetching assignable users" });
+    }
+  });
+  
+  // Get editor users for anyone (accessible to all authenticated users)
+  app.get("/api/editors", isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Filter for active editors only
+      const editorUsers = users
+        .filter(user => user.role === 'editor' && user.status === 'active')
+        .map(({ id, username, name }) => ({ id, username, name }));
+      
+      res.json(editorUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching editor users" });
     }
   });
   
