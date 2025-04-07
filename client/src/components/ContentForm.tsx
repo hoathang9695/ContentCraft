@@ -26,6 +26,7 @@ import { Loader2 } from 'lucide-react';
 
 // Content schema with validation
 const contentSchema = insertContentSchema.extend({
+  externalId: z.string().optional(),
   source: z.string().optional(),
   categories: z.string().optional(),
   labels: z.string().optional(),
@@ -51,6 +52,7 @@ export function ContentForm({
   const form = useForm<ContentFormValues>({
     resolver: zodResolver(contentSchema),
     defaultValues: {
+      externalId: defaultValues?.externalId || '',
       source: defaultValues?.source || '',
       categories: defaultValues?.categories || '',
       labels: defaultValues?.labels || '',
@@ -83,6 +85,23 @@ export function ContentForm({
                   <SelectItem value="published">Đã xử lý</SelectItem>
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="externalId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>External ID</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Nhập External ID" 
+                  {...field} 
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

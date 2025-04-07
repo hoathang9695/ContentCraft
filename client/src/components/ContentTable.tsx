@@ -425,7 +425,20 @@ export function ContentTable({
               key: 'externalId',
               header: 'External ID',
               render: (row: Content) => (
-                <div className="font-medium text-xs">{row.externalId || `ID-${row.id}`}</div>
+                <div className="font-medium text-xs">
+                  {row.externalId ? (
+                    <a 
+                      href={`https://emso.vn/posts/${row.externalId}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {row.externalId}
+                    </a>
+                  ) : (
+                    `ID-${row.id}`
+                  )}
+                </div>
               ),
             },
             {
