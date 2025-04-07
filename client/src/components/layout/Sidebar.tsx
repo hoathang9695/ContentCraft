@@ -5,7 +5,9 @@ import {
   Users, 
   User,
   ActivitySquare,
-  History
+  History,
+  Folder,
+  Tag
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -112,6 +114,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={handleItemClick}
                 >
                   Hoạt động người dùng
+                </SidebarItem>
+                
+                <SidebarItem
+                  href="/categories"
+                  icon={Folder}
+                  isActive={isActivePath('/categories')}
+                  onClick={handleItemClick}
+                >
+                  Quản lý Categories
                 </SidebarItem>
               </>
             )}
