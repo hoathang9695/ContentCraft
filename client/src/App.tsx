@@ -17,7 +17,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={DashboardPage} adminOnly={true} />
+      <ProtectedRoute path="/" component={DashboardPage} adminOnly={false} />
       <ProtectedRoute path="/contents" component={ContentPage} />
       <ProtectedRoute path="/contents/new" component={ContentEditor} adminOnly={true} />
       <ProtectedRoute path="/contents/:id/edit" component={ContentEditor} adminOnly={true} />

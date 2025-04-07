@@ -74,9 +74,9 @@ export default function DashboardPage() {
       const nextDateFilterKey = `${format(updatedStartDate, 'yyyy-MM-dd')}-${format(updatedEndDate, 'yyyy-MM-dd')}`;
       console.log('New date filter key:', nextDateFilterKey);
       
-      // Invalidate query cache để buộc refetch
+      // Invalidate query cache để buộc refetch - thêm user.role để phân biệt cache
       queryClient.invalidateQueries({
-        queryKey: ['/api/stats']
+        queryKey: ['/api/stats', user?.role]
       });
       
       toast({
@@ -97,7 +97,7 @@ export default function DashboardPage() {
     // Force refetch bằng cách invalidate query sau khi cập nhật state
     setTimeout(() => {
       queryClient.invalidateQueries({
-        queryKey: ['/api/stats']
+        queryKey: ['/api/stats', user?.role]
       });
       
       toast({
@@ -121,7 +121,7 @@ export default function DashboardPage() {
     unassigned: number;
     period: { start: string; end: string } | null;
   }>({
-    queryKey: ['/api/stats', dateFilterKey], // Sử dụng dateFilterKey thay vì dateParams
+    queryKey: ['/api/stats', dateFilterKey, user?.role], // Thêm user.role để phân biệt cache
     queryFn: async () => {
       const queryString = `?startDate=${dateParams.startDate}&endDate=${dateParams.endDate}`;
       console.log('Fetching stats with query:', queryString); // Debug
