@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -23,6 +23,7 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState<string>('');
+  const [extractedComments, setExtractedComments] = useState<string[]>([]);
   
   // Predefined comment templates
   const predefinedComments = [
@@ -36,16 +37,24 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
   
   // Extract comments inside {} brackets
   const extractComments = (text: string): string[] => {
+    if (!text) return [];
+    
     const regex = /{([^}]*)}/g;
     const matches = text.match(regex);
     
     if (!matches) return [text]; // If no matches, use the whole text
     
-    return matches.map(match => match.substring(1, match.length - 1));
+    return matches.map(match => match.substring(1, match.length - 1).trim()).filter(comment => comment.length > 0);
   };
   
+  // Update extracted comments whenever the commentText changes
+  useEffect(() => {
+    const comments = extractComments(commentText);
+    setExtractedComments(comments);
+  }, [commentText]);
+  
   const addPredefinedComment = (comment: string) => {
-    setCommentText(prev => prev + (prev ? ' ' : '') + comment);
+    setCommentText(prev => prev + (prev ? ' ' : '') + `{${comment}}`);
   };
   
   const commentMutation = useMutation({
@@ -74,8 +83,7 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
   const handleSubmit = () => {
     if (!contentId) return;
     
-    const comments = extractComments(commentText);
-    const commentCount = comments.length;
+    const commentCount = extractedComments.length;
     
     if (commentCount > 0) {
       commentMutation.mutate({ id: contentId, count: commentCount });
@@ -97,12 +105,37 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
         </DialogHeader>
         
         <div className="space-y-4 my-4">
-          <div className="flex flex-wrap gap-2">
+          {/* Display extracted comments as buttons */}
+          {extractedComments.length > 0 && commentText.includes('{') && commentText.includes('}') && (
+            <div className="flex flex-wrap gap-2 bg-gray-50 p-3 rounded-md">
+              <div className="w-full text-sm text-muted-foreground mb-2">
+                Các comment đã tách:
+              </div>
+              {extractedComments.map((comment, index) => (
+                <Button 
+                  key={index} 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-white"
+                  onClick={() => setCommentText(commentText + ` {${comment}}`)}
+                >
+                  {comment}
+                </Button>
+              ))}
+            </div>
+          )}
+          
+          {/* Display pre-defined comment templates */}
+          <div className="flex flex-wrap gap-2 bg-gray-50 p-3 rounded-md">
+            <div className="w-full text-sm text-muted-foreground mb-2">
+              Mẫu comment có sẵn:
+            </div>
             {predefinedComments.map((comment, index) => (
               <Button 
                 key={index} 
                 variant="outline" 
                 size="sm"
+                className="bg-white"
                 onClick={() => addPredefinedComment(comment)}
               >
                 {comment}
@@ -118,7 +151,7 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
           />
           
           <div className="text-sm text-muted-foreground">
-            Số comments sẽ được thêm: {extractComments(commentText).length}
+            Số comments sẽ được thêm: {extractedComments.length}
           </div>
         </div>
         
