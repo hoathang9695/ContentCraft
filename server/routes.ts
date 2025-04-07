@@ -349,9 +349,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         end.setHours(23, 59, 59, 999);
         
         filteredContents = filteredContents.filter(content => {
-          if (!content.createdAt) return false;
-          const createdAt = new Date(content.createdAt);
-          return createdAt >= start && createdAt <= end;
+          // Kiểm tra theo cả ngày tạo và ngày cập nhật
+          // Nếu nội dung được tạo HOẶC cập nhật trong khoảng thời gian, sẽ được hiển thị
+          if (!content.createdAt && !content.updatedAt) return false;
+          
+          // Kiểm tra ngày tạo nếu có
+          if (content.createdAt) {
+            const createdAt = new Date(content.createdAt);
+            if (createdAt >= start && createdAt <= end) return true;
+          }
+          
+          // Kiểm tra ngày cập nhật nếu có
+          if (content.updatedAt) {
+            const updatedAt = new Date(content.updatedAt);
+            if (updatedAt >= start && updatedAt <= end) return true;
+          }
+          
+          return false; // Không thỏa mãn điều kiện nào
         });
       }
       
