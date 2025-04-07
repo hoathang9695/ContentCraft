@@ -98,6 +98,11 @@ export default function FakeUsersPage() {
     enabled: isAdmin, // Chỉ kích hoạt truy vấn nếu là admin
   });
   
+  // Debug - In thông tin về user và API URL
+  console.log("User info:", user);
+  console.log("Is admin:", isAdmin);
+  console.log("API URL:", window.location.origin + "/api/fake-users");
+  
   // Xử lý lỗi từ truy vấn
   useEffect(() => {
     if (error) {

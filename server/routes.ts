@@ -1323,6 +1323,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: req.body.status || 'active' // Default status is active
       });
       
+      // Kiểm tra xem token đã tồn tại chưa
+      const existingFakeUser = await storage.getFakeUserByToken(validatedData.token);
+      if (existingFakeUser) {
+        return res.status(400).json({ 
+          message: "Token đã tồn tại",
+          error: "Token này đã được sử dụng bởi một người dùng ảo khác" 
+        });
+      }
+      
       const newFakeUser = await storage.createFakeUser(validatedData);
       res.status(201).json(newFakeUser);
     } catch (error) {
@@ -1351,6 +1360,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate with insertFakeUserSchema.partial() to allow partial updates
       const validatedData = insertFakeUserSchema.partial().parse(req.body);
+      
+      // Nếu đang cập nhật token, kiểm tra xem token mới đã tồn tại chưa
+      if (validatedData.token && validatedData.token !== existingFakeUser.token) {
+        const duplicateUser = await storage.getFakeUserByToken(validatedData.token);
+        if (duplicateUser && duplicateUser.id !== fakeUserId) {
+          return res.status(400).json({ 
+            message: "Token đã tồn tại",
+            error: "Token này đã được sử dụng bởi một người dùng ảo khác" 
+          });
+        }
+      }
       
       const updatedFakeUser = await storage.updateFakeUser(fakeUserId, validatedData);
       res.json(updatedFakeUser);

@@ -34,6 +34,12 @@ export async function apiRequest<T = any>(
   });
 
   await throwIfResNotOk(res);
+  
+  // Nếu mã status 204 No Content, không cần parse JSON
+  if (res.status === 204) {
+    return {} as T;
+  }
+  
   return await res.json() as T;
 }
 
@@ -43,15 +49,26 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Debug console logs
+    console.log("Fetching from queryKey:", queryKey[0]);
+    
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
     });
+
+    console.log("API Response status:", res.status);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }
 
     await throwIfResNotOk(res);
+    
+    // Nếu mã status 204 No Content, không cần parse JSON
+    if (res.status === 204) {
+      return {} as T;
+    }
+    
     return await res.json();
   };
 

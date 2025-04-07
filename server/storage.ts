@@ -60,6 +60,7 @@ export interface IStorage {
   // Fake User operations
   getAllFakeUsers(): Promise<FakeUser[]>;
   getFakeUser(id: number): Promise<FakeUser | undefined>;
+  getFakeUserByToken(token: string): Promise<FakeUser | undefined>; // Get fake user by token
   createFakeUser(fakeUser: InsertFakeUser): Promise<FakeUser>;
   updateFakeUser(id: number, fakeUser: Partial<InsertFakeUser>): Promise<FakeUser | undefined>;
   deleteFakeUser(id: number): Promise<boolean>;
@@ -543,6 +544,11 @@ export class DatabaseStorage implements IStorage {
 
   async getFakeUser(id: number): Promise<FakeUser | undefined> {
     const result = await db.select().from(fakeUsers).where(eq(fakeUsers.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async getFakeUserByToken(token: string): Promise<FakeUser | undefined> {
+    const result = await db.select().from(fakeUsers).where(eq(fakeUsers.token, token));
     return result.length > 0 ? result[0] : undefined;
   }
 
