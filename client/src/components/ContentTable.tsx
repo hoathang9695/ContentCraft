@@ -9,6 +9,7 @@ import { Edit, Eye, Trash2, Plus, MoreHorizontal, MessageSquare, ThumbsUp, Refre
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { CommentDialog } from '@/components/CommentDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +59,8 @@ export function ContentTable({
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [contentToUpdate, setContentToUpdate] = useState<number | null>(null);
+  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+  const [contentToComment, setContentToComment] = useState<number | null>(null);
   const [authError, setAuthError] = useState(false);
   
   // Toast hiển thị khi không tìm thấy dữ liệu nào
@@ -345,8 +348,9 @@ export function ContentTable({
   };
   
   const handlePushComment = (id: number) => {
-    // Add 1 comment to the content
-    commentMutation.mutate({ id, count: 1 });
+    // Open comment dialog instead of directly adding a comment
+    setContentToComment(id);
+    setIsCommentDialogOpen(true);
   };
   
   const handlePushReaction = (id: number) => {
@@ -630,6 +634,13 @@ export function ContentTable({
         open={isUpdateDialogOpen}
         onOpenChange={setIsUpdateDialogOpen}
         contentId={contentToUpdate}
+      />
+      
+      {/* Comment Dialog */}
+      <CommentDialog
+        open={isCommentDialogOpen}
+        onOpenChange={setIsCommentDialogOpen}
+        contentId={contentToComment}
       />
     </>
   );
