@@ -319,50 +319,67 @@ export default function DashboardPage() {
         />
       </div>
       
-      {/* Section biểu đồ phân bổ dữ liệu theo người xử lý */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-8">
-        <AssignmentPieChart
-          title="Phân bổ dữ liệu theo người xử lý"
-          data={stats?.assignedPerUser || []}
-          isLoading={isLoadingStats}
-          onViewAll={() => navigate('/contents')}
-        />
-        
-        <div className="flex flex-col gap-4">
-          <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <h3 className="text-lg font-medium mb-2">Thống kê tổng quan</h3>
-            <p className="text-muted-foreground mb-4">
-              Biểu đồ thể hiện tỷ lệ phân công nội dung giữa các nhân sự trong hệ thống.
-            </p>
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between">
-                <span>Tổng số nội dung đã phân công:</span>
-                <span className="font-medium">{stats?.assigned || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tổng số nội dung chưa phân công:</span>
-                <span className="font-medium">{stats?.unassigned || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tổng số người dùng tham gia xử lý:</span>
-                <span className="font-medium">{stats?.assignedPerUser?.length || 0}</span>
+      {/* Section biểu đồ phân bổ dữ liệu theo người xử lý - chỉ hiển thị cho admin */}
+      {user?.role === 'admin' && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-8">
+          <AssignmentPieChart
+            title="Phân bổ dữ liệu theo người xử lý"
+            data={stats?.assignedPerUser || []}
+            isLoading={isLoadingStats}
+            onViewAll={() => navigate('/contents')}
+          />
+          
+          <div className="flex flex-col gap-4">
+            <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <h3 className="text-lg font-medium mb-2">Thống kê tổng quan</h3>
+              <p className="text-muted-foreground mb-4">
+                Biểu đồ thể hiện tỷ lệ phân công nội dung giữa các nhân sự trong hệ thống.
+              </p>
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between">
+                  <span>Tổng số nội dung đã phân công:</span>
+                  <span className="font-medium">{stats?.assigned || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tổng số nội dung chưa phân công:</span>
+                  <span className="font-medium">{stats?.unassigned || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tổng số người dùng tham gia xử lý:</span>
+                  <span className="font-medium">{stats?.assignedPerUser?.length || 0}</span>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div className="mt-auto">
-            <Button 
-              size="lg" 
-              variant="default" 
-              onClick={handleViewAllContent}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-medium"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              Xem tất cả nội dung
-            </Button>
+            
+            <div className="mt-auto">
+              <Button 
+                size="lg" 
+                variant="default" 
+                onClick={handleViewAllContent}
+                className="w-full bg-primary hover:bg-primary/90 text-white font-medium"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Xem tất cả nội dung
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+      
+      {/* Button "Xem tất cả nội dung" cho người dùng không phải admin */}
+      {user?.role !== 'admin' && (
+        <div className="mb-8">
+          <Button 
+            size="lg" 
+            variant="default" 
+            onClick={handleViewAllContent}
+            className="w-full bg-primary hover:bg-primary/90 text-white font-medium"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Xem tất cả nội dung
+          </Button>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

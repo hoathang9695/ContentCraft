@@ -19,7 +19,7 @@ import {
   LogOut 
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface AppHeaderProps {
   onMenuClick: () => void;
@@ -99,6 +99,7 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                    <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
                     <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
                   </Avatar>
                   <span className="hidden md:inline-block text-sm font-medium">
