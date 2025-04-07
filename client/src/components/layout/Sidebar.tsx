@@ -109,6 +109,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </SidebarItem>
                 
                 <SidebarItem
+                  href="/categories"
+                  icon={Folder}
+                  isActive={isActivePath('/categories')}
+                  onClick={handleItemClick}
+                >
+                  Quản lý Categories
+                </SidebarItem>
+                
+                <SidebarItem
                   href="/users"
                   icon={Users}
                   isActive={isActivePath('/users')}
@@ -124,15 +133,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={handleItemClick}
                 >
                   Hoạt động người dùng
-                </SidebarItem>
-                
-                <SidebarItem
-                  href="/categories"
-                  icon={Folder}
-                  isActive={isActivePath('/categories')}
-                  onClick={handleItemClick}
-                >
-                  Quản lý Categories
                 </SidebarItem>
               </>
             )}
