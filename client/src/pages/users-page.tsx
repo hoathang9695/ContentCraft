@@ -38,8 +38,7 @@ export default function UsersPage() {
   // Update user status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: number; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/users/${userId}/status`, { status });
-      return await res.json();
+      return await apiRequest("PATCH", `/api/users/${userId}/status`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
