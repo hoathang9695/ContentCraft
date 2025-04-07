@@ -12,13 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface CommentDialogProps {
   open: boolean;
@@ -39,13 +32,18 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState<string>('');
   const [extractedComments, setExtractedComments] = useState<string[]>([]);
-  const [selectedFakeUser, setSelectedFakeUser] = useState<string>('');
-  
   // Fetch fake users
   const { data: fakeUsers = [] } = useQuery<FakeUser[]>({
     queryKey: ['/api/fake-users'],
     enabled: open && !!externalId, // Only fetch when dialog is open and we have an externalId
   });
+  
+  // Hàm lấy ngẫu nhiên một người dùng ảo từ danh sách
+  const getRandomFakeUser = (): FakeUser | null => {
+    if (fakeUsers.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * fakeUsers.length);
+    return fakeUsers[randomIndex];
+  };
   
   // Extract comments inside {} brackets
   const extractComments = (text: string): string[] => {
@@ -65,15 +63,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     setExtractedComments(comments);
   }, [commentText]);
   
-  // Reset selected fake user when dialog opens
+  // Reset form khi đóng dialog
   useEffect(() => {
-    if (open && fakeUsers.length > 0) {
-      setSelectedFakeUser(fakeUsers[0].id.toString());
-    } else if (!open) {
-      setSelectedFakeUser(''); // Đặt lại thành chuỗi rỗng khi đóng dialog
+    if (!open) {
       setCommentText('');
     }
-  }, [open, fakeUsers]);
+  }, [open]);
   
   // Mutation để gửi comment đến API bên ngoài sử dụng API mới
   const sendExternalCommentMutation = useMutation({
@@ -141,7 +136,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
     
-    // Cập nhật số lượng comment trong DB nội bộ
+    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
     if (!externalId) {
       commentMutation.mutate({ id: contentId, count: commentCount });
       return;
@@ -149,25 +144,27 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     
     // Xử lý trường hợp gửi comment qua API bên ngoài
     if (externalId) {
-      // Kiểm tra nếu người dùng đã chọn fake user
-      if (!selectedFakeUser) {
+      // Kiểm tra nếu không có người dùng ảo nào
+      if (fakeUsers.length === 0) {
         toast({
           title: 'Lỗi',
-          description: 'Vui lòng chọn một người dùng ảo để gửi comment',
+          description: 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.',
           variant: 'destructive',
         });
         return;
       }
       
-      const fakeUserId = parseInt(selectedFakeUser);
-      
-      // Gửi từng comment thông qua API mới
+      // Gửi từng comment với một người dùng ảo ngẫu nhiên
       let successCount = 0;
       for (const comment of extractedComments) {
         try {
+          // Lấy ngẫu nhiên một người dùng ảo cho mỗi comment
+          const randomUser = getRandomFakeUser();
+          if (!randomUser) continue;
+          
           await sendExternalCommentMutation.mutateAsync({
             externalId,
-            fakeUserId,
+            fakeUserId: randomUser.id,
             comment
           });
           successCount++;
@@ -204,27 +201,22 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         </DialogHeader>
         
         <div className="space-y-4 my-4 flex-1 overflow-y-auto pr-2">
-          {/* Hiển thị danh sách fake users nếu có externalId */}
+          {/* Hiển thị thông tin về người dùng ảo nếu có externalId */}
           {externalId && (
             <div className="flex flex-col space-y-2">
-              <label htmlFor="fake-user-select" className="text-sm font-medium">
-                Chọn người dùng để gửi comment
-              </label>
-              <Select 
-                value={selectedFakeUser} 
-                onValueChange={setSelectedFakeUser}
-              >
-                <SelectTrigger id="fake-user-select" className="w-full">
-                  <SelectValue placeholder="Chọn người dùng ảo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fakeUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md text-sm">
+                <p className="font-medium">Thông tin người dùng ảo</p>
+                <p className="mt-1">
+                  {fakeUsers.length > 0 
+                    ? "Hệ thống sẽ tự động chọn ngẫu nhiên một người dùng ảo để gửi mỗi comment" 
+                    : "Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý."}
+                </p>
+                {fakeUsers.length > 0 && (
+                  <p className="mt-1 text-xs">
+                    Có tổng cộng {fakeUsers.length} người dùng ảo có thể sử dụng để gửi comment
+                  </p>
+                )}
+              </div>
               {fakeUsers.length === 0 && (
                 <p className="text-xs text-red-500">
                   Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý.
@@ -296,8 +288,8 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             disabled={
               commentMutation.isPending || 
               sendExternalCommentMutation.isPending || 
-              (externalId && !selectedFakeUser) ||
-              (externalId && fakeUsers.length === 0)
+              (externalId && fakeUsers.length === 0) ||
+              extractedComments.length === 0
             }
           >
             {commentMutation.isPending || sendExternalCommentMutation.isPending ? "Đang gửi..." : "Gửi"}
