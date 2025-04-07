@@ -38,7 +38,16 @@ export default function ContentPage() {
   // Hàm xử lý khi thay đổi ngày
   const handleDateFilter = () => {
     // Tại đây, bạn có thể thêm logic lọc dữ liệu theo ngày
-    console.log('Filtering by date range:', { startDate, endDate });
+    console.log('Filtering by date range:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    });
+    // Cho phép hệ thống có thời gian để cập nhật state trước khi render
+    setTimeout(() => {
+      // Kích hoạt re-render để áp dụng bộ lọc
+      setStartDate(new Date(startDate));
+      setEndDate(new Date(endDate));
+    }, 0);
   };
   
   // Hàm xử lý khi thay đổi trạng thái nguồn
@@ -56,21 +65,42 @@ export default function ContentPage() {
                 <Button 
                   variant={activeTab === 'all' ? 'default' : 'ghost'} 
                   size="sm"
-                  onClick={() => setActiveTab('all')}
+                  onClick={() => {
+                    setActiveTab('all');
+                    // Kích hoạt re-render của ContentTable khi chuyển tab
+                    setTimeout(() => {
+                      const newStart = new Date(startDate);
+                      setStartDate(newStart);
+                    }, 0);
+                  }}
                 >
                   Tất cả
                 </Button>
                 <Button 
                   variant={activeTab === 'processed' ? 'default' : 'ghost'} 
                   size="sm"
-                  onClick={() => setActiveTab('processed')}
+                  onClick={() => {
+                    setActiveTab('processed');
+                    // Kích hoạt re-render của ContentTable khi chuyển tab
+                    setTimeout(() => {
+                      const newStart = new Date(startDate);
+                      setStartDate(newStart);
+                    }, 0);
+                  }}
                 >
                   Đã xử lý
                 </Button>
                 <Button 
                   variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
                   size="sm"
-                  onClick={() => setActiveTab('unprocessed')}
+                  onClick={() => {
+                    setActiveTab('unprocessed');
+                    // Kích hoạt re-render của ContentTable khi chuyển tab
+                    setTimeout(() => {
+                      const newStart = new Date(startDate);
+                      setStartDate(newStart);
+                    }, 0);
+                  }}
                 >
                   Chưa xử lý
                 </Button>

@@ -22,28 +22,69 @@ import {
 import { Content } from '@shared/schema';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { addDays } from 'date-fns';
-import { DateRange } from 'react-day-picker';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, navigate] = useLocation();
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(); 
+  
+  // Sử dụng ngày 1 tháng hiện tại làm giá trị mặc định cho ngày bắt đầu
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
+  const [endDate, setEndDate] = useState<Date>(today);
   
   // Chuyển đổi khoảng ngày để truyền vào query
-  const dateParams = dateRange?.from && dateRange?.to 
-    ? { 
-        startDate: format(dateRange.from, 'yyyy-MM-dd'),
-        endDate: format(dateRange.to, 'yyyy-MM-dd') 
-      } 
-    : {};
+  const dateParams = { 
+    startDate: format(startDate, 'yyyy-MM-dd'),
+    endDate: format(endDate, 'yyyy-MM-dd') 
+  };
   
   // Fetch content based on user role (all for admin, only user's content for regular users)
   const { data: contents = [], isLoading: isLoadingContents } = useQuery<Content[]>({
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
   
+  // Hàm xử lý khi thay đổi ngày
+  const handleDateFilter = () => {
+    // Log thông tin về khoảng thời gian đã chọn để debug
+    console.log('Filtering by date range:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    });
+    
+    // Kích hoạt re-render để áp dụng bộ lọc
+    setTimeout(() => {
+      setStartDate(new Date(startDate));
+      setEndDate(new Date(endDate));
+      
+      toast({
+        title: "Đã áp dụng bộ lọc",
+        description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+      });
+    }, 0);
+  };
+  
+  // Hàm xử lý khi nhấn nút xóa bộ lọc
+  const handleResetDateFilter = () => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    setStartDate(firstDayOfMonth);
+    setEndDate(today);
+    
+    toast({
+      title: "Đã đặt lại bộ lọc",
+      description: "Hiển thị dữ liệu từ đầu tháng đến thời điểm hiện tại",
+    });
+  };
+
   // Fetch dashboard stats với params khoảng thời gian
   const { data: stats, isLoading: isLoadingStats } = useQuery<{
     totalContent: number;
@@ -60,9 +101,7 @@ export default function DashboardPage() {
   }>({
     queryKey: ['/api/stats', dateParams],
     queryFn: async () => {
-      const queryString = dateRange?.from && dateRange?.to 
-        ? `?startDate=${dateParams.startDate}&endDate=${dateParams.endDate}` 
-        : '';
+      const queryString = `?startDate=${dateParams.startDate}&endDate=${dateParams.endDate}`;
       const response = await fetch(`/api/stats${queryString}`);
       if (!response.ok) {
         throw new Error('Failed to fetch stats');
@@ -98,12 +137,93 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         
-        {/* Bộ lọc ngày tháng */}
-        <div>
-          <DateRangePicker 
-            dateRange={dateRange} 
-            onDateRangeChange={setDateRange} 
-          />
+        {/* Bộ lọc ngày tháng mới (từ ngày đến ngày) */}
+        <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <div>
+              <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-10 justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setStartDate(date);
+                        if (date > endDate) {
+                          setEndDate(date);
+                        }
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div>
+              <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-10 justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setEndDate(date);
+                        if (date < startDate) {
+                          setStartDate(date);
+                        }
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="flex items-end gap-2 h-[74px]">
+              <Button 
+                variant="default" 
+                className="h-10 bg-green-600 hover:bg-green-700 text-white" 
+                onClick={handleDateFilter}
+              >
+                Áp dụng
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
+                onClick={handleResetDateFilter}
+              >
+                Xóa bộ lọc
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -113,16 +233,6 @@ export default function DashboardPage() {
           <span className="font-medium">
             Đang hiển thị dữ liệu từ {stats.period.start} đến {stats.period.end}
           </span>
-          {dateRange && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setDateRange(undefined)}
-              className="h-8"
-            >
-              Xoá bộ lọc
-            </Button>
-          )}
         </div>
       )}
       

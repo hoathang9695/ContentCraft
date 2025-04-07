@@ -157,6 +157,9 @@ export function ContentTable({
       
       // Kiểm tra lọc theo trạng thái xác minh nguồn
       let verificationMatch = true;
+      
+      // Nếu có sourceVerification (đã truyền vào), áp dụng bộ lọc này
+      // Ngay cả khi không có statusFilter (tab "Tất cả"), vẫn áp dụng bộ lọc xác minh nguồn nếu được chỉ định
       if (sourceVerification) {
         verificationMatch = content.sourceVerification === sourceVerification;
       }
@@ -176,44 +179,37 @@ export function ContentTable({
       // Kiểm tra lọc theo ngày tháng
       let dateMatch = true;
       if (startDate && endDate) {
+        // Chuyển đổi ngày bắt đầu, kết thúc sang chuẩn để so sánh
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
         
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         
+        // Kiểm tra xem hai ngày có cùng một ngày không
         const isSameDay = start.getDate() === end.getDate() && 
                           start.getMonth() === end.getMonth() && 
-                          start.getFullYear() === start.getFullYear();
+                          start.getFullYear() === end.getFullYear();
         
-        if (isSameDay || start < end) {
-          if (!content.createdAt) {
-            dateMatch = false;
+        if (!content.createdAt) {
+          // Nếu không có ngày tạo, không khớp với bộ lọc ngày
+          dateMatch = false;
+        } else {
+          const contentDate = new Date(content.createdAt);
+          
+          // Set lại thời gian để chỉ so sánh ngày
+          const contentDateStart = new Date(contentDate);
+          contentDateStart.setHours(0, 0, 0, 0);
+          
+          // So sánh theo thời gian thực tế (không cần chuyển đổi UTC)
+          if (isSameDay) {
+            // Nếu ngày bắt đầu và kết thúc là cùng một ngày, kiểm tra xem nội dung được tạo vào ngày đó
+            const contentDay = new Date(contentDate);
+            contentDay.setHours(0, 0, 0, 0);
+            dateMatch = contentDay.getTime() === start.getTime();
           } else {
-            const contentDate = new Date(content.createdAt);
-            
-            // Convert to UTC for comparison
-            const contentDay = new Date(Date.UTC(
-              contentDate.getFullYear(),
-              contentDate.getMonth(),
-              contentDate.getDate()
-            ));
-            const startDay = new Date(Date.UTC(
-              start.getFullYear(),
-              start.getMonth(),
-              start.getDate()
-            ));
-            const endDay = new Date(Date.UTC(
-              end.getFullYear(),
-              end.getMonth(),
-              end.getDate()
-            ));
-
-            if (isSameDay) {
-              dateMatch = contentDay.getTime() === startDay.getTime();
-            } else {
-              dateMatch = contentDay >= startDay && contentDay <= endDay;
-            }
+            // Nếu có khoảng thời gian, kiểm tra xem nội dung nằm trong khoảng đó
+            dateMatch = contentDateStart >= start && contentDateStart <= end;
           }
         }
       }
