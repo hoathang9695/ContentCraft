@@ -98,49 +98,55 @@ export function CommentDialog({ open, onOpenChange, contentId }: CommentDialogPr
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Comment</DialogTitle>
           <DialogDescription>Cách nhau bởi dấu {'{}'}</DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 my-4">
+        <div className="space-y-4 my-4 flex-1 overflow-y-auto pr-2">
           {/* Display extracted comments as buttons */}
           {extractedComments.length > 0 && commentText.includes('{') && commentText.includes('}') && (
-            <div className="flex flex-wrap gap-2 bg-gray-50 p-3 rounded-md">
+            <div className="bg-gray-50 p-3 rounded-md">
               <div className="w-full text-sm text-muted-foreground mb-2">
                 Các comment đã tách:
               </div>
-              {extractedComments.map((comment, index) => (
+              <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto">
+                {extractedComments.map((comment, index) => (
+                  <Button 
+                    key={index} 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-white text-xs max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap"
+                    title={comment}
+                    onClick={() => setCommentText(commentText + ` {${comment}}`)}
+                  >
+                    {comment.length > 25 ? comment.substring(0, 25) + '...' : comment}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Display pre-defined comment templates */}
+          <div className="bg-gray-50 p-3 rounded-md">
+            <div className="w-full text-sm text-muted-foreground mb-2">
+              Mẫu comment có sẵn:
+            </div>
+            <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto">
+              {predefinedComments.map((comment, index) => (
                 <Button 
                   key={index} 
                   variant="outline" 
                   size="sm"
                   className="bg-white"
-                  onClick={() => setCommentText(commentText + ` {${comment}}`)}
+                  title={comment}
+                  onClick={() => addPredefinedComment(comment)}
                 >
                   {comment}
                 </Button>
               ))}
             </div>
-          )}
-          
-          {/* Display pre-defined comment templates */}
-          <div className="flex flex-wrap gap-2 bg-gray-50 p-3 rounded-md">
-            <div className="w-full text-sm text-muted-foreground mb-2">
-              Mẫu comment có sẵn:
-            </div>
-            {predefinedComments.map((comment, index) => (
-              <Button 
-                key={index} 
-                variant="outline" 
-                size="sm"
-                className="bg-white"
-                onClick={() => addPredefinedComment(comment)}
-              >
-                {comment}
-              </Button>
-            ))}
           </div>
           
           <Textarea
