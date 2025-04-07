@@ -39,10 +39,22 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   });
   
   // Hàm lấy ngẫu nhiên một người dùng ảo từ danh sách
-  const getRandomFakeUser = (): FakeUser | null => {
+  // Đảm bảo không lấy trùng lặp người dùng (trừ khi không còn lựa chọn)
+  const getRandomFakeUser = (usedIds: number[] = []): FakeUser | null => {
     if (fakeUsers.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * fakeUsers.length);
-    return fakeUsers[randomIndex];
+    
+    // Nếu đã sử dụng tất cả người dùng ảo, bắt đầu lại từ đầu
+    if (usedIds.length >= fakeUsers.length) {
+      const randomIndex = Math.floor(Math.random() * fakeUsers.length);
+      return fakeUsers[randomIndex];
+    }
+    
+    // Lọc ra những người dùng chưa sử dụng
+    const availableUsers = fakeUsers.filter(user => !usedIds.includes(user.id));
+    
+    // Chọn ngẫu nhiên một người dùng từ danh sách còn lại
+    const randomIndex = Math.floor(Math.random() * availableUsers.length);
+    return availableUsers[randomIndex];
   };
   
   // Extract comments inside {} brackets
@@ -154,22 +166,44 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         return;
       }
       
-      // Gửi từng comment với một người dùng ảo ngẫu nhiên
+      // Gửi từng comment với một người dùng ảo ngẫu nhiên khác nhau
       let successCount = 0;
-      for (const comment of extractedComments) {
+      const usedFakeUserIds: number[] = []; // Danh sách ID của người dùng ảo đã sử dụng
+      
+      // Hàm để thêm độ trễ giữa các lần gọi API
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      // Sử dụng hàm async/await riêng để có thể thêm độ trễ giữa các lần gửi
+      for (let index = 0; index < extractedComments.length; index++) {
+        const comment = extractedComments[index];
         try {
-          // Lấy ngẫu nhiên một người dùng ảo cho mỗi comment
-          const randomUser = getRandomFakeUser();
+          // Thêm độ trễ 1 giây giữa các lần gửi, trừ lần gửi đầu tiên
+          if (index > 0) {
+            await delay(1000); // Đợi 1 giây trước khi gửi comment tiếp theo
+          }
+          
+          // Lấy ngẫu nhiên một người dùng ảo cho mỗi comment, không trùng với những người đã sử dụng
+          const randomUser = getRandomFakeUser(usedFakeUserIds);
           if (!randomUser) continue;
           
-          await sendExternalCommentMutation.mutateAsync({
+          // Lưu lại ID người dùng ảo vừa sử dụng
+          usedFakeUserIds.push(randomUser.id);
+          
+          // Log thông tin trước khi gửi để debug
+          console.log(`Đang gửi comment thứ ${index + 1}/${extractedComments.length}: "${comment}" bởi người dùng ảo: ${randomUser.name} (ID: ${randomUser.id})`);
+          
+          const result = await sendExternalCommentMutation.mutateAsync({
             externalId,
             fakeUserId: randomUser.id,
             comment
           });
+          
           successCount++;
+          
+          // Log kết quả gửi
+          console.log(`Gửi thành công comment thứ ${index + 1}: "${comment}" bởi người dùng ảo: ${randomUser.name} (ID: ${randomUser.id})`);
         } catch (error) {
-          console.error('Lỗi khi gửi comment:', error);
+          console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
         }
       }
       
@@ -208,7 +242,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
                 <p className="font-medium">Thông tin người dùng ảo</p>
                 <p className="mt-1">
                   {fakeUsers.length > 0 
-                    ? "Hệ thống sẽ tự động chọn ngẫu nhiên một người dùng ảo để gửi mỗi comment" 
+                    ? "Hệ thống sẽ tự động chọn ngẫu nhiên một người dùng ảo khác nhau để gửi mỗi comment" 
                     : "Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý."}
                 </p>
                 {fakeUsers.length > 0 && (
@@ -276,6 +310,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               <p className="mt-1">
                 Comments sẽ được gửi đến API của nội dung có ID ngoài: <strong>{externalId}</strong>
               </p>
+              {extractedComments.length > 1 && (
+                <p className="mt-1 text-xs italic">
+                  Lưu ý: Khi gửi nhiều comment cùng lúc, hệ thống sẽ tự động thêm độ trễ 1 giây giữa các comment để tránh lỗi từ API bên ngoài.
+                </p>
+              )}
             </div>
           )}
         </div>

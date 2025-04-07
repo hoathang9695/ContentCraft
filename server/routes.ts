@@ -1422,9 +1422,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Fake Users API (admin only)
-  // Get all fake users
-  app.get("/api/fake-users", isAdmin, async (req, res) => {
+  // Fake Users API
+  // Get all fake users (available for all authenticated users for comment functionality)
+  app.get("/api/fake-users", isAuthenticated, async (req, res) => {
     try {
       const fakeUsers = await storage.getAllFakeUsers();
       res.json(fakeUsers);
