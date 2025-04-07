@@ -271,7 +271,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Cập nhật thông tin</DialogTitle>
         </DialogHeader>
@@ -284,9 +284,9 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         ) : (
           <div className="grid grid-cols-3 gap-6 overflow-hidden h-[60vh]">
             {/* Categories */}
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full overflow-hidden">
               <h3 className="font-bold text-lg mb-4">Categories</h3>
-              <div className="flex-1 border rounded-md p-2 overflow-auto">
+              <div className="flex-1 border rounded-md p-2 overflow-y-auto">
                 <div className="space-y-2 pr-2">
                   {categories && categories.map((category) => (
                     <div 
@@ -311,10 +311,10 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             </div>
             
             {/* Labels */}
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full overflow-hidden">
               <h3 className="font-bold text-lg mb-4">Label</h3>
               
-              <div className="flex-1 border rounded-md p-2 overflow-auto">
+              <div className="flex-1 border rounded-md p-2 overflow-y-auto">
                 {labelsByCategory.size > 0 ? (
                   Array.from(labelsByCategory.entries()).map(([categoryName, labels]) => (
                     <div key={categoryName} className="mb-4 last:mb-0">
@@ -351,9 +351,9 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             </div>
             
             {/* Safety Status */}
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full overflow-hidden">
               <h3 className="font-bold text-lg mb-4">Hành động</h3>
-              <div className="space-y-2 border rounded-md p-4">
+              <div className="space-y-2 border rounded-md p-4 overflow-y-auto">
                 <div 
                   className="flex items-center space-x-2 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                   onClick={() => setIsSafe(isSafe === true ? null : true)}

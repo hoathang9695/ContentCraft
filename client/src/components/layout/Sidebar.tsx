@@ -95,18 +95,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             
             {isAdmin && (
               <>
+                <div className="mt-4 mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Admin Functions
+                </div>
+                
+                <SidebarItem
+                  href="/fake-users"
+                  icon={UserCog}
+                  isActive={isActivePath('/fake-users')}
+                  onClick={handleItemClick}
+                >
+                  Quản lý người dùng ảo
+                </SidebarItem>
+                
                 <SidebarItem
                   href="/users"
                   icon={Users}
                   isActive={isActivePath('/users')}
                   onClick={handleItemClick}
                 >
-                  Users
+                  User
                 </SidebarItem>
-
-                <div className="mt-4 mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Admin Functions
-                </div>
                 
                 <SidebarItem
                   href="/user-activities"
@@ -124,15 +133,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={handleItemClick}
                 >
                   Quản lý Categories
-                </SidebarItem>
-                
-                <SidebarItem
-                  href="/fake-users"
-                  icon={UserCog}
-                  isActive={isActivePath('/fake-users')}
-                  onClick={handleItemClick}
-                >
-                  Người dùng ảo
                 </SidebarItem>
               </>
             )}
