@@ -332,6 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats", isAuthenticated, async (req, res) => {
     try {
       const allContents = await storage.getAllContents();
+      const allUsers = await storage.getAllUsers();
       const user = req.user as Express.User;
       const { startDate, endDate } = req.query;
       
@@ -383,6 +384,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const unsafe = filteredContents.filter(c => c.safe === false).length;
       const unchecked = filteredContents.filter(c => c.safe === null).length;
       
+      // Tính số lượng nội dung trên mỗi người dùng
+      const assignedPerUser = [];
+      
+      if (user.role === 'admin') {
+        // Lọc chỉ người dùng active và có role là editor
+        const activeEditors = allUsers.filter(u => u.status === 'active' && u.role === 'editor');
+        
+        for (const editor of activeEditors) {
+          const contentsCount = filteredContents.filter(c => c.assigned_to_id === editor.id).length;
+          if (contentsCount > 0) {
+            assignedPerUser.push({
+              userId: editor.id,
+              username: editor.username,
+              name: editor.name,
+              count: contentsCount
+            });
+          }
+        }
+        
+        // Sắp xếp theo số lượng nội dung giảm dần
+        assignedPerUser.sort((a, b) => b.count - a.count);
+      }
+      
       res.json({
         totalContent: filteredContents.length,
         pending,
@@ -398,6 +422,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assigned: filteredContents.filter(c => c.assigned_to_id !== null).length,
         // Số lượng bài viết chưa được phân công
         unassigned: filteredContents.filter(c => c.assigned_to_id === null).length,
+        // Thêm thông tin số lượng nội dung trên mỗi người dùng (chỉ admin mới thấy)
+        assignedPerUser: user.role === 'admin' ? assignedPerUser : [],
         // Thông tin khoảng thời gian nếu có lọc
         period: startDate && endDate ? {
           start: startDate,
