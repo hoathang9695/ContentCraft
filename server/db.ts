@@ -4,12 +4,19 @@ import * as schema from "@shared/schema";
 
 // Create a connection pool instead of a single client
 export const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
+  host: process.env.PGHOST,
+  port: parseInt(process.env.PGPORT || '5432'),
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
   max: 10, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
   connectionTimeoutMillis: 10000, // Increase connection timeout to 10 seconds
   // Add auto reconnect logic
   allowExitOnIdle: false, // Don't exit if all clients are idle
+  ssl: {
+    rejectUnauthorized: false // Required for some PostgreSQL providers
+  }
 });
 
 // Add error handling
