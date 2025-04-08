@@ -1,0 +1,134 @@
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  department: text("department").notNull().default("Marketing"), // 'Marketing', 'Chăm sóc khách hàng', 'Kinh doanh', 'Kế toán', 'Lập trình viên'
+  position: text("position").notNull().default("Nhân viên"), // 'Nhân viên', 'Trưởng phòng'
+  role: text("role").notNull().default("editor"),
+  status: text("status").notNull().default("pending"), // 'active', 'pending', 'inactive'
+  avatarUrl: text("avatar_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const contents = pgTable("contents", {
+  id: serial("id").primaryKey(),
+  externalId: text("external_id").unique(), // ID nội dung từ service bên ngoài qua Kafka
+  source: text("source"), // Nguồn cấp
+  categories: text("categories"), // Danh mục
+  labels: text("labels"), // Nhãn
+  status: text("status").notNull().default("pending"), // 'pending', 'processing', 'completed'
+  sourceVerification: text("source_verification").notNull().default("unverified"), // 'verified', 'unverified'
+  assigned_to_id: integer("assigned_to_id").references(() => users.id), // Người được phân công xử lý
+  assignedAt: timestamp("assigned_at"), // Thời điểm phân công
+  approver_id: integer("approver_id").references(() => users.id), // Người phê duyệt
+  approveTime: timestamp("approve_time"), // Thời điểm phê duyệt
+  comments: integer("comments").default(0), // Số lượng comment
+  reactions: integer("reactions").default(0), // Số lượng reaction
+  processingResult: text("processing_result"), // Kết quả xử lý
+  safe: boolean("safe"), // Trạng thái an toàn (true: an toàn, false: không an toàn, null: chưa đánh giá)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertContentSchema = createInsertSchema(contents).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+export type InsertContent = z.infer<typeof insertContentSchema>;
+export type Content = typeof contents.$inferSelect;
+
+// Login schema (subset of user)
+export const loginSchema = insertUserSchema.pick({
+  username: true,
+  password: true,
+});
+
+export type LoginData = z.infer<typeof loginSchema>;
+
+// User activity log for tracking login/logout/registration
+export const userActivities = pgTable("user_activities", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  activityType: text("activity_type").notNull(), // 'login', 'logout', 'register'
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  metadata: jsonb("metadata"), // Additional info like device, browser, etc
+});
+
+export const insertUserActivitySchema = createInsertSchema(userActivities).omit({ 
+  id: true,
+  timestamp: true 
+});
+
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
+export type UserActivity = typeof userActivities.$inferSelect;
+
+// Bảng danh mục (Categories)
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(), // Tên danh mục
+  description: text("description"), // Mô tả danh mục (tùy chọn)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Bảng nhãn (Labels)
+export const labels = pgTable("labels", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // Tên nhãn
+  categoryId: integer("category_id").notNull().references(() => categories.id), // ID của danh mục cha
+  description: text("description"), // Mô tả nhãn (tùy chọn)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Schema để insert Category
+export const insertCategorySchema = createInsertSchema(categories).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+// Schema để insert Label
+export const insertLabelSchema = createInsertSchema(labels).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type Category = typeof categories.$inferSelect;
+
+export type InsertLabel = z.infer<typeof insertLabelSchema>;
+export type Label = typeof labels.$inferSelect;
+
+// Bảng người dùng ảo (FakeUsers) cho việc đẩy comment
+export const fakeUsers = pgTable("fake_users", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // Tên người dùng ảo
+  token: text("token").notNull().unique(), // Token/ID đại diện cho người dùng
+  description: text("description"), // Mô tả về người dùng ảo
+  avatarUrl: text("avatar_url"), // URL avatar (tùy chọn)
+  status: text("status").notNull().default("active"), // active, inactive
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Schema để insert FakeUser
+export const insertFakeUserSchema = createInsertSchema(fakeUsers).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertFakeUser = z.infer<typeof insertFakeUserSchema>;
+export type FakeUser = typeof fakeUsers.$inferSelect;
