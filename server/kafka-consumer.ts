@@ -73,7 +73,11 @@ function parseMessage(messageValue: Buffer | null): ContentMessage | null {
  */
 export async function processContentMessage(contentMessage: ContentMessage) {
   try {
-    log(`Processing content: ${JSON.stringify(contentMessage)}`, 'kafka');
+    const messageWithStringId = {
+      ...contentMessage,
+      externalId: String(contentMessage.externalId)
+    };
+    log(`Processing content: ${JSON.stringify(messageWithStringId)}`, 'kafka');
 
     // Kiểm tra xem nội dung đã tồn tại chưa
     const existingContent = await db.query.contents.findFirst({
