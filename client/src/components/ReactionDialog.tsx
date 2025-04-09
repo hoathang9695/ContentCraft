@@ -64,7 +64,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
             console.log('Request headers:', {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${fakeUser.token}`,
+              'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po',
               'Cache-Control': 'no-cache'
             });
             console.log('Request body:', requestBody);
@@ -74,7 +74,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${fakeUser.token}`,
+                'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po',
                 'Cache-Control': 'no-cache'
               },
               body: JSON.stringify(requestBody)
