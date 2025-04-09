@@ -59,12 +59,23 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           try {
             console.log(`Attempt ${retryCount + 1} of ${maxRetries}`);
 
-            const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+            const apiUrl = `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`;
+            console.log('Calling API:', apiUrl);
+            console.log('Request headers:', {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${fakeUser.token}`,
+              'Cache-Control': 'no-cache'
+            });
+            console.log('Request body:', requestBody);
+
+            const response = await fetch(apiUrl, {
               method: 'POST',
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${fakeUser.token}`
+                'Authorization': `Bearer ${fakeUser.token}`,
+                'Cache-Control': 'no-cache'
               },
               body: JSON.stringify(requestBody)
             });
