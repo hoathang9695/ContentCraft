@@ -209,6 +209,7 @@ export function ContentTable({
 
   // Show toast for empty date filter results
   useEffect(() => {
+    const dateFilterApplied = filterStart && filterEnd;
     if (dateFilterApplied && filterStart && filterEnd) {
       if (filteredContents.length === 0 && beforeFilterCount > 0 && !toastShownRef.current) {
         setTimeout(() => {
