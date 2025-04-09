@@ -171,11 +171,16 @@ export function ContentTable({
       // Kiểm tra lọc theo trạng thái xác minh nguồn một cách chính xác
       let verificationMatch = true;
       if (sourceVerification) {
-        verificationMatch = content.sourceVerification === sourceVerification;
-        console.log(`Verification match for ${content.externalId}:`, {
-          contentVerification: content.sourceVerification,
-          filterVerification: sourceVerification,
-          match: verificationMatch
+        // Đảm bảo so sánh chính xác chuỗi
+        const contentVerification = String(content.sourceVerification).trim();
+        const filterVerification = String(sourceVerification).trim();
+        verificationMatch = contentVerification === filterVerification;
+
+        console.log(`Content ${content.externalId} verification check:`, {
+          contentVerification,
+          filterVerification,
+          match: verificationMatch,
+          exact: contentVerification === filterVerification
         });
       }
 
