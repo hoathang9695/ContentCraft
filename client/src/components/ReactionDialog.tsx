@@ -38,37 +38,35 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       console.log(`Reaction type:`, reactionType);
 
       try {
-        // Log request details
+        console.log('=== SENDING REACTION ===');
+        console.log('External ID:', externalId);
+        console.log('Reaction type:', reactionType);
+        console.log('User token:', fakeUser.token);
+
         const requestBody = {
           custom_vote_type: reactionType,
           page_id: null
         };
 
-        console.log('Sending reaction request:', {
-          url: `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`,
-          token: fakeUser.token,
-          body: requestBody
-        });
+        console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
         const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json', 
             'Authorization': `Bearer ${fakeUser.token}`
           },
-          body: JSON.stringify({
-            custom_vote_type: reactionType,
-            page_id: null
-          })
+          body: JSON.stringify(requestBody)
         });
 
-        // Log response details for debugging
+        console.log('=== REACTION RESPONSE ===');
         console.log('Response status:', response.status);
         const responseText = await response.text();
         console.log('Response body:', responseText);
 
         if (!response.ok) {
+          console.error('Reaction API error:', responseText);
           throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
         }
 
