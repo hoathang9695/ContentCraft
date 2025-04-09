@@ -39,7 +39,7 @@ export async function setupKafkaConsumer(
       eachMessage: async (payload: EachMessagePayload) => {
         const { message } = payload;
         const contentMessage = parseMessage(message.value);
-        
+
         if (contentMessage) {
           await processContentMessage(contentMessage);
         }
@@ -58,7 +58,7 @@ export async function setupKafkaConsumer(
  */
 function parseMessage(messageValue: Buffer | null): ContentMessage | null {
   if (!messageValue) return null;
-  
+
   try {
     const value = messageValue.toString();
     return JSON.parse(value) as ContentMessage;
@@ -74,23 +74,23 @@ function parseMessage(messageValue: Buffer | null): ContentMessage | null {
 export async function processContentMessage(contentMessage: ContentMessage) {
   try {
     log(`Processing content: ${JSON.stringify(contentMessage)}`, 'kafka');
-    
+
     // Kiểm tra xem nội dung đã tồn tại chưa
     const existingContent = await db.query.contents.findFirst({
       where: eq(contents.externalId, contentMessage.externalId),
     });
-    
+
     if (existingContent) {
       log(`Content with externalId ${contentMessage.externalId} already exists.`, 'kafka');
       return;
     }
-    
+
     // Lấy danh sách người dùng phải là editor và có trạng thái active
     const editorUsers = await db.query.users.findMany({
       where: (users, { eq, and }) => 
         and(eq(users.role, 'editor'), eq(users.status, 'active')),
     });
-    
+
     if (editorUsers.length === 0) {
       log('No active editor users found to assign content.', 'kafka');
       // Lưu nội dung mà không phân công
@@ -104,34 +104,34 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       });
       return;
     }
-    
+
     // Tìm người xử lý tiếp theo dựa trên hệ thống turn-based
-    
+
     // 1. Lấy nội dung mới nhất đã được phân công
     const lastAssignedContent = await db.query.contents.findFirst({
       where: (contents, { isNotNull }) => isNotNull(contents.assigned_to_id),
       orderBy: (contents, { desc }) => [desc(contents.assignedAt)],
     });
-    
+
     let nextAssigneeIndex = 0;
-    
+
     // 2. Nếu đã có nội dung được phân công trước đó
     if (lastAssignedContent && lastAssignedContent.assigned_to_id) {
       // Tìm vị trí của người được phân công trước đó
       const lastAssigneeIndex = editorUsers.findIndex(
         user => user.id === lastAssignedContent.assigned_to_id
       );
-      
+
       if (lastAssigneeIndex !== -1) {
         // Người tiếp theo trong danh sách (quay vòng nếu đến cuối danh sách)
         nextAssigneeIndex = (lastAssigneeIndex + 1) % editorUsers.length;
       }
     }
-    
+
     // Phân công cho người tiếp theo
     const assigned_to_id = editorUsers[nextAssigneeIndex].id;
     const now = new Date();
-    
+
     // Lưu nội dung với thông tin phân công
     await db.insert(contents).values({
       externalId: contentMessage.externalId,
@@ -143,7 +143,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       assigned_to_id,
       assignedAt: now,
     });
-    
+
     log(`Content ${contentMessage.externalId} assigned to user ID ${assigned_to_id} (${editorUsers[nextAssigneeIndex].username})`, 'kafka');
   } catch (error) {
     log(`Error processing content message: ${error}`, 'kafka-error');
