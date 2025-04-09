@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { CommentDialog } from '@/components/CommentDialog';
+import { ReactionDialog } from '@/components/ReactionDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +62,9 @@ export function ContentTable({
   const [contentToUpdate, setContentToUpdate] = useState<number | null>(null);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [contentToComment, setContentToComment] = useState<number | null>(null);
+  const [contentToReact, setContentToReact] = useState<number | null>(null);
   const [externalIdToComment, setExternalIdToComment] = useState<string | undefined>(undefined);
+  const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
   const [authError, setAuthError] = useState(false);
 
   // Toast hiển thị khi không tìm thấy dữ liệu nào
@@ -294,8 +297,14 @@ export function ContentTable({
   };
 
   const handlePushReaction = (id: number) => {
-    // Add 1 reaction to the content
-    reactionMutation.mutate({ id, count: 1 });
+    setContentToReact(id);
+    setIsReactionDialogOpen(true);
+  };
+
+  const handleReactionSubmit = (count: number) => {
+    if (contentToReact !== null) {
+      reactionMutation.mutate({ id: contentToReact, count });
+    }
   };
 
   const confirmDelete = () => {
@@ -601,6 +610,14 @@ export function ContentTable({
         onOpenChange={setIsCommentDialogOpen}
         contentId={contentToComment}
         externalId={externalIdToComment}
+      />
+
+      {/* Reaction Dialog */}
+      <ReactionDialog
+        open={isReactionDialogOpen}
+        onOpenChange={setIsReactionDialogOpen}
+        contentId={contentToReact}
+        onSubmit={handleReactionSubmit}
       />
     </>
   );
