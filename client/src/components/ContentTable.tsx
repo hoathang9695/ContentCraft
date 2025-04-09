@@ -428,7 +428,7 @@ export function ContentTable({
                 <div className="font-medium text-xs">
                   {row.externalId ? (
                     <a 
-                      href={`https://emso.vn/posts/${row.externalId}`} 
+                      href={`https://lab-emso.vn/posts/${row.externalId}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
