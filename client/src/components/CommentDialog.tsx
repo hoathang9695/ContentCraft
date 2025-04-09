@@ -137,9 +137,10 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   const handleSubmit = async () => {
     if (!contentId) return;
     
-    const commentCount = extractedComments.length;
+    // Loại bỏ các comment trùng lặp
+    const uniqueComments = Array.from(new Set(extractedComments));
     
-    if (commentCount === 0) {
+    if (uniqueComments.length === 0) {
       toast({
         title: 'Lỗi', 
         description: 'Vui lòng nhập ít nhất một comment',
@@ -156,18 +157,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     const sendCommentsInBackground = async () => {
       let successCount = 0;
       const usedFakeUserIds: number[] = [];
-      const processedComments = new Set<string>();
+      let successCount = 0;
+      const usedFakeUserIds: number[] = [];
 
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       
-      for (let index = 0; index < extractedComments.length; index++) {
-        const comment = extractedComments[index];
-        
-        // Kiểm tra nếu comment đã được xử lý
-        if (processedComments.has(comment)) {
-          console.log(`Bỏ qua comment trùng lặp: ${comment}`);
-          continue;
-        }
+      for (let index = 0; index < uniqueComments.length; index++) {
+        const comment = uniqueComments[index];
 
         try {
           if (index > 0) {
@@ -182,14 +178,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           console.log(`Đang gửi comment thứ ${index + 1}/${extractedComments.length}`);
           
           if (externalId) {
+            // Sử dụng await để đảm bảo comment được gửi tuần tự
             await sendExternalCommentMutation.mutateAsync({
               externalId,
               fakeUserId: randomUser.id,
               comment
             });
-            
-            // Đánh dấu comment đã được xử lý
-            processedComments.add(comment);
           }
           
           successCount++;
