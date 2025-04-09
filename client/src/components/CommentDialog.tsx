@@ -215,76 +215,18 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
     
-    // Xử lý trường hợp gửi comment qua API bên ngoài
-    if (externalId) {
-      // Kiểm tra nếu không có người dùng ảo nào
-      if (fakeUsers.length === 0) {
-        toast({
-          title: 'Lỗi',
-          description: 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // Gửi từng comment với một người dùng ảo ngẫu nhiên khác nhau
-      let successCount = 0;
-      const usedFakeUserIds: number[] = []; // Danh sách ID của người dùng ảo đã sử dụng
-      
-      // Hàm để thêm độ trễ giữa các lần gọi API
-      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-      
-      // Sử dụng hàm async/await riêng để có thể thêm độ trễ giữa các lần gửi
-      for (let index = 0; index < extractedComments.length; index++) {
-        const comment = extractedComments[index];
-        try {
-          // Thêm độ trễ 1 phút giữa các lần gửi, trừ lần gửi đầu tiên
-          if (index > 0) {
-            await delay(60000); // Đợi 1 phút (60 giây) trước khi gửi comment tiếp theo
-          }
-          
-          // Lấy ngẫu nhiên một người dùng ảo cho mỗi comment, không trùng với những người đã sử dụng
-          const randomUser = getRandomFakeUser(usedFakeUserIds);
-          if (!randomUser) continue;
-          
-          // Lưu lại ID người dùng ảo vừa sử dụng
-          usedFakeUserIds.push(randomUser.id);
-          
-          // Log thông tin trước khi gửi để debug
-          console.log(`Đang gửi comment thứ ${index + 1}/${extractedComments.length}: "${comment}" bởi người dùng ảo: ${randomUser.name} (ID: ${randomUser.id})`);
-          
-          const result = await sendExternalCommentMutation.mutateAsync({
-            externalId,
-            fakeUserId: randomUser.id,
-            comment
-          });
-          
-          successCount++;
-          
-          // Log kết quả gửi
-          console.log(`Gửi thành công comment thứ ${index + 1}: "${comment}" bởi người dùng ảo: ${randomUser.name} (ID: ${randomUser.id})`);
-        } catch (error) {
-          console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
-        }
-      }
-      
-      if (successCount > 0) {
-        // Nếu có ít nhất một comment gửi thành công
-        toast({
-          title: 'Gửi comment thành công',
-          description: `Đã gửi thành công ${successCount}/${extractedComments.length} comment.`,
-        });
-        onOpenChange(false);
-        setCommentText('');
-      } else {
-        // Nếu không có comment nào gửi thành công
-        toast({
-          title: 'Lỗi',
-          description: 'Không thể gửi comment nào. Vui lòng kiểm tra kết nối hoặc thử lại sau.',
-          variant: 'destructive',
-        });
-      }
+    // Kiểm tra nếu không có người dùng ảo nào
+    if (fakeUsers.length === 0) {
+      toast({
+        title: 'Lỗi',
+        description: 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.',
+        variant: 'destructive',
+      });
+      return;
     }
+    
+    // Chỉ gọi hàm sendCommentsInBackground để gửi comment
+    sendCommentsInBackground().catch(console.error);
   };
   
   return (
