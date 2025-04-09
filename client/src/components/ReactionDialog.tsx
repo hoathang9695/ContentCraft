@@ -33,22 +33,36 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       const fakeUser = fakeUsers.find(u => u.id === fakeUserId);
       if (!fakeUser?.token) throw new Error('Invalid fake user token');
 
-      const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fakeUser.token}`
-        },
-        body: JSON.stringify({
-          type: reactionType
-        })
-      });
+      // Log để debug
+      console.log(`Sending reaction to external ID ${externalId}`);
+      console.log(`Using fake user:`, fakeUser);
+      console.log(`Reaction type:`, reactionType);
 
-      if (!response.ok) {
-        throw new Error('Failed to send reaction');
+      try {
+        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${fakeUser.token}`
+          },
+          body: JSON.stringify({
+            type: reactionType
+          })
+        });
+
+        console.log('API Response:', response.status);
+        const responseData = await response.text();
+        console.log('Response data:', responseData);
+
+        if (!response.ok) {
+          throw new Error(`Failed to send reaction: ${response.status} ${responseData}`);
+        }
+
+        return responseData ? JSON.parse(responseData) : null;
+      } catch (error) {
+        console.error('Error sending reaction:', error);
+        throw error;
       }
-
-      return response.json();
     }
   });
 
