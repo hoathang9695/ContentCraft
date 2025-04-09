@@ -153,18 +153,23 @@ export function ContentTable({
   } else {
     // Áp dụng bộ lọc thông thường cho các trường hợp khác
     filteredContents = allContents.filter(content => {
+      // In thông tin content để debug
+      console.log(`Filtering content ${content.id}:`, {
+        externalId: content.externalId,
+        status: content.status,
+        sourceVerification: content.sourceVerification
+      });
+
       // Kiểm tra lọc theo trạng thái
       let statusMatch = true;
       if (statusFilter) {
         statusMatch = content.status === statusFilter;
       }
 
-      // Kiểm tra lọc theo trạng thái xác minh nguồn 
+      // Kiểm tra lọc theo trạng thái xác minh nguồn một cách chính xác
       let verificationMatch = true;
       if (sourceVerification) {
         verificationMatch = content.sourceVerification === sourceVerification;
-        console.log(`Content ${content.id} - Verification match: ${verificationMatch}`);
-        console.log(`sourceVerification: ${content.sourceVerification}, filter: ${sourceVerification}`);
       }
 
       // Kiểm tra lọc theo từ khóa tìm kiếm
