@@ -3,101 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
 
-interface ReactionDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  contentId: number | null;
-  externalId?: string;
-  onSubmit: (count: number) => void;
-}
-
-const REACTION_TYPES = ['like', 'yay', 'haha', 'love', 'sad', 'wow', 'angry'];
-
-export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSubmit }: ReactionDialogProps) {
-  const [count, setCount] = useState<string>('');
+export function ReactionDialog({ isOpen, onClose, externalId }) {
+  const [numReactions, setNumReactions] = useState('');
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Fetch fake users
-  const { data: fakeUsers = [] } = useQuery({
-    queryKey: ['/api/fake-users'],
-    enabled: open,
-  });
-
-  // Mutation for sending external reaction
-  const sendExternalReactionMutation = useMutation({
-    mutationFn: async ({ fakeUserId, externalId, reactionType }: { fakeUserId: number, externalId: string, reactionType: string }) => {
-      const fakeUser = fakeUsers.find(u => u.id === fakeUserId);
-      if (!fakeUser?.token) throw new Error('Invalid fake user token');
-
-      // Log để debug
-      console.log(`Sending reaction to external ID ${externalId}`);
-      console.log(`Using fake user:`, fakeUser);
-      console.log(`Reaction type:`, reactionType);
-
-      try {
-        // Log request details
-        const requestBody = {
-          custom_vote_type: reactionType,
-          page_id: null
-        };
-
-        console.log('Sending reaction request:', {
-          url: `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`,
-          token: fakeUser.token,
-          body: requestBody
-        });
-
-        console.log('Sending reaction request:', {
-          url: `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`,
-          token: fakeUser.token,
-          body: {
-            custom_vote_type: reactionType,
-            page_id: null
-          }
-        });
-
-        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${fakeUser.token}`
-          },
-          body: JSON.stringify({
-            custom_vote_type: reactionType,
-            page_id: null
-          })
-        });
-
-        // Log response details for debugging
-        console.log('Response status:', response.status);
-        const responseText = await response.text();
-        console.log('Response body:', responseText);
-
-        if (!response.ok) {
-          throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
-        }
-        console.log('Response status:', response.status);
-        const responseText = await response.text();
-        console.log('Response body:', responseText);
-
-        if (!response.ok) {
-          throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
-        }
-
-        return responseText ? JSON.parse(responseText) : null;
-      } catch (error) {
-        console.error('Error sending reaction:', error);
-        throw error;
-      }
-    }
-  });
-
-  const handleSubmit = async () => {
-    const reactionCount = parseInt(count, 10);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const reactionCount = parseInt(numReactions, 10);
     if (isNaN(reactionCount) || reactionCount < 1) {
       toast({
         title: 'Số lượng không hợp lệ',
@@ -107,82 +21,66 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       return;
     }
 
-    if (externalId) {
-      // Track used fake users to avoid duplicates
-      const usedUserIds = new Set();
-
+    setLoading(true);
+    try {
       for (let i = 0; i < reactionCount; i++) {
         try {
-          // Reset used users if we've used them all
-          if (usedUserIds.size === fakeUsers.length) {
-            usedUserIds.clear();
-          }
-
-          // Get available users
-          const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-
-          // Select random user and reaction type
-          // Add 1-minute delay between reactions (except for first one)
-          if (i > 0) {
-            toast({
-              title: 'Đang chờ',
-              description: `Chờ 1 phút trước khi gửi reaction tiếp theo...`,
-            });
-            await new Promise(resolve => setTimeout(resolve, 60000)); // 60 seconds = 1 minute
-          }
-
-          const randomUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
-          const randomReactionType = REACTION_TYPES[Math.floor(Math.random() * REACTION_TYPES.length)];
-
-          await sendExternalReactionMutation.mutateAsync({
-            fakeUserId: randomUser.id,
-            externalId,
-            reactionType: randomReactionType
+          const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              custom_vote_type: "like",
+              page_id: null
+            })
           });
 
-          usedUserIds.add(randomUser.id);
-
-          // Update local reaction count
-          if (i === reactionCount - 1) {
-            onSubmit(reactionCount);
+          if (!response.ok) {
+            throw new Error(`Failed to send reaction: ${response.status} ${await response.text()}`);
           }
+          
         } catch (error) {
           console.error('Error sending reaction:', error);
           toast({
             title: 'Lỗi gửi reaction',
-            description: `Reaction thứ ${i + 1} thất bại`,
+            description: `Reaction thứ ${i + 1} thất bại: ${error.message}`,
             variant: 'destructive'
           });
+          //Consider adding logic to handle partial successes and failures here.
         }
       }
-    } else {
-      // If no externalId, just update local count
-      onSubmit(reactionCount);
+      onClose();
+    } catch (error) {
+      console.error('Error sending reaction:', error);
+    } finally {
+      setLoading(false);
     }
-
-    setCount('');
-    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Reactions</DialogTitle>
+          <DialogTitle>Send Reactions</DialogTitle>
         </DialogHeader>
-        <div className="py-4">
+        <form onSubmit={handleSubmit}>
           <Input
             type="number"
-            value={count}
-            onChange={(e) => setCount(e.target.value)}
-            placeholder="Nhập số lượng reactions"
+            placeholder="Number of reactions"
+            value={numReactions}
+            onChange={(e) => setNumReactions(e.target.value)}
             min="1"
           />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Hủy</Button>
-          <Button onClick={handleSubmit}>Lưu</Button>
-        </DialogFooter>
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Sending...' : 'Send'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
