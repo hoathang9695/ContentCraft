@@ -158,11 +158,10 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       let successCount = 0;
       const usedFakeUserIds: number[] = [];
       const processedComments = new Set<string>();
-
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-      // Đảm bảo mỗi comment là duy nhất
-      const uniqueCommentsArray = Array.from(new Set(uniqueComments));
+      // Đảm bảo mỗi comment là duy nhất và chưa được xử lý
+      const uniqueCommentsArray = uniqueComments.filter(comment => !processedComments.has(comment));
 
       for (let index = 0; index < uniqueCommentsArray.length; index++) {
         const comment = uniqueCommentsArray[index];
