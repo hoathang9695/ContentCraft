@@ -79,10 +79,16 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
             body: responseData,
             headers: Object.fromEntries(response.headers.entries())
           });
+          
+          // Specific error for server issues
+          if (response.status === 502 || response.status === 503) {
+            throw new Error('Server is temporarily unavailable. Please try again in a few moments.');
+          }
+          
           throw new Error(`Failed to send reaction: ${response.status} ${responseData}`);
         }
 
-        return responseText ? JSON.parse(responseText) : null;
+        return responseData ? JSON.parse(responseData) : null;
       } catch (error) {
         console.error('Error sending reaction:', error);
         throw error;
