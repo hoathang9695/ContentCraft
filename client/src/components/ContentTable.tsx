@@ -161,9 +161,8 @@ export function ContentTable({
 
       // Kiểm tra lọc theo trạng thái xác minh nguồn
       let verificationMatch = true;
-
-      // Chỉ áp dụng bộ lọc sourceVerification khi có cả statusFilter
-      if (sourceVerification && statusFilter) {
+      if (sourceVerification) {
+        // Áp dụng filter sourceVerification độc lập với statusFilter
         verificationMatch = content.sourceVerification === sourceVerification;
       }
 
