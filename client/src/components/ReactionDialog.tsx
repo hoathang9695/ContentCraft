@@ -57,7 +57,10 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${fakeUser.token}`
           },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify({
+            custom_vote_type: reactionType,
+            page_id: null
+          })
         });
 
         // Log response details for debugging
