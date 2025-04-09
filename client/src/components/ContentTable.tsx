@@ -162,8 +162,9 @@ export function ContentTable({
       // Kiểm tra lọc theo trạng thái xác minh nguồn
       let verificationMatch = true;
       if (sourceVerification) {
-        // Áp dụng filter sourceVerification độc lập với statusFilter
+        // So sánh chính xác giá trị sourceVerification
         verificationMatch = content.sourceVerification === sourceVerification;
+        console.log(`Content ${content.id} verification: ${content.sourceVerification} vs filter: ${sourceVerification}`);
       }
 
       // Kiểm tra lọc theo từ khóa tìm kiếm
