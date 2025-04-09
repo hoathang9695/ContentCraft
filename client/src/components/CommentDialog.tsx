@@ -161,7 +161,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
       // Đảm bảo mỗi comment là duy nhất và chưa được xử lý
-      const uniqueCommentsArray = uniqueComments.filter(comment => !processedComments.has(comment));
+      const uniqueCommentsArray = Array.from(new Set(uniqueComments));
 
       for (let index = 0; index < uniqueCommentsArray.length; index++) {
         const comment = uniqueCommentsArray[index];
@@ -169,23 +169,21 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         try {
           // Thêm độ trễ 1 phút trước khi gửi comment tiếp theo
           if (index > 0) {
-            await delay(60000);
+            await delay(60000); // 60 giây = 1 phút
           }
 
-          // Chỉ lấy người dùng chưa được sử dụng
+          // Chọn một user fake chưa được sử dụng
           const randomUser = getRandomFakeUser(usedFakeUserIds);
           if (!randomUser) {
-            console.log('Không còn người dùng ảo khả dụng');
+            console.log(`Không còn user fake khả dụng cho comment: ${comment}`);
             continue;
           }
 
           // Đánh dấu đã sử dụng user này
           usedFakeUserIds.push(randomUser.id);
 
-          console.log(`Đang gửi comment thứ ${index + 1}/${uniqueCommentsArray.length} với user ${randomUser.name}`);
-
+          // Gửi comment với user đã chọn
           if (externalId && !processedComments.has(comment)) {
-            // Gửi comment và đợi kết quả
             await sendExternalCommentMutation.mutateAsync({
               externalId,
               fakeUserId: randomUser.id,
@@ -195,14 +193,9 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             // Đánh dấu comment đã được xử lý
             processedComments.add(comment);
             successCount++;
+
+            console.log(`Đã gửi comment "${comment}" với user ${randomUser.name}`);
           }
-
-          // Hiển thị toast cho mỗi comment thành công
-          toast({
-            title: 'Gửi comment thành công',
-            description: `Đã gửi ${successCount}/${uniqueCommentsArray.length} comment`,
-          });
-
         } catch (error) {
           console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
           toast({
@@ -212,12 +205,6 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           });
         }
       }
-
-      // Thông báo kết quả cuối cùng
-      toast({
-        title: 'Hoàn thành',
-        description: `Đã gửi thành công ${successCount}/${uniqueCommentsArray.length} comment`,
-      });
     };
 
     // Khởi chạy worker ngầm
