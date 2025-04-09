@@ -163,56 +163,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       // Đảm bảo mỗi comment là duy nhất
       const uniqueCommentsArray = Array.from(new Set(uniqueComments));
       
+      let isProcessing = false;
+
       for (let index = 0; index < uniqueCommentsArray.length; index++) {
-        const comment = uniqueCommentsArray[index];
-        
-        // Thêm độ trễ 1 phút trước khi gửi comment tiếp theo
-        if (index > 0) {
-          console.log(`Chờ 1 phút trước khi gửi comment tiếp theo...`);
-          await delay(60000); // 60 giây = 1 phút
-        }
-
-        // Chọn một user fake chưa được sử dụng
-        const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-        if (availableUsers.length === 0) {
-          // Reset danh sách đã sử dụng nếu hết user
-          usedUserIds.clear();
-        }
-
-        const randomUser = availableUsers.length > 0 
-          ? availableUsers[Math.floor(Math.random() * availableUsers.length)]
-          : fakeUsers[Math.floor(Math.random() * fakeUsers.length)];
-
-        try {
-          if (externalId && !processedComments.has(comment)) {
-            console.log(`Đang gửi comment "${comment}" với user ${randomUser.name}...`);
-            await sendExternalCommentMutation.mutateAsync({
-              externalId,
-              fakeUserId: randomUser.id,
-              comment
-            });
-
-            // Đánh dấu comment và user đã được sử dụng
-            processedComments.add(comment);
-            usedUserIds.add(randomUser.id);
-            successCount++;
-
-            console.log(`Đã gửi thành công comment "${comment}" với user ${randomUser.name}`);
-
-            // Thông báo thành công và thời gian chờ
-            toast({
-              title: 'Thành công', 
-              description: `Đã gửi comment với user ${randomUser.name}${index < uniqueCommentsArray.length - 1 ? '. Chờ 1 phút để gửi tiếp...' : ''}`
-            });
-          }
-        } catch (error) {
-          console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
-          toast({
-            title: 'Lỗi gửi comment',
-            description: `Comment thứ ${index + 1} thất bại`,
-            variant: 'destructive'
-          });
-        }
+        if (isProcessing) continue;
+        isProcessing = true;
         
         const comment = uniqueCommentsArray[index];
         
