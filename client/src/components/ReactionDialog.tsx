@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 interface ReactionDialogProps {
   open: boolean;
@@ -13,11 +15,44 @@ interface ReactionDialogProps {
   onSubmit: (count: number) => void;
 }
 
+const REACTION_TYPES = ['like', 'yay', 'haha', 'love', 'sad', 'wow', 'angry'];
+
 export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSubmit }: ReactionDialogProps) {
   const [count, setCount] = useState<string>('');
   const { toast } = useToast();
 
-  const handleSubmit = () => {
+  // Fetch fake users
+  const { data: fakeUsers = [] } = useQuery({
+    queryKey: ['/api/fake-users'],
+    enabled: open,
+  });
+
+  // Mutation for sending external reaction
+  const sendExternalReactionMutation = useMutation({
+    mutationFn: async ({ fakeUserId, externalId, reactionType }: { fakeUserId: number, externalId: string, reactionType: string }) => {
+      const fakeUser = fakeUsers.find(u => u.id === fakeUserId);
+      if (!fakeUser?.token) throw new Error('Invalid fake user token');
+
+      const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fakeUser.token}`
+        },
+        body: JSON.stringify({
+          type: reactionType
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send reaction');
+      }
+
+      return response.json();
+    }
+  });
+
+  const handleSubmit = async () => {
     const reactionCount = parseInt(count, 10);
     if (isNaN(reactionCount) || reactionCount < 1) {
       toast({
@@ -27,7 +62,51 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       });
       return;
     }
-    onSubmit(reactionCount);
+
+    if (externalId) {
+      // Track used fake users to avoid duplicates
+      const usedUserIds = new Set();
+
+      for (let i = 0; i < reactionCount; i++) {
+        try {
+          // Reset used users if we've used them all
+          if (usedUserIds.size === fakeUsers.length) {
+            usedUserIds.clear();
+          }
+
+          // Get available users
+          const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
+          
+          // Select random user and reaction type
+          const randomUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
+          const randomReactionType = REACTION_TYPES[Math.floor(Math.random() * REACTION_TYPES.length)];
+
+          await sendExternalReactionMutation.mutateAsync({
+            fakeUserId: randomUser.id,
+            externalId,
+            reactionType: randomReactionType
+          });
+
+          usedUserIds.add(randomUser.id);
+
+          // Update local reaction count
+          if (i === reactionCount - 1) {
+            onSubmit(reactionCount);
+          }
+        } catch (error) {
+          console.error('Error sending reaction:', error);
+          toast({
+            title: 'Lỗi gửi reaction',
+            description: `Reaction thứ ${i + 1} thất bại`,
+            variant: 'destructive'
+          });
+        }
+      }
+    } else {
+      // If no externalId, just update local count
+      onSubmit(reactionCount);
+    }
+
     setCount('');
     onOpenChange(false);
   };
