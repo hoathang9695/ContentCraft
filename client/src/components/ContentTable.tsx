@@ -140,12 +140,23 @@ export function ContentTable({
     const statusMatch = !statusFilter || content.status === statusFilter;
     // Source verification filter
     const verificationMatch = content.sourceVerification === sourceVerification;
-    // Search filter
+    
+    // Parse source name for better filtering
+    let sourceName = "";
+    try {
+      const sourceObj = content.source ? JSON.parse(content.source) : null;
+      sourceName = sourceObj?.name || content.source || "";
+    } catch {
+      sourceName = content.source || "";
+    }
+    
+    // Enhanced search filter
+    const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch = !searchQuery || 
-      content.externalId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      content.source?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      content.categories?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      content.labels?.toLowerCase().includes(searchQuery.toLowerCase());
+      content.externalId?.toLowerCase().includes(searchTerm) ||
+      sourceName.toLowerCase().includes(searchTerm) ||
+      content.categories?.toLowerCase().includes(searchTerm) ||
+      content.labels?.toLowerCase().includes(searchTerm);
     
     return statusMatch && verificationMatch && searchMatch;
   });
