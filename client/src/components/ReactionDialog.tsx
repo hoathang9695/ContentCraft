@@ -40,7 +40,8 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       try {
         // Log request details
         const requestBody = {
-          custom_vote_type: reactionType // Corrected: use the actual reactionType
+          custom_vote_type: reactionType,
+          page_id: null
         };
 
         console.log('=== REACTION REQUEST DETAILS ===');
