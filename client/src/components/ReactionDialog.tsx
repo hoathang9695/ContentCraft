@@ -44,7 +44,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         console.log('User token:', fakeUser.token);
 
         const requestBody = {
-          type: reactionType
+          custom_vote_type: reactionType
         };
 
         console.log('=== REACTION REQUEST ===');
