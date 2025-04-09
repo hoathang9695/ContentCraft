@@ -48,47 +48,55 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           page_id: null
         };
 
-        console.log('Request body:', JSON.stringify(requestBody, null, 2));
+        console.log('=== REACTION REQUEST ===');
+        console.log('Sending reaction to:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
+        console.log('With token:', fakeUser.token);
 
-        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json', 
-            'Authorization': `Bearer ${fakeUser.token}`
-          },
-          body: JSON.stringify(requestBody)
-        });
+        const maxRetries = 3;
+        let retryCount = 0;
 
-        console.log('=== REACTION RESPONSE ===');
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+        while (retryCount < maxRetries) {
+          try {
+            console.log(`Attempt ${retryCount + 1} of ${maxRetries}`);
 
-        // Handle different HTTP status codes
-        if (response.status === 502 || response.status === 503) {
-          throw new Error('Service temporarily unavailable. Please try again later.');
-        }
+            const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${fakeUser.token}`
+              },
+              body: JSON.stringify(requestBody)
+            });
 
-        const responseData = await response.text();
-        console.log('Response body:', responseData);
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
-        if (!response.ok) {
-          console.error('Reaction API error:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: responseData,
-            headers: Object.fromEntries(response.headers.entries())
-          });
-          
-          // Specific error for server issues
-          if (response.status === 502 || response.status === 503) {
-            throw new Error('Server is temporarily unavailable. Please try again in a few moments.');
+            const responseData = await response.text();
+            console.log('Response body:', responseData);
+
+            if (response.ok) {
+              return responseData ? JSON.parse(responseData) : null;
+            }
+
+            if (response.status === 502 || response.status === 503) {
+              retryCount++;
+              if (retryCount < maxRetries) {
+                console.log(`Retrying after ${retryCount} seconds...`);
+                await new Promise(resolve => setTimeout(resolve, retryCount * 1000));
+                continue;
+              }
+            }
+
+            throw new Error(`Failed to send reaction: ${response.status} ${responseData}`);
+          } catch (error) {
+            console.error('Error in attempt:', error);
+            retryCount++;
+            if (retryCount >= maxRetries) throw error;
           }
-          
-          throw new Error(`Failed to send reaction: ${response.status} ${responseData}`);
         }
 
-        return responseData ? JSON.parse(responseData) : null;
+        throw new Error('Max retries exceeded');
       } catch (error) {
         console.error('Error sending reaction:', error);
         throw error;
