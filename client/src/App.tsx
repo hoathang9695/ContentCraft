@@ -21,7 +21,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={DashboardPage} adminOnly={false} />
       <ProtectedRoute path="/contents" component={ContentPage} />
-      <ProtectedRoute path="/contents/new" component={ContentEditor} adminOnly={true} />
+      <ProtectedRoute path="/contents/new" component={ContentEditor} adminOnly={false} />
       <ProtectedRoute path="/contents/:id/edit" component={ContentEditor} adminOnly={true} />
       <ProtectedRoute path="/users" component={UsersPage} adminOnly={true} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
