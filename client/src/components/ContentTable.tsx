@@ -159,12 +159,12 @@ export function ContentTable({
         statusMatch = content.status === statusFilter;
       }
 
-      // Kiểm tra lọc theo trạng thái xác minh nguồn
+      // Kiểm tra lọc theo trạng thái xác minh nguồn 
       let verificationMatch = true;
       if (sourceVerification) {
-        // Đảm bảo so sánh chính xác với giá trị mong muốn
         verificationMatch = content.sourceVerification === sourceVerification;
-        console.log(`Content ${content.id} - Verification match: ${verificationMatch} (${content.sourceVerification} vs ${sourceVerification})`);
+        console.log(`Content ${content.id} - Verification match: ${verificationMatch}`);
+        console.log(`sourceVerification: ${content.sourceVerification}, filter: ${sourceVerification}`);
       }
 
       // Kiểm tra lọc theo từ khóa tìm kiếm
