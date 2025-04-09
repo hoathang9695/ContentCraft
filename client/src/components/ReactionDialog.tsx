@@ -78,6 +78,15 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
           
           // Select random user and reaction type
+          // Add 1-minute delay between reactions (except for first one)
+          if (i > 0) {
+            toast({
+              title: 'Đang chờ',
+              description: `Chờ 1 phút trước khi gửi reaction tiếp theo...`,
+            });
+            await new Promise(resolve => setTimeout(resolve, 60000)); // 60 seconds = 1 minute
+          }
+
           const randomUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
           const randomReactionType = REACTION_TYPES[Math.floor(Math.random() * REACTION_TYPES.length)];
 
