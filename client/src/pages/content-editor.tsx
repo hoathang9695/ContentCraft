@@ -15,65 +15,48 @@ export default function ContentEditor() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const isEditMode = Boolean(params.id);
-  
+
   // Fetch content if in edit mode
   const { data: content, isLoading } = useQuery<Content>({
     queryKey: [`/api/contents/${params.id}`],
     enabled: isEditMode,
   });
-  
+
   // Create content mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertContent) => {
-      try {
-        const res = await apiRequest('POST', '/api/contents', data);
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || 'Failed to create content');
-        }
-        return await res.json();
-      } catch (error) {
-        console.error('Create content error:', error);
-        // Nếu lỗi nhưng vẫn tạo thành công, hiển thị thông báo thành công
-        // và thông báo lỗi phụ (không ngăn chặn redirect)
-        toast({
-          title: 'Content created with warnings',
-          description: 'Your content was saved but there were some issues. It should still be visible in the content list.',
-          variant: 'default',
-        });
-        // Giả vờ thành công để tiếp tục chuyển hướng
-        queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
-        navigate('/contents');
-        return null; // Trả về null để không gọi onSuccess
+      const res = await apiRequest('POST', '/api/contents', {
+        ...data,
+        source: data.source || null, // Đảm bảo source được gửi đi
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to create content');
       }
+      return await res.json();
     },
-    onSuccess: (data) => {
-      if (!data) return; // Nếu đã xử lý trong try-catch, không thực hiện onSuccess
-      
+    onSuccess: () => {
+      // Cập nhật cache sau khi tạo thành công
       queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+
       toast({
-        title: 'Content created',
-        description: 'Your content has been successfully created.',
+        title: 'Success',
+        description: 'Content has been created successfully'
       });
+
       navigate('/contents');
     },
     onError: (error) => {
-      console.error('Mutation error:', error);
       toast({
         title: 'Error creating content',
-        description: String(error),
-        variant: 'destructive',
+        description: error.message,
+        variant: 'destructive'
       });
-      // Đảm bảo làm mới dữ liệu sau khi gặp lỗi
-      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
-    },
+    }
   });
-  
+
   // Update content mutation
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<InsertContent>) => {
@@ -97,7 +80,7 @@ export default function ContentEditor() {
       });
     },
   });
-  
+
   const handleSubmit = (data: ContentFormValues) => {
     if (isEditMode) {
       updateMutation.mutate(data);
@@ -105,7 +88,7 @@ export default function ContentEditor() {
       createMutation.mutate(data as InsertContent);
     }
   };
-  
+
   return (
     <DashboardLayout>
       <div className="mb-6 flex items-center justify-between">
@@ -124,7 +107,7 @@ export default function ContentEditor() {
           </h1>
         </div>
       </div>
-      
+
       <Card>
         <CardContent className="pt-6">
           {isEditMode && isLoading ? (
