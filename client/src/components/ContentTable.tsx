@@ -207,11 +207,11 @@ export function ContentTable({
     limit ? Math.min(startIndex + itemsPerPage, startIndex + limit) : startIndex + itemsPerPage
   );
 
-  // Show toast for empty date filter results
+  // Show toast for empty date filter results 
   useEffect(() => {
-    const dateFilterApplied = filterStart && filterEnd;
-    if (dateFilterApplied && filterStart && filterEnd) {
-      if (filteredContents.length === 0 && beforeFilterCount > 0 && !toastShownRef.current) {
+    const dateFilterApplied = startDate && endDate;
+    if (dateFilterApplied && startDate && endDate) {
+      if (filteredContents.length === 0 && allContents.length > 0 && !toastShownRef.current) {
         setTimeout(() => {
           toast({
             title: "Không tìm thấy dữ liệu",
