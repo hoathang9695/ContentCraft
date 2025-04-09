@@ -38,78 +38,38 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       console.log(`Reaction type:`, reactionType);
 
       try {
-        console.log('=== SENDING REACTION ===');
-        console.log('External ID:', externalId);
-        console.log('Reaction type:', reactionType);
-        console.log('User token:', fakeUser.token);
-
-        const REACTION_TYPES = ['like', 'haha', 'love', 'angry', 'sad', 'wow', 'yay'];
-        const randomReactionType = REACTION_TYPES[Math.floor(Math.random() * REACTION_TYPES.length)];
-        
+        // Log request details
         const requestBody = {
-          custom_vote_type: randomReactionType
+          custom_vote_type: reactionType,
+          page_id: null
         };
 
-        console.log('=== REACTION REQUEST ===');
-        console.log('Sending reaction to:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
-        console.log('With token:', fakeUser.token);
+        console.log('Sending reaction request:', {
+          url: `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`,
+          token: fakeUser.token,
+          body: requestBody
+        });
 
-        const maxRetries = 3;
-        let retryCount = 0;
+        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${fakeUser.token}`
+          },
+          body: JSON.stringify(requestBody)
+        });
 
-        while (retryCount < maxRetries) {
-          try {
-            console.log(`Attempt ${retryCount + 1} of ${maxRetries}`);
+        // Log response details for debugging
+        console.log('Response status:', response.status);
+        const responseText = await response.text();
+        console.log('Response body:', responseText);
 
-            const apiUrl = `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`;
-            console.log('Calling API:', apiUrl);
-            console.log('Request headers:', {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po',
-              'Cache-Control': 'no-cache'
-            });
-            console.log('Request body:', requestBody);
-
-            const response = await fetch(apiUrl, {
-              method: 'POST',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${fakeUser.token}`,
-                'Cache-Control': 'no-cache'
-              },
-              body: JSON.stringify(requestBody)
-            });
-
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-            const responseData = await response.text();
-            console.log('Response body:', responseData);
-
-            if (response.ok) {
-              return responseData ? JSON.parse(responseData) : null;
-            }
-
-            if (response.status === 502 || response.status === 503) {
-              retryCount++;
-              if (retryCount < maxRetries) {
-                console.log(`Retrying after ${retryCount} seconds...`);
-                await new Promise(resolve => setTimeout(resolve, retryCount * 1000));
-                continue;
-              }
-            }
-
-            throw new Error(`Failed to send reaction: ${response.status} ${responseData}`);
-          } catch (error) {
-            console.error('Error in attempt:', error);
-            retryCount++;
-            if (retryCount >= maxRetries) throw error;
-          }
+        if (!response.ok) {
+          throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
         }
 
-        throw new Error('Max retries exceeded');
+        return responseText ? JSON.parse(responseText) : null;
       } catch (error) {
         console.error('Error sending reaction:', error);
         throw error;
