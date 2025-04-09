@@ -140,7 +140,14 @@ export function ContentTable({
     const statusMatch = !statusFilter || content.status === statusFilter;
     // Source verification filter
     const verificationMatch = content.sourceVerification === sourceVerification;
-    return statusMatch && verificationMatch;
+    // Search filter
+    const searchMatch = !searchQuery || 
+      content.externalId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      content.source?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      content.categories?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      content.labels?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return statusMatch && verificationMatch && searchMatch;
   });
 
 
