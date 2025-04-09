@@ -77,8 +77,34 @@ export function ContentTable({
     error 
   } = useQuery<Content[], Error>({
     queryKey: [apiEndpoint],
-    staleTime: 60000, // Reduce refetching (1 min)
-    refetchOnWindowFocus: true
+    staleTime: 60000,
+    refetchOnWindowFocus: true,
+    onSuccess: (data) => {
+      console.log("=== API Response Data ===");
+      console.log("Total contents received:", data.length);
+
+      // Log all contents with verified status
+      const verifiedContents = data.filter(c => c.sourceVerification === 'verified');
+      console.log("Verified contents:", verifiedContents);
+
+      // Specifically look for our target content
+      const targetContent = data.find(c => c.externalId === '114307866176639848');
+      console.log("Target content (114307866176639848):", targetContent);
+
+      // Parse and log source names
+      data.forEach(content => {
+        try {
+          const sourceObj = content.source ? JSON.parse(content.source) : null;
+          console.log(`Content ${content.externalId} source:`, {
+            raw: content.source,
+            parsed: sourceObj,
+            name: sourceObj?.name
+          });
+        } catch (e) {
+          console.log(`Error parsing source for ${content.externalId}:`, content.source);
+        }
+      });
+    }
   });
 
   // Xử lý lỗi từ query khi có cập nhật
@@ -139,122 +165,38 @@ export function ContentTable({
   // In thông tin trước khi áp dụng lọc
   console.log("Filter settings:", { statusFilter, sourceVerification });
 
-  if (statusFilter === 'pending' && sourceVerification === 'unverified') {
-    // Trường hợp đặc biệt: Chưa xử lý và Chưa xác minh - cần đảm bảo kết quả đúng
-    console.log("Applying special filter: Chưa xử lý + Chưa xác minh");
+  // Apply filters
+  filteredContents = allContents.filter(content => {
+    // Status filter
+    const statusMatch = !statusFilter || content.status === statusFilter;
 
-    // Áp dụng trực tiếp cả hai bộ lọc
-    filteredContents = allContents.filter(content => {
-      console.log(`Content ID ${content.id} - Status: [${content.status}], Verification: [${content.sourceVerification}]`);
-      return content.status === 'pending' && content.sourceVerification === 'unverified';
-    });
+    // Source verification filter
+    const verificationMatch = !sourceVerification || content.sourceVerification === sourceVerification;
 
-    console.log("Filtered results:", filteredContents.length);
-  } else {
-    // Áp dụng bộ lọc thông thường cho các trường hợp khác
-    filteredContents = allContents.filter(content => {
-      // In thông tin content để debug
-      console.log(`Filtering content ${content.id}:`, {
-        externalId: content.externalId,
+    // Log filter results for the target content
+    if (content.externalId === '114307866176639848') {
+      console.log('Target content filter results:', {
         status: content.status,
         sourceVerification: content.sourceVerification,
-        currentFilter: sourceVerification
+        statusMatch,
+        verificationMatch,
+        finalMatch: statusMatch && verificationMatch
       });
+    }
 
-      // Kiểm tra lọc theo trạng thái
-      let statusMatch = true;
-      if (statusFilter) {
-        statusMatch = content.status === statusFilter;
-        console.log(`Status match for ${content.externalId}:`, statusMatch);
-      }
+    return statusMatch && verificationMatch;
+  });
 
-      // Kiểm tra lọc theo trạng thái xác minh nguồn một cách chính xác
-      let verificationMatch = true;
-      if (sourceVerification) {
-        // Đảm bảo so sánh chính xác chuỗi
-        const contentVerification = String(content.sourceVerification).trim();
-        const filterVerification = String(sourceVerification).trim();
-        verificationMatch = contentVerification === filterVerification;
+  // Log filtered results
+  console.log('Filter summary:', {
+    total: filteredContents.length,
+    hasTargetContent: filteredContents.some(c => c.externalId === '114307866176639848'),
+    filters: {
+      status: statusFilter,
+      verification: sourceVerification
+    }
+  });
 
-        console.log(`Content ${content.externalId} verification check:`, {
-          contentVerification,
-          filterVerification,
-          match: verificationMatch,
-          exact: contentVerification === filterVerification
-        });
-      }
-
-      const finalMatch = statusMatch && verificationMatch;
-      console.log(`Final match for ${content.externalId}:`, finalMatch);
-
-      // Kiểm tra lọc theo từ khóa tìm kiếm
-      let searchMatch = true;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const sourceMention = content.source && content.source.toLowerCase().includes(query);
-        const categoriesMention = content.categories && content.categories.toLowerCase().includes(query);
-        const labelsMention = content.labels && content.labels.toLowerCase().includes(query);
-
-        // Áp dụng Boolean cho đảm bảo trả về giá trị boolean
-        searchMatch = Boolean(sourceMention || categoriesMention || labelsMention);
-      }
-
-      // Kiểm tra lọc theo ngày tháng
-      let dateMatch = true;
-      if (startDate && endDate) {
-        // Chuyển đổi ngày bắt đầu, kết thúc sang chuẩn để so sánh
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-
-        // Kiểm tra xem hai ngày có cùng một ngày không
-        const isSameDay = start.getDate() === end.getDate() && 
-                          start.getMonth() === end.getMonth() && 
-                          start.getFullYear() === end.getFullYear();
-
-        if (!content.createdAt) {
-          // Nếu không có ngày tạo, không khớp với bộ lọc ngày
-          dateMatch = false;
-        } else {
-          const contentDate = new Date(content.createdAt);
-
-          // Set lại thời gian để chỉ so sánh ngày
-          const contentDateStart = new Date(contentDate);
-          contentDateStart.setHours(0, 0, 0, 0);
-
-          // So sánh theo thời gian thực tế (không cần chuyển đổi UTC)
-          if (isSameDay) {
-            // Nếu ngày bắt đầu và kết thúc là cùng một ngày, kiểm tra xem nội dung được tạo vào ngày đó
-            const contentDay = new Date(contentDate);
-            contentDay.setHours(0, 0, 0, 0);
-            dateMatch = contentDay.getTime() === start.getTime();
-          } else {
-            // Nếu có khoảng thời gian, kiểm tra xem nội dung nằm trong khoảng đó
-            dateMatch = contentDateStart >= start && contentDateStart <= end;
-          }
-        }
-      }
-
-      // Nội dung phải thỏa mãn tất cả các điều kiện lọc
-      return statusMatch && verificationMatch && searchMatch && dateMatch;
-    });
-  }
-
-  console.log("Final filtered contents count:", filteredContents.length);
-
-  // Thông tin cho toast thông báo không có kết quả
-  let beforeFilterCount = 0;
-  let dateFilterApplied = false;
-  let filterStart: Date | null = null;
-  let filterEnd: Date | null = null;
-
-  if (startDate && endDate) {
-    filterStart = new Date(startDate);
-    filterEnd = new Date(endDate);
-    dateFilterApplied = true;
-  }
 
   // Pagination
   const itemsPerPage = 10;
