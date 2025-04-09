@@ -169,7 +169,12 @@ export function ContentTable({
       // Kiểm tra lọc theo trạng thái xác minh nguồn một cách chính xác
       let verificationMatch = true;
       if (sourceVerification) {
+        // Đảm bảo so sánh chính xác với sourceVerification
         verificationMatch = content.sourceVerification === sourceVerification;
+        console.log(`Content ${content.externalId} - Match: ${verificationMatch}`, {
+          contentVerification: content.sourceVerification,
+          filterVerification: sourceVerification
+        });
       }
 
       // Kiểm tra lọc theo từ khóa tìm kiếm
