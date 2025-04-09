@@ -156,11 +156,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     // Tạo worker để gửi comment ngầm
     const sendCommentsInBackground = async () => {
       let successCount = 0;
-      const usedFakeUserIds: number[] = [];
+      const usedUserIds = new Set<number>();
       const processedComments = new Set<string>();
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-      // Đảm bảo mỗi comment là duy nhất và chưa được xử lý
+      // Đảm bảo mỗi comment là duy nhất
       const uniqueCommentsArray = Array.from(new Set(uniqueComments));
 
       for (let index = 0; index < uniqueCommentsArray.length; index++) {
@@ -169,37 +169,41 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         try {
           // Thêm độ trễ 1 phút trước khi gửi comment tiếp theo
           if (index > 0) {
+            console.log(`Chờ 1 phút trước khi gửi comment tiếp theo...`);
             await delay(60000); // 60 giây = 1 phút
           }
 
           // Chọn một user fake chưa được sử dụng
-          const randomUser = getRandomFakeUser(usedFakeUserIds);
-          if (!randomUser) {
-            console.log(`Không còn user fake khả dụng cho comment: ${comment}`);
-            continue;
+          const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
+          if (availableUsers.length === 0) {
+            // Reset danh sách đã sử dụng nếu hết user
+            usedUserIds.clear();
           }
 
-          // Đánh dấu đã sử dụng user này
-          usedFakeUserIds.push(randomUser.id);
+          const randomUser = availableUsers.length > 0 
+            ? availableUsers[Math.floor(Math.random() * availableUsers.length)]
+            : fakeUsers[Math.floor(Math.random() * fakeUsers.length)];
 
           // Gửi comment với user đã chọn
           if (externalId && !processedComments.has(comment)) {
+            console.log(`Đang gửi comment "${comment}" với user ${randomUser.name}...`);
             await sendExternalCommentMutation.mutateAsync({
               externalId,
               fakeUserId: randomUser.id,
               comment
             });
 
-            // Đánh dấu comment đã được xử lý
+            // Đánh dấu comment và user đã được sử dụng
             processedComments.add(comment);
+            usedUserIds.add(randomUser.id);
             successCount++;
 
-            console.log(`Đã gửi comment "${comment}" với user ${randomUser.name}`);
-            
-            // Thông báo thành công
+            console.log(`Đã gửi thành công comment "${comment}" với user ${randomUser.name}`);
+
+            // Thông báo thành công và thời gian chờ
             toast({
               title: 'Thành công',
-              description: `Đã gửi comment với user ${randomUser.name}. Chờ 1 phút để gửi tiếp...`
+              description: `Đã gửi comment với user ${randomUser.name}${index < uniqueCommentsArray.length - 1 ? '. Chờ 1 phút để gửi tiếp...' : ''}`
             });
           }
         } catch (error) {
