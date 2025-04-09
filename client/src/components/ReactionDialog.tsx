@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
@@ -65,7 +64,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         console.log('Response status:', response.status);
         const responseText = await response.text();
         console.log('Response body:', responseText);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
         }
@@ -102,7 +101,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
 
           // Get available users
           const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-          
+
           // Select random user and reaction type
           // Add 1-minute delay between reactions (except for first one)
           if (i > 0) {
