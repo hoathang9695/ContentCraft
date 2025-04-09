@@ -37,51 +37,51 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     queryKey: ['/api/fake-users'],
     enabled: open && !!externalId, // Only fetch when dialog is open and we have an externalId
   });
-  
+
   // Hàm lấy ngẫu nhiên một người dùng ảo từ danh sách
   // Đảm bảo không lấy trùng lặp người dùng (trừ khi không còn lựa chọn)
   const getRandomFakeUser = (usedIds: number[] = []): FakeUser | null => {
     if (fakeUsers.length === 0) return null;
-    
+
     // Nếu đã sử dụng tất cả người dùng ảo, bắt đầu lại từ đầu
     if (usedIds.length >= fakeUsers.length) {
       const randomIndex = Math.floor(Math.random() * fakeUsers.length);
       return fakeUsers[randomIndex];
     }
-    
+
     // Lọc ra những người dùng chưa sử dụng
     const availableUsers = fakeUsers.filter(user => !usedIds.includes(user.id));
-    
+
     // Chọn ngẫu nhiên một người dùng từ danh sách còn lại
     const randomIndex = Math.floor(Math.random() * availableUsers.length);
     return availableUsers[randomIndex];
   };
-  
+
   // Extract comments inside {} brackets
   const extractComments = (text: string): string[] => {
     if (!text) return [];
-    
+
     const regex = /{([^}]*)}/g;
     const matches = text.match(regex);
-    
+
     if (!matches) return [text]; // If no matches, use the whole text
-    
+
     return matches.map(match => match.substring(1, match.length - 1).trim()).filter(comment => comment.length > 0);
   };
-  
+
   // Update extracted comments whenever the commentText changes
   useEffect(() => {
     const comments = extractComments(commentText);
     setExtractedComments(comments);
   }, [commentText]);
-  
+
   // Reset form khi đóng dialog
   useEffect(() => {
     if (!open) {
       setCommentText('');
     }
   }, [open]);
-  
+
   // Mutation để gửi comment đến API bên ngoài sử dụng API mới
   const sendExternalCommentMutation = useMutation({
     mutationFn: async ({ externalId, fakeUserId, comment }: { externalId: string, fakeUserId: number, comment: string }) => {
@@ -119,7 +119,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         title: 'Cập nhật thành công',
         description: 'Đã thêm comment vào nội dung.',
       });
-      
+
       if (!externalId) {
         onOpenChange(false);
         setCommentText('');
@@ -133,13 +133,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       });
     },
   });
-  
+
   const handleSubmit = async () => {
     if (!contentId) return;
-    
+
     // Loại bỏ các comment trùng lặp
     const uniqueComments = Array.from(new Set(extractedComments));
-    
+
     if (uniqueComments.length === 0) {
       toast({
         title: 'Lỗi', 
@@ -157,9 +157,10 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     const sendCommentsInBackground = async () => {
       let successCount = 0;
       const usedFakeUserIds: number[] = [];
+      const processedComments = new Set<string>(); // Theo dõi những comment đã được xử lý
 
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-      
+
       for (let index = 0; index < uniqueComments.length; index++) {
         const comment = uniqueComments[index];
 
@@ -170,22 +171,23 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
           const randomUser = getRandomFakeUser(usedFakeUserIds);
           if (!randomUser) continue;
-          
+
           usedFakeUserIds.push(randomUser.id);
 
           console.log(`Đang gửi comment thứ ${index + 1}/${extractedComments.length}`);
-          
-          if (externalId) {
+
+          if (externalId && !processedComments.has(comment)) { // Only send if not processed
             // Sử dụng await để đảm bảo comment được gửi tuần tự
             await sendExternalCommentMutation.mutateAsync({
               externalId,
               fakeUserId: randomUser.id,
               comment
             });
+            processedComments.add(comment); // Mark as processed
           }
-          
+
           successCount++;
-          
+
           // Hiển thị toast cho mỗi comment thành công
           toast({
             title: 'Gửi comment thành công',
@@ -211,13 +213,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
     // Khởi chạy worker ngầm
     sendCommentsInBackground().catch(console.error);
-    
+
     // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
     if (!externalId) {
-      commentMutation.mutate({ id: contentId, count: commentCount });
+      commentMutation.mutate({ id: contentId, count: extractedComments.length }); // Use extractedComments.length
       return;
     }
-    
+
     // Kiểm tra nếu không có người dùng ảo nào
     if (fakeUsers.length === 0) {
       toast({
@@ -227,11 +229,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       });
       return;
     }
-    
+
     // Chỉ gọi hàm sendCommentsInBackground để gửi comment
     sendCommentsInBackground().catch(console.error);
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-hidden flex flex-col w-[90vw]">
@@ -239,7 +241,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           <DialogTitle>Comment</DialogTitle>
           <DialogDescription>Cách nhau bởi dấu {'{}'}</DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 my-4 flex-1 overflow-y-auto pr-2">
           {/* Hiển thị thông tin về người dùng ảo nếu có externalId */}
           {externalId && (
@@ -264,7 +266,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               )}
             </div>
           )}
-          
+
           {/* Display extracted comments as buttons */}
           {extractedComments.length > 0 && commentText.includes('{') && commentText.includes('}') && (
             <div className="bg-gray-50 p-3 rounded-md">
@@ -298,18 +300,18 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               </div>
             </div>
           )}
-          
+
           <Textarea
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             placeholder="Nhập nội dung comment hoặc nhiều comment cách nhau bởi dấu ngoặc nhọn {comment1} {comment2}"
             className="min-h-[200px]"
           />
-          
+
           <div className="text-sm text-muted-foreground">
             Số comments sẽ được thêm: {extractedComments.length}
           </div>
-          
+
           {externalId && (
             <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm">
               <p className="font-medium">Gửi comment tới API bên ngoài</p>
@@ -324,7 +326,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             </div>
           )}
         </div>
-        
+
         <DialogFooter>
           <Button 
             type="submit" 
