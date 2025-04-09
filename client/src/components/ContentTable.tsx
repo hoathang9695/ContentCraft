@@ -444,11 +444,19 @@ export function ContentTable({
             {
               key: 'source',
               header: 'Nguồn cấp',
-              render: (row: Content) => (
-                <div className="font-medium">
-                  {row.source || 'Không có nguồn'}
-                </div>
-              ),
+              render: (row: Content) => {
+                let sourceObj;
+                try {
+                  sourceObj = row.source ? JSON.parse(row.source) : null;
+                } catch (e) {
+                  sourceObj = null;
+                }
+                return (
+                  <div className="font-medium">
+                    {sourceObj?.name || row.source || 'Không có nguồn'}
+                  </div>
+                );
+              },
             },
             {
               key: 'categories',
