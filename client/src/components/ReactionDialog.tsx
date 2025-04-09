@@ -43,8 +43,11 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         console.log('Reaction type:', reactionType);
         console.log('User token:', fakeUser.token);
 
+        const REACTION_TYPES = ['like', 'haha', 'love', 'angry', 'sad', 'wow', 'yay'];
+        const randomReactionType = REACTION_TYPES[Math.floor(Math.random() * REACTION_TYPES.length)];
+        
         const requestBody = {
-          custom_vote_type: reactionType
+          custom_vote_type: randomReactionType
         };
 
         console.log('=== REACTION REQUEST ===');
