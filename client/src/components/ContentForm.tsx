@@ -50,13 +50,13 @@ export function ContentForm({
   onSubmit 
 }: ContentFormProps) {
   const { user } = useAuth();
-  
+
   // Fetch active editors
   const { data: editors = [], isLoading: isLoadingEditors } = useQuery<{id: number, name: string, username: string}[]>({
     queryKey: ['/api/editors'],
     enabled: user?.role === 'admin', // Only load if user is admin
   });
-  
+
   // Form
   const form = useForm<ContentFormValues>({
     resolver: zodResolver(contentSchema),
@@ -70,7 +70,7 @@ export function ContentForm({
       assigned_to_id: defaultValues?.assigned_to_id || undefined
     }
   });
-  
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -99,7 +99,7 @@ export function ContentForm({
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="externalId"
@@ -116,7 +116,7 @@ export function ContentForm({
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="source"
@@ -167,7 +167,7 @@ export function ContentForm({
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="sourceVerification"
@@ -192,7 +192,7 @@ export function ContentForm({
             </FormItem>
           )}
         />
-        
+
         {/* Hiển thị select người xử lý chỉ khi người dùng là admin */}
         {user?.role === 'admin' && (
           <FormField
@@ -233,7 +233,7 @@ export function ContentForm({
             )}
           />
         )}
-        
+
         <div className="flex justify-end space-x-2">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
