@@ -50,15 +50,6 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           body: requestBody
         });
 
-        console.log('Sending reaction request:', {
-          url: `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`,
-          token: fakeUser.token,
-          body: {
-            custom_vote_type: reactionType,
-            page_id: null
-          }
-        });
-
         const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
           method: 'POST',
           headers: {
@@ -73,13 +64,6 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         });
 
         // Log response details for debugging
-        console.log('Response status:', response.status);
-        const responseText = await response.text();
-        console.log('Response body:', responseText);
-
-        if (!response.ok) {
-          throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
-        }
         console.log('Response status:', response.status);
         const responseText = await response.text();
         console.log('Response body:', responseText);
