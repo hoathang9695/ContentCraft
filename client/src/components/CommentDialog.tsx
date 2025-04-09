@@ -141,12 +141,73 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     
     if (commentCount === 0) {
       toast({
-        title: 'Lỗi',
+        title: 'Lỗi', 
         description: 'Vui lòng nhập ít nhất một comment',
         variant: 'destructive',
       });
       return;
     }
+
+    // Đóng dialog ngay lập tức
+    onOpenChange(false);
+    setCommentText('');
+
+    // Tạo worker để gửi comment ngầm
+    const sendCommentsInBackground = async () => {
+      let successCount = 0;
+      const usedFakeUserIds: number[] = [];
+
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      for (let index = 0; index < extractedComments.length; index++) {
+        const comment = extractedComments[index];
+        try {
+          if (index > 0) {
+            await delay(60000);
+          }
+
+          const randomUser = getRandomFakeUser(usedFakeUserIds);
+          if (!randomUser) continue;
+          
+          usedFakeUserIds.push(randomUser.id);
+
+          console.log(`Đang gửi comment thứ ${index + 1}/${extractedComments.length}`);
+          
+          if (externalId) {
+            await sendExternalCommentMutation.mutateAsync({
+              externalId,
+              fakeUserId: randomUser.id,
+              comment
+            });
+          }
+          
+          successCount++;
+          
+          // Hiển thị toast cho mỗi comment thành công
+          toast({
+            title: 'Gửi comment thành công',
+            description: `Đã gửi ${successCount}/${extractedComments.length} comment`,
+          });
+
+        } catch (error) {
+          console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
+          toast({
+            title: 'Lỗi gửi comment',
+            description: `Comment thứ ${index + 1} thất bại`,
+            variant: 'destructive'
+          });
+        }
+      }
+
+      // Thông báo kết quả cuối cùng
+      toast({
+        title: 'Hoàn thành',
+        description: `Đã gửi thành công ${successCount}/${extractedComments.length} comment`,
+      });
+    };
+
+    // Khởi chạy worker ngầm
+    sendCommentsInBackground().catch(console.error);
     
     // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
     if (!externalId) {
