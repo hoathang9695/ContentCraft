@@ -157,8 +157,6 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     const sendCommentsInBackground = async () => {
       let successCount = 0;
       const usedFakeUserIds: number[] = [];
-      let successCount = 0;
-      const usedFakeUserIds: number[] = [];
 
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       
