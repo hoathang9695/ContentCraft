@@ -135,66 +135,12 @@ export function ContentTable({
   }, [allContents, apiEndpoint]);
 
   // Filter content based on search, status, and date range
-  let filteredContents = [...allContents];
-
-  // Xem trạng thái của bộ lọc
-  console.log("Total contents before filter:", allContents.length);
-  console.log("Status filter:", statusFilter);
-  console.log("Source verification filter:", sourceVerification);
-
-  // Kiểm tra dữ liệu thoả mãn từng bộ lọc riêng biệt
-  const contentsWithPendingStatus = allContents.filter(content => 
-    content.status === 'pending'
-  );
-
-  const contentsWithUnverifiedSource = allContents.filter(content => 
-    content.sourceVerification === 'unverified'
-  );
-
-  console.log("Contents with pending status:", contentsWithPendingStatus.length);
-  console.log("Contents with unverified source:", contentsWithUnverifiedSource.length);
-
-  // Kiểm tra dữ liệu thỏa mãn cả hai điều kiện cùng lúc
-  const contentsWithBoth = allContents.filter(content => 
-    content.status === 'pending' && 
-    content.sourceVerification === 'unverified'
-  );
-
-  console.log("Contents matching BOTH pending AND unverified:", contentsWithBoth.length);
-
-  // In thông tin trước khi áp dụng lọc
-  console.log("Filter settings:", { statusFilter, sourceVerification });
-
-  // Apply filters
-  filteredContents = allContents.filter(content => {
+  const filteredContents = allContents.filter(content => {
     // Status filter
     const statusMatch = !statusFilter || content.status === statusFilter;
-
-    // Source verification filter - match exact value
+    // Source verification filter
     const verificationMatch = content.sourceVerification === sourceVerification;
-
-    // Log filter results for the target content
-    if (content.externalId === '114307866176639848') {
-      console.log('Target content filter results:', {
-        status: content.status,
-        sourceVerification: content.sourceVerification,
-        statusMatch,
-        verificationMatch,
-        finalMatch: statusMatch && verificationMatch
-      });
-    }
-
     return statusMatch && verificationMatch;
-  });
-
-  // Log filtered results
-  console.log('Filter summary:', {
-    total: filteredContents.length,
-    hasTargetContent: filteredContents.some(c => c.externalId === '114307866176639848'),
-    filters: {
-      status: statusFilter,
-      verification: sourceVerification
-    }
   });
 
 
