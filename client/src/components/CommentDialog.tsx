@@ -162,15 +162,10 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
       // Đảm bảo mỗi comment là duy nhất
       const uniqueCommentsArray = Array.from(new Set(uniqueComments));
-      
-      let isProcessing = false;
 
       for (let index = 0; index < uniqueCommentsArray.length; index++) {
-        if (isProcessing) continue;
-        isProcessing = true;
-        
         const comment = uniqueCommentsArray[index];
-        
+
         try {
           // Thêm độ trễ 1 phút trước khi gửi comment tiếp theo
           if (index > 0) {
@@ -189,7 +184,6 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             ? availableUsers[Math.floor(Math.random() * availableUsers.length)]
             : fakeUsers[Math.floor(Math.random() * fakeUsers.length)];
 
-          // Kiểm tra xem comment đã được xử lý chưa
           if (externalId && !processedComments.has(comment)) {
             console.log(`Đang gửi comment "${comment}" với user ${randomUser.name}...`);
             await sendExternalCommentMutation.mutateAsync({
@@ -211,9 +205,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               description: `Đã gửi comment với user ${randomUser.name}${index < uniqueCommentsArray.length - 1 ? '. Chờ 1 phút để gửi tiếp...' : ''}`
             });
           }
-          isProcessing = false;
         } catch (error) {
-          isProcessing = false;
           console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
           toast({
             title: 'Lỗi gửi comment',
@@ -244,7 +236,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     }
 
     // Chỉ gọi hàm sendCommentsInBackground để gửi comment
-    sendCommentsInBackground().catch(console.error);
+    //sendCommentsInBackground().catch(console.error); // This line is removed as it's already called above.
   };
 
   return (
