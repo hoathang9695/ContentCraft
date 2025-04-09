@@ -40,31 +40,30 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
 
       try {
         // Log request details
+        const requestBody = {
+          custom_vote_type: reactionType,
+          page_id: null
+        };
+
         console.log('Sending reaction request:', {
           url: `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`,
           token: fakeUser.token,
-          body: {
-            custom_vote_type: reactionType,
-            page_id: null
-          }
+          body: requestBody
         });
 
         const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
-          method: 'POST', 
+          method: 'POST',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${fakeUser.token}`
           },
-          body: JSON.stringify({
-            custom_vote_type: reactionType,
-            page_id: null
-          })
+          body: JSON.stringify(requestBody)
         });
 
-        // Log response
-        const responseText = await response.text();
+        // Log response details for debugging
         console.log('Response status:', response.status);
+        const responseText = await response.text();
         console.log('Response body:', responseText);
         
         if (!response.ok) {
