@@ -70,15 +70,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
         }
 
-        console.log('API Response:', response.status);
-        const responseData = await response.text();
-        console.log('Response data:', responseData);
-
-        if (!response.ok) {
-          throw new Error(`Failed to send reaction: ${response.status} ${responseData}`);
-        }
-
-        return responseData ? JSON.parse(responseData) : null;
+        return responseText ? JSON.parse(responseText) : null;
       } catch (error) {
         console.error('Error sending reaction:', error);
         throw error;
