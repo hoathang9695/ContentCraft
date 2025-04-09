@@ -62,18 +62,24 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
 
         console.log('=== REACTION RESPONSE ===');
         console.log('Response status:', response.status);
-        const responseText = await response.text();
-        console.log('Response body:', responseText);
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        // Handle different HTTP status codes
+        if (response.status === 502 || response.status === 503) {
+          throw new Error('Service temporarily unavailable. Please try again later.');
+        }
+
+        const responseData = await response.text();
+        console.log('Response body:', responseData);
 
         if (!response.ok) {
           console.error('Reaction API error:', {
             status: response.status,
             statusText: response.statusText,
-            body: responseText,
+            body: responseData,
             headers: Object.fromEntries(response.headers.entries())
           });
-          throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
+          throw new Error(`Failed to send reaction: ${response.status} ${responseData}`);
         }
 
         return responseText ? JSON.parse(responseText) : null;
