@@ -40,15 +40,19 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       try {
         // Log request details
         const requestBody = {
-          custom_vote_type: reactionType,
-          page_id: null
+          custom_vote_type: randomReactionType
         };
 
-        console.log('Sending reaction request:', {
-          url: `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`,
-          token: fakeUser.token,
-          body: requestBody
+        console.log('=== REACTION REQUEST DEBUG ===');
+        console.log('External ID:', externalId);
+        console.log('Fake User:', fakeUser);
+        console.log('Request URL:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
+        console.log('Request Headers:', {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fakeUser.token}`
         });
+        console.log('Request Body:', requestBody);
 
         const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
           method: 'POST',
@@ -66,6 +70,10 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         console.log('Response body:', responseText);
 
         if (!response.ok) {
+          console.log('=== REACTION ERROR ===');
+          console.log('Response Status:', response.status);
+          console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
+          console.log('Response Body:', responseText);
           throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
         }
 
