@@ -19,7 +19,7 @@ export const users = pgTable("users", {
 export const contents = pgTable("contents", {
   id: serial("id").primaryKey(),
   externalId: text("external_id").unique(), // ID nội dung từ service bên ngoài qua Kafka
-  source: text("source"), // Nguồn cấp
+  source: text("source"), // Nguồn cấp (có thể null)
   categories: text("categories"), // Danh mục
   labels: text("labels"), // Nhãn
   status: text("status").notNull().default("pending"), // 'pending', 'processing', 'completed'
