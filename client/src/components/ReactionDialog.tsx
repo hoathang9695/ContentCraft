@@ -73,7 +73,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po',
+                'Authorization': `Bearer ${fakeUser.token}`,
                 'Cache-Control': 'no-cache'
               },
               body: JSON.stringify(requestBody)
