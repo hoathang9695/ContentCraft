@@ -161,7 +161,7 @@ export function ContentTable({
         setTimeout(() => {
           toast({
             title: "Không tìm thấy dữ liệu",
-            description: `Không có dữ liệu nào trong khoảng từ ${filterStart.getDate()}/${filterStart.getMonth() + 1}/${filterStart.getFullYear()} đến ${filterEnd.getDate()}/${filterEnd.getMonth() + 1}/${filterEnd.getFullYear()}`,
+            description: `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`,
             variant: "destructive"
           });
           toastShownRef.current = true;
