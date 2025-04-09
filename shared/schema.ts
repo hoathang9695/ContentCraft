@@ -132,3 +132,14 @@ export const insertFakeUserSchema = createInsertSchema(fakeUsers).omit({
 
 export type InsertFakeUser = z.infer<typeof insertFakeUserSchema>;
 export type FakeUser = typeof fakeUsers.$inferSelect;
+
+export interface ContentMessage {
+  externalId: string;        // ID nội dung, kiểu string
+  source?: {                // Nguồn cấp dạng object
+    id: string;            // ID của nguồn
+    name: string;          // Tên của nguồn
+  };          
+  categories?: string;      // Danh mục, kiểu string và optional
+  labels?: string;          // Nhãn, kiểu string và optional 
+  sourceVerification?: 'verified' | 'unverified';  // Trạng thái xác minh nguồn
+}

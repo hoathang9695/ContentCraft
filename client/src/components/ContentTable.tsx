@@ -63,13 +63,13 @@ export function ContentTable({
   const [contentToComment, setContentToComment] = useState<number | null>(null);
   const [externalIdToComment, setExternalIdToComment] = useState<string | undefined>(undefined);
   const [authError, setAuthError] = useState(false);
-  
+
   // Toast hiển thị khi không tìm thấy dữ liệu nào
   const toastShownRef = useRef(false);
-  
+
   // Simplify query to avoid TypeScript errors
   const apiEndpoint = user?.role === 'admin' ? '/api/contents' : '/api/my-contents';
-  
+
   // Properly typed query for content data
   const { 
     data: allContents = [], 
@@ -77,10 +77,36 @@ export function ContentTable({
     error 
   } = useQuery<Content[], Error>({
     queryKey: [apiEndpoint],
-    staleTime: 60000, // Reduce refetching (1 min)
-    refetchOnWindowFocus: true
+    staleTime: 60000,
+    refetchOnWindowFocus: true,
+    onSuccess: (data) => {
+      console.log("=== API Response Data ===");
+      console.log("Total contents received:", data.length);
+
+      // Log all contents with verified status
+      const verifiedContents = data.filter(c => c.sourceVerification === 'verified');
+      console.log("Verified contents:", verifiedContents);
+
+      // Specifically look for our target content
+      const targetContent = data.find(c => c.externalId === '114307866176639848');
+      console.log("Target content (114307866176639848):", targetContent);
+
+      // Parse and log source names
+      data.forEach(content => {
+        try {
+          const sourceObj = content.source ? JSON.parse(content.source) : null;
+          console.log(`Content ${content.externalId} source:`, {
+            raw: content.source,
+            parsed: sourceObj,
+            name: sourceObj?.name
+          });
+        } catch (e) {
+          console.log(`Error parsing source for ${content.externalId}:`, content.source);
+        }
+      });
+    }
   });
-  
+
   // Xử lý lỗi từ query khi có cập nhật
   useEffect(() => {
     if (error) {
@@ -95,7 +121,7 @@ export function ContentTable({
       }
     }
   }, [error, toast]);
-  
+
   // Add logging for debugging
   useEffect(() => {
     if (allContents && Array.isArray(allContents)) {
@@ -107,136 +133,35 @@ export function ContentTable({
       });
     }
   }, [allContents, apiEndpoint]);
-  
+
   // Filter content based on search, status, and date range
-  let filteredContents = [...allContents];
-  
-  // Xem trạng thái của bộ lọc
-  console.log("Total contents before filter:", allContents.length);
-  console.log("Status filter:", statusFilter);
-  console.log("Source verification filter:", sourceVerification);
-  
-  // Kiểm tra dữ liệu thoả mãn từng bộ lọc riêng biệt
-  const contentsWithPendingStatus = allContents.filter(content => 
-    content.status === 'pending'
-  );
-  
-  const contentsWithUnverifiedSource = allContents.filter(content => 
-    content.sourceVerification === 'unverified'
-  );
-  
-  console.log("Contents with pending status:", contentsWithPendingStatus.length);
-  console.log("Contents with unverified source:", contentsWithUnverifiedSource.length);
-  
-  // Kiểm tra dữ liệu thỏa mãn cả hai điều kiện cùng lúc
-  const contentsWithBoth = allContents.filter(content => 
-    content.status === 'pending' && 
-    content.sourceVerification === 'unverified'
-  );
-  
-  console.log("Contents matching BOTH pending AND unverified:", contentsWithBoth.length);
-  
-  // In thông tin trước khi áp dụng lọc
-  console.log("Filter settings:", { statusFilter, sourceVerification });
-  
-  if (statusFilter === 'pending' && sourceVerification === 'unverified') {
-    // Trường hợp đặc biệt: Chưa xử lý và Chưa xác minh - cần đảm bảo kết quả đúng
-    console.log("Applying special filter: Chưa xử lý + Chưa xác minh");
+  const filteredContents = allContents.filter(content => {
+    // Status filter
+    const statusMatch = !statusFilter || content.status === statusFilter;
+    // Source verification filter
+    const verificationMatch = content.sourceVerification === sourceVerification;
     
-    // Áp dụng trực tiếp cả hai bộ lọc
-    filteredContents = allContents.filter(content => {
-      console.log(`Content ID ${content.id} - Status: [${content.status}], Verification: [${content.sourceVerification}]`);
-      return content.status === 'pending' && content.sourceVerification === 'unverified';
-    });
+    // Parse source name for better filtering
+    let sourceName = "";
+    try {
+      const sourceObj = content.source ? JSON.parse(content.source) : null;
+      sourceName = sourceObj?.name || content.source || "";
+    } catch {
+      sourceName = content.source || "";
+    }
     
-    console.log("Filtered results:", filteredContents.length);
-  } else {
-    // Áp dụng bộ lọc thông thường cho các trường hợp khác
-    filteredContents = allContents.filter(content => {
-      // Kiểm tra lọc theo trạng thái
-      let statusMatch = true;
-      if (statusFilter) {
-        statusMatch = content.status === statusFilter;
-      }
-      
-      // Kiểm tra lọc theo trạng thái xác minh nguồn
-      let verificationMatch = true;
-      
-      // Nếu có sourceVerification (đã truyền vào), áp dụng bộ lọc này
-      // Ngay cả khi không có statusFilter (tab "Tất cả"), vẫn áp dụng bộ lọc xác minh nguồn nếu được chỉ định
-      if (sourceVerification) {
-        verificationMatch = content.sourceVerification === sourceVerification;
-      }
-      
-      // Kiểm tra lọc theo từ khóa tìm kiếm
-      let searchMatch = true;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const sourceMention = content.source && content.source.toLowerCase().includes(query);
-        const categoriesMention = content.categories && content.categories.toLowerCase().includes(query);
-        const labelsMention = content.labels && content.labels.toLowerCase().includes(query);
-        
-        // Áp dụng Boolean cho đảm bảo trả về giá trị boolean
-        searchMatch = Boolean(sourceMention || categoriesMention || labelsMention);
-      }
-      
-      // Kiểm tra lọc theo ngày tháng
-      let dateMatch = true;
-      if (startDate && endDate) {
-        // Chuyển đổi ngày bắt đầu, kết thúc sang chuẩn để so sánh
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        
-        // Kiểm tra xem hai ngày có cùng một ngày không
-        const isSameDay = start.getDate() === end.getDate() && 
-                          start.getMonth() === end.getMonth() && 
-                          start.getFullYear() === end.getFullYear();
-        
-        if (!content.createdAt) {
-          // Nếu không có ngày tạo, không khớp với bộ lọc ngày
-          dateMatch = false;
-        } else {
-          const contentDate = new Date(content.createdAt);
-          
-          // Set lại thời gian để chỉ so sánh ngày
-          const contentDateStart = new Date(contentDate);
-          contentDateStart.setHours(0, 0, 0, 0);
-          
-          // So sánh theo thời gian thực tế (không cần chuyển đổi UTC)
-          if (isSameDay) {
-            // Nếu ngày bắt đầu và kết thúc là cùng một ngày, kiểm tra xem nội dung được tạo vào ngày đó
-            const contentDay = new Date(contentDate);
-            contentDay.setHours(0, 0, 0, 0);
-            dateMatch = contentDay.getTime() === start.getTime();
-          } else {
-            // Nếu có khoảng thời gian, kiểm tra xem nội dung nằm trong khoảng đó
-            dateMatch = contentDateStart >= start && contentDateStart <= end;
-          }
-        }
-      }
-      
-      // Nội dung phải thỏa mãn tất cả các điều kiện lọc
-      return statusMatch && verificationMatch && searchMatch && dateMatch;
-    });
-  }
-  
-  console.log("Final filtered contents count:", filteredContents.length);
-  
-  // Thông tin cho toast thông báo không có kết quả
-  let beforeFilterCount = 0;
-  let dateFilterApplied = false;
-  let filterStart: Date | null = null;
-  let filterEnd: Date | null = null;
-  
-  if (startDate && endDate) {
-    filterStart = new Date(startDate);
-    filterEnd = new Date(endDate);
-    dateFilterApplied = true;
-  }
-  
+    // Enhanced search filter
+    const searchTerm = searchQuery?.toLowerCase() || "";
+    const searchMatch = !searchQuery || 
+      content.externalId?.toLowerCase().includes(searchTerm) ||
+      sourceName.toLowerCase().includes(searchTerm) ||
+      content.categories?.toLowerCase().includes(searchTerm) ||
+      content.labels?.toLowerCase().includes(searchTerm);
+    
+    return statusMatch && verificationMatch && searchMatch;
+  });
+
+
   // Pagination
   const itemsPerPage = 10;
   const totalPages = Math.ceil(filteredContents.length / itemsPerPage);
@@ -245,15 +170,16 @@ export function ContentTable({
     startIndex, 
     limit ? Math.min(startIndex + itemsPerPage, startIndex + limit) : startIndex + itemsPerPage
   );
-  
-  // Show toast for empty date filter results
+
+  // Show toast for empty date filter results 
   useEffect(() => {
-    if (dateFilterApplied && filterStart && filterEnd) {
-      if (filteredContents.length === 0 && beforeFilterCount > 0 && !toastShownRef.current) {
+    const dateFilterApplied = startDate && endDate;
+    if (dateFilterApplied && startDate && endDate) {
+      if (filteredContents.length === 0 && allContents.length > 0 && !toastShownRef.current) {
         setTimeout(() => {
           toast({
             title: "Không tìm thấy dữ liệu",
-            description: `Không có dữ liệu nào trong khoảng từ ${filterStart.getDate()}/${filterStart.getMonth() + 1}/${filterStart.getFullYear()} đến ${filterEnd.getDate()}/${filterEnd.getMonth() + 1}/${filterEnd.getFullYear()}`,
+            description: `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`,
             variant: "destructive"
           });
           toastShownRef.current = true;
@@ -267,7 +193,7 @@ export function ContentTable({
       }
     };
   }, [filteredContents.length, toast, startDate, endDate]);
-  
+
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -292,7 +218,7 @@ export function ContentTable({
       });
     },
   });
-  
+
   // Mutations for comment and reaction updates
   const commentMutation = useMutation({
     mutationFn: async ({ id, count }: { id: number, count: number }) => {
@@ -342,19 +268,19 @@ export function ContentTable({
     setIsUpdateDialogOpen(true);
   };
   const handleViewContent = (id: number) => navigate(`/contents/${id}/edit`);
-  
+
   const handleDeleteClick = (id: number) => {
     setContentToDelete(id);
     setIsDeleteDialogOpen(true);
   };
-  
+
   const handlePushComment = (id: number) => {
     // Tìm content trong danh sách để lấy externalId
     const content = allContents.find(c => c.id === id);
-    
+
     // Open comment dialog instead of directly adding a comment
     setContentToComment(id);
-    
+
     // Kiểm tra để đảm bảo không có giá trị null
     if (content && content.externalId) {
       setExternalIdToComment(content.externalId);
@@ -363,21 +289,21 @@ export function ContentTable({
       setExternalIdToComment(undefined);
       console.log('Không có externalId, chỉ cập nhật số lượng comment trong database nội bộ');
     }
-    
+
     setIsCommentDialogOpen(true);
   };
-  
+
   const handlePushReaction = (id: number) => {
     // Add 1 reaction to the content
     reactionMutation.mutate({ id, count: 1 });
   };
-  
+
   const confirmDelete = () => {
     if (contentToDelete !== null) {
       deleteMutation.mutate(contentToDelete);
     }
   };
-  
+
   return (
     <>
       <div className="mb-6">
@@ -390,7 +316,7 @@ export function ContentTable({
             </Button>
           </div>
         )}
-        
+
         {authError && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
             <div className="flex">
@@ -412,7 +338,7 @@ export function ContentTable({
             </div>
           </div>
         )}
-        
+
         <DataTable
           data={paginatedContents}
           isLoading={isLoading}
@@ -444,11 +370,19 @@ export function ContentTable({
             {
               key: 'source',
               header: 'Nguồn cấp',
-              render: (row: Content) => (
-                <div className="font-medium">
-                  {row.source || 'Không có nguồn'}
-                </div>
-              ),
+              render: (row: Content) => {
+                let sourceObj;
+                try {
+                  sourceObj = row.source ? JSON.parse(row.source) : null;
+                } catch (e) {
+                  sourceObj = null;
+                }
+                return (
+                  <div className="font-medium">
+                    {sourceObj?.name || row.source || 'Không có nguồn'}
+                  </div>
+                );
+              },
             },
             {
               key: 'categories',
@@ -632,7 +566,7 @@ export function ContentTable({
           }
         />
       </div>
-      
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -653,14 +587,14 @@ export function ContentTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {/* Update Content Dialog */}
       <UpdateContentDialog 
         open={isUpdateDialogOpen}
         onOpenChange={setIsUpdateDialogOpen}
         contentId={contentToUpdate}
       />
-      
+
       {/* Comment Dialog */}
       <CommentDialog
         open={isCommentDialogOpen}
