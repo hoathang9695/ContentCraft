@@ -157,25 +157,30 @@ export function ContentTable({
       console.log(`Filtering content ${content.id}:`, {
         externalId: content.externalId,
         status: content.status,
-        sourceVerification: content.sourceVerification
+        sourceVerification: content.sourceVerification,
+        currentFilter: sourceVerification
       });
 
       // Kiểm tra lọc theo trạng thái
       let statusMatch = true;
       if (statusFilter) {
         statusMatch = content.status === statusFilter;
+        console.log(`Status match for ${content.externalId}:`, statusMatch);
       }
 
       // Kiểm tra lọc theo trạng thái xác minh nguồn một cách chính xác
       let verificationMatch = true;
       if (sourceVerification) {
-        // Đảm bảo so sánh chính xác với sourceVerification
         verificationMatch = content.sourceVerification === sourceVerification;
-        console.log(`Content ${content.externalId} - Match: ${verificationMatch}`, {
+        console.log(`Verification match for ${content.externalId}:`, {
           contentVerification: content.sourceVerification,
-          filterVerification: sourceVerification
+          filterVerification: sourceVerification,
+          match: verificationMatch
         });
       }
+
+      const finalMatch = statusMatch && verificationMatch;
+      console.log(`Final match for ${content.externalId}:`, finalMatch);
 
       // Kiểm tra lọc theo từ khóa tìm kiếm
       let searchMatch = true;
