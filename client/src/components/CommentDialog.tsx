@@ -156,11 +156,19 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     const sendCommentsInBackground = async () => {
       let successCount = 0;
       const usedFakeUserIds: number[] = [];
+      const processedComments = new Set<string>();
 
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       
       for (let index = 0; index < extractedComments.length; index++) {
         const comment = extractedComments[index];
+        
+        // Kiểm tra nếu comment đã được xử lý
+        if (processedComments.has(comment)) {
+          console.log(`Bỏ qua comment trùng lặp: ${comment}`);
+          continue;
+        }
+
         try {
           if (index > 0) {
             await delay(60000);
@@ -179,6 +187,9 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               fakeUserId: randomUser.id,
               comment
             });
+            
+            // Đánh dấu comment đã được xử lý
+            processedComments.add(comment);
           }
           
           successCount++;
