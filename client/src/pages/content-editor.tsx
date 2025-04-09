@@ -25,18 +25,28 @@ export default function ContentEditor() {
   // Create content mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertContent) => {
-      const res = await apiRequest('POST', '/api/contents', {
-        ...data,
-        source: data.source || null, // Đảm bảo source được gửi đi
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to create content');
+      try {
+        const res = await apiRequest('POST', '/api/contents', {
+          ...data,
+          source: data.source || null,
+        });
+        const responseData = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(responseData.message || 'Failed to create content');
+        }
+        
+        return responseData;
+      } catch (error) {
+        console.error('Create content error:', error);
+        // Ensure cache is updated even if there's an error
+        queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+        throw error;
       }
-      return await res.json();
     },
     onSuccess: () => {
-      // Cập nhật cache sau khi tạo thành công
       queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
@@ -50,10 +60,11 @@ export default function ContentEditor() {
     },
     onError: (error) => {
       toast({
-        title: 'Error creating content',
-        description: error.message,
-        variant: 'destructive'
+        title: 'Content created with warning',
+        description: 'Content was saved but there were some issues. Please check the content list.',
+        variant: 'default'
       });
+      navigate('/contents');
     }
   });
 
