@@ -139,7 +139,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
     // Lưu nội dung với thông tin phân công
     await db.insert(contents).values({
       externalId: contentMessage.externalId,
-      source: contentMessage.source || null,
+      source: contentMessage.source ? contentMessage.source.name : null,
       categories: contentMessage.categories || null,
       labels: contentMessage.labels || null,
       status: 'pending',
