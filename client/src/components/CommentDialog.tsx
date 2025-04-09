@@ -195,6 +195,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             successCount++;
 
             console.log(`Đã gửi comment "${comment}" với user ${randomUser.name}`);
+            
+            // Thông báo thành công
+            toast({
+              title: 'Thành công',
+              description: `Đã gửi comment với user ${randomUser.name}. Chờ 1 phút để gửi tiếp...`
+            });
           }
         } catch (error) {
           console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
