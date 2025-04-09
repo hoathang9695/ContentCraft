@@ -40,17 +40,18 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       try {
         // Log request details
         const requestBody = {
-          custom_vote_type: randomReactionType
+          custom_vote_type: reactionType // Corrected: use the actual reactionType
         };
 
-        console.log('=== REACTION REQUEST DEBUG ===');
+        console.log('=== REACTION REQUEST DETAILS ===');
         console.log('External ID:', externalId);
         console.log('Fake User:', fakeUser);
-        console.log('Request URL:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
-        console.log('Request Headers:', {
+        console.log('URL:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
+        console.log('Headers:', {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fakeUser.token}`
+          'Authorization': `Bearer ${fakeUser.token}`,
+          'Cache-Control': 'no-cache'
         });
         console.log('Request Body:', requestBody);
 
@@ -59,15 +60,25 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${fakeUser.token}`
+            'Authorization': `Bearer ${fakeUser.token}`,
+            'Cache-Control': 'no-cache'
           },
           body: JSON.stringify(requestBody)
         });
 
-        // Log response details for debugging
-        console.log('Response status:', response.status);
+        console.log('=== REACTION RESPONSE DETAILS ===');
+        console.log('Response Status:', response.status);
+        console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
         const responseText = await response.text();
-        console.log('Response body:', responseText);
+        console.log('Response Body:', responseText);
+
+        // Try to parse response as JSON if possible
+        try {
+          const responseJson = JSON.parse(responseText);
+          console.log('Parsed Response:', responseJson);
+        } catch (e) {
+          console.log('Response is not JSON:', responseText);
+        }
 
         if (!response.ok) {
           console.log('=== REACTION ERROR ===');
