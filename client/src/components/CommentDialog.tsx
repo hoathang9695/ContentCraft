@@ -160,16 +160,24 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const processedComments = new Set<string>();
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-      // Đảm bảo mỗi comment là duy nhất và chưa được xử lý
+      // Đảm bảo mỗi comment là duy nhất
       const uniqueCommentsArray = Array.from(new Set(uniqueComments));
+      const processedComments = new Set<string>();
 
       for (let index = 0; index < uniqueCommentsArray.length; index++) {
         const comment = uniqueCommentsArray[index];
-
+        
         try {
           // Thêm độ trễ 1 phút trước khi gửi comment tiếp theo
           if (index > 0) {
+            console.log(`Chờ 1 phút trước khi gửi comment tiếp theo...`);
             await delay(60000); // 60 giây = 1 phút
+          }
+
+          // Kiểm tra nếu comment đã được xử lý
+          if (processedComments.has(comment)) {
+            console.log(`Comment "${comment}" đã được xử lý trước đó`);
+            continue;
           }
 
           // Chọn một user fake chưa được sử dụng
@@ -179,22 +187,21 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             continue;
           }
 
-          // Đánh dấu đã sử dụng user này
-          usedFakeUserIds.push(randomUser.id);
-
           // Gửi comment với user đã chọn
-          if (externalId && !processedComments.has(comment)) {
+          if (externalId) {
+            console.log(`Đang gửi comment "${comment}" với user ${randomUser.name}...`);
             await sendExternalCommentMutation.mutateAsync({
               externalId,
               fakeUserId: randomUser.id,
               comment
             });
 
-            // Đánh dấu comment đã được xử lý
+            // Đánh dấu comment và user đã được sử dụng
             processedComments.add(comment);
+            usedFakeUserIds.push(randomUser.id);
             successCount++;
 
-            console.log(`Đã gửi comment "${comment}" với user ${randomUser.name}`);
+            console.log(`Đã gửi thành công comment "${comment}" với user ${randomUser.name}`);
           }
         } catch (error) {
           console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
