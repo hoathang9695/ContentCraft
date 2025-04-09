@@ -25,26 +25,34 @@ export default function ContentEditor() {
   // Create content mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertContent) => {
-      try {
-        const res = await apiRequest('POST', '/api/contents', data);
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || 'Failed to create content');
-        }
-        return await res.json();
-      } catch (error) {
-        console.error('Create content error:', error);
-        // Nếu lỗi nhưng vẫn tạo thành công, hiển thị thông báo thành công
-        // và thông báo lỗi phụ (không ngăn chặn redirect)
-        toast({
-          title: 'Content created with warnings',
-          description: 'Your content was saved but there were some issues. It should still be visible in the content list.',
-          variant: 'default',
-        });
-        // Giả vờ thành công để tiếp tục chuyển hướng
-        queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      const res = await apiRequest('POST', '/api/contents', data);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to create content');
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      // Cập nhật cache
+      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+
+      toast({
+        title: 'Success',
+        description: 'Content has been created successfully',
+      });
+
+      // Chuyển hướng về trang contents
+      navigate('/contents');
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error creating content',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }'/api/stats'] });
         navigate('/contents');
         return null; // Trả về null để không gọi onSuccess
       }
