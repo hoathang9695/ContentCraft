@@ -44,13 +44,10 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         console.log('User token:', fakeUser.token);
 
         const requestBody = {
-          emoji: reactionType,  // Change type to emoji parameter
-          type: 'react'  // Add type parameter
+          type: reactionType
         };
 
         console.log('=== REACTION REQUEST ===');
-        console.log('Request URL:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
-        console.log('Request Body:', requestBody);
         console.log('Sending reaction to:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
         console.log('With token:', fakeUser.token);
 
@@ -72,7 +69,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
             console.log('Request body:', requestBody);
 
             const response = await fetch(apiUrl, {
-              method: 'POST', 
+              method: 'POST',
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -81,10 +78,6 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
               },
               body: JSON.stringify(requestBody)
             });
-
-            console.log('Response status:', response.status);
-            const responseData = await response.text();
-            console.log('Response data:', responseData);
 
             console.log('Response status:', response.status);
             console.log('Response headers:', Object.fromEntries(response.headers.entries()));
