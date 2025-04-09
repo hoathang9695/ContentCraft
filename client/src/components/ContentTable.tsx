@@ -170,8 +170,8 @@ export function ContentTable({
     // Status filter
     const statusMatch = !statusFilter || content.status === statusFilter;
 
-    // Source verification filter
-    const verificationMatch = !sourceVerification || content.sourceVerification === sourceVerification;
+    // Source verification filter - match exact value
+    const verificationMatch = content.sourceVerification === sourceVerification;
 
     // Log filter results for the target content
     if (content.externalId === '114307866176639848') {
