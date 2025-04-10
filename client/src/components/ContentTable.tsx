@@ -186,62 +186,54 @@ export function ContentTable({
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const content = allContents.find(c => c.id === id);
-      console.log('Delete content:', content);
-      
-      if (content?.externalId) {
-        try {
-          console.log('Deleting from external system:', content.externalId);
-          const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
-            }
-          });
-
-          console.log('External delete response:', response.status);
-          if (!response.ok) {
-            throw new Error('Không thể xóa từ hệ thống bên ngoài');
-          }
-
-          console.log('Updating content status in database...');
-          try {
-            // Update content status after successful deletion
-            const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
-              processing_result: 'delete',
-              approver_id: user?.id,
-              approveTime: new Date(),
-              status: 'completed'
-            });
-            
-            console.log('Updated content:', updatedContent);
-
-            if (!updatedContent) {
-              throw new Error('Failed to update content status');
-            }
-
-            // Invalidate queries to refresh the data
-            await queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
-            await queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-
-            return id; // Return success
-          } catch (error) {
-            console.error('Error updating content status:', error);
-            throw new Error('Failed to update content status in database');
-          }
-
-          toast({
-            title: 'Thành công',
-            description: `Đã xóa ExternalID ${content.externalId} thành công`,
-          });
-        } catch (error) {
-          console.error('Error deleting from external system:', error);
-          throw new Error('Không thể xóa từ hệ thống bên ngoài. Vui lòng thử lại sau.');
-        }
+      if (!content?.externalId) {
+        throw new Error('Không tìm thấy ExternalID');
       }
+
+      // First update the content status in our database
+      console.log('Updating content status to delete...');
+      const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
+        processing_result: 'delete',
+        approver_id: user?.id,
+        approveTime: new Date(),
+        status: 'completed'
+      });
+
+      if (!updatedContent) {
+        throw new Error('Không thể cập nhật trạng thái xóa');
+      }
+
+      console.log('Status updated, deleting from external system:', content.externalId);
+      const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Không thể xóa từ hệ thống bên ngoài');
+      }
+
+      // Double-check the status update
+      await apiRequest('PATCH', `/api/contents/${id}`, {
+        processing_result: 'delete',
+        status: 'completed'
+      });
+
+      // Refresh data
+      await queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+
       return id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
+      const content = allContents.find(c => c.id === id);
       setIsDeleteDialogOpen(false);
+      toast({
+        title: 'Thành công',
+        description: `Đã xóa ExternalID ${content?.externalId} thành công`,
+      });
     },
     onError: (error) => {
       toast({
