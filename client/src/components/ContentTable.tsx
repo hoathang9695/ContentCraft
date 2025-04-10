@@ -203,7 +203,8 @@ export function ContentTable({
           const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
             processingResult: 'delete',
             approver_id: user?.id,
-            approveTime: new Date()
+            approveTime: new Date(),
+            status: 'completed' // Add status update
           });
 
           // Invalidate queries to refresh the data
