@@ -57,14 +57,13 @@ export function DataTable<T>({
           />
         </div>
       )}
-      
-      <div className="rounded-md border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table className="min-w-full">
+
+      <div className="rounded-md border bg-card overflow-x-auto"> {/* Added overflow-x-auto here */}
+        <Table className="min-w-full">
             {caption && <TableCaption>{caption}</TableCaption>}
             <TableHeader>
               <TableRow>
-                {columns.map((column) => (
+                {columns.map((column, index) => (
                   <TableHead key={column.key} className={column.className}>
                     {column.header}
                   </TableHead>
@@ -90,8 +89,11 @@ export function DataTable<T>({
               ) : (
                 data.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="hover:bg-muted/50">
-                    {columns.map((column) => (
-                      <TableCell key={`${rowIndex}-${column.key}`} className={column.className}>
+                    {columns.map((column, columnIndex) => (
+                      <TableCell 
+                        key={`${rowIndex}-${column.key}`} 
+                        className={columnIndex === columns.length -1 ? 'sticky right-0' : column.className}
+                      > {/* Added sticky class to last column */}
                         {column.render
                           ? column.render(row)
                           // @ts-ignore - accessing dynamic property
@@ -106,9 +108,8 @@ export function DataTable<T>({
               )}
             </TableBody>
           </Table>
-        </div>
       </div>
-      
+
       {pagination && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <Button
@@ -120,11 +121,11 @@ export function DataTable<T>({
             <ChevronLeft className="h-4 w-4 mr-2" />
             Previous
           </Button>
-          
+
           <div className="text-sm text-muted-foreground">
             Page {pagination.currentPage} of {pagination.totalPages}
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"

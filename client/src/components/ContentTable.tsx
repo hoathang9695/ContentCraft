@@ -439,9 +439,9 @@ export function ContentTable({
               },
             },
             {
-              key: 'actions',
-              header: 'Hành động',
-              className: 'text-right',
+              key: "actions",
+              header: "Hành động",
+              className: "sticky right-0 bg-background shadow-[-8px_0_8px_-4px_rgba(0,0,0,0.1)]",
               render: (row: Content) => (
                 <div className="flex justify-end">
                   <DropdownMenu>
