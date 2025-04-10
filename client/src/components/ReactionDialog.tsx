@@ -98,6 +98,11 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
   });
 
   const handleSubmit = async () => {
+    console.log('=== handleSubmit START ===');
+    console.log('Input count:', count);
+    console.log('External ID:', externalId);
+    console.log('Fake Users:', fakeUsers);
+
     const reactionCount = parseInt(count, 10);
     if (isNaN(reactionCount) || reactionCount < 1) {
       toast({
