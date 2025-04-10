@@ -25,16 +25,16 @@ export async function setupKafkaConsumer() {
       log('Kafka is not enabled', 'kafka');
       return;
     }
-
+    const sasl = process.env.KAFKA_SASL == 'true'? {
+      mechanism: process.env.KAFKA_SASL_MECHANISMS as 'PLAIN',
+      username: process.env.KAFKA_SASL_USERNAME || '',
+      password: process.env.KAFKA_SASL_PASSWORD || ''
+    }: undefined
     const kafka = new Kafka({
       clientId: 'content-processing-service',
       brokers: process.env.KAFKA_BROKERS?.split(',') || [],
       ssl: false,
-      sasl: {
-        mechanism: process.env.KAFKA_SASL_MECHANISMS as 'PLAIN',
-        username: process.env.KAFKA_SASL_USERNAME || '',
-        password: process.env.KAFKA_SASL_PASSWORD || ''
-      },
+      sasl: sasl,
       connectionTimeout: 3000,
       authenticationTimeout: 1000,
     });
