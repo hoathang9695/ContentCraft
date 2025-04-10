@@ -175,22 +175,31 @@ export function ContentTable({
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/contents/${id}`);
+      const content = allContents.find(c => c.id === id);
+      if (content?.externalId) {
+        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete from external service');
+        }
+      }
       return id;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       toast({
-        title: 'Content deleted',
-        description: 'The content has been successfully deleted.',
+        title: 'Đã xóa bài viết',
+        description: 'Bài viết đã được xóa khỏi hệ thống bên ngoài.',
       });
       setIsDeleteDialogOpen(false);
     },
     onError: (error) => {
       toast({
-        title: 'Error deleting content',
+        title: 'Lỗi khi xóa',
         description: error.message,
         variant: 'destructive',
       });
