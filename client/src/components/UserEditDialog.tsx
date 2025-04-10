@@ -285,14 +285,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                 )}
               </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Hủy
-                </Button>
+              <div className="flex justify-end">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
