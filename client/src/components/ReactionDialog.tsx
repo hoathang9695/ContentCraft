@@ -10,8 +10,9 @@ interface ReactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contentId: number | null;
-  externalId?: string;
+  externalId?: string; 
   onSubmit: (count: number) => void;
+  fakeUsers?: { id: number, name: string, token: string }[];
 }
 
 const REACTION_TYPES = ['like', 'yay', 'haha', 'love', 'sad', 'wow', 'angry'];
