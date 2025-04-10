@@ -63,6 +63,33 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [newPassword, setNewPassword] = useState<string>("");
+  const [isResetting, setIsResetting] = useState(false);
+
+  // Password reset mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (data: { userId: number; password: string }) => {
+      const res = await apiRequest("POST", `/api/users/${data.userId}/reset-password`, {
+        password: data.password
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password reset",
+        description: "Password has been reset successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Reset failed",
+        description: error.message || "Failed to reset password.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsResetting(false);
+    },
+  });
 
   // Set up the form with user data
   const form = useForm<UserUpdateFormValues>({
@@ -236,10 +263,17 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   variant="secondary"
                   className="flex items-center justify-center gap-2"
                   onClick={() => {
+                    if (!user) return;
+                    setIsResetting(true);
                     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
                     const randomPass = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
                     setNewPassword(randomPass);
+                    resetPasswordMutation.mutate({
+                      userId: user.id,
+                      password: randomPass
+                    });
                   }}
+                  disabled={isResetting}
                 >
                   <Lock className="h-4 w-4" />
                   Reset Pass
