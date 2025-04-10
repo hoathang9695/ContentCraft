@@ -33,7 +33,8 @@ export function ReactionDialog({ open, onOpenChange, externalId, fakeUser }: Rea
       // Log request details
       const requestBody = {
         custom_vote_type: randomReactionType,
-        page_id: null
+        page_id: null,
+        externalId: externalId
       };
 
       // Validate required data before proceeding
