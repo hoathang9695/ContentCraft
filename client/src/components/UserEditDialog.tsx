@@ -229,11 +229,11 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
             />
 
             <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
-              <div className="flex gap-2 mt-4 sm:mt-0">
+              <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
                 <Button 
                   type="button" 
                   variant="outline"
-                  className="flex items-center"
+                  className="flex items-center justify-center"
                   onClick={() => {
                     // Implement reset password logic here
                     toast({
