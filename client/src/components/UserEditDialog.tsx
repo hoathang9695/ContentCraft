@@ -228,7 +228,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
               )}
             />
 
-            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between gap-4">
+            <DialogFooter className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   type="button" 
@@ -285,8 +285,8 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                 )}
               </div>
 
-              <div className="flex justify-end">
-                <Button type="submit" disabled={isSubmitting}>
+              <div className="flex justify-end w-full">
+                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
