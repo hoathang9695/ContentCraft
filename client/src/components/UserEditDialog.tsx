@@ -228,31 +228,29 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
               )}
             />
 
-            <DialogFooter className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-2">
+            <DialogFooter className="mt-6 flex-col space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                 <Button 
                   type="button" 
                   variant="outline"
-                  className="flex items-center justify-center gap-2"
+                  className="flex items-center justify-center gap-2 w-full"
                   onClick={() => {
-                    // Implement reset password logic here
                     toast({
                       title: "Reset password",
                       description: "Password reset functionality will be implemented soon.",
                     });
                   }}
                 >
-                  <Lock className="mr-2 h-4 w-4" />
+                  <Lock className="h-4 w-4" />
                   Reset mật khẩu
                 </Button>
-                {/* Chỉ hiển thị nút xóa nếu user không phải là admin chính (id=1) */}
                 {user && user.id !== 1 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 
                         type="button" 
                         variant="destructive"
-                        className="flex items-center"
+                        className="flex items-center justify-center w-full"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Xóa người dùng
@@ -284,19 +282,20 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   </AlertDialog>
                 )}
               </div>
-
-              <div className="flex justify-end w-full">
-                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang lưu...
-                    </>
-                  ) : (
-                    "Lưu thay đổi"
-                  )}
-                </Button>
-              </div>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="w-full"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  "Lưu thay đổi"
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
