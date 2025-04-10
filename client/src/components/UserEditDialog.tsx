@@ -140,15 +140,15 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
-          <DialogDescription>
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-xl">Edit User</DialogTitle>
+          <DialogDescription className="mt-1.5">
             Update the department, position, and role for {user?.name}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="department"
@@ -228,12 +228,12 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
               )}
             />
 
-            <DialogFooter className="mt-6 flex-col space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+            <DialogFooter className="mt-8 flex-col space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 <Button 
                   type="button" 
-                  variant="outline"
-                  className="flex items-center justify-center gap-2 w-full"
+                  variant="secondary"
+                  className="flex items-center justify-center gap-2 w-full h-10"
                   onClick={() => {
                     toast({
                       title: "Reset password",
