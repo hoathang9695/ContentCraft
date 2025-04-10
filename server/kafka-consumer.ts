@@ -1,3 +1,4 @@
+
 import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
 import { db } from './db';
 import { contents, users } from '../shared/schema';
@@ -17,22 +18,39 @@ export interface ContentMessage {
 /**
  * Hàm khởi tạo và thiết lập kết nối với Kafka
  */
-export async function setupKafkaConsumer(
-  brokers: string[] = ['localhost:9092'],
-  groupId: string = 'content-processing-group',
-  topic: string = 'content-topic'
-) {
+export async function setupKafkaConsumer() {
   try {
+    // Kiểm tra xem Kafka có được kích hoạt không
+    if (process.env.KAFKA_ENABLED !== 'true') {
+      log('Kafka is not enabled', 'kafka');
+      return;
+    }
+
     const kafka = new Kafka({
       clientId: 'content-processing-service',
-      brokers,
+      brokers: process.env.KAFKA_BROKERS?.split(',') || [],
+      ssl: false,
+      sasl: {
+        mechanism: process.env.KAFKA_SASL_MECHANISMS as 'PLAIN',
+        username: process.env.KAFKA_SASL_USERNAME || '',
+        password: process.env.KAFKA_SASL_PASSWORD || ''
+      },
+      connectionTimeout: 3000,
+      authenticationTimeout: 1000,
     });
 
-    consumer = kafka.consumer({ groupId });
+    consumer = kafka.consumer({ 
+      groupId: process.env.KAFKA_GROUP_ID || 'emso-processor'
+    });
+    
     await consumer.connect();
-    await consumer.subscribe({ topic, fromBeginning: true });
+    
+    const topics = process.env.KAFKA_TOPICS?.split(',') || ['content_management'];
+    for (const topic of topics) {
+      await consumer.subscribe({ topic, fromBeginning: true });
+    }
 
-    log('Connected to Kafka and subscribed to topic: ' + topic, 'kafka');
+    log('Connected to Kafka and subscribed to topics: ' + topics.join(', '), 'kafka');
 
     // Bắt đầu tiêu thụ tin nhắn
     await consumer.run({
@@ -110,8 +128,6 @@ export async function processContentMessage(contentMessage: ContentMessage) {
     }
 
     // Tìm người xử lý tiếp theo dựa trên hệ thống turn-based
-
-    // 1. Lấy nội dung mới nhất đã được phân công
     const lastAssignedContent = await db.query.contents.findFirst({
       where: (contents, { isNotNull }) => isNotNull(contents.assigned_to_id),
       orderBy: (contents, { desc }) => [desc(contents.assignedAt)],
@@ -119,27 +135,22 @@ export async function processContentMessage(contentMessage: ContentMessage) {
 
     let nextAssigneeIndex = 0;
 
-    // 2. Nếu đã có nội dung được phân công trước đó
     if (lastAssignedContent && lastAssignedContent.assigned_to_id) {
-      // Tìm vị trí của người được phân công trước đó
       const lastAssigneeIndex = editorUsers.findIndex(
         user => user.id === lastAssignedContent.assigned_to_id
       );
 
       if (lastAssigneeIndex !== -1) {
-        // Người tiếp theo trong danh sách (quay vòng nếu đến cuối danh sách)
         nextAssigneeIndex = (lastAssigneeIndex + 1) % editorUsers.length;
       }
     }
 
-    // Phân công cho người tiếp theo
     const assigned_to_id = editorUsers[nextAssigneeIndex].id;
     const now = new Date();
 
-    // Lưu nội dung với thông tin phân công
     await db.insert(contents).values({
       externalId: contentMessage.externalId,
-      source: contentMessage.source ? contentMessage.source.name : null,
+      source: contentMessage.source || null,
       categories: contentMessage.categories || null,
       labels: contentMessage.labels || null,
       status: 'pending',
