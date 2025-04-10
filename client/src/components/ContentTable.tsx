@@ -82,33 +82,7 @@ export function ContentTable({
   } = useQuery<Content[], Error>({
     queryKey: [apiEndpoint],
     staleTime: 60000,
-    refetchOnWindowFocus: true,
-    onSuccess: (data) => {
-      console.log("=== API Response Data ===");
-      console.log("Total contents received:", data.length);
-
-      // Log all contents with verified status
-      const verifiedContents = data.filter(c => c.sourceVerification === 'verified');
-      console.log("Verified contents:", verifiedContents);
-
-      // Specifically look for our target content
-      const targetContent = data.find(c => c.externalId === '114307866176639848');
-      console.log("Target content (114307866176639848):", targetContent);
-
-      // Parse and log source names
-      data.forEach(content => {
-        try {
-          const sourceObj = content.source ? JSON.parse(content.source) : null;
-          console.log(`Content ${content.externalId} source:`, {
-            raw: content.source,
-            parsed: sourceObj,
-            name: sourceObj?.name
-          });
-        } catch (e) {
-          console.log(`Error parsing source for ${content.externalId}:`, content.source);
-        }
-      });
-    }
+    refetchOnWindowFocus: true
   });
 
   // Xử lý lỗi từ query khi có cập nhật
