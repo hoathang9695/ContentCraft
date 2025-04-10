@@ -30,7 +30,10 @@ export async function setupKafkaConsumer(
 
     consumer = kafka.consumer({ groupId });
     await consumer.connect();
-    await consumer.subscribe({ topic, fromBeginning: true });
+    const topics = process.env.KAFKA_TOPICS?.split(',') || [];
+    for (const topic of topics) {
+      await consumer.subscribe({ topic, fromBeginning: true });
+    }
 
     log('Connected to Kafka and subscribed to topic: ' + topic, 'kafka');
 
