@@ -511,9 +511,10 @@ export function ContentTable({
                 if (row.createdAt) {
                   const date = new Date(row.createdAt);
                   return (
-                    <span className="text-muted-foreground whitespace-nowrap">
-                      {`${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`}
-                    </span>
+                    <div className="text-muted-foreground">
+                      <div>{`${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`}</div>
+                      <div className="text-xs">{`${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`}</div>
+                    </div>
                   );
                 }
                 return <span className="text-muted-foreground">N/A</span>;
