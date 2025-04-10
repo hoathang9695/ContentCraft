@@ -164,7 +164,7 @@ export function ContentTable({
         } else if (searchQuery) {
           message = `Không tìm thấy dữ liệu nào phù hợp với từ khóa "${searchQuery}"`;
         }
-        
+
         toast({
           title: "Không tìm thấy dữ liệu",
           description: message,
@@ -173,7 +173,7 @@ export function ContentTable({
         toastShownRef.current = true;
       }, 0);
     }
-    
+
     // Reset toast state when filters change
     return () => {
       if (startDate || endDate || searchQuery) {
@@ -194,11 +194,18 @@ export function ContentTable({
               'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
             }
           });
-          
+
           if (!response.ok) {
             throw new Error('Không thể xóa từ hệ thống bên ngoài');
           }
-          
+
+          // Update content status after successful deletion
+          await apiRequest('PATCH', `/api/contents/${id}`, {
+            processingResult: 'delete',
+            approver_id: 1, // Placeholder - Needs proper user ID retrieval
+            approveTime: new Date()
+          });
+
           toast({
             title: 'Thành công',
             description: `Đã xóa ExternalID ${content.externalId} thành công`,
@@ -299,7 +306,7 @@ export function ContentTable({
   const handlePushReaction = (id: number) => {
     console.log('=== handlePushReaction START ===');
     console.log('Content ID:', id);
-    
+
     const content = allContents?.find(c => c.id === id);
     console.log('Found Content:', content);
 
@@ -472,6 +479,19 @@ export function ContentTable({
                     : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'
                 }`}>
                   {row.safe === true ? 'An toàn' : row.safe === false ? 'Không an toàn' : 'Chưa đánh giá'}
+                </span>
+              ),
+            },
+            {
+              key: 'processingResult',
+              header: 'Trạng thái hiển thị',
+              render: (row: Content) => (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  row.processingResult === 'delete'
+                    ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'
+                }`}>
+                  {row.processingResult === 'delete' ? 'Đã xóa' : 'Chưa xóa'}
                 </span>
               ),
             },
