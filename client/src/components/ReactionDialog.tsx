@@ -40,13 +40,14 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       try {
         // Log request details
         const requestBody = {
-          custom_vote_type: reactionType,
+          custom_vote_type: randomReactionType,
           page_id: null
         };
 
         console.log('=== REACTION REQUEST DETAILS ===');
         console.log('External ID:', externalId);
         console.log('Fake User:', fakeUser);
+        console.log('Random Reaction Type:', randomReactionType);
         console.log('URL:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
         console.log('Headers:', {
           'Accept': 'application/json',
@@ -57,6 +58,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         console.log('Request Body:', requestBody);
 
         const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+          mode: 'cors',
           method: 'POST',
           headers: {
             'Accept': 'application/json',
