@@ -98,7 +98,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
     }
   });
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const reactionCount = parseInt(count, 10);
     if (isNaN(reactionCount) || reactionCount < 1) {
       toast({
@@ -109,8 +109,12 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       return;
     }
 
-    if (externalId) {
+    // Start background process for sending reactions
+    const sendReactionsInBackground = async () => {
+      if (!externalId) return;
+
       const usedUserIds = new Set();
+      let successCount = 0;
 
       for (let i = 0; i < reactionCount; i++) {
         try {
@@ -119,12 +123,8 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           }
 
           const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-
+          
           if (i > 0) {
-            toast({
-              title: 'Đang chờ',
-              description: `Chờ 1 phút trước khi gửi reaction tiếp theo...`,
-            });
             await new Promise(resolve => setTimeout(resolve, 60000));
           }
 
@@ -138,10 +138,12 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           });
 
           usedUserIds.add(randomUser.id);
+          successCount++;
 
-          if (i === reactionCount - 1) {
-            onSubmit(reactionCount);
-          }
+          toast({
+            title: 'Đã gửi reaction',
+            description: `Đã gửi ${successCount}/${reactionCount} reactions`,
+          });
         } catch (error) {
           toast({
             title: 'Lỗi gửi reaction',
@@ -150,12 +152,21 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           });
         }
       }
-    } else {
-      onSubmit(reactionCount);
-    }
+    };
 
+    // Start background process
+    sendReactionsInBackground().catch(console.error);
+    
+    // Update local state and close dialog immediately
+    onSubmit(reactionCount);
     setCount('');
     onOpenChange(false);
+
+    // Show initial toast
+    toast({
+      title: 'Đang gửi reactions',
+      description: `Bắt đầu gửi ${reactionCount} reactions trong nền`,
+    });
   };
 
   return (
