@@ -185,16 +185,17 @@ export function ContentTable({
         });
         
         if (!response.ok) {
-          throw new Error('Failed to delete from external service');
+          throw new Error('Không thể xóa từ hệ thống bên ngoài');
         }
+        
+        toast({
+          title: 'Thành công',
+          description: `Đã xóa ExternalID ${content.externalId} thành công`,
+        });
       }
       return id;
     },
     onSuccess: () => {
-      toast({
-        title: 'Đã xóa bài viết',
-        description: 'Bài viết đã được xóa khỏi hệ thống bên ngoài.',
-      });
       setIsDeleteDialogOpen(false);
     },
     onError: (error) => {
