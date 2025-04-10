@@ -229,7 +229,22 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
             />
 
             <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
-              <div className="flex mt-4 sm:mt-0">
+              <div className="flex gap-2 mt-4 sm:mt-0">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="flex items-center"
+                  onClick={() => {
+                    // Implement reset password logic here
+                    toast({
+                      title: "Reset password",
+                      description: "Password reset functionality will be implemented soon.",
+                    });
+                  }}
+                >
+                  <Lock className="mr-2 h-4 w-4" />
+                  Reset mật khẩu
+                </Button>
                 {/* Chỉ hiển thị nút xóa nếu user không phải là admin chính (id=1) */}
                 {user && user.id !== 1 && (
                   <AlertDialog>
