@@ -177,21 +177,26 @@ export function ContentTable({
     mutationFn: async (id: number) => {
       const content = allContents.find(c => c.id === id);
       if (content?.externalId) {
-        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
+        try {
+          const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Không thể xóa từ hệ thống bên ngoài');
           }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Không thể xóa từ hệ thống bên ngoài');
+          
+          toast({
+            title: 'Thành công',
+            description: `Đã xóa ExternalID ${content.externalId} thành công`,
+          });
+        } catch (error) {
+          console.error('Error deleting from external system:', error);
+          throw new Error('Không thể xóa từ hệ thống bên ngoài. Vui lòng thử lại sau.');
         }
-        
-        toast({
-          title: 'Thành công',
-          description: `Đã xóa ExternalID ${content.externalId} thành công`,
-        });
       }
       return id;
     },
