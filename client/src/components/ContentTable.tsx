@@ -180,7 +180,7 @@ export function ContentTable({
         const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
+            'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
           }
         });
         
