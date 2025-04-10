@@ -36,6 +36,14 @@ export function ReactionDialog({ open, onOpenChange, externalId, fakeUser }: Rea
         page_id: null
       };
 
+      // Validate required data before proceeding
+      if (!externalId) {
+        throw new Error('External ID is required');
+      }
+      if (!fakeUser) {
+        throw new Error('Fake user data is required');
+      }
+      
       console.log('=== REACTION REQUEST DETAILS ===');
       console.log('External ID:', externalId);
       console.log('Fake User:', fakeUser);
