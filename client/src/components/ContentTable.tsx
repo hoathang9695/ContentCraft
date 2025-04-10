@@ -299,17 +299,21 @@ export function ContentTable({
   const handlePushReaction = (id: number) => {
     console.log('=== handlePushReaction START ===');
     console.log('Content ID:', id);
-    console.log('All Contents:', allContents);
-
+    
     const content = allContents?.find(c => c.id === id);
     console.log('Found Content:', content);
 
-    if (!content?.externalId) {
-      console.log('External ID is undefined for content ID:', id);
+    if (content?.externalId) {
+      setContentToReact(id);
+      setExternalIdToReact(content.externalId);
+      setIsReactionDialogOpen(true);
+    } else {
+      toast({
+        title: "Lỗi",
+        description: "Không tìm thấy External ID cho nội dung này",
+        variant: "destructive"
+      });
     }
-
-    setContentToReact(id);
-    setIsReactionDialogOpen(true);
   };
 
   const handleReactionSubmit = (count: number) => {
