@@ -101,28 +101,6 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
   });
   
   // Delete user mutation
-  // Reset password mutation
-  const resetPasswordMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("No user selected");
-      const res = await apiRequest("POST", `/api/users/${user.id}/reset-password`);
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Mật khẩu đã được đặt lại",
-        description: "Mật khẩu mới đã được gửi đến email của người dùng.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Lỗi đặt lại mật khẩu",
-        description: error.message || "Không thể đặt lại mật khẩu.",
-        variant: "destructive",
-      });
-    }
-  });
-
   const deleteUserMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("No user selected");
@@ -251,44 +229,8 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
             />
 
             <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
-              <div className="flex gap-2 mt-4 sm:mt-0">
-                {/* Reset Password Button */}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      className="flex items-center"
-                    >
-                      <Lock className="mr-2 h-4 w-4" />
-                      Đặt lại mật khẩu
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Xác nhận đặt lại mật khẩu</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Bạn có chắc chắn muốn đặt lại mật khẩu cho <b>{user?.name}</b>?
-                        Mật khẩu mới sẽ được gửi đến email của họ.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Hủy</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => resetPasswordMutation.mutate()} disabled={resetPasswordMutation.isPending}>
-                        {resetPasswordMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Đang xử lý...
-                          </>
-                        ) : (
-                          "Xác nhận"
-                        )}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                {/* Delete Button - Chỉ hiển thị nút xóa nếu user không phải là admin chính (id=1) */}
+              <div className="flex mt-4 sm:mt-0">
+                {/* Chỉ hiển thị nút xóa nếu user không phải là admin chính (id=1) */}
                 {user && user.id !== 1 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

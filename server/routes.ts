@@ -564,44 +564,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Reset user password (admin only)
-  app.post("/api/users/:id/reset-password", isAdmin, async (req, res) => {
-    try {
-      const userId = Number(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Generate a random password
-      const newPassword = Math.random().toString(36).slice(-8);
-      const hashedPassword = await hashPassword(newPassword);
-
-      // Update user password
-      const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
-      
-      if (!updatedUser) {
-        return res.status(500).json({ message: "Failed to update password" });
-      }
-
-      // In thực tế, gửi mật khẩu qua email của user
-      // TODO: Implement email sending
-      console.log(`New password for user ${user.username}: ${newPassword}`);
-
-      res.json({ 
-        message: "Password has been reset successfully",
-        // Trong môi trường development, trả về mật khẩu mới
-        newPassword: process.env.NODE_ENV === 'development' ? newPassword : undefined
-      });
-    } catch (error) {
-      res.status(500).json({ 
-        message: "Error resetting password",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
   // Update user details (admin only)
   app.patch("/api/users/:id", isAdmin, async (req, res) => {
     try {
