@@ -242,7 +242,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   }}
                 >
                   <Lock className="h-4 w-4" />
-                  Reset mật khẩu
+                  Reset Pass
                 </Button>
                 {user && user.id !== 1 && (
                   <AlertDialog>
@@ -253,7 +253,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                         className="flex items-center justify-center w-full"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Xóa người dùng
+                        Delete User
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -293,7 +293,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                     Đang lưu...
                   </>
                 ) : (
-                  "Lưu thay đổi"
+                  "Save"
                 )}
               </Button>
             </DialogFooter>
