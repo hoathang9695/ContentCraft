@@ -297,7 +297,17 @@ export function ContentTable({
   };
 
   const handlePushReaction = (id: number) => {
+    const content = allContent?.find(c => c.id === id);
+    if (!content?.externalId) {
+      toast({
+        title: "Error",
+        description: "External ID not found for this content",
+        variant: "destructive"
+      });
+      return;
+    }
     setContentToReact(id);
+    setExternalIdToReact(content.externalId);
     setIsReactionDialogOpen(true);
   };
 
