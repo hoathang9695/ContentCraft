@@ -200,11 +200,15 @@ export function ContentTable({
           }
 
           // Update content status after successful deletion
-          await apiRequest('PATCH', `/api/contents/${id}`, {
+          const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
             processingResult: 'delete',
-            approver_id: user?.id, //Corrected to use optional chaining
+            approver_id: user?.id,
             approveTime: new Date()
           });
+
+          // Invalidate queries to refresh the data
+          queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
 
           toast({
             title: 'Thành công',
