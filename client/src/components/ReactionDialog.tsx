@@ -98,7 +98,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
     }
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const reactionCount = parseInt(count, 10);
     if (isNaN(reactionCount) || reactionCount < 1) {
       toast({
@@ -108,6 +108,11 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       });
       return;
     }
+
+    // Close dialog immediately
+    onOpenChange(false);
+    setCount('');
+    onSubmit(reactionCount);
 
     // Start background process for sending reactions
     const sendReactionsInBackground = async () => {
@@ -154,19 +159,18 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       }
     };
 
-    // Start background process
-    sendReactionsInBackground().catch(console.error);
-    
-    // Update local state and close dialog immediately
-    onSubmit(reactionCount);
-    setCount('');
-    onOpenChange(false);
-
     // Show initial toast
     toast({
       title: 'Đang gửi reactions',
       description: `Bắt đầu gửi ${reactionCount} reactions trong nền`,
     });
+
+    // Execute background process
+    try {
+      await sendReactionsInBackground();
+    } catch (error) {
+      console.error('Error in background process:', error);
+    }
   };
 
   return (
