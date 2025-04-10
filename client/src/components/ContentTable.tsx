@@ -63,7 +63,6 @@ export function ContentTable({
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [contentToComment, setContentToComment] = useState<number | null>(null);
   const [contentToReact, setContentToReact] = useState<number | null>(null);
-  const [externalIdToReact, setExternalIdToReact] = useState<string | undefined>(undefined);
   const [externalIdToComment, setExternalIdToComment] = useState<string | undefined>(undefined);
   const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
   const [authError, setAuthError] = useState(false);
@@ -298,17 +297,7 @@ export function ContentTable({
   };
 
   const handlePushReaction = (id: number) => {
-    const content = allContents?.find(c => c.id === id);
-    if (!content?.externalId) {
-      toast({
-        title: "Error",
-        description: "External ID not found for this content",
-        variant: "destructive"
-      });
-      return;
-    }
     setContentToReact(id);
-    setExternalIdToReact(content.externalId);
     setIsReactionDialogOpen(true);
   };
 
@@ -628,8 +617,6 @@ export function ContentTable({
         open={isReactionDialogOpen}
         onOpenChange={setIsReactionDialogOpen}
         contentId={contentToReact}
-        externalId={externalIdToReact}
-        fakeUser={fakeUser}
         onSubmit={handleReactionSubmit}
       />
     </>
