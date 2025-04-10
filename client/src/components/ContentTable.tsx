@@ -152,7 +152,7 @@ export function ContentTable({
   // Show toast for empty date filter results 
   useEffect(() => {
     const dateFilterApplied = startDate && endDate;
-    if (dateFilterApplied && startDate && endDate) {
+    if (dateFilterApplied && startDate && endDate && !searchQuery) {
       if (filteredContents.length === 0 && allContents.length > 0 && !toastShownRef.current) {
         setTimeout(() => {
           toast({
@@ -164,13 +164,13 @@ export function ContentTable({
         }, 0);
       }
     }
-    // Reset toast state when date range changes
+    // Reset toast state when date range or search changes
     return () => {
-      if (startDate || endDate) {
+      if (startDate || endDate || searchQuery) {
         toastShownRef.current = false;
       }
     };
-  }, [filteredContents.length, toast, startDate, endDate]);
+  }, [filteredContents.length, toast, startDate, endDate, searchQuery]);
 
   // Delete mutation
   const deleteMutation = useMutation({
