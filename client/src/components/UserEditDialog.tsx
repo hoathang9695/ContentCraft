@@ -228,23 +228,26 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
               )}
             />
 
+            <div className="flex items-center gap-4 mt-4 mb-6">
+              <Button 
+                type="button" 
+                variant="secondary"
+                className="flex items-center justify-center gap-2"
+                onClick={() => {
+                  const randomPass = Math.random().toString(36).slice(-8);
+                  toast({
+                    title: "New password generated",
+                    description: `Temporary password: ${randomPass}`,
+                  });
+                }}
+              >
+                <Lock className="h-4 w-4" />
+                Reset Pass
+              </Button>
+            </div>
+
             <DialogFooter className="mt-8">
-              <div className="grid grid-cols-3 gap-4 w-full">
-                <Button 
-                  type="button" 
-                  variant="secondary"
-                  className="flex items-center justify-center gap-2 h-10"
-                  onClick={() => {
-                    toast({
-                      title: "Reset password",
-                      description: "Password reset functionality will be implemented soon.",
-                    });
-                  }}
-                >
-                  <Lock className="h-4 w-4" />
-                  Reset
-                </Button>
-                
+              <div className="grid grid-cols-2 gap-4 w-full">
                 {user && user.id !== 1 ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
