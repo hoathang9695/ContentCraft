@@ -627,6 +627,8 @@ export function ContentTable({
         open={isReactionDialogOpen}
         onOpenChange={setIsReactionDialogOpen}
         contentId={contentToReact}
+        externalId={externalIdToReact}
+        fakeUser={fakeUser}
         onSubmit={handleReactionSubmit}
       />
     </>
