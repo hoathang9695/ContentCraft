@@ -33,29 +33,12 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       const fakeUser = fakeUsers.find(u => u.id === fakeUserId);
       if (!fakeUser?.token) throw new Error('Invalid fake user token');
 
-      // Log để debug
-      console.log(`Sending reaction to external ID ${externalId}`);
-      console.log(`Using fake user:`, fakeUser);
-      console.log(`Reaction type:`, reactionType);
 
       try {
-        // Log request details
         const requestBody = {
           custom_vote_type: reactionType,
           page_id: null
         };
-
-        console.log('=== REACTION REQUEST DETAILS ===');
-        console.log('External ID:', externalId);
-        console.log('Fake User:', fakeUser);
-        console.log('URL:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
-        console.log('Headers:', {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fakeUser.token}`,
-          'Cache-Control': 'no-cache'
-        });
-        console.log('Request Body:', requestBody);
 
         const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
           method: 'POST',
@@ -68,31 +51,20 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           body: JSON.stringify(requestBody)
         });
 
-        console.log('=== REACTION RESPONSE DETAILS ===');
-        console.log('Response Status:', response.status);
-        console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
         const responseText = await response.text();
-        console.log('Response Body:', responseText);
 
-        // Try to parse response as JSON if possible
         try {
           const responseJson = JSON.parse(responseText);
-          console.log('Parsed Response:', responseJson);
         } catch (e) {
-          console.log('Response is not JSON:', responseText);
+          // Ignore parsing errors
         }
 
         if (!response.ok) {
-          console.log('=== REACTION ERROR ===');
-          console.log('Response Status:', response.status);
-          console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
-          console.log('Response Body:', responseText);
           throw new Error(`Failed to send reaction: ${response.status} ${responseText}`);
         }
 
         return responseText ? JSON.parse(responseText) : null;
       } catch (error) {
-        console.error('Error sending reaction:', error);
         throw error;
       }
     }
@@ -128,7 +100,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
           }
 
           const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-          
+
           if (i > 0) {
             await new Promise(resolve => setTimeout(resolve, 60000));
           }
@@ -169,7 +141,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
     try {
       await sendReactionsInBackground();
     } catch (error) {
-      console.error('Error in background process:', error);
+     
     }
   };
 
