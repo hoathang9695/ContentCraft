@@ -204,19 +204,30 @@ export function ContentTable({
           }
 
           console.log('Updating content status in database...');
-          // Update content status after successful deletion
-          const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
-            processing_result: 'delete',
-            approver_id: user?.id,
-            approveTime: new Date(),
-            status: 'completed'
-          });
-          
-          console.log('Updated content:', updatedContent);
+          try {
+            // Update content status after successful deletion
+            const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
+              processing_result: 'delete',
+              approver_id: user?.id,
+              approveTime: new Date(),
+              status: 'completed'
+            });
+            
+            console.log('Updated content:', updatedContent);
 
-          // Invalidate queries to refresh the data
-          queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+            if (!updatedContent) {
+              throw new Error('Failed to update content status');
+            }
+
+            // Invalidate queries to refresh the data
+            await queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+            await queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+
+            return id; // Return success
+          } catch (error) {
+            console.error('Error updating content status:', error);
+            throw new Error('Failed to update content status in database');
+          }
 
           toast({
             title: 'Thành công',
