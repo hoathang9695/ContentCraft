@@ -92,7 +92,7 @@ export function DataTable<T>({
                     {columns.map((column, columnIndex) => (
                       <TableCell 
                         key={`${rowIndex}-${column.key}`} 
-                        className={columnIndex === columns.length -1 ? 'sticky right-0 bg-background shadow-[-8px_0_8px_-4px_rgba(0,0,0,0.1)] dark:shadow-[-8px_0_8px_-4px_rgba(0,0,0,0.3)]' : column.className}
+                        className={columnIndex === columns.length -1 ? 'sticky right-0 bg-background shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)] dark:shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.4)]' : column.className}
                       > {/* Added sticky class to last column */}
                         {column.render
                           ? column.render(row)
