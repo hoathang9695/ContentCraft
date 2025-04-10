@@ -119,20 +119,11 @@ export function ContentTable({
     // Source verification filter
     const verificationMatch = content.sourceVerification === sourceVerification;
 
-    // Parse source name for better filtering
-    let sourceName = "";
-    try {
-      const sourceObj = content.source ? JSON.parse(content.source) : null;
-      sourceName = sourceObj?.name || content.source || "";
-    } catch {
-      sourceName = content.source || "";
-    }
-
     // Enhanced search filter
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch = !searchQuery || 
       content.externalId?.toLowerCase().includes(searchTerm) ||
-      sourceName.toLowerCase().includes(searchTerm) ||
+      content.source?.toLowerCase().includes(searchTerm) ||
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
 
