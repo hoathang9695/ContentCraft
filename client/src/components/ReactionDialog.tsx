@@ -99,11 +99,6 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
   });
 
   const handleSubmit = async () => {
-    console.log('=== handleSubmit START ===');
-    console.log('Input count:', count);
-    console.log('External ID:', externalId);
-    console.log('Fake Users:', fakeUsers);
-
     const reactionCount = parseInt(count, 10);
     if (isNaN(reactionCount) || reactionCount < 1) {
       toast({
@@ -115,27 +110,22 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
     }
 
     if (externalId) {
-      // Track used fake users to avoid duplicates
       const usedUserIds = new Set();
 
       for (let i = 0; i < reactionCount; i++) {
         try {
-          // Reset used users if we've used them all
           if (usedUserIds.size === fakeUsers.length) {
             usedUserIds.clear();
           }
 
-          // Get available users
           const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
 
-          // Select random user and reaction type
-          // Add 1-minute delay between reactions (except for first one)
           if (i > 0) {
             toast({
               title: 'Đang chờ',
               description: `Chờ 1 phút trước khi gửi reaction tiếp theo...`,
             });
-            await new Promise(resolve => setTimeout(resolve, 60000)); // 60 seconds = 1 minute
+            await new Promise(resolve => setTimeout(resolve, 60000));
           }
 
           const randomUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
@@ -149,12 +139,10 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
 
           usedUserIds.add(randomUser.id);
 
-          // Update local reaction count
           if (i === reactionCount - 1) {
             onSubmit(reactionCount);
           }
         } catch (error) {
-          console.error('Error sending reaction:', error);
           toast({
             title: 'Lỗi gửi reaction',
             description: `Reaction thứ ${i + 1} thất bại`,
@@ -163,7 +151,6 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         }
       }
     } else {
-      // If no externalId, just update local count
       onSubmit(reactionCount);
     }
 
