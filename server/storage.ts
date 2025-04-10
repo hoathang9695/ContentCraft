@@ -402,14 +402,18 @@ export class DatabaseStorage implements IStorage {
 
   async updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined> {
     console.log('=== Storage updateContent START ===');
-    console.log('Content ID:', id);
-    console.log('Update data received:', content);
+    console.log('1. Content ID:', id);
+    console.log('2. Update data received:', content);
     
     // Get current content state
     const currentContent = await this.getContent(id);
-    console.log('Current content state:', currentContent);
+    console.log('3. Current content state:', currentContent);
     
-    // Prepare update data
+    // Ensure processing_result is included in update
+    const hasProcessingResult = content.processing_result !== undefined;
+    console.log('4. Has processing_result:', hasProcessingResult);
+    
+    // Prepare update data with processing_result validation
     const updateData = {
       ...content,
       updatedAt: new Date()

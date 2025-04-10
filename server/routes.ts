@@ -327,23 +327,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Add logging before deletion
-      console.log(`Deleting content with ID: ${contentId}`);
+      console.log('=== DELETE CONTENT START ===');
+      console.log(`1. Content ID to delete: ${contentId}`);
+      console.log('2. Current user:', { id: user.id, role: user.role });
+      console.log('3. Existing content:', existingContent);
 
       // First update the content status
-      console.log('Updating content status before deletion:', {
-        id: contentId,
+      const updateData = {
         processing_result: 'delete',
-        approver_id: user?.id
-      });
-
-      const updatedContent = await storage.updateContent(contentId, {
-        processing_result: 'delete',
-        approver_id: user?.id,
+        approver_id: user.id,
         approveTime: new Date(),
         status: 'completed'
-      });
+      };
 
-      console.log('Content after status update:', updatedContent);
+      console.log('4. Update data:', updateData);
+
+      const updatedContent = await storage.updateContent(contentId, updateData);
+      
+      console.log('5. Content after status update:', updatedContent);
+      console.log('6. Processing result:', updatedContent?.processing_result);
 
       if (!updatedContent) {
         return res.status(500).json({ message: "Failed to update content status" });
