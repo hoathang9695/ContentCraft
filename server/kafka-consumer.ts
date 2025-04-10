@@ -24,8 +24,15 @@ export async function setupKafkaConsumer(
 ) {
   try {
     const kafka = new Kafka({
-      clientId: 'content-processing-service',
-      brokers,
+      clientId: 'content-processing-service', 
+      brokers: process.env.KAFKA_BROKERS?.split(',') || brokers,
+      ssl: false,
+      sasl: {
+        mechanism: process.env.KAFKA_SASL_MECHANISMS as string,
+        username: process.env.KAFKA_SASL_USERNAME || '',
+        password: process.env.KAFKA_SASL_PASSWORD || '',
+      },
+      securityProtocol: process.env.KAFKA_SECURITY_PROTOCOL as string,
     });
 
     consumer = kafka.consumer({ groupId });
