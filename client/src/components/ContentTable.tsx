@@ -149,22 +149,32 @@ export function ContentTable({
     limit ? Math.min(startIndex + itemsPerPage, startIndex + limit) : startIndex + itemsPerPage
   );
 
-  // Show toast for empty date filter results 
+  // Show toast for empty filter results 
   useEffect(() => {
     const dateFilterApplied = startDate && endDate;
-    if (dateFilterApplied && startDate && endDate && !searchQuery) {
-      if (filteredContents.length === 0 && allContents.length > 0 && !toastShownRef.current) {
-        setTimeout(() => {
-          toast({
-            title: "Không tìm thấy dữ liệu",
-            description: `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`,
-            variant: "destructive"
-          });
-          toastShownRef.current = true;
-        }, 0);
-      }
+    const hasFilters = dateFilterApplied || searchQuery;
+
+    if (hasFilters && filteredContents.length === 0 && allContents.length > 0 && !toastShownRef.current) {
+      setTimeout(() => {
+        let message = '';
+        if (dateFilterApplied && searchQuery) {
+          message = `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()} với từ khóa "${searchQuery}"`;
+        } else if (dateFilterApplied) {
+          message = `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`;
+        } else if (searchQuery) {
+          message = `Không tìm thấy dữ liệu nào phù hợp với từ khóa "${searchQuery}"`;
+        }
+        
+        toast({
+          title: "Không tìm thấy dữ liệu",
+          description: message,
+          variant: "destructive"
+        });
+        toastShownRef.current = true;
+      }, 0);
     }
-    // Reset toast state when date range or search changes
+    
+    // Reset toast state when filters change
     return () => {
       if (startDate || endDate || searchQuery) {
         toastShownRef.current = false;
