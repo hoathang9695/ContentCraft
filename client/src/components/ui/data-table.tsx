@@ -58,7 +58,7 @@ export function DataTable<T>({
         </div>
       )}
 
-      <div className="rounded-md border bg-card overflow-x-auto"> {/* Added overflow-x-auto here */}
+      <div className="rounded-md border bg-card overflow-x-auto max-h-[calc(100vh-16rem)]"> {/* Added max height and overflow */}
         <Table className="min-w-full">
             {caption && <TableCaption>{caption}</TableCaption>}
             <TableHeader>
