@@ -143,7 +143,7 @@ export function ContentTable({
     const statusMatch = !statusFilter || content.status === statusFilter;
     // Source verification filter
     const verificationMatch = content.sourceVerification === sourceVerification;
-    
+
     // Parse source name for better filtering
     let sourceName = "";
     try {
@@ -152,7 +152,7 @@ export function ContentTable({
     } catch {
       sourceName = content.source || "";
     }
-    
+
     // Enhanced search filter
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch = !searchQuery || 
@@ -160,7 +160,7 @@ export function ContentTable({
       sourceName.toLowerCase().includes(searchTerm) ||
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
-    
+
     return statusMatch && verificationMatch && searchMatch;
   });
 
@@ -297,6 +297,17 @@ export function ContentTable({
   };
 
   const handlePushReaction = (id: number) => {
+    console.log('=== handlePushReaction START ===');
+    console.log('Content ID:', id);
+    console.log('All Contents:', allContents);
+
+    const content = allContents?.find(c => c.id === id);
+    console.log('Found Content:', content);
+
+    if (!content?.externalId) {
+      console.log('External ID is undefined for content ID:', id);
+    }
+
     setContentToReact(id);
     setIsReactionDialogOpen(true);
   };
