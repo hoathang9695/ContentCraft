@@ -228,12 +228,12 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
               )}
             />
 
-            <DialogFooter className="mt-8 flex-col space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+            <DialogFooter className="mt-8">
+              <div className="grid grid-cols-3 gap-4 w-full">
                 <Button 
                   type="button" 
                   variant="secondary"
-                  className="flex items-center justify-center gap-2 w-full h-10"
+                  className="flex items-center justify-center gap-2 h-10"
                   onClick={() => {
                     toast({
                       title: "Reset password",
@@ -242,18 +242,19 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   }}
                 >
                   <Lock className="h-4 w-4" />
-                  Reset Pass
+                  Reset
                 </Button>
-                {user && user.id !== 1 && (
+                
+                {user && user.id !== 1 ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 
                         type="button" 
                         variant="destructive"
-                        className="flex items-center justify-center w-full"
+                        className="flex items-center justify-center"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete User
+                        Delete
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -280,22 +281,24 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                )}
-              </div>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting} 
-                className="w-full"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang lưu...
-                  </>
                 ) : (
-                  "Save"
+                  <div /> 
                 )}
-              </Button>
+                
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
