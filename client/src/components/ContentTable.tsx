@@ -202,7 +202,7 @@ export function ContentTable({
           // Update content status after successful deletion
           await apiRequest('PATCH', `/api/contents/${id}`, {
             processingResult: 'delete',
-            approver_id: 1, // Placeholder - Needs proper user ID retrieval
+            approver_id: user?.id, //Corrected to use optional chaining
             approveTime: new Date()
           });
 
