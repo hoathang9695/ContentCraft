@@ -253,8 +253,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/contents/:id", isAuthenticated, async (req, res) => {
     try {
       const contentId = Number(req.params.id);
+      console.log('PATCH /api/contents/:id - Request body:', req.body);
+      
       const existingContent = await storage.getContent(contentId);
+      console.log('Existing content:', existingContent);
+      
       const user = req.user as Express.User;
+      console.log('User:', user);
       
       if (!existingContent) {
         return res.status(404).json({ message: "Content not found" });

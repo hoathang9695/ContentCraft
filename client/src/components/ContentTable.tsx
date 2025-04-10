@@ -186,8 +186,11 @@ export function ContentTable({
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const content = allContents.find(c => c.id === id);
+      console.log('Delete content:', content);
+      
       if (content?.externalId) {
         try {
+          console.log('Deleting from external system:', content.externalId);
           const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
             method: 'DELETE',
             headers: {
@@ -195,17 +198,21 @@ export function ContentTable({
             }
           });
 
+          console.log('External delete response:', response.status);
           if (!response.ok) {
             throw new Error('Không thể xóa từ hệ thống bên ngoài');
           }
 
+          console.log('Updating content status in database...');
           // Update content status after successful deletion
           const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
-            processing_result: 'delete', // Fix: Change processingResult to processing_result
+            processing_result: 'delete',
             approver_id: user?.id,
             approveTime: new Date(),
             status: 'completed'
           });
+          
+          console.log('Updated content:', updatedContent);
 
           // Invalidate queries to refresh the data
           queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
