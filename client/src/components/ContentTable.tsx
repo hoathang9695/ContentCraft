@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useQuery, useMutation, UseQueryResult } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Content } from '@shared/schema';
 import { DataTable } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Eye, Trash2, Plus, MoreHorizontal, MessageSquare, ThumbsUp, RefreshCw } from 'lucide-react';
+import { Edit, Eye, Trash2, Plus, MoreHorizontal, MessageSquare, ThumbsUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +30,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { UpdateContentDialog } from './UpdateContentDialog';
 
 type ContentTableProps = {
   title?: string;
@@ -58,15 +57,12 @@ export function ContentTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
-  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-  const [contentToUpdate, setContentToUpdate] = useState<number | null>(null);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [contentToComment, setContentToComment] = useState<number | null>(null);
   const [contentToReact, setContentToReact] = useState<number | null>(null);
   const [externalIdToComment, setExternalIdToComment] = useState<string | undefined>(undefined);
   const [externalIdToReact, setExternalIdToReact] = useState<string | undefined>(undefined);
   const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
-  const [authError, setAuthError] = useState(false);
 
   // Toast hiển thị khi không tìm thấy dữ liệu nào
   const toastShownRef = useRef(false);
@@ -74,43 +70,15 @@ export function ContentTable({
   // Simplify query to avoid TypeScript errors
   const apiEndpoint = user?.role === 'admin' ? '/api/contents' : '/api/my-contents';
 
-  // Properly typed query for content data
   const { 
     data: allContents = [], 
     isLoading, 
     error 
-  } = useQuery<Content[], Error>({
+  } = useQuery<Content[]>({
     queryKey: [apiEndpoint],
     staleTime: 60000,
     refetchOnWindowFocus: true
   });
-
-  // Xử lý lỗi từ query khi có cập nhật
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching content:", error);
-      if (error instanceof Error && error.message.includes("Unauthorized")) {
-        setAuthError(true);
-        toast({
-          title: "Vui lòng đăng nhập",
-          description: "Bạn cần đăng nhập để xem nội dung này. Nếu đã đăng nhập, hãy thử làm mới trang.",
-          variant: "destructive"
-        });
-      }
-    }
-  }, [error, toast]);
-
-  // Add logging for debugging
-  useEffect(() => {
-    if (allContents && Array.isArray(allContents)) {
-      console.log("API returned data:", {
-        endpointCalled: apiEndpoint,
-        count: allContents.length,
-        isArray: Array.isArray(allContents),
-        firstItem: allContents.length > 0 ? {...allContents[0]} : null
-      });
-    }
-  }, [allContents, apiEndpoint]);
 
   // Filter content based on search, status, and date range
   const filteredContents = allContents.filter(content => {
@@ -131,14 +99,12 @@ export function ContentTable({
     // Enhanced search filter
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch = !searchQuery || 
-      content.externalId?.toLowerCase().includes(searchTerm) ||
       sourceName.toLowerCase().includes(searchTerm) ||
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
 
     return statusMatch && verificationMatch && searchMatch;
   });
-
 
   // Pagination
   const itemsPerPage = 10;
@@ -185,59 +151,22 @@ export function ContentTable({
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const content = allContents.find(c => c.id === id);
-      if (!content?.externalId) {
-        throw new Error('Không tìm thấy ExternalID');
-      }
-
-      // First update the content status in our database
-      console.log('Updating content status to delete...');
-      const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
-        processing_result: 'delete',
-        approver_id: user?.id,
-        approveTime: new Date(),
-        status: 'completed'
-      });
-
-      if (!updatedContent) {
-        throw new Error('Không thể cập nhật trạng thái xóa');
-      }
-
-      console.log('Status updated, deleting from external system:', content.externalId);
-      const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Không thể xóa từ hệ thống bên ngoài');
-      }
-
-      // Double-check the status update
-      await apiRequest('PATCH', `/api/contents/${id}`, {
-        processing_result: 'delete',
-        status: 'completed'
-      });
-
-      // Refresh data
-      await queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-
+      await apiRequest('DELETE', `/api/contents/${id}`);
       return id;
     },
-    onSuccess: (id) => {
-      const content = allContents.find(c => c.id === id);
-      setIsDeleteDialogOpen(false);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       toast({
-        title: 'Thành công',
-        description: `Đã xóa ExternalID ${content?.externalId} thành công`,
+        title: 'Content deleted',
+        description: 'The content has been successfully deleted.',
       });
+      setIsDeleteDialogOpen(false);
     },
     onError: (error) => {
       toast({
-        title: 'Lỗi khi xóa',
+        title: 'Error deleting content',
         description: error.message,
         variant: 'destructive',
       });
@@ -288,10 +217,7 @@ export function ContentTable({
   });
 
   const handleCreateContent = () => navigate('/contents/new');
-  const handleEditContent = (id: number) => {
-    setContentToUpdate(id);
-    setIsUpdateDialogOpen(true);
-  };
+  const handleEditContent = (id: number) => navigate(`/contents/${id}/edit`);
   const handleViewContent = (id: number) => navigate(`/contents/${id}/edit`);
 
   const handleDeleteClick = (id: number) => {
@@ -300,31 +226,14 @@ export function ContentTable({
   };
 
   const handlePushComment = (id: number) => {
-    // Tìm content trong danh sách để lấy externalId
     const content = allContents.find(c => c.id === id);
-
-    // Open comment dialog instead of directly adding a comment
     setContentToComment(id);
-
-    // Kiểm tra để đảm bảo không có giá trị null
-    if (content && content.externalId) {
-      setExternalIdToComment(content.externalId);
-      console.log(`Gửi comment đến API ngoài cho externalId: ${content.externalId}`);
-    } else {
-      setExternalIdToComment(undefined);
-      console.log('Không có externalId, chỉ cập nhật số lượng comment trong database nội bộ');
-    }
-
+    setExternalIdToComment(content?.externalId);
     setIsCommentDialogOpen(true);
   };
 
   const handlePushReaction = (id: number) => {
-    console.log('=== handlePushReaction START ===');
-    console.log('Content ID:', id);
-
     const content = allContents?.find(c => c.id === id);
-    console.log('Found Content:', content);
-
     if (content?.externalId) {
       setContentToReact(id);
       setExternalIdToReact(content.externalId);
@@ -360,28 +269,6 @@ export function ContentTable({
               <Plus className="h-4 w-4 mr-2" />
               New Content
             </Button>
-          </div>
-        )}
-
-        {authError && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">
-                  Vui lòng đăng nhập để xem nội dung. Nếu đã đăng nhập, hãy thử làm mới trang hoặc đăng nhập lại.
-                </p>
-                <p className="mt-2 text-sm text-red-700">
-                  <Button size="sm" variant="outline" onClick={() => navigate("/auth")}>
-                    Đi tới trang đăng nhập
-                  </Button>
-                </p>
-              </div>
-            </div>
           </div>
         )}
 
@@ -470,20 +357,7 @@ export function ContentTable({
               ),
             },
             {
-              key: 'displayStatus',
-              header: 'Trạng thái hiển thị',
-              render: (row: Content) => (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  row.processingResult === 'delete'
-                    ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                    : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-                }`}>
-                  {row.processingResult === 'delete' ? 'Đã xóa' : 'Chưa xóa'}
-                </span>
-              ),
-            },
-            {
-              key: 'sourceVerification', 
+              key: 'sourceVerification',
               header: 'Trạng thái xác minh',
               render: (row: Content) => (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -507,19 +381,6 @@ export function ContentTable({
                     : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'
                 }`}>
                   {row.safe === true ? 'An toàn' : row.safe === false ? 'Không an toàn' : 'Chưa đánh giá'}
-                </span>
-              ),
-            },
-            {
-              key: 'processingResult',
-              header: 'Trạng thái hiển thị',
-              render: (row: Content) => (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  row.processingResult === 'delete'
-                    ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'
-                }`}>
-                  {row.processingResult === 'delete' ? 'Đã xóa' : 'Chưa xóa'}
                 </span>
               ),
             },
@@ -590,9 +451,9 @@ export function ContentTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditContent(row.id)}>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        <span>Cập nhật thông tin</span>
+                      <DropdownMenuItem onClick={() => handleViewContent(row.id)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        <span>Xem chi tiết</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handlePushComment(row.id)}>
                         <MessageSquare className="mr-2 h-4 w-4" />
@@ -605,12 +466,16 @@ export function ContentTable({
                       {user?.role === 'admin' && (
                         <>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleEditContent(row.id)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>Chỉnh sửa</span>
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleDeleteClick(row.id)}
                             className="text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-950"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Xóa post</span>
+                            <span>Xóa</span>
                           </DropdownMenuItem>
                         </>
                       )}
@@ -659,13 +524,6 @@ export function ContentTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Update Content Dialog */}
-      <UpdateContentDialog 
-        open={isUpdateDialogOpen}
-        onOpenChange={setIsUpdateDialogOpen}
-        contentId={contentToUpdate}
-      />
 
       {/* Comment Dialog */}
       <CommentDialog
