@@ -38,36 +38,39 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       console.log(`Reaction type:`, reactionType);
 
       try {
-        // Log request details
+        // Log request details 
         const requestBody = {
           custom_vote_type: randomReactionType,
           page_id: null
+        };
+
+        const requestUrl = `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`;
+        const requestHeaders = {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${fakeUser.token}`,
+          'Cache-Control': 'no-cache'
         };
 
         console.log('=== REACTION REQUEST DETAILS ===');
         console.log('External ID:', externalId);
         console.log('Fake User:', fakeUser);
         console.log('Random Reaction Type:', randomReactionType);
-        console.log('URL:', `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`);
-        console.log('Headers:', {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fakeUser.token}`,
-          'Cache-Control': 'no-cache'
-        });
-        console.log('Request Body:', requestBody);
+        console.log('URL:', requestUrl);
+        console.log('Headers:', requestHeaders);
+        console.log('Request Body:', JSON.stringify(requestBody, null, 2));
 
-        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+        console.log('Sending request...');
+        const response = await fetch(requestUrl, {
           mode: 'cors',
           method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${fakeUser.token}`,
-            'Cache-Control': 'no-cache'
-          },
+          headers: requestHeaders,
           body: JSON.stringify(requestBody)
         });
+        
+        console.log('=== REACTION RESPONSE DETAILS ===');
+        console.log('Response Status:', response.status);
+        console.log('Response Status Text:', response.statusText);
 
         console.log('=== REACTION RESPONSE DETAILS ===');
         console.log('Response Status:', response.status);
