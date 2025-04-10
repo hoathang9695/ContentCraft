@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trash2, Lock } from "lucide-react";
+import { Loader2, Trash2, Lock, Copy } from "lucide-react";
 
 // Define the schema for the form
 const userUpdateSchema = z.object({
@@ -62,6 +62,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [newPassword, setNewPassword] = useState<string>("");
 
   // Set up the form with user data
   const form = useForm<UserUpdateFormValues>({
@@ -229,21 +230,41 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
             />
 
             <div className="flex items-center gap-4 mt-4 mb-6">
-              <Button 
-                type="button" 
-                variant="secondary"
-                className="flex items-center justify-center gap-2"
-                onClick={() => {
-                  const randomPass = Math.random().toString(36).slice(-8);
-                  toast({
-                    title: "New password generated",
-                    description: `Temporary password: ${randomPass}`,
-                  });
-                }}
-              >
-                <Lock className="h-4 w-4" />
-                Reset Pass
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  className="flex items-center justify-center gap-2"
+                  onClick={() => {
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                    const randomPass = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+                    setNewPassword(randomPass);
+                  }}
+                >
+                  <Lock className="h-4 w-4" />
+                  Reset Pass
+                </Button>
+                {newPassword && (
+                  <div className="flex items-center bg-muted px-3 py-1 rounded-md">
+                    <span className="mr-2 text-sm font-mono">{newPassword}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(newPassword);
+                        toast({
+                          title: "Copied",
+                          description: "Password copied to clipboard",
+                        });
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <DialogFooter className="mt-8">
