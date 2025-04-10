@@ -297,7 +297,7 @@ export function ContentTable({
   };
 
   const handlePushReaction = (id: number) => {
-    const content = allContent?.find(c => c.id === id);
+    const content = allContents?.find(c => c.id === id);
     if (!content?.externalId) {
       toast({
         title: "Error",
