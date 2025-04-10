@@ -329,28 +329,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add logging before deletion
       console.log(`Deleting content with ID: ${contentId}`);
 
+      // First update the content status
+      console.log('Updating content status before deletion:', {
+        id: contentId,
+        processing_result: 'delete',
+        approver_id: user?.id
+      });
+
+      const updatedContent = await storage.updateContent(contentId, {
+        processing_result: 'delete',
+        approver_id: user?.id,
+        approveTime: new Date(),
+        status: 'completed'
+      });
+
+      console.log('Content after status update:', updatedContent);
+
+      if (!updatedContent) {
+        return res.status(500).json({ message: "Failed to update content status" });
+      }
+
+      // Then proceed with soft deletion
       const deleted = await storage.deleteContent(contentId);
       if (deleted) {
-        // Update content status after successful deletion
-        console.log('Updating content with data:', {
-          id: contentId,
-          processing_result: 'delete', 
-          approver_id: user?.id,
-          approveTime: new Date()
-        });
-
-        const updatedContent = await storage.updateContent(contentId, {
-          processing_result: 'delete',
-          approver_id: user?.id,
-          approveTime: new Date(),
-          status: 'completed'
-        });
-
-        console.log('API Response:', updatedContent);
-
-        // Double check updated content
+        // Double check final state
         const checkContent = await storage.getContent(contentId);
-        console.log('Content after update:', checkContent);
+        console.log('Final content state:', checkContent);
         res.status(204).send();
       } else {
         res.status(500).json({ message: "Error deleting content" });

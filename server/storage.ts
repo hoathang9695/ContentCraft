@@ -401,16 +401,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined> {
-    console.log('Storage updateContent - ID:', id);
-    console.log('Raw update data:', content);
+    console.log('=== Storage updateContent START ===');
+    console.log('Content ID:', id);
+    console.log('Update data received:', content);
     
-    // Log the exact data being set
+    // Get current content state
+    const currentContent = await this.getContent(id);
+    console.log('Current content state:', currentContent);
+    
+    // Prepare update data
     const updateData = {
       ...content,
       updatedAt: new Date()
     };
-    console.log('Final update data:', updateData);
+    console.log('Final update data to be applied:', updateData);
 
+    // Perform update
     const result = await db
       .update(contents)
       .set(updateData)
