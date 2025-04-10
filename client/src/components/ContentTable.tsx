@@ -64,6 +64,7 @@ export function ContentTable({
   const [contentToComment, setContentToComment] = useState<number | null>(null);
   const [contentToReact, setContentToReact] = useState<number | null>(null);
   const [externalIdToComment, setExternalIdToComment] = useState<string | undefined>(undefined);
+  const [externalIdToReact, setExternalIdToReact] = useState<string | undefined>(undefined);
   const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
   const [authError, setAuthError] = useState(false);
 
@@ -632,6 +633,7 @@ export function ContentTable({
         open={isReactionDialogOpen}
         onOpenChange={setIsReactionDialogOpen}
         contentId={contentToReact}
+        externalId={externalIdToReact}
         onSubmit={handleReactionSubmit}
       />
     </>
