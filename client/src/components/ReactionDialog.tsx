@@ -49,6 +49,10 @@ export function ReactionDialog({ open, onOpenChange, externalId, fakeUser }: Rea
       });
       console.log('Request Body:', requestBody);
 
+      if (!fakeUser || !fakeUser.token) {
+        throw new Error('No fake user token available');
+      }
+
       const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
         mode: 'cors',
         method: 'POST',
