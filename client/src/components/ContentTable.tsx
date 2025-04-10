@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { CommentDialog } from '@/components/CommentDialog';
+import { ReactionDialog } from '@/components/ReactionDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +62,10 @@ export function ContentTable({
   const [contentToUpdate, setContentToUpdate] = useState<number | null>(null);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [contentToComment, setContentToComment] = useState<number | null>(null);
+  const [contentToReact, setContentToReact] = useState<number | null>(null);
   const [externalIdToComment, setExternalIdToComment] = useState<string | undefined>(undefined);
+  const [externalIdToReact, setExternalIdToReact] = useState<string | undefined>(undefined);
+  const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
   const [authError, setAuthError] = useState(false);
 
   // Toast hiển thị khi không tìm thấy dữ liệu nào
@@ -78,33 +82,7 @@ export function ContentTable({
   } = useQuery<Content[], Error>({
     queryKey: [apiEndpoint],
     staleTime: 60000,
-    refetchOnWindowFocus: true,
-    onSuccess: (data) => {
-      console.log("=== API Response Data ===");
-      console.log("Total contents received:", data.length);
-
-      // Log all contents with verified status
-      const verifiedContents = data.filter(c => c.sourceVerification === 'verified');
-      console.log("Verified contents:", verifiedContents);
-
-      // Specifically look for our target content
-      const targetContent = data.find(c => c.externalId === '114307866176639848');
-      console.log("Target content (114307866176639848):", targetContent);
-
-      // Parse and log source names
-      data.forEach(content => {
-        try {
-          const sourceObj = content.source ? JSON.parse(content.source) : null;
-          console.log(`Content ${content.externalId} source:`, {
-            raw: content.source,
-            parsed: sourceObj,
-            name: sourceObj?.name
-          });
-        } catch (e) {
-          console.log(`Error parsing source for ${content.externalId}:`, content.source);
-        }
-      });
-    }
+    refetchOnWindowFocus: true
   });
 
   // Xử lý lỗi từ query khi có cập nhật
@@ -140,7 +118,7 @@ export function ContentTable({
     const statusMatch = !statusFilter || content.status === statusFilter;
     // Source verification filter
     const verificationMatch = content.sourceVerification === sourceVerification;
-    
+
     // Parse source name for better filtering
     let sourceName = "";
     try {
@@ -149,7 +127,7 @@ export function ContentTable({
     } catch {
       sourceName = content.source || "";
     }
-    
+
     // Enhanced search filter
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch = !searchQuery || 
@@ -157,7 +135,7 @@ export function ContentTable({
       sourceName.toLowerCase().includes(searchTerm) ||
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
-    
+
     return statusMatch && verificationMatch && searchMatch;
   });
 
@@ -197,22 +175,37 @@ export function ContentTable({
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/contents/${id}`);
+      const content = allContents.find(c => c.id === id);
+      if (content?.externalId) {
+        try {
+          const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Không thể xóa từ hệ thống bên ngoài');
+          }
+          
+          toast({
+            title: 'Thành công',
+            description: `Đã xóa ExternalID ${content.externalId} thành công`,
+          });
+        } catch (error) {
+          console.error('Error deleting from external system:', error);
+          throw new Error('Không thể xóa từ hệ thống bên ngoài. Vui lòng thử lại sau.');
+        }
+      }
       return id;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
-      toast({
-        title: 'Content deleted',
-        description: 'The content has been successfully deleted.',
-      });
       setIsDeleteDialogOpen(false);
     },
     onError: (error) => {
       toast({
-        title: 'Error deleting content',
+        title: 'Lỗi khi xóa',
         description: error.message,
         variant: 'destructive',
       });
@@ -294,8 +287,29 @@ export function ContentTable({
   };
 
   const handlePushReaction = (id: number) => {
-    // Add 1 reaction to the content
-    reactionMutation.mutate({ id, count: 1 });
+    console.log('=== handlePushReaction START ===');
+    console.log('Content ID:', id);
+    
+    const content = allContents?.find(c => c.id === id);
+    console.log('Found Content:', content);
+
+    if (content?.externalId) {
+      setContentToReact(id);
+      setExternalIdToReact(content.externalId);
+      setIsReactionDialogOpen(true);
+    } else {
+      toast({
+        title: "Lỗi",
+        description: "Không tìm thấy External ID cho nội dung này",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleReactionSubmit = (count: number) => {
+    if (contentToReact !== null) {
+      reactionMutation.mutate({ id: contentToReact, count });
+    }
   };
 
   const confirmDelete = () => {
@@ -571,18 +585,18 @@ export function ContentTable({
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Bạn có chắc chắn?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the content.
+              Hành động này không thể hoàn tác. Nội dung sẽ bị xóa vĩnh viễn.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600 dark:bg-red-700 dark:hover:bg-red-800 dark:focus:ring-red-700"
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteMutation.isPending ? 'Đang xóa...' : 'Xóa'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -601,6 +615,15 @@ export function ContentTable({
         onOpenChange={setIsCommentDialogOpen}
         contentId={contentToComment}
         externalId={externalIdToComment}
+      />
+
+      {/* Reaction Dialog */}
+      <ReactionDialog
+        open={isReactionDialogOpen}
+        onOpenChange={setIsReactionDialogOpen}
+        contentId={contentToReact}
+        externalId={externalIdToReact}
+        onSubmit={handleReactionSubmit}
       />
     </>
   );
