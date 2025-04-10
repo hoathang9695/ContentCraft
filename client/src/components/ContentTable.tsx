@@ -201,10 +201,10 @@ export function ContentTable({
 
           // Update content status after successful deletion
           const updatedContent = await apiRequest('PATCH', `/api/contents/${id}`, {
-            processingResult: 'delete',
+            processing_result: 'delete', // Fix: Change processingResult to processing_result
             approver_id: user?.id,
             approveTime: new Date(),
-            status: 'completed' // Add status update
+            status: 'completed'
           });
 
           // Invalidate queries to refresh the data
