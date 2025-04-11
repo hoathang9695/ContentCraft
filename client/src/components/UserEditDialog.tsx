@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Lock, Copy } from "lucide-react";
 
 // Define the schema for the form
 const userUpdateSchema = z.object({
@@ -62,6 +62,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [newPassword, setNewPassword] = useState<string>("");
 
   // Set up the form with user data
   const form = useForm<UserUpdateFormValues>({
@@ -127,9 +128,15 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
     },
   });
 
-  const onSubmit = (data: UserUpdateFormValues) => {
-    setIsSubmitting(true);
-    updateUserMutation.mutate(data);
+  const onSubmit = async (data: UserUpdateFormValues) => {
+    try {
+      setIsSubmitting(true);
+      await updateUserMutation.mutateAsync(data);
+    } catch (error) {
+      // Handle error silently
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleDeleteUser = () => {
@@ -140,15 +147,15 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
-          <DialogDescription>
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-xl">Edit User</DialogTitle>
+          <DialogDescription className="mt-1.5">
             Update the department, position, and role for {user?.name}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="department"
@@ -228,19 +235,82 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
               )}
             />
 
-            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
-              <div className="flex mt-4 sm:mt-0">
-                {/* Chỉ hiển thị nút xóa nếu user không phải là admin chính (id=1) */}
-                {user && user.id !== 1 && (
+            <div className="flex items-center gap-4 mt-4 mb-6">
+              <div className="flex items-center space-x-2">
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  className="flex items-center justify-center gap-2"
+                  onClick={async () => {
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                    const randomPass = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+                    
+                    try {
+                      // Update password in database
+                      const response = await fetch(`/api/users/${user.id}/reset-password`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ newPassword: randomPass })
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('Failed to update password');
+                      }
+
+                      setNewPassword(randomPass);
+                      toast({
+                        title: "Password Reset",
+                        description: "New password has been set successfully",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to reset password",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  <Lock className="h-4 w-4" />
+                  Reset Pass
+                </Button>
+                {newPassword && (
+                  <div className="flex items-center bg-muted px-3 py-1 rounded-md">
+                    <span className="mr-2 text-sm font-mono">{newPassword}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(newPassword);
+                        toast({
+                          title: "Copied",
+                          description: "Password copied to clipboard",
+                        });
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="mt-8">
+              <div className="grid grid-cols-2 gap-4 w-full">
+                {user && user.id !== 1 ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 
                         type="button" 
                         variant="destructive"
-                        className="flex items-center"
+                        className="flex items-center justify-center"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Xóa người dùng
+                        Delete
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -267,25 +337,21 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                ) : (
+                  <div /> 
                 )}
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
+                
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
                 >
-                  Hủy
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang lưu...
+                      Saving...
                     </>
                   ) : (
-                    "Lưu thay đổi"
+                    "Save"
                   )}
                 </Button>
               </div>
