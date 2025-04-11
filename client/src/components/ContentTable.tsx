@@ -500,14 +500,16 @@ export function ContentTable({
               header: 'Ngày tạo',
               render: (row: Content) => {
                 if (row.createdAt) {
-                  const date = new Date(row.createdAt);
-                  const hours = date.getHours();
+                  // Chuyển đổi UTC sang GMT+7
+                  const utcDate = new Date(row.createdAt);
+                  const localDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                  const hours = localDate.getHours();
                   const ampm = hours >= 12 ? 'PM' : 'AM';
                   const hours12 = hours % 12 || 12;
                   return (
                     <div className="text-muted-foreground">
-                      <div>{`${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`}</div>
-                      <div className="text-xs">{`${hours12.toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} ${ampm}`}</div>
+                      <div>{`${localDate.getDate().toString().padStart(2, '0')}-${(localDate.getMonth() + 1).toString().padStart(2, '0')}-${localDate.getFullYear()}`}</div>
+                      <div className="text-xs">{`${hours12.toString().padStart(2, '0')}:${localDate.getMinutes().toString().padStart(2, '0')} ${ampm}`}</div>
                     </div>
                   );
                 }
