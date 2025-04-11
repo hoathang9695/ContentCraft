@@ -133,7 +133,7 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
       setIsSubmitting(true);
       await updateUserMutation.mutateAsync(data);
     } catch (error) {
-      console.error('Update error:', error);
+      // Handle error silently
     } finally {
       setIsSubmitting(false);
     }
