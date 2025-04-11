@@ -500,11 +500,12 @@ export function ContentTable({
               header: 'Ngày tạo',
               render: (row: Content) => {
                 if (row.createdAt) {
+                  // Get UTC time components directly
                   const date = new Date(row.createdAt);
                   return (
                     <div className="text-muted-foreground">
-                      <div>{`${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`}</div>
-                      <div className="text-xs">{`${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`}</div>
+                      <div>{`${date.getUTCFullYear()}-${(date.getUTCMonth() + 1).toString().padStart(2, '0')}-${date.getUTCDate().toString().padStart(2, '0')}`}</div>
+                      <div className="text-xs">{`${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`}</div>
                     </div>
                   );
                 }
