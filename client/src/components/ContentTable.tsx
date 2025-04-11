@@ -500,11 +500,16 @@ export function ContentTable({
               header: 'Ngày tạo',
               render: (row: Content) => {
                 if (row.createdAt) {
-                  const date = new Date(row.createdAt);
+                  // Parse the ISO string directly without timezone conversion
+                  const dateStr = row.createdAt;
+                  const [datePart, timePart] = dateStr.split('T');
+                  const [year, month, day] = datePart.split('-');
+                  const [hour, minute] = timePart.split(':');
+                  
                   return (
                     <div className="text-muted-foreground">
-                      <div>{`${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`}</div>
-                      <div className="text-xs">{`${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`}</div>
+                      <div>{`${year}-${month}-${day}`}</div>
+                      <div className="text-xs">{`${hour}:${minute}`}</div>
                     </div>
                   );
                 }
