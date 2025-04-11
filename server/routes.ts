@@ -600,7 +600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate role if it's provided
       if (role && !['admin', 'editor', 'viewer'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role value" });
+        return res.status(400).json({ success: false, message: "Invalid role value" });
       }
       
       // Build update object with only the fields that are provided
@@ -610,20 +610,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (role) updateData.role = role;
       
       if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ message: "No valid fields to update" });
+        return res.status(400).json({ success: false, message: "No valid fields to update" });
       }
       
       const updatedUser = await storage.updateUser(userId, updateData);
       
       if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ success: false, message: "User not found" });
       }
       
       // Remove password from response
       const { password, ...safeUser } = updatedUser;
-      res.json(safeUser);
+      return res.json({ success: true, data: safeUser });
     } catch (error) {
-      res.status(500).json({ message: "Error updating user details" });
+      return res.status(500).json({ success: false, message: "Error updating user details" });
     }
   });
 

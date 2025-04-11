@@ -128,9 +128,15 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
     },
   });
 
-  const onSubmit = (data: UserUpdateFormValues) => {
-    setIsSubmitting(true);
-    updateUserMutation.mutate(data);
+  const onSubmit = async (data: UserUpdateFormValues) => {
+    try {
+      setIsSubmitting(true);
+      await updateUserMutation.mutateAsync(data);
+    } catch (error) {
+      console.error('Update error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleDeleteUser = () => {
