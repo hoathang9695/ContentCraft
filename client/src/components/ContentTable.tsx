@@ -501,10 +501,13 @@ export function ContentTable({
               render: (row: Content) => {
                 if (row.createdAt) {
                   const date = new Date(row.createdAt);
+                  const hours = date.getHours();
+                  const ampm = hours >= 12 ? 'PM' : 'AM';
+                  const hours12 = hours % 12 || 12;
                   return (
                     <div className="text-muted-foreground">
                       <div>{`${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`}</div>
-                      <div className="text-xs">{`${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`}</div>
+                      <div className="text-xs">{`${hours12.toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} ${ampm}`}</div>
                     </div>
                   );
                 }
