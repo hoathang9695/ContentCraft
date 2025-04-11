@@ -235,10 +235,36 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   type="button" 
                   variant="secondary"
                   className="flex items-center justify-center gap-2"
-                  onClick={() => {
+                  onClick={async () => {
                     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
                     const randomPass = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-                    setNewPassword(randomPass);
+                    
+                    try {
+                      // Update password in database
+                      const response = await fetch(`/api/users/${user.id}/reset-password`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ newPassword: randomPass })
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('Failed to update password');
+                      }
+
+                      setNewPassword(randomPass);
+                      toast({
+                        title: "Password Reset",
+                        description: "New password has been set successfully",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to reset password",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                 >
                   <Lock className="h-4 w-4" />

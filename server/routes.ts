@@ -565,6 +565,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update user details (admin only)
+  // Reset user password (admin only)
+  app.post("/api/users/:id/reset-password", isAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const { newPassword } = req.body;
+
+      if (!newPassword) {
+        return res.status(400).json({ message: "New password is required" });
+      }
+
+      // Hash the new password
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update user's password
+      const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Remove password from response
+      const { password, ...safeUser } = updatedUser;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ message: "Error resetting password" });
+    }
+  });
+
   app.patch("/api/users/:id", isAdmin, async (req, res) => {
     try {
       const userId = Number(req.params.id);
