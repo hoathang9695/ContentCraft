@@ -42,7 +42,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Lock, Copy } from "lucide-react";
-import { useState } from "react";
 
 // Define the schema for the form
 const userUpdateSchema = z.object({
@@ -237,7 +236,8 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
                   variant="secondary"
                   className="flex items-center justify-center gap-2"
                   onClick={() => {
-                    const randomPass = Math.random().toString(36).slice(-8);
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                    const randomPass = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
                     setNewPassword(randomPass);
                   }}
                 >
