@@ -159,52 +159,80 @@ export class ContentController {
         return res.status(403).json({ message: "You can only edit content assigned to you" });
       }
 
+      console.log('Raw input data:', req.body);
+
       // Parse và validate input data
-      const inputData = {
+      const inputData: any = {
         ...req.body,
         updatedAt: new Date()
       };
 
-      // Parse safe thành boolean hoặc null
+      // Xử lý source
+      if (typeof inputData.source === 'string') {
+        try {
+          // Kiểm tra nếu source đã là JSON string
+          JSON.parse(inputData.source);
+        } catch {
+          // Nếu không phải JSON string, bọc object trong JSON.stringify
+          try {
+            inputData.source = JSON.stringify(inputData.source);
+          } catch {
+            inputData.source = null;
+          }
+        }
+      } else if (typeof inputData.source === 'object' && inputData.source !== null) {
+        inputData.source = JSON.stringify(inputData.source);
+      } else {
+        inputData.source = null;
+      }
+
+      // Xử lý safe
       if (inputData.safe !== undefined) {
         if (typeof inputData.safe === 'string') {
-          inputData.safe = inputData.safe === 'true' ? true : inputData.safe === 'false' ? false : null;
+          inputData.safe = inputData.safe === 'true' ? true : 
+                          inputData.safe === 'false' ? false : null;
         } else if (typeof inputData.safe !== 'boolean') {
           inputData.safe = null;
         }
       }
 
-      // Xử lý các trường có thể null
-      ['categories', 'labels', 'processingResult', 'source'].forEach(field => {
-        if (inputData[field] === undefined || inputData[field] === '') {
+      // Xử lý categories và labels
+      ['categories', 'labels'].forEach(field => {
+        if (!inputData[field] || inputData[field] === '') {
           inputData[field] = null;
+        } else if (Array.isArray(inputData[field])) {
+          inputData[field] = inputData[field].join(',');
         }
-        if (field === 'source' && inputData[field]) {
+      });
+
+      // Xử lý processingResult
+      if (!inputData.processingResult || inputData.processingResult === '') {
+        inputData.processingResult = null;
+      }
+
+      // Đảm bảo số nguyên cho comments và reactions
+      ['comments', 'reactions'].forEach(field => {
+        if (inputData[field] !== undefined) {
+          const num = parseInt(inputData[field], 10);
+          inputData[field] = isNaN(num) ? 0 : num;
+        }
+      });
+
+      // Xử lý thời gian
+      ['assignedAt', 'approveTime'].forEach(field => {
+        if (inputData[field]) {
           try {
-            // Đảm bảo source là JSON string hợp lệ
-            const parsed = JSON.parse(inputData[field]);
-            inputData[field] = JSON.stringify(parsed);
+            inputData[field] = new Date(inputData[field]);
+            if (isNaN(inputData[field].getTime())) {
+              inputData[field] = null;
+            }
           } catch {
-            // Nếu không phải JSON, giữ nguyên giá trị string
+            inputData[field] = null;
           }
         }
       });
 
-      // Đảm bảo comments và reactions là số
-      if (inputData.comments !== undefined) {
-        inputData.comments = Number(inputData.comments) || 0;
-      }
-      if (inputData.reactions !== undefined) {
-        inputData.reactions = Number(inputData.reactions) || 0;
-      }
-
-      // Parse dates
-      if (inputData.assignedAt) {
-        inputData.assignedAt = new Date(inputData.assignedAt);
-      }
-      if (inputData.approveTime) {
-        inputData.approveTime = new Date(inputData.approveTime);
-      }
+      console.log('Processed input data:', inputData);
 
       // Thêm các trường tự động
       if (inputData.status === 'completed') {
