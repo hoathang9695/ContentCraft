@@ -221,9 +221,28 @@ export class ContentController {
       // Log validated data
       console.log("Validated data:", validatedData);
 
-      console.log('Updating content with data:', {
+      // Log chi tiết kiểu dữ liệu trước khi update
+      console.log('Content update details:', {
         contentId,
-        validatedData,
+        validatedData: {
+          ...validatedData,
+          source: {
+            value: validatedData.source,
+            type: typeof validatedData.source
+          },
+          safe: {
+            value: validatedData.safe,
+            type: typeof validatedData.safe
+          },
+          categories: {
+            value: validatedData.categories,
+            type: typeof validatedData.categories
+          },
+          labels: {
+            value: validatedData.labels,
+            type: typeof validatedData.labels
+          }
+        },
         user: {
           id: user.id,
           role: user.role
