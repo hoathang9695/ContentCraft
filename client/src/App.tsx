@@ -15,6 +15,7 @@ import FakeUsersPage from "@/pages/fake-users-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
+import UserFeedbackPage from './pages/user-feedback-page';
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <ProtectedRoute path="/categories" component={CategoriesPage} adminOnly={true} />
       <ProtectedRoute path="/fake-users" component={FakeUsersPage} adminOnly={true} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/user-feedback" component={UserFeedbackPage} /> {/* Added route */}
       <Route component={NotFound} />
     </Switch>
   );
