@@ -166,13 +166,10 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       });
       
       // 2. Send to Gorse service via Kafka
-      const selectedCategories = selectedCategories?.join(',') || '';
-      const selectedLabels = selectedLabels?.join(',') || '';
-
       await apiRequest('POST', '/api/kafka/send', {
         externalId: updatedContent.externalId,
-        categories: selectedCategories,
-        labels: selectedLabels,
+        categories: uniqueCategories.join(','),
+        labels: uniqueLabels.join(','), 
         safe: isSafe,
         sourceVerification: isVerified ? 'verified' : 'unverified'
       });
