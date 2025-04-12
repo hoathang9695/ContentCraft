@@ -165,47 +165,64 @@ export class ContentController {
         updatedAt: new Date()
       };
 
-      // Parse safe thành boolean hoặc null
+      console.log('Raw input data:', inputData);
+
+      // Xử lý safe (boolean | null)
       if (inputData.safe !== undefined) {
         if (typeof inputData.safe === 'string') {
-          inputData.safe = inputData.safe === 'true' ? true : inputData.safe === 'false' ? false : null;
+          if (inputData.safe === 'true') inputData.safe = true;
+          else if (inputData.safe === 'false') inputData.safe = false;
+          else inputData.safe = null;
         } else if (typeof inputData.safe !== 'boolean') {
           inputData.safe = null;
         }
       }
 
-      // Xử lý source trước
-      if (inputData.source !== undefined) {
-        if (typeof inputData.source === 'string') {
-          try {
-            // Kiểm tra nếu đã là JSON string hợp lệ
-            JSON.parse(inputData.source);
-            // Nếu parse được thì giữ nguyên
-          } catch {
-            // Nếu không parse được, có thể là object đã được stringify
-            try {
-              const sourceStr = JSON.stringify(inputData.source);
-              JSON.parse(sourceStr); // Verify lại
-              inputData.source = sourceStr;
-            } catch {
-              // Nếu vẫn lỗi thì set null
-              inputData.source = null;
-            }
+      // Xử lý categories và labels (string | null)
+      ['categories', 'labels'].forEach(field => {
+        if (inputData[field] !== undefined) {
+          if (Array.isArray(inputData[field])) {
+            inputData[field] = inputData[field].join(',');
+          } else if (typeof inputData[field] === 'string') {
+            inputData[field] = inputData[field].trim() || null;
+          } else {
+            inputData[field] = null;
           }
-        } else if (typeof inputData.source === 'object' && inputData.source !== null) {
-          // Nếu là object thì stringify
-          inputData.source = JSON.stringify(inputData.source);
-        } else {
+        }
+      });
+
+      // Xử lý source (JSON string | null)
+      if (inputData.source !== undefined) {
+        try {
+          if (typeof inputData.source === 'string') {
+            // Thử parse để kiểm tra JSON hợp lệ
+            JSON.parse(inputData.source);
+          } else if (typeof inputData.source === 'object' && inputData.source !== null) {
+            inputData.source = JSON.stringify(inputData.source);
+          } else {
+            inputData.source = null;
+          }
+        } catch (e) {
+          console.error('Error processing source:', e);
           inputData.source = null;
         }
       }
 
-      // Xử lý các trường có thể null
-      ['categories', 'labels', 'processingResult'].forEach(field => {
-        if (inputData[field] === undefined || inputData[field] === '') {
-          inputData[field] = null;
-        }
-      });
+      // Xử lý sourceVerification (string)
+      if (inputData.sourceVerification !== undefined) {
+        inputData.sourceVerification = ['verified', 'unverified'].includes(inputData.sourceVerification) 
+          ? inputData.sourceVerification 
+          : 'unverified';
+      }
+
+      // Xử lý processingResult (string | null)
+      if (inputData.processingResult !== undefined) {
+        inputData.processingResult = typeof inputData.processingResult === 'string' 
+          ? inputData.processingResult.trim() || null
+          : null;
+      }
+
+      console.log('Processed input data:', inputData);
 
       // Đảm bảo comments và reactions là số
       if (inputData.comments !== undefined) {
