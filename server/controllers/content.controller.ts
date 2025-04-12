@@ -125,6 +125,12 @@ export class ContentController {
   // Update content
   async updateContent(req: Request, res: Response) {
     try {
+      console.log("Update content request:", {
+        body: req.body,
+        params: req.params,
+        user: req.user ? { id: (req.user as Express.User).id, role: (req.user as Express.User).role } : null
+      });
+
       if (!req.user) {
         return res.status(401).json({ 
           success: false,
@@ -143,6 +149,8 @@ export class ContentController {
       const existingContent = await storage.getContent(contentId);
       const user = req.user as Express.User;
 
+      console.log("Existing content:", existingContent);
+
       if (!existingContent) {
         return res.status(404).json({ message: "Content not found" });
       }
@@ -153,7 +161,8 @@ export class ContentController {
 
       // Parse và validate input data
       const inputData = {
-        ...req.body
+        ...req.body,
+        updatedAt: new Date() // Đảm bảo updatedAt luôn được cập nhật
       };
 
       // Chuyển đổi các trường đặc biệt
@@ -179,8 +188,14 @@ export class ContentController {
         inputData.approveTime = new Date();
       }
 
+      // Log input data trước khi validate
+      console.log("Processed input data:", inputData);
+
       // Validate data
       const validatedData = insertContentSchema.partial().parse(inputData);
+
+      // Log validated data
+      console.log("Validated data:", validatedData);
 
       console.log('Updating content with data:', {
         contentId,
@@ -191,22 +206,36 @@ export class ContentController {
         }
       });
 
-      const updatedContent = await storage.updateContent(contentId, validatedData);
+      try {
+        const updatedContent = await storage.updateContent(contentId, validatedData);
 
-      if (!updatedContent) {
-        console.error('No content returned after update');
+        if (!updatedContent) {
+          console.error('No content returned after update');
+          return res.status(500).json({
+            success: false,
+            message: "Failed to update content"
+          });
+        }
+
+        console.log('Content updated successfully:', updatedContent);
+
+        // Fetch updated content to verify changes
+        const verifiedContent = await storage.getContent(contentId);
+        console.log('Verified updated content:', verifiedContent);
+
+        return res.json({
+          success: true,
+          data: updatedContent,
+          verified: verifiedContent
+        });
+      } catch (dbError) {
+        console.error('Database error during update:', dbError);
         return res.status(500).json({
           success: false,
-          message: "Failed to update content"
+          message: "Database error during update",
+          error: dbError instanceof Error ? dbError.message : String(dbError)
         });
       }
-
-      console.log('Content updated successfully:', updatedContent);
-
-      return res.json({
-        success: true,
-        data: updatedContent
-      });
     } catch (error) {
       console.error('Error in update content controller:', error);
       if (error instanceof ZodError) {
