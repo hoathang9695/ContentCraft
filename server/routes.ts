@@ -644,15 +644,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!externalId) {
         return res.status(400).json({
           success: false,
-          message: "External ID is required"
+          message: "Item ID is required"
         });
       }
 
-      // Simulate Kafka message
-      await simulateKafkaMessage(externalId);
-
       // Simulate sending content update to your Gorse service using Kafka
-      log(`Sending update to Gorse service for external ID ${externalId}`, 'kafka');
+      log(`Sending update to Gorse service for item ${externalId}`, 'kafka');
       log(`Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || 'unverified'}`, 'kafka');
 
       // Simulate Kafka message
