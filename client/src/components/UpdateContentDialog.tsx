@@ -155,28 +155,38 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       categories: string, 
       labels: string, 
       safe: boolean | null,
-      sourceVerification?: string 
+      sourceVerification?: string,
+      status?: string 
     }) => {
-      // 1. Update content in our database
-      const updatedContent = await apiRequest('PATCH', `/api/contents/${data.id}`, {
-        categories: data.categories,
-        labels: data.labels,
-        safe: data.safe,
-        sourceVerification: data.sourceVerification
-      });
-      
-      // 2. Send to Gorse service via Kafka
-      await apiRequest('POST', '/api/kafka/send', {
-        itemId: updatedContent.externalId,
-        categories: data.categories,
-        labels: data.labels,
-        safe: data.safe,
-        sourceVerification: data.sourceVerification
-      });
-      
-      return updatedContent;
+      try {
+        // 1. Update content in our database
+        const updatedContent = await apiRequest('PATCH', `/api/contents/${data.id}`, {
+          categories: data.categories,
+          labels: data.labels,
+          safe: data.safe,
+          sourceVerification: data.sourceVerification,
+          status: data.status
+        });
+
+        if (!updatedContent) {
+          throw new Error('No response from update request');
+        }
+
+        // 2. Send to Gorse service via Kafka
+        await apiRequest('POST', '/api/kafka/send', {
+          externalId: content?.externalId,
+          categories: data.categories,
+          labels: data.labels,
+          safe: data.safe,
+          sourceVerification: data.sourceVerification
+        });
+        
+        return updatedContent;
+      } catch (error) {
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
       queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}`] });
@@ -188,10 +198,11 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error('Mutation error:', error);
       toast({
         title: 'Lỗi khi cập nhật nội dung',
-        description: error.message,
+        description: error.message || 'Không thể cập nhật nội dung',
         variant: 'destructive',
       });
     }
@@ -240,9 +251,23 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const handleSubmit = () => {
     if (!contentId) return;
     
-    // Loại bỏ các labels trùng lặp trước khi lưu
-    const uniqueCategories = Array.from(new Set(selectedCategories));
-    const uniqueLabels = Array.from(new Set(selectedLabels));
+    // Validate required fields
+    if (isSafe === null) {
+      toast({
+        title: 'Validation Error',
+        description: 'Vui lòng chọn trạng thái an toàn',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Loại bỏ các labels trùng lặp và khoảng trắng
+    const uniqueCategories = Array.from(new Set(selectedCategories))
+      .map(c => c.trim())
+      .filter(Boolean);
+    const uniqueLabels = Array.from(new Set(selectedLabels))
+      .map(l => l.trim())
+      .filter(Boolean);
     
     // Tạo payload để gửi đi
     const payload: {
@@ -250,19 +275,17 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       categories: string,
       labels: string,
       safe: boolean | null,
-      sourceVerification?: string
+      sourceVerification?: string,
+      status?: string
     } = {
       id: contentId,
-      categories: uniqueCategories.join(', '),
-      labels: uniqueLabels.join(', '),
-      safe: isSafe
+      categories: uniqueCategories.join(','),
+      labels: uniqueLabels.join(','),
+      safe: isSafe,
+      sourceVerification: isVerified ? 'verified' : 'unverified',
+      status: uniqueCategories.length > 0 ? 'completed' : 'pending'
     };
-    
-    // Thêm trạng thái xác minh dựa vào checkbox và nội dung phải an toàn
-    if (isSafe === true) {
-      payload.sourceVerification = isVerified ? 'verified' : 'unverified';
-    }
-    
+
     updateMutation.mutate(payload);
   };
   
