@@ -173,13 +173,6 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         safe: isSafe,
         sourceVerification: isVerified ? 'verified' : 'unverified'
       });
-
-      // Update status to completed if categories are set
-      if (selectedCategories.length > 0) {
-        await apiRequest('PATCH', `/api/contents/${contentId}`, {
-          status: 'completed'
-        });
-      }
       
       return updatedContent;
     },
@@ -257,12 +250,14 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       categories: string,
       labels: string,
       safe: boolean | null,
-      sourceVerification?: string
+      sourceVerification?: string,
+      status?: string
     } = {
       id: contentId,
       categories: uniqueCategories.join(', '),
       labels: uniqueLabels.join(', '),
-      safe: isSafe
+      safe: isSafe,
+      status: uniqueCategories.length > 0 ? 'completed' : 'pending'
     };
     
     // Thêm trạng thái xác minh dựa vào checkbox và nội dung phải an toàn
