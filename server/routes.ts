@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Content routes
-  import contentRouter from './routes/content.router';
+  const contentRouter = (await import('./routes/content.router')).default;
   app.use("/api/contents", contentRouter);
 
 
