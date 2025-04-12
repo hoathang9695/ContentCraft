@@ -159,118 +159,52 @@ export class ContentController {
         return res.status(403).json({ message: "You can only edit content assigned to you" });
       }
 
-      console.log('Raw input data:', req.body);
-
       // Parse và validate input data
-      console.log('Raw request body:', req.body);
-      
-      const inputData: any = {
+      const inputData = {
         ...req.body,
         updatedAt: new Date()
       };
 
-      // Giữ nguyên source từ DB nếu không được cập nhật
-      const existingContent = await storage.getContent(contentId);
-      if (!existingContent) {
-        return res.status(404).json({ 
-          success: false,
-          message: "Content not found" 
-        });
-      }
-
-      // Chỉ cập nhật source nếu được gửi lên
-      if (inputData.source !== undefined) {
-        try {
-          if (typeof inputData.source === 'string') {
-            // Kiểm tra nếu là JSON string hợp lệ
-            try {
-              JSON.parse(inputData.source);
-              // Nếu parse thành công, giữ nguyên string
-            } catch {
-              // Nếu không phải JSON, giữ nguyên source cũ
-              inputData.source = existingContent.source;
-            }
-          } else if (typeof inputData.source === 'object' && inputData.source !== null) {
-            // Nếu là object, chuyển thành JSON string
-            inputData.source = JSON.stringify(inputData.source);
-          } else {
-            // Các trường hợp khác giữ nguyên source cũ
-            inputData.source = existingContent.source;
-          }
-        } catch (error) {
-          console.error('Error processing source:', error);
-          // Nếu có lỗi, giữ nguyên source cũ
-          inputData.source = existingContent.source;
-        }
-      } else {
-        // Nếu không có source mới, giữ nguyên source cũ
-        inputData.source = existingContent.source;
-      }
-      
-      console.log('Final processed source:', inputData.source);
-
-      console.log('Processed source:', inputData.source);
-
-      // Xử lý safe - chỉ chấp nhận boolean hoặc string 'true'/'false'
+      // Parse safe thành boolean hoặc null
       if (inputData.safe !== undefined) {
-        if (typeof inputData.safe === 'boolean') {
-          // Giữ nguyên nếu là boolean
-        } else if (typeof inputData.safe === 'string') {
-          // Chỉ chấp nhận 'true' hoặc 'false'
-          inputData.safe = inputData.safe.toLowerCase() === 'true' ? true :
-                          inputData.safe.toLowerCase() === 'false' ? false : null;
-        } else {
+        if (typeof inputData.safe === 'string') {
+          inputData.safe = inputData.safe === 'true' ? true : inputData.safe === 'false' ? false : null;
+        } else if (typeof inputData.safe !== 'boolean') {
           inputData.safe = null;
         }
       }
 
-      // Xử lý categories và labels
-      ['categories', 'labels'].forEach(field => {
-        if (!inputData[field]) {
-          inputData[field] = null;
-        } else if (Array.isArray(inputData[field])) {
-          // Lọc bỏ giá trị rỗng và chuyển thành chuỗi
-          inputData[field] = inputData[field]
-            .filter((item: any) => item && typeof item === 'string')
-            .join(',');
-        } else if (typeof inputData[field] === 'string') {
-          // Nếu là chuỗi rỗng thì set null
-          inputData[field] = inputData[field].trim() || null;
-        } else {
+      // Xử lý các trường có thể null
+      ['categories', 'labels', 'processingResult', 'source'].forEach(field => {
+        if (inputData[field] === undefined || inputData[field] === '') {
           inputData[field] = null;
         }
-      });
-
-      console.log('Processed input data before validation:', inputData);
-
-      // Xử lý processingResult
-      if (!inputData.processingResult || inputData.processingResult === '') {
-        inputData.processingResult = null;
-      }
-
-      // Đảm bảo số nguyên cho comments và reactions
-      ['comments', 'reactions'].forEach(field => {
-        if (inputData[field] !== undefined) {
-          const num = parseInt(inputData[field], 10);
-          inputData[field] = isNaN(num) ? 0 : num;
-        }
-      });
-
-      // Xử lý thời gian
-      ['assignedAt', 'approveTime'].forEach(field => {
-        if (inputData[field]) {
+        if (field === 'source' && inputData[field]) {
           try {
-            inputData[field] = new Date(inputData[field]);
-            if (isNaN(inputData[field].getTime())) {
-              inputData[field] = null;
-            }
+            // Đảm bảo source là JSON string hợp lệ
+            const parsed = JSON.parse(inputData[field]);
+            inputData[field] = JSON.stringify(parsed);
           } catch {
-            inputData[field] = null;
+            // Nếu không phải JSON, giữ nguyên giá trị string
           }
         }
       });
 
-      console.log('Processed input data:', inputData);
+      // Đảm bảo comments và reactions là số
+      if (inputData.comments !== undefined) {
+        inputData.comments = Number(inputData.comments) || 0;
+      }
+      if (inputData.reactions !== undefined) {
+        inputData.reactions = Number(inputData.reactions) || 0;
+      }
+
+      // Parse dates
+      if (inputData.assignedAt) {
+        inputData.assignedAt = new Date(inputData.assignedAt);
+      }
+      if (inputData.approveTime) {
+        inputData.approveTime = new Date(inputData.approveTime);
+      }
 
       // Thêm các trường tự động
       if (inputData.status === 'completed') {
@@ -316,18 +250,6 @@ export class ContentController {
       });
 
       try {
-        // Log data before update
-        console.log('Attempting to update content:', {
-          contentId,
-          validatedData: {
-            ...validatedData,
-            source: typeof validatedData.source,
-            safe: typeof validatedData.safe,
-            categories: validatedData.categories,
-            labels: validatedData.labels
-          }
-        });
-
         const updatedContent = await storage.updateContent(contentId, validatedData);
 
         if (!updatedContent) {
@@ -338,9 +260,16 @@ export class ContentController {
           });
         }
 
+        console.log('Content updated successfully:', updatedContent);
+
+        // Fetch updated content to verify changes
+        const verifiedContent = await storage.getContent(contentId);
+        console.log('Verified updated content:', verifiedContent);
+
         return res.json({
           success: true,
-          data: updatedContent
+          data: updatedContent,
+          verified: verifiedContent
         });
       } catch (dbError) {
         console.error('Database error during update:', dbError);
