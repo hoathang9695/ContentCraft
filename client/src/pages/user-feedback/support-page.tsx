@@ -3,13 +3,15 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, MoreHorizontal, Mail } from "lucide-react";
+import { Eye, MoreHorizontal, Mail, CheckCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 interface SupportRequest {
   id: number;
@@ -17,8 +19,14 @@ interface SupportRequest {
   email: string;
   subject: string;
   content: string;
-  createdAt: string;
   status: 'pending' | 'processing' | 'completed';
+  assigned_to_id: number | null;
+  assigned_at: string | null;
+  response_content: string | null;
+  responder_id: number | null;
+  response_time: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function SupportPage() {
@@ -51,6 +59,13 @@ export default function SupportPage() {
                 ),
               },
               {
+                key: 'createdAt',
+                header: 'Ngày tạo',
+                render: (row: SupportRequest) => (
+                  <div>{format(new Date(row.created_at), 'dd/MM/yyyy HH:mm')}</div>
+                ),
+              },
+              {
                 key: 'fullName',
                 header: 'Họ và tên',
                 render: (row: SupportRequest) => (
@@ -75,7 +90,56 @@ export default function SupportPage() {
                 key: 'content',
                 header: 'Nội dung',
                 render: (row: SupportRequest) => (
-                  <div className="truncate max-w-[300px]">{row.content}</div>
+                  <div className="truncate max-w-[200px]">{row.content}</div>
+                ),
+              },
+              {
+                key: 'status',
+                header: 'Trạng thái',
+                render: (row: SupportRequest) => (
+                  <Badge variant={
+                    row.status === 'completed' ? 'success' :
+                    row.status === 'processing' ? 'warning' : 'secondary'
+                  }>
+                    {row.status === 'completed' ? 'Đã xử lý' :
+                     row.status === 'processing' ? 'Đang xử lý' : 'Chờ xử lý'}
+                  </Badge>
+                ),
+              },
+              {
+                key: 'assigned',
+                header: 'Phân công',
+                render: (row: SupportRequest) => (
+                  <div>
+                    {row.assigned_to_id ? (
+                      <div className="text-sm">
+                        <div>ID: {row.assigned_to_id}</div>
+                        <div className="text-muted-foreground">
+                          {format(new Date(row.assigned_at!), 'dd/MM/yyyy HH:mm')}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Chưa phân công</span>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'response',
+                header: 'Phản hồi',
+                render: (row: SupportRequest) => (
+                  <div>
+                    {row.response_content ? (
+                      <div className="text-sm">
+                        <div className="truncate max-w-[200px]">{row.response_content}</div>
+                        <div className="text-muted-foreground">
+                          {format(new Date(row.response_time!), 'dd/MM/yyyy HH:mm')}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Chưa có phản hồi</span>
+                    )}
+                  </div>
                 ),
               },
               {
@@ -99,6 +163,12 @@ export default function SupportPage() {
                           <Mail className="mr-2 h-4 w-4" />
                           <span>Gửi phản hồi</span>
                         </DropdownMenuItem>
+                        {row.status !== 'completed' && (
+                          <DropdownMenuItem>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            <span>Đánh dấu hoàn thành</span>
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
