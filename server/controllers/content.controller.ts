@@ -1,4 +1,3 @@
-
 import { Request, Response } from "express";
 import { storage } from "../storage";
 import { insertContentSchema } from "@shared/schema";
@@ -19,9 +18,9 @@ export class ContentController {
         username: user.username, 
         role: user.role 
       });
-      
+
       let contents;
-      
+
       if (user.role === 'admin') {
         console.log("Admin user - fetching ALL contents");
         contents = await storage.getAllContents();
@@ -29,13 +28,13 @@ export class ContentController {
         console.log(`Regular user - fetching contents assigned to user ID ${user.id}`);
         contents = await storage.getContentsByAssignee(user.id);
       }
-      
+
       if (!contents) {
         return res.status(500).json({ message: "Failed to fetch contents" });
       }
 
       console.log(`Returning ${contents.length} content items`);
-      
+
       if (contents.length > 0) {
         console.log("First content example:", { 
           id: contents[0].id,
@@ -43,7 +42,7 @@ export class ContentController {
           verification: contents[0].sourceVerification
         });
       }
-      
+
       return res.json(contents);
     } catch (error) {
       console.error("Error fetching contents:", error);
@@ -60,15 +59,15 @@ export class ContentController {
       const contentId = Number(req.params.id);
       const content = await storage.getContent(contentId);
       const user = req.user as Express.User;
-      
+
       if (!content) {
         return res.status(404).json({ message: "Content not found" });
       }
-      
+
       if (user.role !== 'admin' && content.assigned_to_id !== user.id) {
         return res.status(403).json({ message: "You can only view content assigned to you" });
       }
-      
+
       res.json(content);
     } catch (error) {
       res.status(500).json({ message: "Error fetching content" });
@@ -80,31 +79,31 @@ export class ContentController {
     try {
       const user = req.user as Express.User;
       let assigned_to_id = user.id;
-      
+
       if (user.role === 'admin' && req.body.assigned_to_id) {
         assigned_to_id = req.body.assigned_to_id;
       }
-      
+
       console.log("Creating new content with data:", {
         userId: user.id,
         username: user.username,
         role: user.role,
         requestBody: req.body
       });
-      
+
       const inputData = {
         ...req.body,
         assigned_to_id: Number(assigned_to_id),
         assignedAt: new Date()
       };
-      
+
       if (isNaN(inputData.assigned_to_id)) {
         return res.status(400).json({ 
           message: "Invalid assigned_to_id value", 
           value: req.body.assigned_to_id
         });
       }
-      
+
       const validatedData = insertContentSchema.parse(inputData);
       const newContent = await storage.createContent(validatedData);
       return res.status(201).json(newContent);
@@ -143,11 +142,11 @@ export class ContentController {
 
       const existingContent = await storage.getContent(contentId);
       const user = req.user as Express.User;
-      
+
       if (!existingContent) {
         return res.status(404).json({ message: "Content not found" });
       }
-      
+
       if (existingContent.assigned_to_id !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only edit content assigned to you" });
       }
@@ -159,14 +158,14 @@ export class ContentController {
           ? req.body.safe === 'true'
           : req.body.safe
       };
-      
+
       const validatedData = insertContentSchema.partial().parse(inputData);
-      
+
       if (validatedData.status === 'completed') {
         validatedData.approver_id = user.id;
         validatedData.approveTime = new Date();
       }
-      
+
       console.log('Updating content with data:', {
         contentId,
         validatedData,
@@ -177,30 +176,35 @@ export class ContentController {
       });
 
       try {
-        if (!validatedData || Object.keys(validatedData).length === 0) {
-          return res.status(400).json({
-            success: false,
-            message: "No valid data provided for update"
-          });
+        // Log input data
+        console.log('Updating content with data:', {
+          contentId,
+          validatedData
+        });
+
+        // Ensure safe is properly converted to boolean
+        if (validatedData.safe !== undefined) {
+          validatedData.safe = typeof validatedData.safe === 'string' 
+            ? validatedData.safe === 'true'
+            : Boolean(validatedData.safe);
         }
 
         const updatedContent = await storage.updateContent(contentId, validatedData);
-        console.log('Content updated successfully:', updatedContent);
-        
+
         if (!updatedContent) {
           console.error('No content returned after update');
           return res.status(500).json({
             success: false,
-            message: "Failed to update content - no data returned"
+            message: "Failed to update content"
           });
         }
 
-        const response = {
+        console.log('Content updated successfully:', updatedContent);
+
+        return res.json({
           success: true,
           data: updatedContent
-        };
-
-        return res.status(200).json(response);
+        });
       } catch (storageError) {
         console.error('Storage error while updating content:', storageError);
         return res.status(500).json({
@@ -232,15 +236,15 @@ export class ContentController {
       const contentId = Number(req.params.id);
       const existingContent = await storage.getContent(contentId);
       const user = req.user as Express.User;
-      
+
       if (!existingContent) {
         return res.status(404).json({ message: "Content not found" });
       }
-      
+
       if (user.role !== 'admin') {
         return res.status(403).json({ message: "Only administrators can delete content" });
       }
-      
+
       const deleted = await storage.deleteContent(contentId);
       if (deleted) {
         res.status(204).send();
