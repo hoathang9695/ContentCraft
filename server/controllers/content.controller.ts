@@ -169,20 +169,22 @@ export class ContentController {
         updatedAt: new Date()
       };
 
-      // Xử lý source - giữ nguyên cấu trúc object
+      // Xử lý source
       try {
         if (typeof inputData.source === 'string') {
-          // Nếu là string, kiểm tra xem có phải JSON không
-          try {
-            // Parse string thành object nếu có thể
-            const parsed = JSON.parse(inputData.source);
-            inputData.source = parsed;
-          } catch {
-            // Nếu không parse được, giữ nguyên string
-            // Do nothing - keep original string
+          // Kiểm tra xem có phải JSON string không
+          if (inputData.source.trim().startsWith('{')) {
+            try {
+              const parsed = JSON.parse(inputData.source);
+              inputData.source = JSON.stringify(parsed);
+            } catch {
+              // Nếu parse lỗi, giữ nguyên string
+            }
           }
+        } else if (typeof inputData.source === 'object' && inputData.source !== null) {
+          // Nếu là object, chuyển thành JSON string
+          inputData.source = JSON.stringify(inputData.source);
         }
-        // Nếu là object hoặc các kiểu khác, giữ nguyên
         console.log('Processed source:', inputData.source);
       } catch (error) {
         console.error('Error processing source:', error);
