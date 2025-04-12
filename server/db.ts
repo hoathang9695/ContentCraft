@@ -7,14 +7,15 @@ export const pool = new pg.Pool({
   host: process.env.PGHOST,
   port: parseInt(process.env.PGPORT || '5432'),
   user: process.env.PGUSER,
-  password: process.env.PGPASSWORD?.toString(), // Đảm bảo mật khẩu là chuỗi
+  password: process.env.PGPASSWORD?.toString(),
   database: process.env.PGDATABASE,
-  max: 10, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 10000, // Increase connection timeout to 10 seconds
-  // Add auto reconnect logic
-  allowExitOnIdle: false, // Don't exit if all clients are idle
-  ssl: false
+  max: 20,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 20000,
+  allowExitOnIdle: false,
+  ssl: false,
+  keepAlive: true,
+  application_name: 'emso'
 });
 
 // Add error handling
