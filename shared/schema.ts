@@ -133,6 +133,32 @@ export const insertFakeUserSchema = createInsertSchema(fakeUsers).omit({
 export type InsertFakeUser = z.infer<typeof insertFakeUserSchema>;
 export type FakeUser = typeof fakeUsers.$inferSelect;
 
+// Bảng yêu cầu hỗ trợ (Support Requests)
+export const supportRequests = pgTable("support_requests", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  subject: text("subject").notNull(),
+  content: text("content").notNull(),
+  status: text("status").notNull().default("pending"), // pending, processing, completed
+  assigned_to_id: integer("assigned_to_id").references(() => users.id),
+  assigned_at: timestamp("assigned_at"),
+  response_content: text("response_content"),
+  responder_id: integer("responder_id").references(() => users.id),
+  response_time: timestamp("response_time"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSupportRequestSchema = createInsertSchema(supportRequests).omit({ 
+  id: true, 
+  created_at: true,
+  updated_at: true 
+});
+
+export type InsertSupportRequest = z.infer<typeof insertSupportRequestSchema>;
+export type SupportRequest = typeof supportRequests.$inferSelect;
+
 export interface ContentMessage {
   externalId: string;        // ID nội dung, kiểu string
   source?: {                // Nguồn cấp dạng object
