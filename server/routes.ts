@@ -546,21 +546,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to send content updates to Gorse service
   app.post("/api/kafka/send", isAuthenticated, async (req, res) => {
     try {
-      const { itemId, categories, labels, safe, sourceVerification } = req.body;
+      const { externalId, categories, labels, safe, sourceVerification } = req.body;
 
-      if (!itemId) {
-        return res.status(400).json({ message: "Item ID is required" });
+      if (!externalId) {
+        return res.status(400).json({ message: "External ID is required" });
       }
 
       // Here you would normally send this to your Gorse service using Kafka
       // For now, we'll simulate a successful response
-      log(`Sending update to Gorse service for item ${itemId}`, 'kafka');
+      log(`Sending update to Gorse service for item ${externalId}`, 'kafka');
       log(`Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || 'unverified'}`, 'kafka');
 
       res.json({
         success: true,
         message: "Successfully sent content update to Gorse service",
-        data: { itemId, categories, labels, safe, sourceVerification }
+        data: { externalId, categories, labels, safe, sourceVerification }
       });
     } catch (error) {
       res.status(500).json({
