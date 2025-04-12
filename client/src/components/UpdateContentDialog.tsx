@@ -168,14 +168,14 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       // 2. Send to Gorse service via Kafka
       await apiRequest('POST', '/api/kafka/send', {
         externalId: updatedContent.externalId,
-        categories: uniqueCategories.join(','),
-        labels: uniqueLabels.join(','), 
+        categories: selectedCategories.join(','),
+        labels: selectedLabels.join(','), 
         safe: isSafe,
         sourceVerification: isVerified ? 'verified' : 'unverified'
       });
 
       // Update status to completed if categories are set
-      if (selectedCategories) {
+      if (selectedCategories.length > 0) {
         await apiRequest('PATCH', `/api/contents/${contentId}`, {
           status: 'completed'
         });
