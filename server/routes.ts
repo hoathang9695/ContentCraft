@@ -97,6 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Content routes
+  import contentRouter from './routes/content.router';
   app.use("/api/contents", contentRouter);
 
 
