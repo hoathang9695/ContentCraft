@@ -162,24 +162,48 @@ export class ContentController {
       // Parse và validate input data
       const inputData = {
         ...req.body,
-        updatedAt: new Date() // Đảm bảo updatedAt luôn được cập nhật
+        updatedAt: new Date()
       };
 
-      // Chuyển đổi các trường đặc biệt
-      if (typeof inputData.safe === 'string') {
-        inputData.safe = inputData.safe === 'true';
+      // Parse safe thành boolean hoặc null
+      if (inputData.safe !== undefined) {
+        if (typeof inputData.safe === 'string') {
+          inputData.safe = inputData.safe === 'true' ? true : inputData.safe === 'false' ? false : null;
+        } else if (typeof inputData.safe !== 'boolean') {
+          inputData.safe = null;
+        }
       }
 
-      if (inputData.categories === '') {
-        inputData.categories = null;
+      // Xử lý các trường có thể null
+      ['categories', 'labels', 'processingResult', 'source'].forEach(field => {
+        if (inputData[field] === undefined || inputData[field] === '') {
+          inputData[field] = null;
+        }
+        if (field === 'source' && inputData[field]) {
+          try {
+            // Đảm bảo source là JSON string hợp lệ
+            const parsed = JSON.parse(inputData[field]);
+            inputData[field] = JSON.stringify(parsed);
+          } catch {
+            // Nếu không phải JSON, giữ nguyên giá trị string
+          }
+        }
+      });
+
+      // Đảm bảo comments và reactions là số
+      if (inputData.comments !== undefined) {
+        inputData.comments = Number(inputData.comments) || 0;
+      }
+      if (inputData.reactions !== undefined) {
+        inputData.reactions = Number(inputData.reactions) || 0;
       }
 
-      if (inputData.labels === '') {
-        inputData.labels = null;
+      // Parse dates
+      if (inputData.assignedAt) {
+        inputData.assignedAt = new Date(inputData.assignedAt);
       }
-
-      if (inputData.processingResult === '') {
-        inputData.processingResult = null;
+      if (inputData.approveTime) {
+        inputData.approveTime = new Date(inputData.approveTime);
       }
 
       // Thêm các trường tự động
