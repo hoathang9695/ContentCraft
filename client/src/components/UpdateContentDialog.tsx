@@ -166,16 +166,19 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       });
       
       // 2. Send to Gorse service via Kafka
+      const selectedCategories = selectedCategories?.join(',') || '';
+      const selectedLabels = selectedLabels?.join(',') || '';
+
       await apiRequest('POST', '/api/kafka/send', {
         externalId: updatedContent.externalId,
-        categories: data.categories,
-        labels: data.labels,
-        safe: data.safe,
-        sourceVerification: data.sourceVerification
+        categories: selectedCategories,
+        labels: selectedLabels,
+        safe: isSafe,
+        sourceVerification: isVerified ? 'verified' : 'unverified'
       });
 
       // Update status to completed if categories are set
-      if (data.categories) {
+      if (selectedCategories) {
         await apiRequest('PATCH', `/api/contents/${contentId}`, {
           status: 'completed'
         });
