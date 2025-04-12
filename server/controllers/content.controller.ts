@@ -126,7 +126,21 @@ export class ContentController {
   // Update content
   async updateContent(req: Request, res: Response) {
     try {
+      if (!req.user) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Unauthorized - Please log in"
+        });
+      }
+
       const contentId = Number(req.params.id);
+      if (!contentId || isNaN(contentId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid content ID"
+        });
+      }
+
       const existingContent = await storage.getContent(contentId);
       const user = req.user as Express.User;
       
@@ -163,6 +177,13 @@ export class ContentController {
       });
 
       try {
+        if (!validatedData || Object.keys(validatedData).length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: "No valid data provided for update"
+          });
+        }
+
         const updatedContent = await storage.updateContent(contentId, validatedData);
         console.log('Content updated successfully:', updatedContent);
         
