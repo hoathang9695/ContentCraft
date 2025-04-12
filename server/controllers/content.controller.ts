@@ -127,7 +127,10 @@ export class ContentController {
         return res.status(403).json({ message: "You can only edit content assigned to you" });
       }
       
-      const validatedData = insertContentSchema.partial().parse(req.body);
+      const validatedData = insertContentSchema.partial().parse({
+        ...req.body,
+        safe: req.body.safe === "true" ? true : req.body.safe === "false" ? false : null
+      });
       
       if (validatedData.status === 'completed') {
         validatedData.approver_id = user.id;
@@ -135,15 +138,24 @@ export class ContentController {
       }
       
       const updatedContent = await storage.updateContent(contentId, validatedData);
-      res.json(updatedContent);
+      return res.status(200).json({
+        success: true,
+        data: updatedContent
+      });
     } catch (error) {
+      console.error('Error updating content:', error);
       if (error instanceof ZodError) {
         return res.status(400).json({ 
+          success: false,
           message: "Validation error", 
           errors: error.errors 
         });
       }
-      res.status(500).json({ message: "Error updating content" });
+      return res.status(500).json({ 
+        success: false,
+        message: "Error updating content",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 
