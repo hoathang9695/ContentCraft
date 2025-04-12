@@ -142,17 +142,43 @@ export class ContentController {
         validatedData.approveTime = new Date();
       }
       
-      // Update content và format response
-      const updatedContent = await storage.updateContent(contentId, validatedData);
-      
-      const response = {
-        success: true,
-        data: updatedContent
-      };
+      console.log('Updating content with data:', {
+        contentId,
+        validatedData,
+        user: {
+          id: user.id,
+          role: user.role
+        }
+      });
 
-      return res.status(200).json(response);
+      try {
+        const updatedContent = await storage.updateContent(contentId, validatedData);
+        console.log('Content updated successfully:', updatedContent);
+        
+        if (!updatedContent) {
+          console.error('No content returned after update');
+          return res.status(500).json({
+            success: false,
+            message: "Failed to update content - no data returned"
+          });
+        }
+
+        const response = {
+          success: true,
+          data: updatedContent
+        };
+
+        return res.status(200).json(response);
+      } catch (storageError) {
+        console.error('Storage error while updating content:', storageError);
+        return res.status(500).json({
+          success: false,
+          message: "Database error while updating content",
+          error: storageError instanceof Error ? storageError.message : String(storageError)
+        });
+      }
     } catch (error) {
-      console.error('Error updating content:', error);
+      console.error('Error in update content controller:', error);
       if (error instanceof ZodError) {
         return res.status(400).json({ 
           success: false,
