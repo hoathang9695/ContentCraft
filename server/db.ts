@@ -14,9 +14,7 @@ export const pool = new pg.Pool({
   connectionTimeoutMillis: 10000, // Increase connection timeout to 10 seconds
   // Add auto reconnect logic
   allowExitOnIdle: false, // Don't exit if all clients are idle
-  ssl: process.env.PGHOST === 'localhost' ? false : {
-    rejectUnauthorized: false // Chỉ sử dụng SSL khi không phải localhost
-  }
+  ssl: false
 });
 
 // Add error handling
@@ -52,7 +50,7 @@ async function connectToDatabase() {
     retryCount++;
     const backoffTime = Math.min(Math.pow(2, retryCount) * 1000, 30000);
     console.log(`Will retry connecting in ${backoffTime/1000} seconds... (Attempt ${retryCount} of ${maxRetries})`);
-    
+
     if (retryCount < maxRetries) {
       // Retry after a delay with exponential backoff
       setTimeout(connectToDatabase, backoffTime);

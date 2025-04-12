@@ -401,16 +401,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateContent(id: number, contentUpdate: Partial<InsertContent>): Promise<Content | undefined> {
-    const result = await db
-      .update(contents)
-      .set({
-        ...contentUpdate,
-        updatedAt: new Date(),
-      })
-      .where(eq(contents.id, id))
-      .returning();
+    console.log('Storage: Updating content', { id, contentUpdate });
     
-    return result.length > 0 ? result[0] : undefined;
+    try {
+      const result = await db
+        .update(contents)
+        .set({
+          ...contentUpdate,
+          updatedAt: new Date()
+        })
+        .where(eq(contents.id, id))
+        .returning();
+
+      console.log('Storage: Update result', result);
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('Storage: Error updating content:', error);
+      throw error;
+    }
   }
 
   async deleteContent(id: number): Promise<boolean> {
