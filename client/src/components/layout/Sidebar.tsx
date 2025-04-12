@@ -92,6 +92,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             >
               Content
             </SidebarItem>
+
+            <SidebarItem
+              href="/user-feedback"
+              icon={ActivitySquare}
+              isActive={isActivePath('/user-feedback')}
+              onClick={handleItemClick}
+            >
+              Xử lý phản hồi
+            </SidebarItem>
             
             {isAdmin && (
               <>
