@@ -338,27 +338,9 @@ export class ContentController {
           });
         }
 
-        // Verify update was successful
-        const verifiedContent = await storage.getContent(contentId);
-        
-        if (!verifiedContent) {
-          console.error('Could not verify updated content');
-          return res.status(500).json({
-            success: false,
-            message: "Failed to verify content update"
-          });
-        }
-
-        console.log('Update successful:', {
-          original: validatedData,
-          updated: updatedContent,
-          verified: verifiedContent
-        });
-
         return res.json({
           success: true,
-          data: updatedContent,
-          verified: verifiedContent
+          data: updatedContent
         });
       } catch (dbError) {
         console.error('Database error during update:', dbError);
