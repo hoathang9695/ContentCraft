@@ -639,21 +639,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Simulate a single kafka message (admin only)
   app.post("/api/kafka/simulate", isAdmin, async (req, res) => {
     try {
-      const { contentId, categories, labels, safe, sourceVerification } = req.body;
+      const { itemId, categories, labels, safe, sourceVerification } = req.body;
 
-      if (!contentId) {
+      if (!itemId) {
         return res.status(400).json({
           success: false,
-          message: "Content ID is required"
+          message: "Item ID is required"
         });
       }
 
       // Simulate sending content update to your Gorse service using Kafka
-      log(`Sending update to Gorse service for item ${contentId}`, 'kafka');
+      log(`Sending update to Gorse service for item ${itemId}`, 'kafka');
       log(`Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || 'unverified'}`, 'kafka');
 
       // Simulate Kafka message
-      await simulateKafkaMessage(contentId);
+      await simulateKafkaMessage(itemId);
 
       res.json({
         success: true,
