@@ -153,18 +153,34 @@ export class ContentController {
 
       // Parse và validate input data
       const inputData = {
-        ...req.body,
-        safe: typeof req.body.safe === 'string' 
-          ? req.body.safe === 'true'
-          : req.body.safe
+        ...req.body
       };
 
-      const validatedData = insertContentSchema.partial().parse(inputData);
-
-      if (validatedData.status === 'completed') {
-        validatedData.approver_id = user.id;
-        validatedData.approveTime = new Date();
+      // Chuyển đổi các trường đặc biệt
+      if (typeof inputData.safe === 'string') {
+        inputData.safe = inputData.safe === 'true';
       }
+
+      if (inputData.categories === '') {
+        inputData.categories = null;
+      }
+
+      if (inputData.labels === '') {
+        inputData.labels = null;
+      }
+
+      if (inputData.processingResult === '') {
+        inputData.processingResult = null;
+      }
+
+      // Thêm các trường tự động
+      if (inputData.status === 'completed') {
+        inputData.approver_id = user.id;
+        inputData.approveTime = new Date();
+      }
+
+      // Validate data
+      const validatedData = insertContentSchema.partial().parse(inputData);
 
       console.log('Updating content with data:', {
         contentId,
@@ -175,44 +191,22 @@ export class ContentController {
         }
       });
 
-      try {
-        // Log input data
-        console.log('Updating content with data:', {
-          contentId,
-          validatedData
-        });
+      const updatedContent = await storage.updateContent(contentId, validatedData);
 
-        // Ensure safe is properly converted to boolean
-        if (validatedData.safe !== undefined) {
-          validatedData.safe = typeof validatedData.safe === 'string' 
-            ? validatedData.safe === 'true'
-            : Boolean(validatedData.safe);
-        }
-
-        const updatedContent = await storage.updateContent(contentId, validatedData);
-
-        if (!updatedContent) {
-          console.error('No content returned after update');
-          return res.status(500).json({
-            success: false,
-            message: "Failed to update content"
-          });
-        }
-
-        console.log('Content updated successfully:', updatedContent);
-
-        return res.json({
-          success: true,
-          data: updatedContent
-        });
-      } catch (storageError) {
-        console.error('Storage error while updating content:', storageError);
+      if (!updatedContent) {
+        console.error('No content returned after update');
         return res.status(500).json({
           success: false,
-          message: "Database error while updating content",
-          error: storageError instanceof Error ? storageError.message : String(storageError)
+          message: "Failed to update content"
         });
       }
+
+      console.log('Content updated successfully:', updatedContent);
+
+      return res.json({
+        success: true,
+        data: updatedContent
+      });
     } catch (error) {
       console.error('Error in update content controller:', error);
       if (error instanceof ZodError) {
