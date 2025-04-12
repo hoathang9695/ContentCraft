@@ -158,8 +158,6 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       sourceVerification?: string,
       status?: string 
     }) => {
-      console.log('Starting update mutation with data:', data);
-
       try {
         // 1. Update content in our database
         const updatedContent = await apiRequest('PATCH', `/api/contents/${data.id}`, {
@@ -169,30 +167,22 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
           sourceVerification: data.sourceVerification,
           status: data.status
         });
-        
-        console.log('Content updated in database:', updatedContent);
 
         if (!updatedContent) {
           throw new Error('No response from update request');
         }
 
         // 2. Send to Gorse service via Kafka
-        const kafkaData = {
-          externalId: content?.externalId, // Use existing content's externalId
+        await apiRequest('POST', '/api/kafka/send', {
+          externalId: content?.externalId,
           categories: data.categories,
           labels: data.labels,
           safe: data.safe,
           sourceVerification: data.sourceVerification
-        };
-
-        console.log('Sending to Kafka:', kafkaData);
-        
-        await apiRequest('POST', '/api/kafka/send', kafkaData);
-        console.log('Successfully sent to Kafka');
+        });
         
         return updatedContent;
       } catch (error) {
-        console.error('Error in mutation:', error);
         throw error;
       }
     },
@@ -282,8 +272,6 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       status: uniqueCategories.length > 0 ? 'completed' : 'pending'
     };
 
-    console.log('Submitting payload:', payload);
-    
     updateMutation.mutate(payload);
   };
   
