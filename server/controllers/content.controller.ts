@@ -162,48 +162,61 @@ export class ContentController {
       console.log('Raw input data:', req.body);
 
       // Parse và validate input data
+      console.log('Raw request body:', req.body);
+      
       const inputData: any = {
         ...req.body,
         updatedAt: new Date()
       };
 
-      // Xử lý source
-      if (typeof inputData.source === 'string') {
-        try {
-          // Kiểm tra nếu source đã là JSON string
+      // Xử lý source - đảm bảo luôn là JSON string hợp lệ
+      try {
+        if (typeof inputData.source === 'string') {
+          // Thử parse để kiểm tra JSON hợp lệ
           JSON.parse(inputData.source);
-        } catch {
-          // Nếu không phải JSON string, bọc object trong JSON.stringify
-          try {
-            inputData.source = JSON.stringify(inputData.source);
-          } catch {
-            inputData.source = null;
-          }
+        } else if (typeof inputData.source === 'object' && inputData.source !== null) {
+          // Nếu là object, chuyển thành JSON string
+          inputData.source = JSON.stringify(inputData.source);
+        } else {
+          // Nếu không phải string hoặc object, set null
+          inputData.source = null;
         }
-      } else if (typeof inputData.source === 'object' && inputData.source !== null) {
-        inputData.source = JSON.stringify(inputData.source);
-      } else {
+      } catch (error) {
+        console.error('Error processing source:', error);
         inputData.source = null;
       }
 
-      // Xử lý safe
+      // Xử lý safe - chỉ chấp nhận boolean hoặc string 'true'/'false'
       if (inputData.safe !== undefined) {
-        if (typeof inputData.safe === 'string') {
-          inputData.safe = inputData.safe === 'true' ? true : 
-                          inputData.safe === 'false' ? false : null;
-        } else if (typeof inputData.safe !== 'boolean') {
+        if (typeof inputData.safe === 'boolean') {
+          // Giữ nguyên nếu là boolean
+        } else if (typeof inputData.safe === 'string') {
+          // Chỉ chấp nhận 'true' hoặc 'false'
+          inputData.safe = inputData.safe.toLowerCase() === 'true' ? true :
+                          inputData.safe.toLowerCase() === 'false' ? false : null;
+        } else {
           inputData.safe = null;
         }
       }
 
       // Xử lý categories và labels
       ['categories', 'labels'].forEach(field => {
-        if (!inputData[field] || inputData[field] === '') {
+        if (!inputData[field]) {
           inputData[field] = null;
         } else if (Array.isArray(inputData[field])) {
-          inputData[field] = inputData[field].join(',');
+          // Lọc bỏ giá trị rỗng và chuyển thành chuỗi
+          inputData[field] = inputData[field]
+            .filter((item: any) => item && typeof item === 'string')
+            .join(',');
+        } else if (typeof inputData[field] === 'string') {
+          // Nếu là chuỗi rỗng thì set null
+          inputData[field] = inputData[field].trim() || null;
+        } else {
+          inputData[field] = null;
         }
       });
+
+      console.log('Processed input data before validation:', inputData);
 
       // Xử lý processingResult
       if (!inputData.processingResult || inputData.processingResult === '') {
@@ -278,6 +291,18 @@ export class ContentController {
       });
 
       try {
+        // Log data before update
+        console.log('Attempting to update content:', {
+          contentId,
+          validatedData: {
+            ...validatedData,
+            source: typeof validatedData.source,
+            safe: typeof validatedData.safe,
+            categories: validatedData.categories,
+            labels: validatedData.labels
+          }
+        });
+
         const updatedContent = await storage.updateContent(contentId, validatedData);
 
         if (!updatedContent) {
@@ -288,11 +313,22 @@ export class ContentController {
           });
         }
 
-        console.log('Content updated successfully:', updatedContent);
-
-        // Fetch updated content to verify changes
+        // Verify update was successful
         const verifiedContent = await storage.getContent(contentId);
-        console.log('Verified updated content:', verifiedContent);
+        
+        if (!verifiedContent) {
+          console.error('Could not verify updated content');
+          return res.status(500).json({
+            success: false,
+            message: "Failed to verify content update"
+          });
+        }
+
+        console.log('Update successful:', {
+          original: validatedData,
+          updated: updatedContent,
+          verified: verifiedContent
+        });
 
         return res.json({
           success: true,
