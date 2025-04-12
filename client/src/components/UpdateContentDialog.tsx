@@ -160,38 +160,43 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     }) => {
       console.log('Starting update mutation with data:', data);
 
-      // 1. Update content in our database
-      const updatedContent = await apiRequest('PATCH', `/api/contents/${data.id}`, {
-        categories: data.categories,
-        labels: data.labels,
-        safe: data.safe,
-        sourceVerification: data.sourceVerification,
-        status: data.status
-      });
-      
-      console.log('Content updated in database:', updatedContent);
+      try {
+        // 1. Update content in our database
+        const updatedContent = await apiRequest('PATCH', `/api/contents/${data.id}`, {
+          categories: data.categories,
+          labels: data.labels,
+          safe: data.safe,
+          sourceVerification: data.sourceVerification,
+          status: data.status
+        });
+        
+        console.log('Content updated in database:', updatedContent);
 
-      if (!updatedContent?.externalId) {
-        throw new Error('Missing externalId from updated content');
+        if (!updatedContent) {
+          throw new Error('No response from update request');
+        }
+
+        // 2. Send to Gorse service via Kafka
+        const kafkaData = {
+          externalId: content?.externalId, // Use existing content's externalId
+          categories: data.categories,
+          labels: data.labels,
+          safe: data.safe,
+          sourceVerification: data.sourceVerification
+        };
+
+        console.log('Sending to Kafka:', kafkaData);
+        
+        await apiRequest('POST', '/api/kafka/send', kafkaData);
+        console.log('Successfully sent to Kafka');
+        
+        return updatedContent;
+      } catch (error) {
+        console.error('Error in mutation:', error);
+        throw error;
       }
-
-      // 2. Send to Gorse service via Kafka
-      const kafkaData = {
-        externalId: updatedContent.externalId,
-        categories: data.categories,
-        labels: data.labels,
-        safe: data.safe,
-        sourceVerification: data.sourceVerification
-      };
-
-      console.log('Sending to Kafka:', kafkaData);
-      
-      await apiRequest('POST', '/api/kafka/send', kafkaData);
-      console.log('Successfully sent to Kafka');
-      
-      return updatedContent;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
       queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}`] });
@@ -203,10 +208,11 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error('Mutation error:', error);
       toast({
         title: 'Lỗi khi cập nhật nội dung',
-        description: error.message,
+        description: error.message || 'Không thể cập nhật nội dung',
         variant: 'destructive',
       });
     }
