@@ -155,24 +155,39 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       categories: string, 
       labels: string, 
       safe: boolean | null,
-      sourceVerification?: string 
+      sourceVerification?: string,
+      status?: string 
     }) => {
+      console.log('Starting update mutation with data:', data);
+
       // 1. Update content in our database
       const updatedContent = await apiRequest('PATCH', `/api/contents/${data.id}`, {
         categories: data.categories,
         labels: data.labels,
         safe: data.safe,
-        sourceVerification: data.sourceVerification
+        sourceVerification: data.sourceVerification,
+        status: data.status
       });
       
+      console.log('Content updated in database:', updatedContent);
+
+      if (!updatedContent?.externalId) {
+        throw new Error('Missing externalId from updated content');
+      }
+
       // 2. Send to Gorse service via Kafka
-      await apiRequest('POST', '/api/kafka/send', {
+      const kafkaData = {
         externalId: updatedContent.externalId,
-        categories: selectedCategories.join(','),
-        labels: selectedLabels.join(','), 
-        safe: isSafe,
-        sourceVerification: isVerified ? 'verified' : 'unverified'
-      });
+        categories: data.categories,
+        labels: data.labels,
+        safe: data.safe,
+        sourceVerification: data.sourceVerification
+      };
+
+      console.log('Sending to Kafka:', kafkaData);
+      
+      await apiRequest('POST', '/api/kafka/send', kafkaData);
+      console.log('Successfully sent to Kafka');
       
       return updatedContent;
     },
@@ -254,16 +269,14 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       status?: string
     } = {
       id: contentId,
-      categories: uniqueCategories.join(', '),
-      labels: uniqueLabels.join(', '),
+      categories: uniqueCategories.join(','),
+      labels: uniqueLabels.join(','),
       safe: isSafe,
+      sourceVerification: isVerified ? 'verified' : 'unverified',
       status: uniqueCategories.length > 0 ? 'completed' : 'pending'
     };
-    
-    // Thêm trạng thái xác minh dựa vào checkbox và nội dung phải an toàn
-    if (isSafe === true) {
-      payload.sourceVerification = isVerified ? 'verified' : 'unverified';
-    }
+
+    console.log('Submitting payload:', payload);
     
     updateMutation.mutate(payload);
   };
