@@ -174,19 +174,36 @@ export class ContentController {
         }
       }
 
+      // Xử lý source trước
+      if (inputData.source !== undefined) {
+        if (typeof inputData.source === 'string') {
+          try {
+            // Kiểm tra nếu đã là JSON string hợp lệ
+            JSON.parse(inputData.source);
+            // Nếu parse được thì giữ nguyên
+          } catch {
+            // Nếu không parse được, có thể là object đã được stringify
+            try {
+              const sourceStr = JSON.stringify(inputData.source);
+              JSON.parse(sourceStr); // Verify lại
+              inputData.source = sourceStr;
+            } catch {
+              // Nếu vẫn lỗi thì set null
+              inputData.source = null;
+            }
+          }
+        } else if (typeof inputData.source === 'object' && inputData.source !== null) {
+          // Nếu là object thì stringify
+          inputData.source = JSON.stringify(inputData.source);
+        } else {
+          inputData.source = null;
+        }
+      }
+
       // Xử lý các trường có thể null
-      ['categories', 'labels', 'processingResult', 'source'].forEach(field => {
+      ['categories', 'labels', 'processingResult'].forEach(field => {
         if (inputData[field] === undefined || inputData[field] === '') {
           inputData[field] = null;
-        }
-        if (field === 'source' && inputData[field]) {
-          try {
-            // Đảm bảo source là JSON string hợp lệ
-            const parsed = JSON.parse(inputData[field]);
-            inputData[field] = JSON.stringify(parsed);
-          } catch {
-            // Nếu không phải JSON, giữ nguyên giá trị string
-          }
         }
       });
 
