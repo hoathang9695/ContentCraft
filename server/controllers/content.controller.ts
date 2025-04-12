@@ -126,22 +126,31 @@ export class ContentController {
       if (existingContent.assigned_to_id !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only edit content assigned to you" });
       }
-      
-      const validatedData = insertContentSchema.partial().parse({
+
+      // Parse và validate input data
+      const inputData = {
         ...req.body,
-        safe: req.body.safe === "true" ? true : req.body.safe === "false" ? false : null
-      });
+        safe: typeof req.body.safe === 'string' 
+          ? req.body.safe === 'true'
+          : req.body.safe
+      };
+      
+      const validatedData = insertContentSchema.partial().parse(inputData);
       
       if (validatedData.status === 'completed') {
         validatedData.approver_id = user.id;
         validatedData.approveTime = new Date();
       }
       
+      // Update content và format response
       const updatedContent = await storage.updateContent(contentId, validatedData);
-      return res.status(200).json({
+      
+      const response = {
         success: true,
         data: updatedContent
-      });
+      };
+
+      return res.status(200).json(response);
     } catch (error) {
       console.error('Error updating content:', error);
       if (error instanceof ZodError) {
