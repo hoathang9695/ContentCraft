@@ -4,11 +4,7 @@ import * as schema from "@shared/schema";
 
 // Create a connection pool instead of a single client
 export const pool = new pg.Pool({
-  host: process.env.PGHOST,
-  port: parseInt(process.env.PGPORT || '5432'),
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD?.toString(),
-  database: process.env.PGDATABASE,
+  connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 60000,
   connectionTimeoutMillis: 20000,
