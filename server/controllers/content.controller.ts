@@ -9,6 +9,10 @@ export class ContentController {
   // Get all contents
   async getAllContents(req: Request, res: Response) {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const user = req.user as Express.User;
       console.log("GET /api/contents - User authenticated:", { 
         id: user.id, 
@@ -26,6 +30,10 @@ export class ContentController {
         contents = await storage.getContentsByAssignee(user.id);
       }
       
+      if (!contents) {
+        return res.status(500).json({ message: "Failed to fetch contents" });
+      }
+
       console.log(`Returning ${contents.length} content items`);
       
       if (contents.length > 0) {
@@ -36,10 +44,13 @@ export class ContentController {
         });
       }
       
-      res.json(contents);
+      return res.json(contents);
     } catch (error) {
       console.error("Error fetching contents:", error);
-      res.status(500).json({ message: "Error fetching contents" });
+      return res.status(500).json({ 
+        message: "Error fetching contents",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 
