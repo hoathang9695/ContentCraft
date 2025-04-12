@@ -251,9 +251,23 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const handleSubmit = () => {
     if (!contentId) return;
     
-    // Loại bỏ các labels trùng lặp trước khi lưu
-    const uniqueCategories = Array.from(new Set(selectedCategories));
-    const uniqueLabels = Array.from(new Set(selectedLabels));
+    // Validate required fields
+    if (isSafe === null) {
+      toast({
+        title: 'Validation Error',
+        description: 'Vui lòng chọn trạng thái an toàn',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Loại bỏ các labels trùng lặp và khoảng trắng
+    const uniqueCategories = Array.from(new Set(selectedCategories))
+      .map(c => c.trim())
+      .filter(Boolean);
+    const uniqueLabels = Array.from(new Set(selectedLabels))
+      .map(l => l.trim())
+      .filter(Boolean);
     
     // Tạo payload để gửi đi
     const payload: {
