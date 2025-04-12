@@ -8,7 +8,10 @@ import {
   History,
   Folder,
   Tag,
-  UserCog
+  UserCog,
+  HelpCircle,
+  ShieldCheck,
+  BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -93,14 +96,45 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               Content
             </SidebarItem>
 
-            <SidebarItem
-              href="/user-feedback"
-              icon={ActivitySquare}
-              isActive={isActivePath('/user-feedback')}
-              onClick={handleItemClick}
-            >
-              Xử lý phản hồi
-            </SidebarItem>
+            <div>
+              <SidebarItem
+                href="/user-feedback"
+                icon={ActivitySquare}
+                isActive={isActivePath('/user-feedback')}
+                onClick={handleItemClick}
+              >
+                Xử lý phản hồi
+              </SidebarItem>
+              
+              <div className="pl-6 ml-2 border-l border-border">
+                <SidebarItem
+                  href="/user-feedback/support"
+                  icon={HelpCircle}
+                  isActive={isActivePath('/user-feedback/support')}
+                  onClick={handleItemClick}
+                >
+                  Yêu cầu hỗ trợ
+                </SidebarItem>
+                
+                <SidebarItem
+                  href="/user-feedback/verification"
+                  icon={ShieldCheck}
+                  isActive={isActivePath('/user-feedback/verification')}
+                  onClick={handleItemClick}
+                >
+                  Yêu cầu xác minh danh tính
+                </SidebarItem>
+                
+                <SidebarItem
+                  href="/user-feedback/tick"
+                  icon={BadgeCheck}
+                  isActive={isActivePath('/user-feedback/tick')}
+                  onClick={handleItemClick}
+                >
+                  Yêu cầu tick Tím
+                </SidebarItem>
+              </div>
+            </div>
             
             {isAdmin && (
               <>
