@@ -284,8 +284,38 @@ export class ContentController {
       });
 
       try {
-        const updatedContent = await storage.updateContent(contentId, validatedData);
+        // Format string fields
+        if (typeof validatedData.categories === 'string') {
+          validatedData.categories = validatedData.categories.trim() || null;
+        }
+        if (typeof validatedData.labels === 'string') {
+          validatedData.labels = validatedData.labels.trim() || null;
+        }
+        
+        // Handle source field
+        if (validatedData.source && typeof validatedData.source === 'string') {
+          try {
+            // Verify if it's valid JSON
+            JSON.parse(validatedData.source);
+          } catch (e) {
+            validatedData.source = null;
+          }
+        }
 
+        // Handle safe field
+        if (validatedData.safe !== undefined) {
+          validatedData.safe = validatedData.safe === true;
+        }
+
+        // Handle sourceVerification
+        if (validatedData.sourceVerification) {
+          validatedData.sourceVerification = validatedData.sourceVerification === 'verified' ? 'verified' : 'unverified';
+        }
+
+        console.log('Processed data before update:', validatedData);
+        
+        const updatedContent = await storage.updateContent(contentId, validatedData);
+        
         if (!updatedContent) {
           console.error('No content returned after update');
           return res.status(500).json({
@@ -296,14 +326,9 @@ export class ContentController {
 
         console.log('Content updated successfully:', updatedContent);
 
-        // Fetch updated content to verify changes
-        const verifiedContent = await storage.getContent(contentId);
-        console.log('Verified updated content:', verifiedContent);
-
         return res.json({
           success: true,
-          data: updatedContent,
-          verified: verifiedContent
+          data: updatedContent
         });
       } catch (dbError) {
         console.error('Database error during update:', dbError);
