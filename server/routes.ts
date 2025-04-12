@@ -658,7 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: "Kafka message simulated successfully",
-        data: { contentId, categories, labels, safe, sourceVerification }
+        data: { itemId, categories, labels, safe, sourceVerification }
       });
     } catch (error) {
       res.status(500).json({
