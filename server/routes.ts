@@ -652,16 +652,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await simulateKafkaMessage(externalId);
 
       // Simulate sending content update to your Gorse service using Kafka
-      log(`Sending update to Gorse service for item ${itemId}`, 'kafka');
+      log(`Sending update to Gorse service for external ID ${externalId}`, 'kafka');
       log(`Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || 'unverified'}`, 'kafka');
 
       // Simulate Kafka message
-      await simulateKafkaMessage(itemId);
+      await simulateKafkaMessage(externalId);
 
       res.json({
         success: true,
         message: "Kafka message simulated successfully",
-        data: { itemId, categories, labels, safe, sourceVerification }
+        data: { externalId, categories, labels, safe, sourceVerification }
       });
     } catch (error) {
       res.status(500).json({
