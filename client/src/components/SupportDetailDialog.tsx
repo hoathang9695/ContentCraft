@@ -41,7 +41,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[600px]">
+      <DialogContent className="max-w-[600px] p-6 rounded-lg bg-background">
         <DialogHeader>
           <DialogTitle>Chi tiết yêu cầu hỗ trợ</DialogTitle>
           <DialogDescription>
