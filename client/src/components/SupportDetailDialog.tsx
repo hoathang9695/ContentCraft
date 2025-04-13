@@ -32,48 +32,34 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           </div>
         </div>
 
-        <div className="space-y-4 text-[15px]">
-          <div className="flex">
-            <span className="min-w-[120px] text-gray-500">
-              Họ và tên:
-            </span>
-            <span className="text-purple-600 font-medium">
-              {request.full_name}
-            </span>
-          </div>
-
-          <div className="flex">
-            <span className="min-w-[120px] text-gray-500">
-              Email:
-            </span>
-            <span className="text-purple-600 font-medium">
-              {request.email}
-            </span>
-          </div>
-
-          <div className="flex">
-            <span className="min-w-[120px] text-gray-500">
-              Chủ đề:
-            </span>
-            <span className="text-purple-600 font-medium">
-              {request.subject}
-            </span>
+        <div className="space-y-4">
+          <div>
+            <span className="text-gray-500">Họ và tên:</span>
+            <span className="ml-2 text-purple-600 font-medium">{request.full_name}</span>
           </div>
 
           <div>
-            <span className="text-gray-500 block mb-2">
-              Nội dung:
-            </span>
-            <div className="bg-gray-50 p-4 rounded-lg text-[15px] leading-relaxed text-gray-700 whitespace-pre-wrap">
+            <span className="text-gray-500">Email:</span>
+            <span className="ml-2 text-purple-600 font-medium">{request.email}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-500">Chủ đề:</span>
+            <span className="ml-2 text-purple-600 font-medium">{request.subject}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-500 block mb-2">Nội dung:</span>
+            <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">
               {request.content}
             </div>
           </div>
         </div>
 
         <div className="flex justify-end mt-6">
-          <Button
+          <Button 
             onClick={onClose}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
             Đã xem
           </Button>
