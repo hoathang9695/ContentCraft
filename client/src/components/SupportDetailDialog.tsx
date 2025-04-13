@@ -1,5 +1,5 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { SupportRequest } from "@/lib/types";
@@ -41,15 +41,21 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[600px] p-6 rounded-lg bg-background">
-        <DialogHeader>
-          <DialogTitle>Chi tiết yêu cầu hỗ trợ</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-[600px] p-6 bg-background">
+        <DialogHeader className="relative">
+          <button
+            onClick={onClose}
+            className="absolute right-0 top-0 hover:bg-gray-100 rounded-full p-2 transition"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+          <DialogTitle className="text-xl font-semibold mb-2">Chi tiết yêu cầu hỗ trợ</DialogTitle>
+          <p className="text-sm text-muted-foreground">
             Xem thông tin chi tiết của yêu cầu hỗ trợ
-          </DialogDescription>
+          </p>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-6">
           <div>
             <span className="text-gray-500">Họ và tên:</span>
             <span className="ml-2 text-purple-600 font-medium">{request.full_name}</span>
@@ -73,20 +79,19 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between gap-2">
-          <Button 
-            variant="outline"
-            onClick={onClose}
-          >
-            Đóng
-          </Button>
-          <Button 
-            onClick={handleMarkAsViewed}
-            disabled={request.status === 'completed'}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            {request.status === 'completed' ? 'Đã xử lý' : 'Đã xem'}
-          </Button>
+        <DialogFooter>
+          <div className="flex justify-between w-full">
+            <Button variant="outline" onClick={onClose}>
+              Đóng
+            </Button>
+            <Button 
+              onClick={handleMarkAsViewed}
+              disabled={request.status === 'completed'}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {request.status === 'completed' ? 'Đã xử lý' : 'Đã xem'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
