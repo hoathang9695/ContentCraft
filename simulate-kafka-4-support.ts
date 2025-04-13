@@ -1,6 +1,6 @@
 import { db } from './server/db.js';
 import { users, supportRequests } from './shared/schema';
-import { and, ne, eq } from 'drizzle-orm';
+import { and, ne, eq, sql } from 'drizzle-orm';
 
 async function createSupportRequest(assigneeId: number) {
   try {
