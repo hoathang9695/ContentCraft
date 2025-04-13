@@ -32,8 +32,10 @@ interface SupportRequest {
 export default function SupportPage() {
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests'],
-    refetchOnWindowFocus: true,
-    staleTime: 5000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchOnReconnect: false,
+    staleTime: Infinity,
     onSuccess: (data) => {
       console.log('Support requests data received:', data);
     },
