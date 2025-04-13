@@ -1,6 +1,6 @@
 
-import { db } from './server/db';
-import { users, supportRequests } from './shared/schema';
+import { db } from './server/db.ts';
+import { users, supportRequests } from './shared/schema.ts';
 import { and, ne, eq, sql } from 'drizzle-orm';
 
 async function createSupportRequest(assigneeId: number) {
