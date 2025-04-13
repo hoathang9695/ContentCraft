@@ -55,7 +55,10 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
             </div>
           </div>
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={onClose}>
+              Đóng
+            </Button>
             <Button variant="default" onClick={onClose}>
               Đã xem
             </Button>
