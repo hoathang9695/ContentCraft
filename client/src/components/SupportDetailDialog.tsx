@@ -1,7 +1,9 @@
+
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { SupportRequest } from "@/lib/types";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   isOpen: boolean;
@@ -10,7 +12,35 @@ interface Props {
 }
 
 export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
+  const queryClient = useQueryClient();
+  
+  const markAsViewed = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/support-requests/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'completed'
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support-requests'] });
+      onClose();
+    },
+  });
+
   if (!request) return null;
+
+  const handleMarkAsViewed = () => {
+    markAsViewed.mutate(request.id);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -58,10 +88,11 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
         <div className="flex justify-end mt-6">
           <Button 
-            onClick={onClose}
+            onClick={handleMarkAsViewed}
+            disabled={request.status === 'completed'}
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            Đã xem
+            {request.status === 'completed' ? 'Đã xử lý' : 'Đã xem'}
           </Button>
         </div>
       </DialogContent>
