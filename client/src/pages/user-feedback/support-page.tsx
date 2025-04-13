@@ -240,24 +240,26 @@ export default function SupportPage() {
                 </Button>
               </div>
             </div>
+
+            <div className="flex items-center gap-4 h-[74px]">
+              <Input 
+                placeholder="Tìm kiếm yêu cầu..." 
+                className="max-w-[300px]"
+              />
+              <Select value={userFilter} onValueChange={setUserFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Chọn người dùng" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={null}>Tất cả</SelectItem>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
-
-        {/* Add user filter here */}
-        <div className="flex justify-end mb-4"> {/* Added flex for alignment */}
-          <Select value={userFilter} onValueChange={setUserFilter}>
-            <SelectTrigger>
-              <span>Chọn người dùng</span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={null}>Tất cả</SelectItem>
-              {users.map(user => (
-                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
 
         <div className="bg-card rounded-lg shadow">
           <DataTable
