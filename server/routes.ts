@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
 import { desc } from 'drizzle-orm';
-import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests } from "@shared/schema";
+import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
 import { pool, db } from "./db";
 import multer from "multer";
 import path from "path";
@@ -874,7 +874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!comment) {
-        return res.status(400).json({ success: false, message: "Comment content is required" });
+        return res.status(400).json({ successfalse, message: "Comment content is required" });
       }
 
       // Lấy thông tin fake user
