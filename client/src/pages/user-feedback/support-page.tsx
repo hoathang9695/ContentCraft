@@ -110,8 +110,15 @@ export default function SupportPage() {
     });
   };
 
-  // Placeholder for fetching user list.  This needs to be implemented.
-  const users = []; // Replace with actual user fetching logic
+  // Fetch users for filtering
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/users'],
+    queryFn: async () => {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
+  });
 
   return (
     <DashboardLayout>
@@ -252,14 +259,19 @@ export default function SupportPage() {
             placeholder="Tìm kiếm yêu cầu..." 
             className="max-w-[300px]"
           />
-          <Select value={userFilter} onValueChange={setUserFilter}>
-            <SelectTrigger className="w-[200px]">
+          <Select 
+            value={userFilter?.toString() || ''} 
+            onValueChange={(value) => setUserFilter(value ? parseInt(value) : null)}
+          >
+            <SelectTrigger className="w-[250px]">
               <SelectValue placeholder="Chọn người dùng" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={null}>Tất cả</SelectItem>
+              <SelectItem value="">Tất cả</SelectItem>
               {users.map(user => (
-                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                <SelectItem key={user.id} value={user.id.toString()}>
+                  {user.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
