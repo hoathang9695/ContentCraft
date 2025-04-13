@@ -1385,36 +1385,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/support-requests', isAuthenticated, async (req, res) => {
     console.log('Fetching support requests');
     try {
-      const result = await db.query.supportRequests.findMany({
-        orderBy: (supportRequests, { desc }) => [desc(supportRequests.created_at)]
-      });
-      console.log(`Found ${result.length} support requests`);
-      if (result && result.length > 0) {
-        console.log('First request:', result[0]);
+      const requests = await storage.getAllSupportRequests();
+      console.log(`Found ${requests.length} support requests`);
+      if (requests && requests.length > 0) {
+        console.log('First request:', requests[0]);
       }
-      return res.json(result);
-    } catch (err) {
-      console.error('Error fetching support requests:', err);
-      return res.status(500).json({ 
-        message: 'Error fetching support requests',
-        error: err instanceof Error ? err.message : String(err)
-      });
-    }
-  });st request:', result[0]);
-      }
-      return res.json(result || []);
+      return res.json(requests || []);
     } catch (err) {
       console.error('Error fetching support requests:', err);
       if (err instanceof Error) {
         return res.status(500).json({ 
-          error: 'Error fetching support requests',
-          message: err.message,
+          message: 'Error fetching support requests',
+          error: err.message,
           stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         });
       }
       return res.status(500).json({ 
-        error: 'Error fetching support requests',
-        message: String(err)
+        message: 'Error fetching support requests',
+        error: String(err)
       });
     }
   });
