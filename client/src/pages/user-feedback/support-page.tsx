@@ -14,7 +14,7 @@ import { format } from "date-fns";
 
 interface SupportRequest {
   id: number;
-  fullName: string;
+  full_name: string;
   email: string;
   subject: string;
   content: string;
@@ -80,10 +80,10 @@ export default function SupportPage() {
                 ),
               },
               {
-                key: 'fullName',
+                key: 'full_name',
                 header: 'Họ và tên',
                 render: (row: SupportRequest) => (
-                  <div className="font-medium">{row.fullName}</div>
+                  <div className="font-medium">{row.full_name}</div>
                 ),
               },
               {
