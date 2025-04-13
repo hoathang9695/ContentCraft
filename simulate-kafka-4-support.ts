@@ -19,31 +19,34 @@ async function createSupportRequest(assigneeId: number) {
     const now = new Date();
     const requestData = {
       fullName: "System Generated",
-      email: "system@example.com",
+      email: "system@example.com", 
       subject: `Yêu cầu hỗ trợ ${now.getTime()}`,
       content: `Yêu cầu hỗ trợ tự động được tạo lúc ${now.toISOString()}`,
       status: 'pending',
       assigned_to_id: assigneeId,
-      assigned_at: now,
-      created_at: now,
-      updated_at: now
+      assigned_at: now
     };
 
     console.log('Attempting to create support request with data:', requestData);
     
-    const newRequest = await db.insert(supportRequests)
+    const result = await db.insert(supportRequests)
       .values(requestData)
-      .returning()
-      .execute();
+      .returning();
 
-    if (!newRequest || newRequest.length === 0) {
-      throw new Error('Failed to create support request - no data returned');
+    console.log('Raw database result:', result);
+    
+    if (!result || !result.length) {
+      throw new Error('No data returned from database insert');
     }
 
-    console.log('Successfully created support request:', newRequest[0]);
-    return newRequest[0];
+    console.log('Successfully created support request:', result[0]);
+    return result[0];
   } catch (error) {
-    console.error('Error creating support request:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 }
