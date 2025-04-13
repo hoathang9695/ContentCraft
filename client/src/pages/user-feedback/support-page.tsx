@@ -67,7 +67,7 @@ export default function SupportPage() {
                 key: 'id',
                 header: 'ID',
                 render: (row: SupportRequest) => (
-                  <div className="font-medium">#{row.id}</div>
+                  <div className="font-medium">{row.id}</div>
                 ),
               },
               {
