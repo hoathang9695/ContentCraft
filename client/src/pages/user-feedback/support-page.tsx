@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,7 @@ interface SupportRequest {
   response_time: string | null;
   created_at: string;
   updated_at: string;
+  assignedUser?: { name: string }; // Added assignedUser property
 }
 
 export default function SupportPage() {
@@ -121,20 +121,15 @@ export default function SupportPage() {
               {
                 key: 'assigned',
                 header: 'Phân công',
-                render: (row: SupportRequest) => (
-                  <div>
-                    {row.assigned_to_id ? (
-                      <div className="text-sm">
-                        <div>ID: {row.assigned_to_id}</div>
-                        <div className="text-muted-foreground">
-                          {format(new Date(row.assigned_at!), 'dd/MM/yyyy HH:mm')}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Chưa phân công</span>
-                    )}
-                  </div>
-                ),
+                render: (row: SupportRequest) => {
+                  // Fetch user info from API if needed
+                  // For now just display the name if available
+                  return (
+                    <div className="font-medium">
+                      {row.assignedUser?.name || `ID: ${row.assigned_to_id}`}
+                    </div>
+                  );
+                },
               },
               {
                 key: 'response',
