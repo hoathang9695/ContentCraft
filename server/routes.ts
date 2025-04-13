@@ -8,6 +8,36 @@ import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFak
 import { pool, db } from "./db";
 import multer from "multer";
 import path from "path";
+
+// API endpoint to get support requests with user info
+app.get("/api/support-requests", async (req, res) => {
+  try {
+    const results = await db
+      .select({
+        id: supportRequests.id,
+        fullName: supportRequests.fullName,
+        email: supportRequests.email,
+        subject: supportRequests.subject,
+        content: supportRequests.content,
+        status: supportRequests.status,
+        assigned_to_id: supportRequests.assigned_to_id,
+        assigned_to_name: users.name,
+        assigned_at: supportRequests.assigned_at,
+        response_content: supportRequests.response_content,
+        responder_id: supportRequests.responder_id,
+        response_time: supportRequests.response_time,
+        created_at: supportRequests.created_at,
+        updated_at: supportRequests.updated_at
+      })
+      .from(supportRequests)
+      .leftJoin(users, eq(supportRequests.assigned_to_id, users.id));
+
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching support requests:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 import fs from "fs";
 import { simulateKafkaMessage, simulateMultipleMessages, simulateMassMessages } from "./kafka-simulator";
 import { log } from "./vite";
