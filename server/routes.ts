@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
 import { pool, db } from "./db";
 import multer from "multer";
