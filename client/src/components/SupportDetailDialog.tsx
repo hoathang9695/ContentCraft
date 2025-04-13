@@ -1,5 +1,5 @@
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { SupportRequest } from "@/lib/types";
@@ -44,25 +44,15 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[600px] p-6">
-        <div className="mb-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-xl font-semibold">Chi tiết yêu cầu hỗ trợ</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Xem thông tin chi tiết của yêu cầu hỗ trợ
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="hover:bg-gray-100 rounded-full p-2 transition"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-        </div>
+      <DialogContent className="max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Chi tiết yêu cầu hỗ trợ</DialogTitle>
+          <DialogDescription>
+            Xem thông tin chi tiết của yêu cầu hỗ trợ
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 py-4">
           <div>
             <span className="text-gray-500">Họ và tên:</span>
             <span className="ml-2 text-purple-600 font-medium">{request.full_name}</span>
@@ -86,7 +76,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           </div>
         </div>
 
-        <div className="flex justify-end mt-6">
+        <DialogFooter>
           <Button 
             onClick={handleMarkAsViewed}
             disabled={request.status === 'completed'}
@@ -94,7 +84,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           >
             {request.status === 'completed' ? 'Đã xử lý' : 'Đã xem'}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
