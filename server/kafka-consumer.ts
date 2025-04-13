@@ -122,7 +122,7 @@ export async function processContentMessage(messageWithStringId: any) {
     // Tạo yêu cầu hỗ trợ mới
     try {
       const insertData = {
-        fullName: "System Generated",
+        full_name: "System Generated",
         email: "system@example.com", 
         subject: `Auto Request content:${contentMessage.externalId}`,
         content: `Auto-generated request from Kafka message: ${JSON.stringify(messageWithStringId)}`,
