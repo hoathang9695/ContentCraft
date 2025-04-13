@@ -1,7 +1,7 @@
-
 import { db } from './server/db';
 import { users, supportRequests } from './shared/schema';
 import { and, ne, eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 async function clearDatabase() {
   try {
@@ -24,28 +24,29 @@ async function createSupportRequest(assigneeId: number) {
       content: `Yêu cầu hỗ trợ tự động được tạo lúc ${now.toISOString()}`,
       status: 'pending',
       assigned_to_id: assigneeId,
-      assigned_at: now
+      assigned_at: now,
+      created_at: now,
+      updated_at: now
     };
 
     console.log('Attempting to create support request with data:', requestData);
-    
-    const result = await db.insert(supportRequests)
-      .values(requestData)
-      .returning({
-        id: supportRequests.id,
-        fullName: supportRequests.fullName,
-        subject: supportRequests.subject,
-        assigned_to_id: supportRequests.assigned_to_id
-      });
 
-    console.log('Raw database result:', result);
-    
-    if (!result || !result.length) {
+    const result = await db.execute(
+      sql`INSERT INTO support_requests 
+          (full_name, email, subject, content, status, assigned_to_id, assigned_at, created_at, updated_at)
+          VALUES 
+          (${requestData.fullName}, ${requestData.email}, ${requestData.subject}, 
+           ${requestData.content}, ${requestData.status}, ${requestData.assigned_to_id}, 
+           ${requestData.assigned_at}, ${requestData.created_at}, ${requestData.updated_at})
+          RETURNING id, full_name, subject, assigned_to_id`
+    );
+
+    if (!result.rows || result.rows.length === 0) {
       throw new Error('No data returned from database insert');
     }
 
-    console.log('Successfully created support request:', result[0]);
-    return result[0];
+    console.log('Successfully created support request:', result.rows[0]);
+    return result.rows[0];
   } catch (error) {
     console.error('Error details:', {
       name: error.name,
@@ -57,29 +58,13 @@ async function createSupportRequest(assigneeId: number) {
 }
 
 async function simulateKafka4Requests() {
-  console.log('Starting simulation with database config:', {
-    host: process.env.PGHOST || '42.96.40.138',
-    database: process.env.PGDATABASE || 'content',
-    user: process.env.PGUSER || 'postgres'
-  });
-  
+  console.log('Starting simulation...');
+
   try {
-    console.log('Kết nối database với config:', {
-      host: process.env.PGHOST,
-      database: process.env.PGDATABASE,
-      user: process.env.PGUSER
-    });
-
     // Test database connection first
-    console.log('Testing database connection with config:', {
-      host: process.env.PGHOST || '42.96.40.138',
-      database: process.env.PGDATABASE || 'content',
-      user: process.env.PGUSER || 'postgres'
-    });
+    const testResult = await db.execute(sql`SELECT NOW()`);
+    console.log('Database connection successful:', testResult.rows[0]);
 
-    const testResult = await db.query('SELECT NOW()');
-    console.log('Database connection successful:', testResult);
-    
     // Don't clear database to preserve existing data
     console.log('Bắt đầu mô phỏng tạo 4 yêu cầu hỗ trợ...');
 
@@ -105,12 +90,12 @@ async function simulateKafka4Requests() {
     for (let i = 0; i < 4; i++) {
       const assigneeIndex = i % activeUsers.length;
       const assignee = activeUsers[assigneeIndex];
-      
+
       try {
         console.log(`Đang tạo yêu cầu ${i + 1}/4 cho ${assignee.name}`);
         const request = await createSupportRequest(assignee.id);
         console.log(`Đã tạo yêu cầu ${i + 1}, phân công cho ${assignee.name}`);
-        
+
         // Đợi 1 giây giữa các yêu cầu
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
