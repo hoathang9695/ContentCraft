@@ -1389,13 +1389,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('User:', req.user);
       const user = req.user as Express.User;
-      const result = await db.select().from(supportRequests)
-        .orderBy(supportRequests.created_at);
-      
-      res.json(result);
+      let result;
 
       if (user.role === 'admin') {
-        result = await db.select({
           ...supportRequests,
           assigned_to_name: users.name
         })
