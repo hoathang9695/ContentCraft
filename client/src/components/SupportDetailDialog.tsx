@@ -1,8 +1,7 @@
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { SupportRequest } from "@/lib/types"; 
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { SupportRequest } from "@/lib/types";
 import { X } from "lucide-react";
 
 interface Props {
@@ -16,50 +15,45 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[600px] p-0">
+      <DialogContent className="max-w-[800px] p-0">
         <div className="flex items-center justify-between border-b p-4">
-          <DialogTitle className="text-xl font-semibold">Chi tiết yêu cầu hỗ trợ</DialogTitle>
-          <button onClick={onClose}>
-            <X className="h-4 w-4" />
+          <DialogTitle className="text-xl">Chi tiết yêu cầu hỗ trợ</DialogTitle>
+          <button onClick={onClose} className="hover:opacity-75">
+            <X className="h-5 w-5" />
           </button>
         </div>
-        
-        <div className="p-4">
-          <p className="text-sm text-gray-500 mb-6">
+
+        <div className="p-6 space-y-6">
+          <p className="text-sm text-gray-600">
             Xem thông tin chi tiết của yêu cầu hỗ trợ
           </p>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-[120px,1fr] gap-2">
-              <span className="text-gray-500">Họ và tên:</span>
-              <span className="text-blue-600">{request.full_name}</span>
+            <div className="flex">
+              <span className="w-[100px] text-gray-600">Họ và tên:</span>
+              <span className="text-indigo-600">{request.full_name}</span>
             </div>
 
-            <div className="grid grid-cols-[120px,1fr] gap-2">
-              <span className="text-gray-500">Email:</span>
-              <span className="text-blue-600">{request.email}</span>
+            <div className="flex">
+              <span className="w-[100px] text-gray-600">Email:</span>
+              <span className="text-indigo-600">{request.email}</span>
             </div>
 
-            <div className="grid grid-cols-[120px,1fr] gap-2">
-              <span className="text-gray-500">Chủ đề:</span>
-              <span className="text-blue-600">{request.subject}</span>
+            <div className="flex">
+              <span className="w-[100px] text-gray-600">Chủ đề:</span>
+              <span className="text-indigo-600">{request.subject}</span>
             </div>
 
-            <div>
-              <span className="text-gray-500">Nội dung:</span>
-              <ScrollArea className="h-[200px] mt-2 rounded-md border p-4">
-                <div className="text-gray-700 whitespace-pre-wrap">
-                  {request.content}
-                </div>
-              </ScrollArea>
+            <div className="space-y-2">
+              <span className="text-gray-600">Nội dung:</span>
+              <div className="border rounded-lg p-4 text-gray-800 min-h-[200px] whitespace-pre-wrap">
+                {request.content}
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={onClose}>
-              Đóng
-            </Button>
-            <Button variant="default" onClick={onClose}>
+          <div className="flex justify-end">
+            <Button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700">
               Đã xem
             </Button>
           </div>
