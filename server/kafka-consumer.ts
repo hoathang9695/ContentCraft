@@ -1,7 +1,7 @@
 
 import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
 import { db } from './db';
-import { contents, users } from '../shared/schema';
+import { contents, users, supportRequests } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 import { log } from './vite';
 
@@ -150,6 +150,8 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       status: 'pending',
       assigned_to_id,
       assigned_at: now,
+      created_at: now,
+      updated_at: now
     });
 
     log(`Support request created and assigned to user ID ${assigned_to_id} (${activeUsers[nextAssigneeIndex].username})`, 'kafka');
