@@ -57,7 +57,8 @@ export default function SupportPage() {
   const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
   const [endDate, setEndDate] = useState<Date>(today);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
-  const [userFilter, setUserFilter] = useState<number | null>(null); // Add user filter state
+  const [userFilter, setUserFilter] = useState<number | null>(null);
+  const [filteredRequests, setFilteredRequests] = useState<SupportRequest[]>([]); // Add user filter state
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
