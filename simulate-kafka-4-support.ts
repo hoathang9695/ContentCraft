@@ -33,7 +33,12 @@ async function createSupportRequest(assigneeId: number) {
     
     const newRequest = await db.insert(supportRequests)
       .values(requestData)
+      .returning()
       .execute();
+
+    if (!newRequest || newRequest.length === 0) {
+      throw new Error('Failed to create support request - no data returned');
+    }
 
     console.log('Successfully created support request:', newRequest[0]);
     return newRequest[0];
@@ -51,8 +56,14 @@ async function simulateKafka4Requests() {
   });
   
   try {
+    console.log('Kết nối database với config:', {
+      host: process.env.PGHOST,
+      database: process.env.PGDATABASE,
+      user: process.env.PGUSER
+    });
+
     // Test database connection first
-    const testResult = await db.query('SELECT NOW()');
+    const testResult = await db.execute(sql`SELECT NOW()`);
     console.log('Database connection successful:', testResult);
     
     // Don't clear database to preserve existing data
