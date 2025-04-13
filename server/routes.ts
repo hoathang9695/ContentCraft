@@ -1387,11 +1387,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const requests = await storage.getAllSupportRequests();
       console.log(`Found ${requests.length} support requests`);
-      console.log('First request if any:', requests[0]);
-      res.json(requests);
+      if (requests && requests.length > 0) {
+        console.log('First request:', requests[0]);
+      }
+      return res.json(requests || []);
     } catch (err) {
       console.error('Error fetching support requests:', err);
-      res.status(500).json({ error: 'Error fetching support requests' });
+      if (err instanceof Error) {
+        return res.status(500).json({ 
+          error: 'Error fetching support requests',
+          message: err.message,
+          stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
+      }
+      return res.status(500).json({ 
+        error: 'Error fetching support requests',
+        message: String(err)
+      });
     }
   });
 
