@@ -1,9 +1,7 @@
-
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { SupportRequest } from "@/lib/types";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { X } from "lucide-react";
+import { SupportRequest } from "@/lib/types";
 
 interface Props {
   isOpen: boolean;
@@ -16,66 +14,71 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[800px] p-0 gap-0">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Chi tiết yêu cầu hỗ trợ
-          </h2>
-          <button
-            onClick={onClose}
-            className="hover:bg-gray-100 rounded-full p-2 transition-colors"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
-
-        <ScrollArea className="max-h-[calc(100vh-200px)]">
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-[140px,1fr] gap-y-4 text-sm">
-              <div className="text-gray-500">Họ và tên:</div>
-              <div className="font-medium text-gray-900">{request.full_name}</div>
-
-              <div className="text-gray-500">Email:</div>
-              <div className="font-medium text-gray-900">{request.email}</div>
-
-              <div className="text-gray-500">Chủ đề:</div>
-              <div className="font-medium text-gray-900">{request.subject}</div>
-
-              <div className="text-gray-500">Trạng thái:</div>
-              <div className="font-medium">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                  ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                    request.status === 'processing' ? 'bg-blue-100 text-blue-800' : 
-                    'bg-green-100 text-green-800'}`}>
-                  {request.status === 'pending' ? 'Chờ xử lý' :
-                    request.status === 'processing' ? 'Đang xử lý' : 'Đã xử lý'}
-                </span>
-              </div>
+      <DialogContent className="max-w-[720px] p-0 rounded-xl">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-[20px] font-bold text-gray-900 mb-1">
+                Chi tiết yêu cầu hỗ trợ
+              </h2>
+              <p className="text-sm text-gray-500">
+                Xem thông tin chi tiết của yêu cầu hỗ trợ
+              </p>
             </div>
+            <button
+              onClick={onClose}
+              className="hover:bg-gray-200 rounded-full p-1.5 transition"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
 
-            <div className="space-y-2.5">
-              <div className="text-sm text-gray-500">Nội dung:</div>
-              <div className="border border-gray-200 rounded-lg px-4 py-3.5 min-h-[200px] bg-gray-50 text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+          {/* Content */}
+          <div className="mt-6 space-y-4 text-[15px]">
+            <div className="flex">
+              <span className="min-w-[120px] text-gray-600 font-medium">
+                Họ và tên:
+              </span>
+              <span className="text-[#7C3AED] font-medium">
+                {request.full_name}
+              </span>
+            </div>
+            <div className="flex">
+              <span className="min-w-[120px] text-gray-600 font-medium">
+                Email:
+              </span>
+              <span className="text-[#7C3AED] font-medium">
+                {request.email}
+              </span>
+            </div>
+            <div className="flex">
+              <span className="min-w-[120px] text-gray-600 font-medium">
+                Chủ đề:
+              </span>
+              <span className="text-[#7C3AED] font-medium">
+                {request.subject}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600 font-medium block mb-1">
+                Nội dung:
+              </span>
+              <div className="bg-gray-50 p-4 border rounded-md text-[15px] leading-relaxed text-gray-800 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
                 {request.content}
               </div>
             </div>
           </div>
-        </ScrollArea>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="h-9 px-4"
-          >
-            Đóng
-          </Button>
-          <Button
-            onClick={onClose}
-            className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Đã xem
-          </Button>
+          {/* Footer */}
+          <div className="flex justify-end mt-6">
+            <Button
+              onClick={onClose}
+              className="bg-[#7C3AED] hover:bg-[#6B21A8] text-white text-sm px-6"
+            >
+              Đã xem
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
