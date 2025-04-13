@@ -137,7 +137,7 @@ export default function SupportPage() {
                       <Calendar
                         mode="single"
                         selected={startDate}
-                        className="bg-white border rounded-md shadow-md"
+                        className="rounded-md border bg-white"
                         onSelect={(date) => {
                           if (date) {
                             setStartDate(date);
@@ -171,7 +171,7 @@ export default function SupportPage() {
                       <Calendar
                         mode="single"
                         selected={endDate}
-                        className="bg-white border rounded-md shadow-md"
+                        className="rounded-md border bg-white"
                         onSelect={(date) => {
                           if (date) {
                             setEndDate(date);
