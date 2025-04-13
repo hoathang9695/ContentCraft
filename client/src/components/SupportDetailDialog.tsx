@@ -2,14 +2,63 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { SupportRequest } from "@/lib/types";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   request: SupportRequest | null;
+  onRequestUpdated?: () => void;
 }
 
-export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
+export function SupportDetailDialog({ isOpen, onClose, request, onRequestUpdated }: Props) {
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+  const handleComplete = async () => {
+    if (!request) return;
+    
+    try {
+      const response = await fetch(`/api/support-requests/${request.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'completed'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update request');
+      }
+
+      toast({
+        title: "Thành công",
+        description: "Đã đánh dấu yêu cầu là đã hoàn thành",
+      });
+
+      setConfirmDialogOpen(false);
+      onRequestUpdated?.();
+      onClose();
+    } catch (error) {
+      console.error('Error completing request:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật trạng thái yêu cầu",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!request) return null;
 
   return (
@@ -56,15 +105,48 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           </div>
         </div>
 
-        <div className="flex justify-end mt-6">
-          <Button 
+        <div className="flex justify-end gap-2 mt-6">
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            Đã xem
+            Đóng
           </Button>
+          {request.status !== 'completed' && (
+            <Button 
+              onClick={() => setConfirmDialogOpen(true)}
+              variant="default"
+            >
+              Đánh dấu hoàn thành
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Xác nhận hoàn thành</AlertDialogTitle>
+          <AlertDialogDescription>
+            Bạn có chắc chắn muốn đánh dấu yêu cầu này là đã hoàn thành?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setConfirmDialogOpen(false)}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="default"
+            onClick={handleComplete}
+          >
+            Xác nhận
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
