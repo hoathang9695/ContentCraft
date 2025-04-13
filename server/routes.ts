@@ -1392,6 +1392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let result;
 
       if (user.role === 'admin') {
+        result = await db.select({
           ...supportRequests,
           assigned_to_name: users.name
         })
