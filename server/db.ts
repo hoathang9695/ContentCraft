@@ -3,17 +3,27 @@ import pg from "pg";
 import * as schema from "@shared/schema";
 
 // Create a connection pool instead of a single client
+// Create pool with better error handling
 export const pool = new pg.Pool({
-  host: process.env.PGHOST || '42.96.40.138',
-  user: process.env.PGUSER || 'postgres',
-  password: process.env.PGPASSWORD || 'chiakhoathanhcong',
-  database: process.env.PGDATABASE || 'content',
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
   port: parseInt(process.env.PGPORT || '5432'),
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
   ssl: false,
   allowExitOnIdle: false
+});
+
+// Test database connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection error:', err);
+  } else {
+    console.log('Database connected successfully');
+  }
 });
 
 // Add error handling
