@@ -1,6 +1,7 @@
+
 import { db } from './server/db';
 import { users, supportRequests } from './shared/schema';
-import { and, ne, eq, sql } from 'drizzle-orm';
+import { and, ne, eq } from 'drizzle-orm';
 
 async function createSupportRequest(assigneeId: number) {
   try {
@@ -18,15 +19,19 @@ async function createSupportRequest(assigneeId: number) {
     };
 
     console.log('Creating support request with data:', requestData);
+    
+    const newRequest = await db.insert(supportRequests)
+      .values(requestData)
+      .returning();
 
-    const result = await db.insert(supportRequests).values(requestData).returning();
+    console.log('Database response:', newRequest);
 
-    if (!result || result.length === 0) {
+    if (!newRequest || newRequest.length === 0) {
       throw new Error('No data returned from database insert');
     }
 
-    console.log('Successfully created support request:', result[0]);
-    return result[0];
+    console.log('Successfully created support request:', newRequest[0]);
+    return newRequest[0];
   } catch (error) {
     console.error('Error creating support request:', error);
     throw error;
@@ -37,6 +42,10 @@ async function simulateKafka4Requests() {
   console.log('Starting simulation...');
 
   try {
+    // Test database connection
+    const testResult = await db.query('SELECT NOW()');
+    console.log('Database connection test:', testResult);
+
     // Get list of active non-admin users
     const activeUsers = await db
       .select()
@@ -53,7 +62,7 @@ async function simulateKafka4Requests() {
       return;
     }
 
-    console.log(`Found ${activeUsers.length} users for assignment`);
+    console.log(`Found ${activeUsers.length} active users:`, activeUsers);
 
     // Create 4 support requests
     for (let i = 0; i < 4; i++) {
@@ -61,9 +70,9 @@ async function simulateKafka4Requests() {
       const assignee = activeUsers[assigneeIndex];
 
       try {
-        console.log(`Creating request ${i + 1}/4 for ${assignee.username}`);
+        console.log(`Creating request ${i + 1}/4 for user ID ${assignee.id}`);
         const request = await createSupportRequest(assignee.id);
-        console.log(`Created request ${i + 1}, assigned to ${assignee.name}`);
+        console.log(`Created request ${i + 1}, assigned to user ID ${assignee.id}`);
 
         // Wait 1 second between requests
         await new Promise(resolve => setTimeout(resolve, 1000));
