@@ -1,6 +1,7 @@
+
 import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
 import { db } from './db';
-import { contents, users, supportRequests } from '../shared/schema';
+import { users, supportRequests } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 import { log } from './vite';
 
@@ -9,8 +10,6 @@ let consumer: Consumer;
 export interface ContentMessage {
   externalId: string;
   source?: string;
-  categories?: string;
-  labels?: string;
   sourceVerification?: 'verified' | 'unverified';
 }
 
@@ -96,7 +95,7 @@ export async function processContentMessage(messageWithStringId: any) {
     const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
 
     if (!activeUsers || activeUsers.length === 0) {
-      log('No active non-admin users found to assign content.', 'kafka');
+      log('No active users found to assign request.', 'kafka');
       return;
     }
 
@@ -143,12 +142,12 @@ export async function processContentMessage(messageWithStringId: any) {
       if (!newRequest || newRequest.length === 0) {
         log('Warning: No data returned after insert', 'kafka');
       }
+
+      log(`Support request created and assigned to user ID ${assigned_to_id} (${activeUsers[nextAssigneeIndex].username})`, 'kafka');
     } catch (err) {
       log(`Error creating support request: ${err}`, 'kafka');
       throw err;
     }
-
-    log(`Support request created and assigned to user ID ${assigned_to_id} (${activeUsers[nextAssigneeIndex].username})`, 'kafka');
   } catch (error) {
     log(`Error processing content message: ${error}`, 'kafka-error');
     throw error;
