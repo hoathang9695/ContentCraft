@@ -47,17 +47,19 @@ export default function SupportPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
-    queryKey: ['/api/support-requests', startDate, endDate],
+    queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString()],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
+      const response = await fetch(`/api/support-requests?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch support requests');
+      return response.json();
+    },
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     refetchOnReconnect: false,
-    staleTime: Infinity,
-    onSuccess: (data) => {
-      console.log('Support requests data received:', data);
-    },
-    onError: (err) => {
-      console.error('Error fetching support requests:', err);
-    }
+    staleTime: Infinity
   });
 
   const filteredRequests = useMemo(() => {
