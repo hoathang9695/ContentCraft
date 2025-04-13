@@ -259,22 +259,11 @@ export default function SupportPage() {
         </div>
 
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <Input 
             placeholder="Tìm kiếm yêu cầu..." 
             className="max-w-[300px]"
           />
-          <Select value={userFilter} onValueChange={setUserFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Chọn người dùng" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={null}>Tất cả</SelectItem>
-              {users.map(user => (
-                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="bg-card rounded-lg shadow">
