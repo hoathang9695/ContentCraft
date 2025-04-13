@@ -1,6 +1,6 @@
 import { db } from './server/db';
 import { users, supportRequests } from './shared/schema';
-import { and, ne, eq } from 'drizzle-orm';
+import { and, ne, eq, sql } from 'drizzle-orm';
 
 async function createSupportRequest(assigneeId: number) {
   try {
@@ -61,7 +61,7 @@ async function simulateKafka4Requests() {
       const assignee = activeUsers[assigneeIndex];
 
       try {
-        console.log(`Creating request ${i + 1}/4 for ${assignee.name}`);
+        console.log(`Creating request ${i + 1}/4 for ${assignee.username}`);
         const request = await createSupportRequest(assignee.id);
         console.log(`Created request ${i + 1}, assigned to ${assignee.name}`);
 
