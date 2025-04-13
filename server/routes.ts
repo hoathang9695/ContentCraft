@@ -1391,13 +1391,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let result;
 
       if (user.role === 'admin') {
-        result = await db.select().from(supportRequests).orderBy(desc(supportRequests.created_at));
+        result = await db.select({
+          ...supportRequests,
+          assigned_to_name: users.name
+        })
+        .from(supportRequests)
+        .leftJoin(users, eq(supportRequests.assigned_to_id, users.id))
+        .orderBy(desc(supportRequests.created_at));
       } else {
-        result = await db
-          .select()
-          .from(supportRequests)
-          .where(eq(supportRequests.assigned_to_id, user.id))
-          .orderBy(desc(supportRequests.created_at));
+        result = await db.select({
+          ...supportRequests,
+          assigned_to_name: users.name
+        })
+        .from(supportRequests)
+        .leftJoin(users, eq(supportRequests.assigned_to_id, users.id))
+        .where(eq(supportRequests.assigned_to_id, user.id))
+        .orderBy(desc(supportRequests.created_at));
       }
 
       console.log(`Found ${result.length} support requests`);
