@@ -5,16 +5,24 @@ import * as schema from "@shared/schema";
 
 // Create a connection pool with detailed logging
 export const pool = new pg.Pool({
-  host: process.env.PGHOST || '42.96.40.138',
-  user: process.env.PGUSER || 'postgres',
-  password: process.env.PGPASSWORD || 'chiakhoathanhcong',
-  database: process.env.PGDATABASE || 'content',
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
   port: parseInt(process.env.PGPORT || '5432'),
-  max: 10,
+  max: 10, 
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
   ssl: false,
   allowExitOnIdle: false
+});
+
+// Log connection details
+console.log('Database connection config:', {
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  user: process.env.PGUSER,
+  port: process.env.PGPORT
 });
 
 // Add detailed connection logging and error handling

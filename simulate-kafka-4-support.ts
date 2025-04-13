@@ -33,7 +33,6 @@ async function createSupportRequest(assigneeId: number) {
     
     const newRequest = await db.insert(supportRequests)
       .values(requestData)
-      .returning()
       .execute();
 
     console.log('Successfully created support request:', newRequest[0]);
