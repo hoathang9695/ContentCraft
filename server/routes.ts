@@ -1387,14 +1387,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/support-requests', isAuthenticated, async (req, res) => {
     console.log('Fetching support requests');
     try {
-      const result = await db.select().from(supportRequests).orderBy(desc(supportRequests.created_at));
-      console.log(`Found ${result.length} support requests`);
-      return res.json(result);
-    } catch (err) {
-      console.error('Error fetching support requests:', err);
+      const user = req.user as Express.User;
+      let supportRequests;
+
+      if (user.role === 'admin') {
+        supportRequests = await storage.getAllSupportRequests();
+      } else {
+        supportRequests = await storage.getSupportRequestsByAssignee(user.id);
+      }
+
+      res.json(supportRequests);
+    } catch (error) {
+      console.error('Error fetching support requests:', error);
       return res.status(500).json({ 
         message: 'Error fetching support requests',
-        error: err instanceof Error ? err.message : String(err)
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });

@@ -93,6 +93,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(supportRequests).orderBy(desc(supportRequests.created_at));
   }
 
+  async getSupportRequestsByAssignee(userId: number): Promise<SupportRequest[]> {
+    return await db
+      .select()
+      .from(supportRequests)
+      .where(eq(supportRequests.assigned_to_id, userId))
+      .orderBy(desc(supportRequests.created_at));
+  }
+
   async updateSupportRequest(id: number, request: Partial<InsertSupportRequest>): Promise<SupportRequest | undefined> {
     const result = await db
       .update(supportRequests)
