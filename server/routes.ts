@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
 import { desc } from 'drizzle-orm';
-import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema } from "@shared/schema";
+import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests } from "@shared/schema";
+import { pool, db } from "./db";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -1386,27 +1387,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/support-requests', isAuthenticated, async (req, res) => {
     console.log('Fetching support requests');
     try {
-      console.log('Database config:', {
-        host: process.env.PGHOST,
-        database: process.env.PGDATABASE,
-        user: process.env.PGUSER
-      });
-      
-      const result = await pool.query(`
-        SELECT * FROM support_requests 
-        ORDER BY created_at DESC
-      `);
-      
-      console.log('Query result:', result);
-      console.log(`Found ${result.rows.length} support requests`);
-      
-      return res.json(result.rows || []);
+      const result = await db.select().from(supportRequests).orderBy(desc(supportRequests.created_at));
+      console.log(`Found ${result.length} support requests`);
+      return res.json(result);
     } catch (err) {
-      console.error('Detailed error:', {
-        name: err.name,
-        message: err.message,
-        stack: err.stack
-      });
+      console.error('Error fetching support requests:', err);
       return res.status(500).json({ 
         message: 'Error fetching support requests',
         error: err instanceof Error ? err.message : String(err)
