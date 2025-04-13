@@ -1,14 +1,14 @@
+
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
 
-// Create a connection pool instead of a single client
-// Create pool with better error handling
+// Create a connection pool with detailed logging
 export const pool = new pg.Pool({
-  host: process.env.PGHOST,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
+  host: process.env.PGHOST || '42.96.40.138',
+  user: process.env.PGUSER || 'postgres',
+  password: process.env.PGPASSWORD || 'chiakhoathanhcong',
+  database: process.env.PGDATABASE || 'content',
   port: parseInt(process.env.PGPORT || '5432'),
   max: 10,
   idleTimeoutMillis: 30000,
@@ -17,28 +17,29 @@ export const pool = new pg.Pool({
   allowExitOnIdle: false
 });
 
-// Test database connection
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Database connection error:', err);
-  } else {
-    console.log('Database connected successfully');
-  }
-});
-
-// Add error handling
-pool.on('error', (err: Error) => {
-  console.error('Unexpected error on idle client', err);
-});
-
-// Listen for specific connection issues
-pool.on('connect', (client) => {
-  console.log('Connected to PostgreSQL database');
-  client.on('error', (err) => {
-    console.error('Database client error:', err);
+// Add detailed connection logging
+pool.on('connect', () => {
+  console.log('Database connected successfully');
+  console.log('Connection config:', {
+    host: pool.options.host,
+    database: pool.options.database,
+    user: pool.options.user,
+    port: pool.options.port
   });
 });
 
+pool.on('error', (err) => {
+  console.error('Database pool error:', err);
+});
 
-// Create Drizzle ORM instance with our schema using the pool
+// Test connection immediately
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection test failed:', err);
+  } else {
+    console.log('Database connection test successful:', res.rows[0]);
+  }
+});
+
+// Create Drizzle ORM instance
 export const db = drizzle(pool, { schema });

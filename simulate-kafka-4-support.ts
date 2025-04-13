@@ -33,7 +33,16 @@ async function createSupportRequest(assigneeId: number) {
 }
 
 async function simulateKafka4Requests() {
+  console.log('Starting simulation with database config:', {
+    host: process.env.PGHOST || '42.96.40.138',
+    database: process.env.PGDATABASE || 'content',
+    user: process.env.PGUSER || 'postgres'
+  });
+  
   try {
+    // Test database connection first
+    const testResult = await db.execute(sql`SELECT NOW()`);
+    console.log('Database connection successful:', testResult);
     await clearDatabase();
     
     console.log('Bắt đầu mô phỏng tạo 4 yêu cầu hỗ trợ...');
