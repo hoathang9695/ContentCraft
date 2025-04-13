@@ -1,5 +1,5 @@
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { SupportRequest } from "@/lib/types";
@@ -15,25 +15,21 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[800px] p-6 gap-0">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Chi tiết yêu cầu hỗ trợ
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Xem thông tin chi tiết của yêu cầu hỗ trợ
-            </p>
-          </div>
+      <DialogContent className="max-w-[800px]">
+        <DialogHeader>
+          <DialogTitle>Chi tiết yêu cầu hỗ trợ</DialogTitle>
+          <DialogDescription>
+            Xem thông tin chi tiết của yêu cầu hỗ trợ
+          </DialogDescription>
           <button
             onClick={onClose}
-            className="hover:bg-gray-200 rounded-full p-1.5 transition"
+            className="absolute right-4 top-4 hover:bg-gray-200 rounded-full p-1.5 transition"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
-        </div>
+        </DialogHeader>
 
-        <div className="space-y-4 text-[15px]">
+        <div className="py-4 space-y-4 text-[15px]">
           <div className="flex">
             <span className="min-w-[120px] text-gray-600">
               Họ và tên:
@@ -71,20 +67,17 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
-          <Button
-            onClick={onClose}
-            variant="outline"
-          >
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose}>
             Đóng
           </Button>
-          <Button
+          <Button 
             onClick={onClose}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
             Đã xem
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
