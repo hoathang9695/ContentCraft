@@ -15,21 +15,33 @@ async function clearDatabase() {
 }
 
 async function createSupportRequest(assigneeId: number) {
-  const now = new Date();
-  const requestData = {
-    fullName: "System Generated",
-    email: "system@example.com",
-    subject: `Yêu cầu hỗ trợ ${now.getTime()}`,
-    content: `Yêu cầu hỗ trợ tự động được tạo lúc ${now.toISOString()}`,
-    status: 'pending',
-    assigned_to_id: assigneeId,
-    assigned_at: now,
-    created_at: now,
-    updated_at: now
-  };
+  try {
+    const now = new Date();
+    const requestData = {
+      fullName: "System Generated",
+      email: "system@example.com",
+      subject: `Yêu cầu hỗ trợ ${now.getTime()}`,
+      content: `Yêu cầu hỗ trợ tự động được tạo lúc ${now.toISOString()}`,
+      status: 'pending',
+      assigned_to_id: assigneeId,
+      assigned_at: now,
+      created_at: now,
+      updated_at: now
+    };
 
-  const newRequest = await db.insert(supportRequests).values(requestData).returning();
-  return newRequest[0];
+    console.log('Attempting to create support request with data:', requestData);
+    
+    const newRequest = await db.insert(supportRequests)
+      .values(requestData)
+      .returning()
+      .execute();
+
+    console.log('Successfully created support request:', newRequest[0]);
+    return newRequest[0];
+  } catch (error) {
+    console.error('Error creating support request:', error);
+    throw error;
+  }
 }
 
 async function simulateKafka4Requests() {
@@ -41,10 +53,10 @@ async function simulateKafka4Requests() {
   
   try {
     // Test database connection first
-    const testResult = await db.execute(sql`SELECT NOW()`);
+    const testResult = await db.query('SELECT NOW()');
     console.log('Database connection successful:', testResult);
-    await clearDatabase();
     
+    // Don't clear database to preserve existing data
     console.log('Bắt đầu mô phỏng tạo 4 yêu cầu hỗ trợ...');
 
     // Lấy danh sách người dùng active không phải admin

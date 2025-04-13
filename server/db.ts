@@ -17,7 +17,7 @@ export const pool = new pg.Pool({
   allowExitOnIdle: false
 });
 
-// Add detailed connection logging
+// Add detailed connection logging and error handling
 pool.on('connect', () => {
   console.log('Database connected successfully');
   console.log('Connection config:', {
@@ -30,16 +30,25 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('Database pool error:', err);
+  // Attempt to reconnect on error
+  pool.connect().catch(connectErr => {
+    console.error('Failed to reconnect to database:', connectErr);
+  });
 });
 
-// Test connection immediately
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Database connection test failed:', err);
-  } else {
+// Test connection immediately and retry if needed
+async function testConnection() {
+  try {
+    const res = await pool.query('SELECT NOW()');
     console.log('Database connection test successful:', res.rows[0]);
+  } catch (err) {
+    console.error('Database connection test failed:', err);
+    // Wait 5 seconds and retry
+    setTimeout(testConnection, 5000);
   }
-});
+}
+
+testConnection();
 
 // Create Drizzle ORM instance
 export const db = drizzle(pool, { schema });
