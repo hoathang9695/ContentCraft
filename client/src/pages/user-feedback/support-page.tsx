@@ -38,8 +38,11 @@ interface SupportRequest {
 
 export default function SupportPage() {
   const { toast } = useToast();
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  // Thiết lập ngày bắt đầu là ngày 1 của tháng hiện tại và ngày kết thúc là ngày hiện tại
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
+  const [endDate, setEndDate] = useState<Date>(today);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
@@ -81,13 +84,8 @@ export default function SupportPage() {
   return (
     <DashboardLayout>
       <div className="container mx-auto p-4">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Yêu cầu hỗ trợ</h1>
-          <p className="text-muted-foreground">
-            Quản lý các yêu cầu hỗ trợ từ người dùng
-          </p>
-
-          <div className="flex items-center mt-4">
+        <div className="mb-4">
+          <div className="flex items-center">
             <div className="flex-shrink-0 mr-auto">
               <div className="bg-background border rounded-md p-1">
                 <div className="flex space-x-1">
