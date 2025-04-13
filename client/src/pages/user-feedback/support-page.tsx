@@ -231,6 +231,8 @@ export default function SupportPage() {
             isLoading={isLoading}
             searchable
             searchPlaceholder="Tìm kiếm yêu cầu..."
+            pagination
+            pageSize={10}
             columns={[
               {
                 key: 'id',
