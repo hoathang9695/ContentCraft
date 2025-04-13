@@ -110,13 +110,14 @@ export default function SupportPage() {
     });
   };
 
-  // Fetch users for filtering
+  // Fetch active users for filtering
   const { data: users = [] } = useQuery({
     queryKey: ['/api/users'],
     queryFn: async () => {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users');
-      return response.json();
+      const allUsers = await response.json();
+      return allUsers.filter(user => user.status === 'active');
     }
   });
 
