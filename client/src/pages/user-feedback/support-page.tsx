@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ interface SupportRequest {
   content: string;
   status: 'pending' | 'processing' | 'completed';
   assigned_to_id: number | null;
+  assigned_to_name: string | null; // Added assigned_to_name
   assigned_at: string | null;
   response_content: string | null;
   responder_id: number | null;
@@ -125,7 +125,7 @@ export default function SupportPage() {
                   <div>
                     {row.assigned_to_id ? (
                       <div className="text-sm">
-                        <div>{row.assigned_to_name}</div>
+                        <div>{row.assigned_to_name}</div> {/* Changed to display assigned_to_name */}
                         <div className="text-muted-foreground">
                           {format(new Date(row.assigned_at!), 'dd/MM/yyyy HH:mm')}
                         </div>
