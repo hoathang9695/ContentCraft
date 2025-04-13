@@ -1,4 +1,7 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useState, useMemo } from "react";
+import { DatePicker } from "@/components/ui/date-range-picker";
+import { startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -30,8 +33,12 @@ interface SupportRequest {
 }
 
 export default function SupportPage() {
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
+
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
-    queryKey: ['/api/support-requests'],
+    queryKey: ['/api/support-requests', startDate, endDate],
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     refetchOnReconnect: false,
@@ -44,7 +51,32 @@ export default function SupportPage() {
     }
   });
 
-  console.log('Current support requests:', supportRequests);
+  // Filter support requests based on date range and status
+  const filteredRequests = useMemo(() => {
+    if (!supportRequests) return [];
+    
+    return supportRequests.filter(request => {
+      // Date range filter
+      if (startDate && endDate) {
+        const requestDate = new Date(request.created_at);
+        const start = startOfDay(startDate);
+        const end = endOfDay(endDate);
+        
+        if (!(requestDate >= start && requestDate <= end)) {
+          return false;
+        }
+      }
+
+      // Status filter
+      if (statusFilter !== 'all') {
+        return request.status === statusFilter;
+      }
+
+      return true;
+    });
+  }, [supportRequests, startDate, endDate, statusFilter]);
+
+  console.log('Current support requests:', filteredRequests);
   console.log('Loading state:', isLoading);
   console.log('Error state:', error);
 
@@ -56,11 +88,75 @@ export default function SupportPage() {
           <p className="text-muted-foreground">
             Quản lý các yêu cầu hỗ trợ từ người dùng
           </p>
+          
+          <div className="flex flex-col gap-4 mt-4 md:flex-row md:items-end">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Ngày bắt đầu</label>
+              <DatePicker
+                value={startDate}
+                onChange={setStartDate}
+                className="w-[200px]"
+              />
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Ngày kết thúc</label>
+              <DatePicker
+                value={endDate}
+                onChange={setEndDate}
+                className="w-[200px]"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('all')}
+              >
+                Tất cả
+              </Button>
+              <Button
+                variant={statusFilter === 'completed' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('completed')}
+              >
+                Đã xử lý
+              </Button>
+              <Button
+                variant={statusFilter === 'pending' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('pending')}
+              >
+                Chưa xử lý
+              </Button>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="default"
+                className="bg-green-500 hover:bg-green-600"
+                onClick={() => {
+                  if (!startDate || !endDate) return;
+                  // Refresh query
+                }}
+              >
+                Áp dụng
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStartDate(undefined);
+                  setEndDate(undefined);
+                  setStatusFilter('all');
+                }}
+              >
+                Xóa bộ lọc
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="bg-card rounded-lg shadow">
           <DataTable
-            data={supportRequests}
+            data={filteredRequests}
             isLoading={isLoading}
             searchable
             searchPlaceholder="Tìm kiếm yêu cầu..."
