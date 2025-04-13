@@ -35,34 +35,34 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
         <div className="space-y-4 text-[15px]">
           <div className="flex">
-            <span className="min-w-[120px] text-gray-900">
+            <span className="min-w-[120px] text-gray-600">
               Họ và tên:
             </span>
-            <span className="text-indigo-600 font-medium">
+            <span className="text-purple-600 font-medium">
               {request.full_name}
             </span>
           </div>
           
           <div className="flex">
-            <span className="min-w-[120px] text-gray-900">
+            <span className="min-w-[120px] text-gray-600">
               Email:
             </span>
-            <span className="text-indigo-600 font-medium">
+            <span className="text-purple-600 font-medium">
               {request.email}
             </span>
           </div>
 
           <div className="flex">
-            <span className="min-w-[120px] text-gray-900">
+            <span className="min-w-[120px] text-gray-600">
               Chủ đề:
             </span>
-            <span className="text-indigo-600 font-medium">
+            <span className="text-purple-600 font-medium">
               {request.subject}
             </span>
           </div>
 
           <div>
-            <span className="text-gray-900 block mb-2">
+            <span className="text-gray-600 block mb-2">
               Nội dung:
             </span>
             <div className="bg-gray-50 p-4 rounded-lg text-[15px] leading-relaxed text-gray-700 whitespace-pre-wrap">
@@ -71,10 +71,16 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           </div>
         </div>
 
-        <div className="flex justify-end mt-6">
+        <div className="flex justify-end gap-2 mt-6">
           <Button
             onClick={onClose}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6"
+            variant="outline"
+          >
+            Đóng
+          </Button>
+          <Button
+            onClick={onClose}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6"
           >
             Đã xem
           </Button>
