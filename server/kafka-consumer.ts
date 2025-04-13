@@ -1,4 +1,3 @@
-
 import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
 import { db } from './db';
 import { users, supportRequests } from '../shared/schema';
@@ -25,16 +24,17 @@ export interface SupportMessage {
  */
 export async function setupKafkaConsumer() {
   try {
-    // Kiểm tra xem Kafka có được kích hoạt không
     if (process.env.KAFKA_ENABLED !== 'true') {
       log('Kafka is not enabled', 'kafka');
       return;
     }
-    const sasl = process.env.KAFKA_SASL == 'true'? {
+
+    const sasl = process.env.KAFKA_SASL == 'true' ? {
       mechanism: process.env.KAFKA_SASL_MECHANISMS as 'PLAIN',
       username: process.env.KAFKA_SASL_USERNAME || '',
       password: process.env.KAFKA_SASL_PASSWORD || ''
-    }: undefined
+    } : undefined;
+
     const kafka = new Kafka({
       clientId: 'content-processing-service',
       brokers: process.env.KAFKA_BROKERS?.split(',') || [],
@@ -44,12 +44,12 @@ export async function setupKafkaConsumer() {
       authenticationTimeout: 1000,
     });
 
-    consumer = kafka.consumer({ 
+    consumer = kafka.consumer({
       groupId: process.env.KAFKA_GROUP_ID || 'emso-processor'
     });
-    
+
     await consumer.connect();
-    
+
     const topics = process.env.KAFKA_TOPICS?.split(',') || ['content_management'];
     for (const topic of topics) {
       await consumer.subscribe({ topic, fromBeginning: true });
@@ -57,7 +57,6 @@ export async function setupKafkaConsumer() {
 
     log('Connected to Kafka and subscribed to topics: ' + topics.join(', '), 'kafka');
 
-    // Bắt đầu tiêu thụ tin nhắn
     await consumer.run({
       eachMessage: async (payload: EachMessagePayload) => {
         const { message } = payload;
@@ -66,9 +65,9 @@ export async function setupKafkaConsumer() {
         if (!parsedMessage) return;
 
         if ('externalId' in parsedMessage) {
-          await processContentMessage(parsedMessage);
+          await processContentMessage(parsedMessage as ContentMessage);
         } else if ('full_name' in parsedMessage) {
-          await processSupportMessage(parsedMessage);
+          await processSupportMessage(parsedMessage as SupportMessage);
         }
       },
     });
@@ -80,23 +79,19 @@ export async function setupKafkaConsumer() {
   }
 }
 
-/**
- * Phân tích tin nhắn từ Kafka
- */
 function parseMessage(messageValue: Buffer | null): ContentMessage | SupportMessage | null {
   if (!messageValue) return null;
 
   try {
     const value = messageValue.toString();
     const message = JSON.parse(value);
-    
-    // Determine message type based on properties
+
     if ('full_name' in message && 'email' in message) {
       return message as SupportMessage;
     } else if ('externalId' in message) {
       return message as ContentMessage;
     }
-    
+
     return null;
   } catch (error) {
     log(`Error parsing message: ${error}`, 'kafka-error');
@@ -104,14 +99,8 @@ function parseMessage(messageValue: Buffer | null): ContentMessage | SupportMess
   }
 }
 
-/**
- * Xử lý tin nhắn Kafka về nội dung
- */
-export async function processContentMessage(messageWithStringId: any) {
+async function processContentMessage(contentMessage: ContentMessage) {
   try {
-    const contentMessage = messageWithStringId;
-
-    // Lấy danh sách người dùng active để phân công
     const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
 
     if (!activeUsers || activeUsers.length === 0) {
@@ -119,18 +108,15 @@ export async function processContentMessage(messageWithStringId: any) {
       return;
     }
 
-    // Tìm người xử lý tiếp theo dựa trên hệ thống turn-based
     const lastAssignedRequest = await db.query.supportRequests.findFirst({
       orderBy: (supportRequests, { desc }) => [desc(supportRequests.assigned_at)],
     });
 
     let nextAssigneeIndex = 0;
-
     if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
         user => user.id === lastAssignedRequest.assigned_to_id
       );
-
       if (lastAssigneeIndex !== -1) {
         nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
       }
@@ -139,18 +125,30 @@ export async function processContentMessage(messageWithStringId: any) {
     const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
-    // Tạo yêu cầu hỗ trợ mới
-    try {
-      const insertData = {
-        full_name: "System Generated",
-        email: "system@example.com", 
-        subject: `Auto Request content:${contentMessage.externalId}`,
-        content: `Auto-generated request from Kafka message: ${JSON.stringify(messageWithStringId)}`,
-        status: 'pending',
+    const insertData = {
+      full_name: "System Generated",
+      email: "system@example.com",
+      subject: `Auto Request content:${contentMessage.externalId}`,
+      content: `Auto-generated request from Kafka message: ${JSON.stringify(contentMessage)}`,
+      status: 'pending',
+      assigned_to_id,
+      assigned_at: now,
+      created_at: now,
+      updated_at: now
+    };
+
+    const newRequest = await db.insert(supportRequests).values(insertData).returning();
+    log(`Content request created and assigned to user ID ${assigned_to_id}`, 'kafka');
+
+    return newRequest[0];
+  } catch (error) {
+    log(`Error processing content message: ${error}`, 'kafka-error');
+    throw error;
+  }
+}
 
 async function processSupportMessage(message: SupportMessage) {
   try {
-    // Lấy danh sách người dùng active để phân công
     const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
 
     if (!activeUsers || activeUsers.length === 0) {
@@ -158,7 +156,6 @@ async function processSupportMessage(message: SupportMessage) {
       return;
     }
 
-    // Tìm người xử lý tiếp theo dựa trên hệ thống turn-based
     const lastAssignedRequest = await db.query.supportRequests.findFirst({
       orderBy: (supportRequests, { desc }) => [desc(supportRequests.assigned_at)],
     });
@@ -176,7 +173,6 @@ async function processSupportMessage(message: SupportMessage) {
     const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
-    // Tạo yêu cầu hỗ trợ mới
     const insertData = {
       ...message,
       status: 'pending',
@@ -196,36 +192,6 @@ async function processSupportMessage(message: SupportMessage) {
   }
 }
 
-        assigned_to_id,
-        assigned_at: now,
-        created_at: now,
-        updated_at: now
-      };
-
-      log(`Attempting to insert support request with data: ${JSON.stringify(insertData)}`, 'kafka');
-
-      const newRequest = await db.insert(supportRequests).values(insertData).returning();
-
-      log(`Successfully created support request: ${JSON.stringify(newRequest)}`, 'kafka');
-
-      if (!newRequest || newRequest.length === 0) {
-        log('Warning: No data returned after insert', 'kafka');
-      }
-
-      log(`Support request created and assigned to user ID ${assigned_to_id} (${activeUsers[nextAssigneeIndex].username})`, 'kafka');
-    } catch (err) {
-      log(`Error creating support request: ${err}`, 'kafka');
-      throw err;
-    }
-  } catch (error) {
-    log(`Error processing content message: ${error}`, 'kafka-error');
-    throw error;
-  }
-}
-
-/**
- * Đóng kết nối Kafka
- */
 export async function disconnectKafkaConsumer() {
   if (consumer) {
     await consumer.disconnect();
