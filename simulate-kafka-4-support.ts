@@ -31,7 +31,12 @@ async function createSupportRequest(assigneeId: number) {
     
     const result = await db.insert(supportRequests)
       .values(requestData)
-      .returning();
+      .returning({
+        id: supportRequests.id,
+        fullName: supportRequests.fullName,
+        subject: supportRequests.subject,
+        assigned_to_id: supportRequests.assigned_to_id
+      });
 
     console.log('Raw database result:', result);
     
@@ -66,7 +71,13 @@ async function simulateKafka4Requests() {
     });
 
     // Test database connection first
-    const testResult = await db.execute(sql`SELECT NOW()`);
+    console.log('Testing database connection with config:', {
+      host: process.env.PGHOST || '42.96.40.138',
+      database: process.env.PGDATABASE || 'content',
+      user: process.env.PGUSER || 'postgres'
+    });
+
+    const testResult = await db.query('SELECT NOW()');
     console.log('Database connection successful:', testResult);
     
     // Don't clear database to preserve existing data
