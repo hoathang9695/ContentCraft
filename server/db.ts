@@ -4,12 +4,15 @@ import * as schema from "@shared/schema";
 
 // Create a connection pool instead of a single client
 export const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://postgres:chiakhoathanhcong@42.96.40.138:5432/content',
-  max: 10, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 10000, // Increase connection timeout to 10 seconds
-  ssl: false, // Disable SSL since connecting to external DB
-  // Add auto reconnect logic
+  host: process.env.PGHOST || '42.96.40.138',
+  user: process.env.PGUSER || 'postgres',
+  password: process.env.PGPASSWORD || 'chiakhoathanhcong',
+  database: process.env.PGDATABASE || 'content',
+  port: parseInt(process.env.PGPORT || '5432'),
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  ssl: false,
   allowExitOnIdle: false
 });
 
