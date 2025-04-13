@@ -117,7 +117,7 @@ export default function SupportPage() {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users');
       const allUsers = await response.json();
-      return allUsers.filter(user => user.status === 'active' && user.role !== 'admin'); 'active');
+      return allUsers.filter(user => user.status === 'active' && user.role !== 'admin');
     }
   });
 
