@@ -259,6 +259,16 @@ export default function SupportPage() {
           <Input 
             placeholder="Tìm kiếm yêu cầu..." 
             className="max-w-[300px]"
+            onChange={(e) => {
+              const searchTerm = e.target.value.toLowerCase();
+              const filtered = supportRequests.filter(request => 
+                request.full_name.toLowerCase().includes(searchTerm) ||
+                request.email.toLowerCase().includes(searchTerm) ||
+                request.subject.toLowerCase().includes(searchTerm) ||
+                request.content.toLowerCase().includes(searchTerm)
+              );
+              setFilteredRequests(filtered);
+            }}
           />
           <Select 
             value={userFilter?.toString() || "all"} 
