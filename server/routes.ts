@@ -1382,6 +1382,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/support-requests', isAuthenticated, async (req, res) => {
+    console.log('Fetching support requests');
+    try {
+      const requests = await storage.getAllSupportRequests();
+      console.log(`Found ${requests.length} support requests`);
+      console.log('First request if any:', requests[0]);
+      res.json(requests);
+    } catch (err) {
+      console.error('Error fetching support requests:', err);
+      res.status(500).json({ error: 'Error fetching support requests' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

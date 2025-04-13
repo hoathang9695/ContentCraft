@@ -142,19 +142,32 @@ export async function processContentMessage(contentMessage: ContentMessage) {
     const now = new Date();
 
     // Tạo yêu cầu hỗ trợ mới
-    const newRequest = await db.insert(supportRequests).values({
-      fullName: "System Generated",
-      email: "system@example.com",
-      subject: `Auto Request ${contentMessage.externalId}`,
-      content: `Auto-generated request from Kafka message: ${JSON.stringify(messageWithStringId)}`,
-      status: 'pending',
-      assigned_to_id,
-      assigned_at: now,
-      created_at: now,
-      updated_at: now
-    }).returning();
+    try {
+      const insertData = {
+        fullName: "System Generated",
+        email: "system@example.com", 
+        subject: `Auto Request ${contentMessage.externalId}`,
+        content: `Auto-generated request from Kafka message: ${JSON.stringify(messageWithStringId)}`,
+        status: 'pending',
+        assigned_to_id,
+        assigned_at: now,
+        created_at: now,
+        updated_at: now
+      };
 
-    log(`Created new support request: ${JSON.stringify(newRequest)}`, 'kafka');
+      log(`Attempting to insert support request with data: ${JSON.stringify(insertData)}`, 'kafka');
+
+      const newRequest = await db.insert(supportRequests).values(insertData).returning();
+      
+      log(`Successfully created support request: ${JSON.stringify(newRequest)}`, 'kafka');
+
+      if (!newRequest || newRequest.length === 0) {
+        log('Warning: No data returned after insert', 'kafka');
+      }
+    } catch (err) {
+      log(`Error creating support request: ${err}`, 'kafka');
+      throw err;
+    }
 
     log(`Support request created and assigned to user ID ${assigned_to_id} (${activeUsers[nextAssigneeIndex].username})`, 'kafka');
   } catch (error) {
