@@ -1,7 +1,8 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
-import { DatePicker } from "@/components/ui/date-range-picker";
+import { Popover, PopoverTrigger, PopoverContent } from "@radix-ui/react-popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "@heroicons/react/24/solid";
 import { startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -41,8 +42,8 @@ export default function SupportPage() {
   // Thiết lập ngày bắt đầu là ngày 1 của tháng hiện tại và ngày kết thúc là ngày hiện tại
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
-  const [endDate, setEndDate] = useState<Date>(today);
+  const [startDate, setStartDate] = useState<Date | undefined>(firstDayOfMonth);
+  const [endDate, setEndDate] = useState<Date | undefined>(today);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
@@ -61,13 +62,13 @@ export default function SupportPage() {
 
   const filteredRequests = useMemo(() => {
     if (!supportRequests) return [];
-    
+
     return supportRequests.filter(request => {
       if (startDate && endDate) {
         const requestDate = new Date(request.created_at);
         const start = startOfDay(startDate);
         const end = endOfDay(endDate);
-        
+
         if (!(requestDate >= start && requestDate <= end)) {
           return false;
         }
@@ -117,30 +118,68 @@ export default function SupportPage() {
             <div className="flex items-center gap-2">
               <div>
                 <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
-                <DatePicker
-                  value={startDate}
-                  onChange={(date) => {
-                    setStartDate(date);
-                    if (date && date > endDate!) {
-                      setEndDate(date);
-                    }
-                  }}
-                  className="w-[200px]"
-                />
+                <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[200px] justify-start text-left font-normal",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, "dd/MM/yyyy") : <span>Chọn ngày</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={(date) => {
+                          if (date) {
+                            setStartDate(date);
+                            if (date > endDate!) {
+                              setEndDate(date);
+                            }
+                          }
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
               </div>
-              
+
               <div>
                 <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
-                <DatePicker
-                  value={endDate}
-                  onChange={(date) => {
-                    setEndDate(date);
-                    if (date && date < startDate!) {
-                      setStartDate(date);
-                    }
-                  }}
-                  className="w-[200px]"
-                />
+                <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[200px] justify-start text-left font-normal",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? format(endDate, "dd/MM/yyyy") : <span>Chọn ngày</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={(date) => {
+                          if (date) {
+                            setEndDate(date);
+                            if (date < startDate!) {
+                              setStartDate(date);
+                            }
+                          }
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
               </div>
 
               <div className="flex items-end gap-2 h-[74px]">
@@ -158,7 +197,7 @@ export default function SupportPage() {
                 >
                   Áp dụng
                 </Button>
-                
+
                 <Button 
                   variant="outline" 
                   className="h-10"
