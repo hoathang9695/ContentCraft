@@ -13,7 +13,19 @@ export const pool = new pg.Pool({
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
   ssl: false,
-  allowExitOnIdle: false
+  allowExitOnIdle: false,
+  // Add logging
+  query_timeout: 10000,
+  statement_timeout: 10000
+});
+
+// Add error logging
+pool.on('error', (err) => {
+  console.error('Unexpected database error:', err);
+});
+
+pool.on('connect', () => {
+  console.log('Connected to database successfully');
 });
 
 // Add error handling
