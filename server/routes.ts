@@ -1392,6 +1392,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (result && result.length > 0) {
         console.log('First request:', result[0]);
       }
+      return res.json(result);
+    } catch (err) {
+      console.error('Error fetching support requests:', err);
+      return res.status(500).json({ 
+        message: 'Error fetching support requests',
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
+  });st request:', result[0]);
+      }
       return res.json(result || []);
     } catch (err) {
       console.error('Error fetching support requests:', err);
