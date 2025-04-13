@@ -125,7 +125,7 @@ export default function SupportPage() {
                   <div>
                     {row.assigned_to_id ? (
                       <div className="text-sm">
-                        <div>ID: {row.assigned_to_id}</div>
+                        <div>{row.assigned_to_name}</div>
                         <div className="text-muted-foreground">
                           {format(new Date(row.assigned_at!), 'dd/MM/yyyy HH:mm')}
                         </div>
