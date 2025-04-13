@@ -75,6 +75,9 @@ function SupportDetailDialog({ isOpen, onClose, request }: { isOpen: boolean; on
           </div>
         )}
       </DialogContent>
+      <DialogFooter>
+        <Button onClick={onClose}>Đóng</Button>
+      </DialogFooter>
     </Dialog>
   );
 }
