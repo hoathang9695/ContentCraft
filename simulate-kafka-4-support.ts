@@ -1,18 +1,6 @@
 import { db } from './server/db';
 import { users, supportRequests } from './shared/schema';
 import { and, ne, eq } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
-
-async function clearDatabase() {
-  try {
-    console.log('Xóa các yêu cầu hỗ trợ hiện có...');
-    await db.delete(supportRequests);
-    console.log('Đã xóa thành công');
-  } catch (err) {
-    console.error('Lỗi khi xóa database:', err);
-    throw err;
-  }
-}
 
 async function createSupportRequest(assigneeId: number) {
   try {
@@ -29,30 +17,18 @@ async function createSupportRequest(assigneeId: number) {
       updated_at: now
     };
 
-    console.log('Attempting to create support request with data:', requestData);
+    console.log('Creating support request with data:', requestData);
 
-    const result = await db.execute(
-      sql`INSERT INTO support_requests 
-          (full_name, email, subject, content, status, assigned_to_id, assigned_at, created_at, updated_at)
-          VALUES 
-          (${requestData.fullName}, ${requestData.email}, ${requestData.subject}, 
-           ${requestData.content}, ${requestData.status}, ${requestData.assigned_to_id}, 
-           ${requestData.assigned_at}, ${requestData.created_at}, ${requestData.updated_at})
-          RETURNING id, full_name, subject, assigned_to_id`
-    );
+    const result = await db.insert(supportRequests).values(requestData).returning();
 
-    if (!result.rows || result.rows.length === 0) {
+    if (!result || result.length === 0) {
       throw new Error('No data returned from database insert');
     }
 
-    console.log('Successfully created support request:', result.rows[0]);
-    return result.rows[0];
+    console.log('Successfully created support request:', result[0]);
+    return result[0];
   } catch (error) {
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
+    console.error('Error creating support request:', error);
     throw error;
   }
 }
@@ -61,14 +37,7 @@ async function simulateKafka4Requests() {
   console.log('Starting simulation...');
 
   try {
-    // Test database connection first
-    const testResult = await db.execute(sql`SELECT NOW()`);
-    console.log('Database connection successful:', testResult.rows[0]);
-
-    // Don't clear database to preserve existing data
-    console.log('Bắt đầu mô phỏng tạo 4 yêu cầu hỗ trợ...');
-
-    // Lấy danh sách người dùng active không phải admin
+    // Get list of active non-admin users
     const activeUsers = await db
       .select()
       .from(users)
@@ -80,41 +49,41 @@ async function simulateKafka4Requests() {
       );
 
     if (activeUsers.length === 0) {
-      console.error('Không tìm thấy người dùng active không phải admin');
+      console.error('No active non-admin users found');
       return;
     }
 
-    console.log(`Tìm thấy ${activeUsers.length} người dùng để phân công`);
+    console.log(`Found ${activeUsers.length} users for assignment`);
 
-    // Tạo và xử lý 4 yêu cầu
+    // Create 4 support requests
     for (let i = 0; i < 4; i++) {
       const assigneeIndex = i % activeUsers.length;
       const assignee = activeUsers[assigneeIndex];
 
       try {
-        console.log(`Đang tạo yêu cầu ${i + 1}/4 cho ${assignee.name}`);
+        console.log(`Creating request ${i + 1}/4 for ${assignee.name}`);
         const request = await createSupportRequest(assignee.id);
-        console.log(`Đã tạo yêu cầu ${i + 1}, phân công cho ${assignee.name}`);
+        console.log(`Created request ${i + 1}, assigned to ${assignee.name}`);
 
-        // Đợi 1 giây giữa các yêu cầu
+        // Wait 1 second between requests
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
-        console.error(`Lỗi khi tạo yêu cầu ${i + 1}:`, error);
+        console.error(`Error creating request ${i + 1}:`, error);
       }
     }
 
-    console.log('Hoàn tất mô phỏng');
+    console.log('Simulation completed');
   } catch (error) {
-    console.error('Lỗi khi mô phỏng:', error);
+    console.error('Simulation error:', error);
     process.exit(1);
   }
 }
 
-// Thực thi mô phỏng
+// Run simulation
 simulateKafka4Requests().then(() => {
-  console.log('Script hoàn thành');
+  console.log('Script completed successfully');
   process.exit(0);
 }).catch(err => {
-  console.error('Script thất bại:', err);
+  console.error('Script failed:', err);
   process.exit(1);
 });
