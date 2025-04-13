@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
@@ -24,6 +23,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SupportRequest {
   id: number;
@@ -49,13 +57,15 @@ export default function SupportPage() {
   const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
   const [endDate, setEndDate] = useState<Date>(today);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
+  const [userFilter, setUserFilter] = useState<number | null>(null); // Add user filter state
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
-    queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString()],
+    queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
+      if (userFilter) params.append('userId', userFilter.toString()); // Add userId parameter
       const response = await fetch(`/api/support-requests?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch support requests');
       return response.json();
@@ -84,9 +94,14 @@ export default function SupportPage() {
         return request.status === statusFilter;
       }
 
+      // Apply user filter if set
+      if (userFilter !== null) {
+        return request.assigned_to_id === userFilter;
+      }
+
       return true;
     });
-  }, [supportRequests, startDate, endDate, statusFilter]);
+  }, [supportRequests, startDate, endDate, statusFilter, userFilter]);
 
   const handleDateFilter = () => {
     toast({
@@ -94,6 +109,9 @@ export default function SupportPage() {
       description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
     });
   };
+
+  // Placeholder for fetching user list.  This needs to be implemented.
+  const users = []; // Replace with actual user fetching logic
 
   return (
     <DashboardLayout>
@@ -203,7 +221,7 @@ export default function SupportPage() {
                 >
                   Áp dụng
                 </Button>
-                
+
                 <Button 
                   variant="outline" 
                   className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
@@ -224,6 +242,22 @@ export default function SupportPage() {
             </div>
           </div>
         </div>
+
+        {/* Add user filter here */}
+        <div className="flex justify-end mb-4"> {/* Added flex for alignment */}
+          <Select value={userFilter} onValueChange={setUserFilter}>
+            <SelectTrigger>
+              <span>Chọn người dùng</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>Tất cả</SelectItem>
+              {users.map(user => (
+                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
 
         <div className="bg-card rounded-lg shadow">
           <DataTable
