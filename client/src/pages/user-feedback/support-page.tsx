@@ -77,32 +77,46 @@ export default function SupportPage() {
     staleTime: Infinity
   });
 
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
   const filteredRequests = useMemo(() => {
     if (!supportRequests) return [];
 
     return supportRequests.filter(request => {
+      // Apply date filter
       if (startDate && endDate) {
         const requestDate = new Date(request.created_at);
         const start = startOfDay(startDate);
         const end = endOfDay(endDate);
-
         if (!(requestDate >= start && requestDate <= end)) {
           return false;
         }
       }
 
-      if (statusFilter !== 'all') {
-        return request.status === statusFilter;
+      // Apply status filter
+      if (statusFilter !== 'all' && request.status !== statusFilter) {
+        return false;
       }
 
-      // Apply user filter if set
-      if (userFilter !== null) {
-        return request.assigned_to_id === userFilter;
+      // Apply user filter
+      if (userFilter !== null && request.assigned_to_id !== userFilter) {
+        return false;
+      }
+
+      // Apply search term
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          request.full_name.toLowerCase().includes(searchLower) ||
+          request.email.toLowerCase().includes(searchLower) ||
+          request.subject.toLowerCase().includes(searchLower) ||
+          request.content.toLowerCase().includes(searchLower)
+        );
       }
 
       return true;
     });
-  }, [supportRequests, startDate, endDate, statusFilter, userFilter]);
+  }, [supportRequests, startDate, endDate, statusFilter, userFilter, searchTerm]);
 
   const handleDateFilter = () => {
     toast({
@@ -260,16 +274,8 @@ export default function SupportPage() {
           <Input 
             placeholder="Tìm kiếm yêu cầu..." 
             className="max-w-[300px]"
-            onChange={(e) => {
-              const searchTerm = e.target.value.toLowerCase();
-              const filtered = supportRequests.filter(request => 
-                request.full_name.toLowerCase().includes(searchTerm) ||
-                request.email.toLowerCase().includes(searchTerm) ||
-                request.subject.toLowerCase().includes(searchTerm) ||
-                request.content.toLowerCase().includes(searchTerm)
-              );
-              setSearchResults(filtered);
-            }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Select 
             value={userFilter?.toString() || "all"} 
