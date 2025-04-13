@@ -57,23 +57,23 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
         <div className="space-y-4 py-6">
           <div>
-            <span className="text-gray-500">Họ và tên:</span>
-            <span className="ml-2 text-purple-600 font-medium">{request.full_name}</span>
+            <span className="text-muted-foreground">Họ và tên:</span>
+            <span className="ml-2 text-primary font-medium">{request.full_name}</span>
           </div>
 
           <div>
-            <span className="text-gray-500">Email:</span>
-            <span className="ml-2 text-purple-600 font-medium">{request.email}</span>
+            <span className="text-muted-foreground">Email:</span>
+            <span className="ml-2 text-primary font-medium">{request.email}</span>
           </div>
 
           <div>
-            <span className="text-gray-500">Chủ đề:</span>
-            <span className="ml-2 text-purple-600 font-medium">{request.subject}</span>
+            <span className="text-muted-foreground">Chủ đề:</span>
+            <span className="ml-2 text-primary font-medium">{request.subject}</span>
           </div>
 
           <div>
-            <span className="text-gray-500 block mb-2">Nội dung:</span>
-            <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">
+            <span className="text-muted-foreground block mb-2">Nội dung:</span>
+            <div className="bg-muted/50 p-4 rounded-lg whitespace-pre-wrap">
               {request.content}
             </div>
           </div>
@@ -87,7 +87,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
             <Button 
               onClick={handleMarkAsViewed}
               disabled={request.status === 'completed'}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              variant="default"
             >
               {request.status === 'completed' ? 'Đã xử lý' : 'Đã xem'}
             </Button>
