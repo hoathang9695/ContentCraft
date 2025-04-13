@@ -133,7 +133,7 @@ export default function SupportPage() {
                         {startDate ? format(startDate, "dd/MM/yyyy") : <span>Chọn ngày</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md" align="start">
                       <Calendar
                         mode="single"
                         selected={startDate}
@@ -166,7 +166,7 @@ export default function SupportPage() {
                         {endDate ? format(endDate, "dd/MM/yyyy") : <span>Chọn ngày</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md" align="start">
                       <Calendar
                         mode="single"
                         selected={endDate}
