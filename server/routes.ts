@@ -1385,9 +1385,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/support-requests', isAuthenticated, async (req, res) => {
     console.log('Fetching support requests');
     try {
-      const result = await db.query.supportRequests.findMany({
-        orderBy: (supportRequests, { desc }) => [desc(supportRequests.created_at)]
-      });
+      const result = await db
+        .select()
+        .from(supportRequests)
+        .orderBy(desc(supportRequests.created_at));
+      
       console.log(`Found ${result.length} support requests`);
       return res.json(result || []);
     } catch (err) {
