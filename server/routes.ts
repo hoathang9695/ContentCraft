@@ -1385,13 +1385,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/support-requests', isAuthenticated, async (req, res) => {
     console.log('Fetching support requests');
     try {
-      const result = await db
-        .select()
-        .from(supportRequests)
-        .orderBy(desc(supportRequests.created_at));
+      const { rows } = await pool.query(`
+        SELECT * FROM support_requests 
+        ORDER BY created_at DESC
+      `);
       
-      console.log(`Found ${result.length} support requests`);
-      return res.json(result || []);
+      console.log(`Found ${rows.length} support requests`);
+      return res.json(rows || []);
     } catch (err) {
       console.error('Error fetching support requests:', err);
       return res.status(500).json({ 
