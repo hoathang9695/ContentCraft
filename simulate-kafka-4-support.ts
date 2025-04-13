@@ -10,7 +10,7 @@ async function createSupportRequest(assigneeId: number) {
     console.log('Creating support request for assignee:', assigneeId);
 
     const requestData = {
-      full_name: "System Generated",
+      fullName: "System Generated",
       email: "system@example.com",
       subject: `Yêu cầu hỗ trợ ${now.getTime()}`,
       content: `Yêu cầu hỗ trợ tự động được tạo lúc ${now.toISOString()}`,
