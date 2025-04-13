@@ -260,14 +260,14 @@ export default function SupportPage() {
             className="max-w-[300px]"
           />
           <Select 
-            value={userFilter?.toString() || ''} 
-            onValueChange={(value) => setUserFilter(value ? parseInt(value) : null)}
+            value={userFilter?.toString() || "all"} 
+            onValueChange={(value) => setUserFilter(value === "all" ? null : parseInt(value))}
           >
             <SelectTrigger className="w-[250px]">
               <SelectValue placeholder="Chọn người dùng" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tất cả</SelectItem>
+              <SelectItem value="all">Tất cả</SelectItem>
               {users.map(user => (
                 <SelectItem key={user.id} value={user.id.toString()}>
                   {user.name}
