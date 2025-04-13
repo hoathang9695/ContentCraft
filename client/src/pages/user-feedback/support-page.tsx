@@ -58,7 +58,7 @@ export default function SupportPage() {
   const [endDate, setEndDate] = useState<Date>(today);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [userFilter, setUserFilter] = useState<number | null>(null);
-  const [filteredRequests, setFilteredRequests] = useState<SupportRequest[]>([]); // Add user filter state
+  const [searchResults, setSearchResults] = useState<SupportRequest[]>([]); // Renamed to searchResults
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
@@ -268,7 +268,7 @@ export default function SupportPage() {
                 request.subject.toLowerCase().includes(searchTerm) ||
                 request.content.toLowerCase().includes(searchTerm)
               );
-              setFilteredRequests(filtered);
+              setSearchResults(filtered);
             }}
           />
           <Select 
