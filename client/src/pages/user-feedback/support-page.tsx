@@ -1,6 +1,7 @@
+
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
-import { Popover, PopoverTrigger, PopoverContent } from "@radix-ui/react-popover";
+import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { startOfDay, endOfDay } from "date-fns";
@@ -15,10 +16,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface SupportRequest {
   id: number;
@@ -39,11 +44,10 @@ interface SupportRequest {
 
 export default function SupportPage() {
   const { toast } = useToast();
-  // Thiết lập ngày bắt đầu là ngày 1 của tháng hiện tại và ngày kết thúc là ngày hiện tại
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const [startDate, setStartDate] = useState<Date | undefined>(firstDayOfMonth);
-  const [endDate, setEndDate] = useState<Date | undefined>(today);
+  const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
+  const [endDate, setEndDate] = useState<Date>(today);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
@@ -84,6 +88,13 @@ export default function SupportPage() {
     });
   }, [supportRequests, startDate, endDate, statusFilter]);
 
+  const handleDateFilter = () => {
+    toast({
+      title: "Đã áp dụng bộ lọc",
+      description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+    });
+  };
+
   return (
     <DashboardLayout>
       <div className="container mx-auto p-4">
@@ -121,97 +132,89 @@ export default function SupportPage() {
               <div>
                 <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
                 <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-[200px] justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "dd/MM/yyyy") : <span>Chọn ngày</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        className="rounded-md border bg-white"
-                        onSelect={(date) => {
-                          if (date) {
-                            setStartDate(date);
-                            if (date > endDate!) {
-                              setEndDate(date);
-                            }
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-10 justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setStartDate(date);
+                          if (date > endDate) {
+                            setEndDate(date);
                           }
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div>
                 <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
                 <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-[200px] justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "dd/MM/yyyy") : <span>Chọn ngày</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        className="rounded-md border bg-white"
-                        onSelect={(date) => {
-                          if (date) {
-                            setEndDate(date);
-                            if (date < startDate!) {
-                              setStartDate(date);
-                            }
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-10 justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setEndDate(date);
+                          if (date < startDate) {
+                            setStartDate(date);
                           }
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="flex items-end gap-2 h-[74px]">
                 <Button 
                   variant="default" 
                   className="h-10 bg-green-600 hover:bg-green-700 text-white" 
-                  onClick={() => {
-                    toast({
-                      title: "Đã áp dụng bộ lọc",
-                      description: startDate && endDate ? 
-                        `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}` :
-                        "Đã áp dụng bộ lọc trạng thái",
-                    });
-                  }}
+                  onClick={handleDateFilter}
                 >
                   Áp dụng
                 </Button>
-
+                
                 <Button 
                   variant="outline" 
-                  className="h-10"
+                  className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
                   onClick={() => {
-                    setStartDate(undefined);
-                    setEndDate(undefined);
-                    setStatusFilter('all');
+                    const today = new Date();
+                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                    setStartDate(firstDayOfMonth);
+                    setEndDate(today);
                     toast({
                       title: "Đã đặt lại bộ lọc",
-                      description: "Hiển thị tất cả dữ liệu",
+                      description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, 'dd/MM/yyyy')} đến ${format(today, 'dd/MM/yyyy')}`,
                     });
                   }}
                 >
