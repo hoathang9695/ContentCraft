@@ -1,24 +1,7 @@
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { format } from "date-fns";
-import { Badge } from "./ui/badge";
-
-interface SupportRequest {
-  id: number;
-  full_name: string;
-  email: string;
-  subject: string;
-  content: string;
-  status: 'pending' | 'processing' | 'completed';
-  assigned_to_id: number | null;
-  assigned_to_name: string | null; 
-  assigned_at: string | null;
-  response_content: string | null;
-  responder_id: number | null;
-  response_time: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import { SupportRequest } from "@/lib/types";
 
 interface Props {
   isOpen: boolean;
@@ -31,69 +14,69 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Chi tiết yêu cầu hỗ trợ #{request.id}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-1">Trạng thái</h4>
-            <Badge variant={
-              request.status === 'completed' ? 'success' :
-              request.status === 'processing' ? 'warning' : 'secondary'
-            }>
-              {request.status === 'completed' ? 'Đã xử lý' :
-               request.status === 'processing' ? 'Đang xử lý' : 'Chờ xử lý'}
-            </Badge>
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-1">Thông tin người gửi</h4>
-            <p className="text-sm">{request.full_name}</p>
-            <p className="text-sm text-muted-foreground">{request.email}</p>
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-1">Tiêu đề</h4>
-            <p className="text-sm">{request.subject}</p>
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-1">Nội dung</h4>
-            <p className="text-sm whitespace-pre-wrap">{request.content}</p>
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-1">Thời gian</h4>
-            <p className="text-sm">
-              Tạo lúc: {format(new Date(request.created_at), 'dd/MM/yyyy HH:mm')}
-            </p>
-            {request.assigned_at && (
-              <p className="text-sm">
-                Phân công lúc: {format(new Date(request.assigned_at), 'dd/MM/yyyy HH:mm')}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-1">Phân công</h4>
-            {request.assigned_to_name ? (
-              <p className="text-sm">{request.assigned_to_name}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">Chưa phân công</p>
-            )}
-          </div>
-
-          {request.response_content && (
+      <DialogContent className="max-w-[600px] p-6">
+        <div className="mb-6">
+          <div className="flex justify-between items-start">
             <div>
-              <h4 className="font-medium mb-1">Phản hồi</h4>
-              <p className="text-sm whitespace-pre-wrap">{request.response_content}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Phản hồi lúc: {format(new Date(request.response_time!), 'dd/MM/yyyy HH:mm')}
+              <h2 className="text-xl font-semibold">Chi tiết yêu cầu hỗ trợ</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Xem thông tin chi tiết của yêu cầu hỗ trợ
               </p>
             </div>
-          )}
+            <button
+              onClick={onClose}
+              className="hover:bg-gray-100 rounded-full p-2 transition"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 text-[15px]">
+          <div className="flex">
+            <span className="min-w-[120px] text-gray-500">
+              Họ và tên:
+            </span>
+            <span className="text-purple-600 font-medium">
+              {request.full_name}
+            </span>
+          </div>
+
+          <div className="flex">
+            <span className="min-w-[120px] text-gray-500">
+              Email:
+            </span>
+            <span className="text-purple-600 font-medium">
+              {request.email}
+            </span>
+          </div>
+
+          <div className="flex">
+            <span className="min-w-[120px] text-gray-500">
+              Chủ đề:
+            </span>
+            <span className="text-purple-600 font-medium">
+              {request.subject}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-gray-500 block mb-2">
+              Nội dung:
+            </span>
+            <div className="bg-gray-50 p-4 rounded-lg text-[15px] leading-relaxed text-gray-700 whitespace-pre-wrap">
+              {request.content}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <Button
+            onClick={onClose}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6"
+          >
+            Đã xem
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
