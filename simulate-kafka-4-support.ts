@@ -1,11 +1,12 @@
-
 import { db } from './server/db.js';
 import { users, supportRequests } from './shared/schema';
-import { and, ne, eq } from 'drizzle-orm';
+import { and, ne, eq, sql } from 'drizzle-orm';
 
 async function createSupportRequest(assigneeId: number) {
   try {
     const now = new Date();
+
+    // Log before insert
     console.log('Creating support request for assignee:', assigneeId);
 
     const requestData = {
@@ -21,14 +22,17 @@ async function createSupportRequest(assigneeId: number) {
     };
 
     console.log('Request data:', requestData);
+
     const result = await db.insert(supportRequests)
       .values(requestData)
       .returning();
 
     console.log('Insert result:', result);
+
     if (!result || result.length === 0) {
       throw new Error('No data returned from insert operation');
     }
+
     return result[0];
   } catch (error) {
     console.error('Error in createSupportRequest:', error);
@@ -57,7 +61,7 @@ async function simulateKafka4Requests() {
         )
       );
 
-    console.log('Active non-admin users found:', activeUsers);
+    console.log('Active users found:', activeUsers);
 
     if (!activeUsers || activeUsers.length === 0) {
       throw new Error('No active non-admin users found');
