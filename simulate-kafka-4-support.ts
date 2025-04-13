@@ -1,14 +1,14 @@
 
 import { db } from './server/db';
 import { users, supportRequests } from './shared/schema';
-import { and, ne, eq } from 'drizzle-orm';
+import { and, ne, eq, sql } from 'drizzle-orm';
 
 async function createSupportRequest(assigneeId: number) {
   try {
     const now = new Date();
     const requestData = {
-      fullName: "System Generated",
-      email: "system@example.com", 
+      full_name: "System Generated", // Changed to match schema
+      email: "system@example.com",
       subject: `Yêu cầu hỗ trợ ${now.getTime()}`,
       content: `Yêu cầu hỗ trợ tự động được tạo lúc ${now.toISOString()}`,
       status: 'pending',
@@ -19,7 +19,7 @@ async function createSupportRequest(assigneeId: number) {
     };
 
     console.log('Creating support request with data:', requestData);
-    
+
     const newRequest = await db.insert(supportRequests)
       .values(requestData)
       .returning();
@@ -42,9 +42,9 @@ async function simulateKafka4Requests() {
   console.log('Starting simulation...');
 
   try {
-    // Test database connection
-    const testResult = await db.query('SELECT NOW()');
-    console.log('Database connection test:', testResult);
+    // Test database connection using Drizzle's sql
+    const testResult = await db.execute(sql`SELECT NOW()`);
+    console.log('Database connection test successful:', testResult);
 
     // Get list of active non-admin users
     const activeUsers = await db
@@ -84,15 +84,14 @@ async function simulateKafka4Requests() {
     console.log('Simulation completed');
   } catch (error) {
     console.error('Simulation error:', error);
-    process.exit(1);
   }
 }
 
 // Run simulation
-simulateKafka4Requests().then(() => {
-  console.log('Script completed successfully');
-  process.exit(0);
-}).catch(err => {
-  console.error('Script failed:', err);
-  process.exit(1);
-});
+simulateKafka4Requests()
+  .then(() => {
+    console.log('Script completed successfully');
+  })
+  .catch(err => {
+    console.error('Script failed:', err);
+  });
