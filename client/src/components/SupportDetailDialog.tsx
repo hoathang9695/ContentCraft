@@ -16,14 +16,11 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
   
   const markAsViewed = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/support-requests/${id}`, {
+      const response = await fetch(`/api/support-requests/${id}/mark-as-viewed`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'completed'
-        }),
+        }
       });
       if (!response.ok) {
         throw new Error('Failed to update status');
@@ -31,7 +28,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/support-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['support-requests'] });
       onClose();
     },
   });
@@ -76,7 +73,13 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex justify-between gap-2">
+          <Button 
+            variant="outline"
+            onClick={onClose}
+          >
+            Đóng
+          </Button>
           <Button 
             onClick={handleMarkAsViewed}
             disabled={request.status === 'completed'}
