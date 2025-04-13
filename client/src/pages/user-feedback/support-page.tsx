@@ -32,6 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+
 
 interface SupportRequest {
   id: number;
@@ -50,6 +52,37 @@ interface SupportRequest {
   updated_at: string;
 }
 
+function SupportDetailDialog({ isOpen, onClose, request }: { isOpen: boolean; onClose: () => void; request: SupportRequest | null }) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="p-4">
+        <DialogHeader>
+          <DialogTitle>Chi tiết yêu cầu hỗ trợ</DialogTitle>
+          <DialogDescription>Xem thông tin chi tiết của yêu cầu hỗ trợ</DialogDescription>
+        </DialogHeader>
+        {request && (
+          <div>
+            <p><strong>Họ và tên:</strong> {request.full_name}</p>
+            <p><strong>Email:</strong> {request.email}</p>
+            <p><strong>Chủ đề:</strong> {request.subject}</p>
+            <p><strong>Nội dung:</strong> {request.content}</p>
+            {request.response_content && (
+              <>
+                <p><strong>Phản hồi:</strong> {request.response_content}</p>
+                <p><strong>Thời gian phản hồi:</strong> {request.response_time}</p>
+              </>
+            )}
+          </div>
+        )}
+      </DialogContent>
+      <DialogFooter>
+        <Button onClick={onClose}>Đóng</Button>
+      </DialogFooter>
+    </Dialog>
+  );
+}
+
+
 export default function SupportPage() {
   const { toast } = useToast();
   const today = new Date();
@@ -58,7 +91,8 @@ export default function SupportPage() {
   const [endDate, setEndDate] = useState<Date>(today);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [userFilter, setUserFilter] = useState<number | null>(null);
-  const [searchResults, setSearchResults] = useState<SupportRequest[]>([]); // Renamed to searchResults
+  const [searchResults, setSearchResults] = useState<SupportRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null); // Added selectedRequest state
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
@@ -66,7 +100,7 @@ export default function SupportPage() {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
-      if (userFilter) params.append('userId', userFilter.toString()); // Add userId parameter
+      if (userFilter) params.append('userId', userFilter.toString());
       const response = await fetch(`/api/support-requests?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch support requests');
       return response.json();
@@ -83,7 +117,6 @@ export default function SupportPage() {
     if (!supportRequests) return [];
 
     return supportRequests.filter(request => {
-      // Apply date filter
       if (startDate && endDate) {
         const requestDate = new Date(request.created_at);
         const start = startOfDay(startDate);
@@ -93,17 +126,14 @@ export default function SupportPage() {
         }
       }
 
-      // Apply status filter
       if (statusFilter !== 'all' && request.status !== statusFilter) {
         return false;
       }
 
-      // Apply user filter
       if (userFilter !== null && request.assigned_to_id !== userFilter) {
         return false;
       }
 
-      // Apply search term
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         return (
@@ -125,7 +155,6 @@ export default function SupportPage() {
     });
   };
 
-  // Fetch active users for filtering
   const { data: users = [] } = useQuery({
     queryKey: ['/api/users'],
     queryFn: async () => {
@@ -266,10 +295,6 @@ export default function SupportPage() {
           </div>
         </div>
 
-        {/* Add user filter here */}
-
-
-
         <div className="flex items-center justify-between mb-4">
           <Input 
             placeholder="Tìm kiếm yêu cầu..." 
@@ -406,7 +431,7 @@ export default function SupportPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSelectedRequest(row)}> {/* Updated onClick handler */}
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
                         </DropdownMenuItem>
@@ -428,6 +453,11 @@ export default function SupportPage() {
             ]}
           />
         </div>
+        <SupportDetailDialog
+          isOpen={!!selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+          request={selectedRequest}
+        />
       </div>
     </DashboardLayout>
   );
