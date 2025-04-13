@@ -32,7 +32,8 @@ interface SupportRequest {
 export default function SupportPage() {
   const { data: supportRequests = [], isLoading } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests'],
-    refetchInterval: 2000, // Refresh every 2 seconds
+    refetchOnWindowFocus: true,
+    staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
   return (
