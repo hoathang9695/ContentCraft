@@ -1,3 +1,4 @@
+
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
 import { DatePicker } from "@/components/ui/date-range-picker";
@@ -14,6 +15,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface SupportRequest {
   id: number;
@@ -23,7 +27,7 @@ interface SupportRequest {
   content: string;
   status: 'pending' | 'processing' | 'completed';
   assigned_to_id: number | null;
-  assigned_to_name: string | null; // Added assigned_to_name
+  assigned_to_name: string | null;
   assigned_at: string | null;
   response_content: string | null;
   responder_id: number | null;
@@ -33,6 +37,7 @@ interface SupportRequest {
 }
 
 export default function SupportPage() {
+  const { toast } = useToast();
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
@@ -51,12 +56,10 @@ export default function SupportPage() {
     }
   });
 
-  // Filter support requests based on date range and status
   const filteredRequests = useMemo(() => {
     if (!supportRequests) return [];
     
     return supportRequests.filter(request => {
-      // Date range filter
       if (startDate && endDate) {
         const requestDate = new Date(request.created_at);
         const start = startOfDay(startDate);
@@ -67,7 +70,6 @@ export default function SupportPage() {
         }
       }
 
-      // Status filter
       if (statusFilter !== 'all') {
         return request.status === statusFilter;
       }
@@ -75,10 +77,6 @@ export default function SupportPage() {
       return true;
     });
   }, [supportRequests, startDate, endDate, statusFilter]);
-
-  console.log('Current support requests:', filteredRequests);
-  console.log('Loading state:', isLoading);
-  console.log('Error state:', error);
 
   return (
     <DashboardLayout>
@@ -88,68 +86,97 @@ export default function SupportPage() {
           <p className="text-muted-foreground">
             Quản lý các yêu cầu hỗ trợ từ người dùng
           </p>
-          
-          <div className="flex flex-col gap-4 mt-4 md:flex-row md:items-end">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Ngày bắt đầu</label>
-              <DatePicker
-                value={startDate}
-                onChange={setStartDate}
-                className="w-[200px]"
-              />
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Ngày kết thúc</label>
-              <DatePicker
-                value={endDate}
-                onChange={setEndDate}
-                className="w-[200px]"
-              />
+
+          <div className="flex items-center mt-4">
+            <div className="flex-shrink-0 mr-auto">
+              <div className="bg-background border rounded-md p-1">
+                <div className="flex space-x-1">
+                  <Button 
+                    variant={statusFilter === 'all' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setStatusFilter('all')}
+                  >
+                    Tất cả
+                  </Button>
+                  <Button 
+                    variant={statusFilter === 'completed' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setStatusFilter('completed')}
+                  >
+                    Đã xử lý
+                  </Button>
+                  <Button 
+                    variant={statusFilter === 'pending' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setStatusFilter('pending')}
+                  >
+                    Chưa xử lý
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('all')}
-              >
-                Tất cả
-              </Button>
-              <Button
-                variant={statusFilter === 'completed' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('completed')}
-              >
-                Đã xử lý
-              </Button>
-              <Button
-                variant={statusFilter === 'pending' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('pending')}
-              >
-                Chưa xử lý
-              </Button>
-            </div>
+            <div className="flex items-center gap-2">
+              <div>
+                <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+                <DatePicker
+                  value={startDate}
+                  onChange={(date) => {
+                    setStartDate(date);
+                    if (date && date > endDate!) {
+                      setEndDate(date);
+                    }
+                  }}
+                  className="w-[200px]"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+                <DatePicker
+                  value={endDate}
+                  onChange={(date) => {
+                    setEndDate(date);
+                    if (date && date < startDate!) {
+                      setStartDate(date);
+                    }
+                  }}
+                  className="w-[200px]"
+                />
+              </div>
 
-            <div className="flex gap-2">
-              <Button 
-                variant="default"
-                className="bg-green-500 hover:bg-green-600"
-                onClick={() => {
-                  if (!startDate || !endDate) return;
-                  // Refresh query
-                }}
-              >
-                Áp dụng
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setStartDate(undefined);
-                  setEndDate(undefined);
-                  setStatusFilter('all');
-                }}
-              >
-                Xóa bộ lọc
-              </Button>
+              <div className="flex items-end gap-2 h-[74px]">
+                <Button 
+                  variant="default" 
+                  className="h-10 bg-green-600 hover:bg-green-700 text-white" 
+                  onClick={() => {
+                    toast({
+                      title: "Đã áp dụng bộ lọc",
+                      description: startDate && endDate ? 
+                        `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}` :
+                        "Đã áp dụng bộ lọc trạng thái",
+                    });
+                  }}
+                >
+                  Áp dụng
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-10"
+                  onClick={() => {
+                    setStartDate(undefined);
+                    setEndDate(undefined);
+                    setStatusFilter('all');
+                    toast({
+                      title: "Đã đặt lại bộ lọc",
+                      description: "Hiển thị tất cả dữ liệu",
+                    });
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -223,7 +250,7 @@ export default function SupportPage() {
                   <div>
                     {row.assigned_to_id ? (
                       <div className="text-sm">
-                        <div>{row.assigned_to_name}</div> {/* Changed to display assigned_to_name */}
+                        <div>{row.assigned_to_name}</div>
                         <div className="text-muted-foreground">
                           {format(new Date(row.assigned_at!), 'dd/MM/yyyy HH:mm')}
                         </div>
