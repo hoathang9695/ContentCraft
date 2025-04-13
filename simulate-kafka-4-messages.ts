@@ -1,8 +1,19 @@
 
 import { db } from './server/db';
-import { users } from './shared/schema';
+import { users, supportRequests } from './shared/schema';
 import { and, ne, eq } from 'drizzle-orm';
 import { processContentMessage } from './server/kafka-consumer';
+
+async function clearDatabase() {
+  try {
+    console.log('Clearing existing support requests...');
+    await db.delete(supportRequests);
+    console.log('Database cleared successfully');
+  } catch (err) {
+    console.error('Error clearing database:', err);
+    throw err;
+  }
+}
 
 async function simulateKafkaMessage(externalId: string) {
   const message = {
@@ -21,9 +32,12 @@ async function simulateKafkaMessage(externalId: string) {
 
 async function simulateKafka4Messages() {
   try {
+    // Clear database first
+    await clearDatabase();
+    
     console.log('Bắt đầu mô phỏng gửi 4 tin nhắn Kafka...');
 
-    // Lấy danh sách user active không phải admin
+    // Get list of active non-admin users
     const activeUsers = await db
       .select()
       .from(users)
@@ -41,7 +55,7 @@ async function simulateKafka4Messages() {
 
     console.log(`Tìm thấy ${activeUsers.length} người dùng để phân công`);
 
-    // Tạo và xử lý 4 tin nhắn
+    // Create and process 4 messages
     for (let i = 0; i < 4; i++) {
       const contentId = `content-${Date.now()}-${i}`;
       try {
@@ -49,7 +63,7 @@ async function simulateKafka4Messages() {
         const message = await simulateKafkaMessage(contentId);
         console.log(`Đã xử lý tin nhắn ${i + 1}/4:`, message);
         
-        // Đợi 1 giây giữa các tin nhắn
+        // Wait 1 second between messages
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         console.error(`Lỗi khi xử lý tin nhắn ${i + 1}:`, error);
@@ -59,8 +73,15 @@ async function simulateKafka4Messages() {
     console.log('Hoàn tất mô phỏng');
   } catch (error) {
     console.error('Lỗi khi mô phỏng Kafka:', error);
+    process.exit(1);
   }
 }
 
-// Chạy mô phỏng
-simulateKafka4Messages();
+// Execute simulation
+simulateKafka4Messages().then(() => {
+  console.log('Script completed successfully');
+  process.exit(0);
+}).catch(err => {
+  console.error('Script failed:', err);
+  process.exit(1);
+});
