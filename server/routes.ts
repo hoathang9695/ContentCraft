@@ -1384,6 +1384,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/support-requests', isAuthenticated, async (req, res) => {
     console.log('Fetching support requests');
+    console.log('Database config:', {
+      host: process.env.PGHOST,
+      database: process.env.PGDATABASE,
+      port: process.env.PGPORT,
+      user: process.env.PGUSER
+    });
     try {
       const result = await db.select().from(supportRequests).orderBy(desc(supportRequests.created_at));
       console.log(`Found ${result.length} support requests`);
