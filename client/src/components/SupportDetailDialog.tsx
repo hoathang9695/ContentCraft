@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -14,71 +15,69 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[720px] p-0 rounded-xl">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-[20px] font-bold text-gray-900 mb-1">
-                Chi tiết yêu cầu hỗ trợ
-              </h2>
-              <p className="text-sm text-gray-500">
-                Xem thông tin chi tiết của yêu cầu hỗ trợ
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="hover:bg-gray-200 rounded-full p-1.5 transition"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+      <DialogContent className="max-w-[800px] p-6 gap-0">
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Chi tiết yêu cầu hỗ trợ
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Xem thông tin chi tiết của yêu cầu hỗ trợ
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="hover:bg-gray-200 rounded-full p-1.5 transition"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="space-y-4 text-[15px]">
+          <div className="flex">
+            <span className="min-w-[120px] text-gray-900">
+              Họ và tên:
+            </span>
+            <span className="text-indigo-600 font-medium">
+              {request.full_name}
+            </span>
+          </div>
+          
+          <div className="flex">
+            <span className="min-w-[120px] text-gray-900">
+              Email:
+            </span>
+            <span className="text-indigo-600 font-medium">
+              {request.email}
+            </span>
           </div>
 
-          {/* Content */}
-          <div className="mt-6 space-y-4 text-[15px]">
-            <div className="flex">
-              <span className="min-w-[120px] text-gray-600 font-medium">
-                Họ và tên:
-              </span>
-              <span className="text-[#7C3AED] font-medium">
-                {request.full_name}
-              </span>
-            </div>
-            <div className="flex">
-              <span className="min-w-[120px] text-gray-600 font-medium">
-                Email:
-              </span>
-              <span className="text-[#7C3AED] font-medium">
-                {request.email}
-              </span>
-            </div>
-            <div className="flex">
-              <span className="min-w-[120px] text-gray-600 font-medium">
-                Chủ đề:
-              </span>
-              <span className="text-[#7C3AED] font-medium">
-                {request.subject}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600 font-medium block mb-1">
-                Nội dung:
-              </span>
-              <div className="bg-gray-50 p-4 border rounded-md text-[15px] leading-relaxed text-gray-800 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
-                {request.content}
-              </div>
-            </div>
+          <div className="flex">
+            <span className="min-w-[120px] text-gray-900">
+              Chủ đề:
+            </span>
+            <span className="text-indigo-600 font-medium">
+              {request.subject}
+            </span>
           </div>
 
-          {/* Footer */}
-          <div className="flex justify-end mt-6">
-            <Button
-              onClick={onClose}
-              className="bg-[#7C3AED] hover:bg-[#6B21A8] text-white text-sm px-6"
-            >
-              Đã xem
-            </Button>
+          <div>
+            <span className="text-gray-900 block mb-2">
+              Nội dung:
+            </span>
+            <div className="bg-gray-50 p-4 rounded-lg text-[15px] leading-relaxed text-gray-700 whitespace-pre-wrap">
+              {request.content}
+            </div>
           </div>
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <Button
+            onClick={onClose}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6"
+          >
+            Đã xem
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
