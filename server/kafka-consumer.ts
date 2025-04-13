@@ -95,7 +95,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       ...contentMessage,
       externalId: String(contentMessage.externalId)
     };
-    log(`Processing content: ${JSON.stringify(messageWithStringId)}`, 'kafka');
+    log(`Starting to process content message: ${JSON.stringify(messageWithStringId)}`, 'kafka');
 
     // Kiểm tra xem nội dung đã tồn tại chưa
     const existingContent = await db.query.contents.findFirst({
@@ -142,7 +142,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
     const now = new Date();
 
     // Tạo yêu cầu hỗ trợ mới
-    await db.insert(supportRequests).values({
+    const newRequest = await db.insert(supportRequests).values({
       fullName: "System Generated",
       email: "system@example.com",
       subject: `Auto Request ${contentMessage.externalId}`,
@@ -152,7 +152,9 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       assigned_at: now,
       created_at: now,
       updated_at: now
-    });
+    }).returning();
+
+    log(`Created new support request: ${JSON.stringify(newRequest)}`, 'kafka');
 
     log(`Support request created and assigned to user ID ${assigned_to_id} (${activeUsers[nextAssigneeIndex].username})`, 'kafka');
   } catch (error) {
