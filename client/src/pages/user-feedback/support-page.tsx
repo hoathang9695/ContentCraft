@@ -396,7 +396,7 @@ export default function SupportPage() {
               {
                 key: 'actions',
                 header: 'Hành động',
-                className: 'text-right',
+                className: 'text-right sticky right-0 bg-background',
                 render: (row: SupportRequest) => (
                   <div className="flex justify-end">
                     <DropdownMenu>
