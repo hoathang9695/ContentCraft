@@ -1,4 +1,3 @@
-
 import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
 import { db } from './db';
 import { contents, users, supportRequests } from '../shared/schema';
@@ -87,36 +86,16 @@ function parseMessage(messageValue: Buffer | null): ContentMessage | null {
 }
 
 /**
- * Xử lý tin nhắn nội dung từ Kafka và phân công xử lý theo turn
+ * Xử lý tin nhắn Kafka về nội dung
  */
-export async function processContentMessage(contentMessage: ContentMessage) {
+export async function processContentMessage(messageWithStringId: any) {
   try {
-    const messageWithStringId = {
-      ...contentMessage,
-      externalId: String(contentMessage.externalId)
-    };
-    log(`Starting to process content message: ${JSON.stringify(messageWithStringId)}`, 'kafka');
+    const contentMessage = messageWithStringId;
 
-    // Kiểm tra xem nội dung đã tồn tại chưa
-    const existingContent = await db.query.contents.findFirst({
-      where: eq(contents.externalId, contentMessage.externalId),
-    });
+    // Lấy danh sách người dùng active để phân công
+    const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
 
-    if (existingContent) {
-      log(`Content with externalId ${contentMessage.externalId} already exists.`, 'kafka');
-      return;
-    }
-
-    // Lấy danh sách người dùng active không phải admin
-    const activeUsers = await db.query.users.findMany({
-      where: (users, { and, ne, eq }) => 
-        and(
-          ne(users.role, 'admin'),
-          eq(users.status, 'active')
-        ),
-    });
-
-    if (activeUsers.length === 0) {
+    if (!activeUsers || activeUsers.length === 0) {
       log('No active non-admin users found to assign content.', 'kafka');
       return;
     }
@@ -146,7 +125,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       const insertData = {
         fullName: "System Generated",
         email: "system@example.com", 
-        subject: `Auto Request ${contentMessage.externalId}`,
+        subject: `Auto Request content:${contentMessage.externalId}`,
         content: `Auto-generated request from Kafka message: ${JSON.stringify(messageWithStringId)}`,
         status: 'pending',
         assigned_to_id,
@@ -158,7 +137,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       log(`Attempting to insert support request with data: ${JSON.stringify(insertData)}`, 'kafka');
 
       const newRequest = await db.insert(supportRequests).values(insertData).returning();
-      
+
       log(`Successfully created support request: ${JSON.stringify(newRequest)}`, 'kafka');
 
       if (!newRequest || newRequest.length === 0) {
@@ -172,7 +151,7 @@ export async function processContentMessage(contentMessage: ContentMessage) {
     log(`Support request created and assigned to user ID ${assigned_to_id} (${activeUsers[nextAssigneeIndex].username})`, 'kafka');
   } catch (error) {
     log(`Error processing content message: ${error}`, 'kafka-error');
-    throw error; // Ném lỗi để caller có thể xử lý
+    throw error;
   }
 }
 
