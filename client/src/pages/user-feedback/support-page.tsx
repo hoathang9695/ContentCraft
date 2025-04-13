@@ -30,11 +30,21 @@ interface SupportRequest {
 }
 
 export default function SupportPage() {
-  const { data: supportRequests = [], isLoading } = useQuery<SupportRequest[]>({
+  const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests'],
     refetchOnWindowFocus: true,
-    staleTime: 5000, // Consider data fresh for 5 seconds
+    staleTime: 5000,
+    onSuccess: (data) => {
+      console.log('Support requests data received:', data);
+    },
+    onError: (err) => {
+      console.error('Error fetching support requests:', err);
+    }
   });
+
+  console.log('Current support requests:', supportRequests);
+  console.log('Loading state:', isLoading);
+  console.log('Error state:', error);
 
   return (
     <DashboardLayout>
