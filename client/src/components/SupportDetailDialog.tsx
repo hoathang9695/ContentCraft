@@ -17,7 +17,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px] p-0 gap-0">
-        <div className="flex items-center justify-between border-b px-6 py-4 bg-white rounded-t-lg">
+        <div className="flex items-center justify-between border-b px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900">
             Chi tiết yêu cầu hỗ trợ
           </h2>
@@ -66,13 +66,13 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           <Button
             variant="outline"
             onClick={onClose}
-            className="h-9 px-4 text-gray-700"
+            className="h-9 px-4"
           >
             Đóng
           </Button>
           <Button
             onClick={onClose}
-            className="h-9 px-4 bg-[#635BFF] hover:bg-[#5146ff] text-white"
+            className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white"
           >
             Đã xem
           </Button>
