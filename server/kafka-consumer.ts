@@ -107,61 +107,55 @@ export async function processContentMessage(contentMessage: ContentMessage) {
       return;
     }
 
-    // Lấy danh sách người dùng phải là editor và có trạng thái active
-    const editorUsers = await db.query.users.findMany({
-      where: (users, { eq, and }) => 
-        and(eq(users.role, 'editor'), eq(users.status, 'active')),
+    // Lấy danh sách người dùng active không phải admin
+    const activeUsers = await db.query.users.findMany({
+      where: (users, { and, ne, eq }) => 
+        and(
+          ne(users.role, 'admin'),
+          eq(users.status, 'active')
+        ),
     });
 
-    if (editorUsers.length === 0) {
-      log('No active editor users found to assign content.', 'kafka');
-      // Lưu nội dung mà không phân công
-      await db.insert(contents).values({
-        externalId: contentMessage.externalId,
-        source: contentMessage.source || null,
-        categories: contentMessage.categories || null,
-        labels: contentMessage.labels || null,
-        status: 'pending',
-        sourceVerification: contentMessage.sourceVerification || 'unverified',
-      });
+    if (activeUsers.length === 0) {
+      log('No active non-admin users found to assign content.', 'kafka');
       return;
     }
 
     // Tìm người xử lý tiếp theo dựa trên hệ thống turn-based
-    const lastAssignedContent = await db.query.contents.findFirst({
-      where: (contents, { isNotNull }) => isNotNull(contents.assigned_to_id),
-      orderBy: (contents, { desc }) => [desc(contents.assignedAt)],
+    const lastAssignedRequest = await db.query.supportRequests.findFirst({
+      orderBy: (supportRequests, { desc }) => [desc(supportRequests.assigned_at)],
     });
 
     let nextAssigneeIndex = 0;
 
-    if (lastAssignedContent && lastAssignedContent.assigned_to_id) {
-      const lastAssigneeIndex = editorUsers.findIndex(
-        user => user.id === lastAssignedContent.assigned_to_id
+    if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        user => user.id === lastAssignedRequest.assigned_to_id
       );
 
       if (lastAssigneeIndex !== -1) {
-        nextAssigneeIndex = (lastAssigneeIndex + 1) % editorUsers.length;
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
       }
     }
 
-    const assigned_to_id = editorUsers[nextAssigneeIndex].id;
+    const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
-    await db.insert(contents).values({
-      externalId: contentMessage.externalId,
-      source: contentMessage.source || null,
-      categories: contentMessage.categories || null,
-      labels: contentMessage.labels || null,
+    // Tạo yêu cầu hỗ trợ mới
+    await db.insert(supportRequests).values({
+      fullName: "System Generated",
+      email: "system@example.com",
+      subject: `Auto Request ${contentMessage.externalId}`,
+      content: `Auto-generated request from Kafka message: ${JSON.stringify(messageWithStringId)}`,
       status: 'pending',
-      sourceVerification: contentMessage.sourceVerification || 'unverified',
       assigned_to_id,
-      assignedAt: now,
+      assigned_at: now,
     });
 
-    log(`Content ${contentMessage.externalId} assigned to user ID ${assigned_to_id} (${editorUsers[nextAssigneeIndex].username})`, 'kafka');
+    log(`Support request created and assigned to user ID ${assigned_to_id} (${activeUsers[nextAssigneeIndex].username})`, 'kafka');
   } catch (error) {
     log(`Error processing content message: ${error}`, 'kafka-error');
+    throw error; // Ném lỗi để caller có thể xử lý
   }
 }
 
