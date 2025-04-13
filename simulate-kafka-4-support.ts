@@ -10,7 +10,7 @@ async function createSupportRequest(assigneeId: number) {
     console.log('Creating support request for assignee:', assigneeId);
 
     const requestData = {
-      full_name: "System Generated", 
+      full_name: "System Generated",
       email: "system@example.com",
       subject: `Yêu cầu hỗ trợ ${now.getTime()}`,
       content: `Yêu cầu hỗ trợ tự động được tạo lúc ${now.toISOString()}`,
@@ -82,8 +82,6 @@ async function simulateKafka4Requests() {
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         console.error(`Failed to create request ${i + 1}:`, error);
-        //The original code re-threw the error here, which is more appropriate for a simulation.  
-        //Leaving it as is will halt the loop on failure
         throw error;
       }
     }

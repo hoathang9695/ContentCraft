@@ -1387,6 +1387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/support-requests', isAuthenticated, async (req, res) => {
     console.log('Fetching support requests');
     try {
+      console.log('User:', req.user);
       const user = req.user as Express.User;
       let result;
 
