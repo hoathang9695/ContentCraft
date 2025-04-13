@@ -7,15 +7,15 @@ async function createSupportRequest(assigneeId: number) {
   try {
     const now = new Date();
     const requestData = {
-      full_name: "System Generated",
-      email: "system@example.com",
+      fullName: "System Generated",
+      email: "system@example.com", 
       subject: `Yêu cầu hỗ trợ ${now.getTime()}`,
       content: `Yêu cầu hỗ trợ tự động được tạo lúc ${now.toISOString()}`,
       status: 'pending',
-      assigned_to_id: assigneeId,
-      assigned_at: now,
-      created_at: now,
-      updated_at: now
+      assignedToId: assigneeId,
+      assignedAt: now,
+      createdAt: now,
+      updatedAt: now
     };
 
     console.log('Creating support request with data:', requestData);
