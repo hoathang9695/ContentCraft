@@ -440,7 +440,36 @@ export default function SupportPage() {
                           <span>Gửi phản hồi</span>
                         </DropdownMenuItem>
                         {row.status !== 'completed' && (
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={async () => {
+                            try {
+                              const response = await fetch(`/api/support-requests/${row.id}`, {
+                                method: 'PUT',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  status: 'completed'
+                                })
+                              });
+                              
+                              if (response.ok) {
+                                toast({
+                                  title: "Thành công",
+                                  description: "Đã cập nhật trạng thái yêu cầu",
+                                });
+                                // Refresh the data
+                                window.location.reload();
+                              } else {
+                                throw new Error('Failed to update status');
+                              }
+                            } catch (error) {
+                              toast({
+                                title: "Lỗi",
+                                description: "Không thể cập nhật trạng thái yêu cầu",
+                                variant: "destructive"
+                              });
+                            }
+                          }}>
                             <CheckCircle className="mr-2 h-4 w-4" />
                             <span>Đánh dấu hoàn thành</span>
                           </DropdownMenuItem>
