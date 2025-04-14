@@ -6,7 +6,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, MoreHorizontal, Mail, CheckCircle } from "lucide-react";
 import {
   DropdownMenu,
@@ -85,6 +85,7 @@ function SupportDetailDialog({ isOpen, onClose, request }: { isOpen: boolean; on
 
 export default function SupportPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
@@ -458,8 +459,8 @@ export default function SupportPage() {
                                   title: "Thành công",
                                   description: "Đã cập nhật trạng thái yêu cầu",
                                 });
-                                // Refresh the data
-                                window.location.reload();
+                                // Invalidate and refetch the support requests query
+                                queryClient.invalidateQueries(['/api/support-requests']);
                               } else {
                                 throw new Error('Failed to update status');
                               }
