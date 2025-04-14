@@ -1,10 +1,12 @@
 import { useLocation, Link } from 'wouter';
+import { useState } from 'react';
 import { 
   LayoutDashboard, 
   FileText, 
   Users, 
   User,
   ActivitySquare,
+  ChevronDown,
   History,
   Folder,
   Tag,
@@ -52,6 +54,7 @@ function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarI
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const [isExpanded, setIsExpanded] = useState(true);
   
   const isAdmin = user?.role === 'admin';
 
@@ -97,16 +100,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </SidebarItem>
 
             <div>
-              <SidebarItem
-                href="/user-feedback"
-                icon={ActivitySquare}
-                isActive={isActivePath('/user-feedback')}
-                onClick={handleItemClick}
-              >
-                Xử lý phản hồi
-              </SidebarItem>
+              <div className="relative">
+                <SidebarItem
+                  href="/user-feedback"
+                  icon={ActivitySquare}
+                  isActive={isActivePath('/user-feedback')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsExpanded(!isExpanded);
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span>Xử lý phản hồi</span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded ? "transform rotate-180" : "")} />
+                  </div>
+                </SidebarItem>
+              </div>
               
-              <div className="pl-6 ml-2 border-l border-border">
+              <div className={cn("pl-6 ml-2 border-l border-border overflow-hidden transition-all", 
+                isExpanded ? "max-h-48" : "max-h-0")}>
                 <SidebarItem
                   href="/user-feedback/support"
                   icon={HelpCircle}
