@@ -448,7 +448,8 @@ export default function SupportPage() {
                                   'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
-                                  status: 'completed'
+                                  status: 'completed',
+                                  response_content: 'Đã xử lý yêu cầu'
                                 })
                               });
                               
