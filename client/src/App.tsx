@@ -18,6 +18,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import UserFeedbackPage from './pages/user-feedback-page';
 import SupportPage from './pages/user-feedback/support-page';
 import VerificationPage from './pages/user-feedback/verification-page';
+import TickPage from './pages/user-feedback/tick-page';
 
 function Router() {
   return (
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/user-feedback" component={UserFeedbackPage} />
       <Route path="/user-feedback/support" component={SupportPage} />
       <Route path="/user-feedback/verification" component={VerificationPage} />
+      <Route path="/user-feedback/tick" component={TickPage} />
       <Route component={NotFound} />
     </Switch>
   );
