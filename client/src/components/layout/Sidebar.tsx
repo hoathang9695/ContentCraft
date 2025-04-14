@@ -54,7 +54,7 @@ function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarI
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const isAdmin = user?.role === 'admin';
 
