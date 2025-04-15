@@ -3,34 +3,68 @@
  * Trong môi trường thực tế, những thông điệp này sẽ đến từ một Kafka broker bên ngoài
  */
 
-import { processContentMessage, ContentMessage } from './kafka-consumer';
+import { db } from './db';
+import { users, supportRequests } from '../shared/schema';
+import { type ContentMessage } from './kafka-consumer';
 import { log } from './vite';
+
 
 /**
  * Tạo và xử lý một thông điệp nội dung mẫu giống như Kafka gửi đến
  */
 export async function simulateKafkaMessage(contentId: string): Promise<ContentMessage> {
-  // Tạo nội dung mẫu với ID đã cung cấp
   const message: ContentMessage = {
     externalId: contentId,
     source: 'Kafka Simulator',
-    categories: 'Test Category',
-    labels: 'test,simulator,kafka',
     sourceVerification: 'unverified'
   };
-  
-  // Ghi log
-  log(`Simulating Kafka message: ${JSON.stringify(message)}`, 'kafka-simulator');
-  
+
+  // Log message
+  console.log(`Simulating Kafka message: ${JSON.stringify(message)}`);
+
   try {
-    // Xử lý tin nhắn như thể nó đến từ Kafka
-    await processContentMessage(message);
-    log(`Successfully processed simulated message for content ID: ${contentId}`, 'kafka-simulator');
+    // Assign to active users in round-robin fashion
+    const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
+
+    if (!activeUsers || activeUsers.length === 0) {
+      throw new Error('No active users found');
+    }
+
+    const lastAssignedRequest = await db.query.supportRequests.findFirst({
+      orderBy: (supportRequests, { desc }) => [desc(supportRequests.assigned_at)],
+    });
+
+    let nextAssigneeIndex = 0;
+    if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        user => user.id === lastAssignedRequest.assigned_to_id
+      );
+      if (lastAssigneeIndex !== -1) {
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+      }
+    }
+
+    const assigned_to_id = activeUsers[nextAssigneeIndex].id;
+    const now = new Date();
+
+    await db.insert(supportRequests).values({
+      full_name: "System Generated",
+      email: "system@example.com", 
+      subject: `Auto Request content:${contentId}`,
+      content: `Auto-generated request from Kafka message: ${JSON.stringify(message)}`,
+      status: 'pending',
+      assigned_to_id,
+      assigned_at: now,
+      created_at: now,
+      updated_at: now
+    });
+
+    console.log(`Successfully processed simulated message for content ID: ${contentId}`);
   } catch (error) {
-    log(`Error processing simulated message: ${error}`, 'kafka-simulator');
+    console.error(`Error processing simulated message: ${error}`);
     throw error;
   }
-  
+
   return message;
 }
 
