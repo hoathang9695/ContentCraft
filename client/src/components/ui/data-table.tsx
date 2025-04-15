@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -26,38 +26,54 @@ interface DataTableProps<T> {
   searchPlaceholder?: string;
   onSearch?: (value: string) => void;
   searchValue?: string;
-  pagination?: {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-  };
+  pagination?: boolean;
+  pageSize?: number;
 }
 
 export function DataTable<T>({
-  data,
+  data = [],
   columns,
   caption,
   isLoading = false,
   searchable = false,
-  searchPlaceholder = 'Search...',
-  onSearch,
-  searchValue = '',
-  pagination,
+  searchPlaceholder = 'Tìm kiếm...',
+  pagination = false,
+  pageSize = 10,
 }: DataTableProps<T>) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const filteredData = useMemo(() => {
+    let filtered = data;
+    if (searchQuery) {
+      const lowercasedQuery = searchQuery.toLowerCase();
+      filtered = data.filter((item) => {
+        return columns.some(column => {
+          const value = item[column.key];
+          return value && value.toString().toLowerCase().includes(lowercasedQuery);
+        });
+      });
+    }
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filtered.slice(start, end);
+  }, [data, searchQuery, currentPage, pageSize, columns]);
+
+
   return (
     <div className="w-full">
-      {searchable && onSearch && (
+      {searchable && (
         <div className="mb-4">
           <Input
             type="text"
             placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={(e) => onSearch(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="max-w-sm"
           />
         </div>
       )}
-      
+
       <div className="rounded-md border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <Table className="min-w-full">
@@ -81,22 +97,20 @@ export function DataTable<T>({
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : data.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
                     No results found.
                   </TableCell>
                 </TableRow>
               ) : (
-                data.map((row, rowIndex) => (
+                filteredData.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="hover:bg-muted/50">
                     {columns.map((column) => (
                       <TableCell key={`${rowIndex}-${column.key}`} className={column.className}>
                         {column.render
                           ? column.render(row)
-                          // @ts-ignore - accessing dynamic property
                           : row[column.key] !== undefined
-                          // @ts-ignore - accessing dynamic property
                           ? String(row[column.key])
                           : null}
                       </TableCell>
@@ -108,32 +122,37 @@ export function DataTable<T>({
           </Table>
         </div>
       </div>
-      
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-            disabled={pagination.currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-          
-          <div className="text-sm text-muted-foreground">
-            Page {pagination.currentPage} of {pagination.totalPages}
+
+      {pagination && filteredData.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="flex-1 text-sm text-muted-foreground">
+            Hiển thị {((currentPage - 1) * pageSize) + 1} đến {Math.min(currentPage * pageSize, filteredData.length)} trong tổng số {data.length} kết quả
           </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-            disabled={pagination.currentPage === pagination.totalPages}
-          >
-            Next
-            <ChevronRight className="h-4 w-4 ml-2" />
-          </Button>
+          <div className="flex items-center space-x-6 lg:space-x-8">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+              >
+                <span className="sr-only">Trang trước</span>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                Trang {currentPage} / {Math.ceil(data.length / pageSize)}
+              </div>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => setCurrentPage(page => Math.min(Math.ceil(data.length / pageSize), page + 1))}
+                disabled={currentPage === Math.ceil(data.length / pageSize)}
+              >
+                <span className="sr-only">Trang sau</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

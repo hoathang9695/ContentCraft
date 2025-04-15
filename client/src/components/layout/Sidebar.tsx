@@ -1,14 +1,19 @@
 import { useLocation, Link } from 'wouter';
+import { useState } from 'react';
 import { 
   LayoutDashboard, 
   FileText, 
   Users, 
   User,
   ActivitySquare,
+  ChevronDown,
   History,
   Folder,
   Tag,
-  UserCog
+  UserCog,
+  HelpCircle,
+  ShieldCheck,
+  BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -49,6 +54,7 @@ function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarI
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const isAdmin = user?.role === 'admin';
 
@@ -92,6 +98,55 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             >
               Content
             </SidebarItem>
+
+            <div>
+              <div className="relative">
+                <SidebarItem
+                  href="/user-feedback"
+                  icon={ActivitySquare}
+                  isActive={isActivePath('/user-feedback')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsExpanded(!isExpanded);
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span>Xử lý phản hồi</span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded ? "transform rotate-180" : "")} />
+                  </div>
+                </SidebarItem>
+              </div>
+              
+              <div className={cn("pl-6 ml-2 border-l border-border overflow-hidden transition-all", 
+                isExpanded ? "max-h-48" : "max-h-0")}>
+                <SidebarItem
+                  href="/user-feedback/support"
+                  icon={HelpCircle}
+                  isActive={isActivePath('/user-feedback/support')}
+                  onClick={handleItemClick}
+                >
+                  Yêu cầu hỗ trợ
+                </SidebarItem>
+                
+                <SidebarItem
+                  href="/user-feedback/verification"
+                  icon={ShieldCheck}
+                  isActive={isActivePath('/user-feedback/verification')}
+                  onClick={handleItemClick}
+                >
+                  Yêu cầu xác minh danh tính
+                </SidebarItem>
+                
+                <SidebarItem
+                  href="/user-feedback/tick"
+                  icon={BadgeCheck}
+                  isActive={isActivePath('/user-feedback/tick')}
+                  onClick={handleItemClick}
+                >
+                  Yêu cầu tick Tím
+                </SidebarItem>
+              </div>
+            </div>
             
             {isAdmin && (
               <>

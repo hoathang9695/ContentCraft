@@ -21,7 +21,8 @@ export default function UsersPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Redirect if not admin
-  if (user && user.role !== "admin") {
+  const shouldRedirect = user && user.role !== "admin";
+  if (shouldRedirect) {
     return <Redirect to="/" />;
   }
 

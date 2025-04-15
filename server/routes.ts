@@ -3,7 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema } from "@shared/schema";
+import { desc, eq } from 'drizzle-orm';
+import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, users, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
+import { pool, db } from "./db";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -872,7 +874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!comment) {
-        return res.status(400).json({ success: false, message: "Comment content is required" });
+        return res.status(400).json({ successfalse, message: "Comment content is required" });
       }
 
       // Lấy thông tin fake user
@@ -1381,6 +1383,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Support routes
+  const supportRouter = (await import('./routes/support.router')).default;
+  app.use("/api/support-requests", supportRouter);
 
   const httpServer = createServer(app);
   return httpServer;

@@ -1,69 +1,62 @@
+
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
 
-// Create a connection pool instead of a single client
+// Create a connection pool with detailed logging
 export const pool = new pg.Pool({
+  host: '42.96.40.138',
+  user: 'postgres',
+  password: 'chiakhoathanhcong',
+  database: 'content',
+  port: 5432,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  ssl: false,
+  allowExitOnIdle: false
+});
+
+// Log connection details
+console.log('Database connection config:', {
   host: process.env.PGHOST,
-  port: parseInt(process.env.PGPORT || '5432'),
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD?.toString(), // Đảm bảo mật khẩu là chuỗi
   database: process.env.PGDATABASE,
-  max: 10, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 10000, // Increase connection timeout to 10 seconds
-  // Add auto reconnect logic
-  allowExitOnIdle: false, // Don't exit if all clients are idle
-  ssl: false
+  user: process.env.PGUSER,
+  port: process.env.PGPORT
 });
 
-// Add error handling
-pool.on('error', (err: Error) => {
-  console.error('Unexpected error on idle client', err);
-  // Don't crash the server on connection errors
-});
-
-// Listen for specific connection issues
-pool.on('connect', (client) => {
-  client.on('error', (err) => {
-    console.error('Database client error:', err);
-    // Individual client error shouldn't crash the entire application
+// Add detailed connection logging and error handling
+pool.on('connect', () => {
+  console.log('Database connected successfully');
+  console.log('Connection config:', {
+    host: pool.options.host,
+    database: pool.options.database,
+    user: pool.options.user,
+    port: pool.options.port
   });
 });
 
-// Connect to PostgreSQL and test connection with exponential backoff
-let retryCount = 0;
-const maxRetries = 5;
+pool.on('error', (err) => {
+  console.error('Database pool error:', err);
+  // Attempt to reconnect on error
+  pool.connect().catch(connectErr => {
+    console.error('Failed to reconnect to database:', connectErr);
+  });
+});
 
-async function connectToDatabase() {
+// Test connection immediately and retry if needed
+async function testConnection() {
   try {
-    // Get a client from the pool to test the connection
-    const client = await pool.connect();
-    console.log("Connected to PostgreSQL database");
-    // Reset retry count on successful connection
-    retryCount = 0;
-    // Release the client back to the pool
-    client.release();
+    const res = await pool.query('SELECT NOW()');
+    console.log('Database connection test successful:', res.rows[0]);
   } catch (err) {
-    console.error("Error connecting to PostgreSQL:", err);
-    // Calculate backoff time with exponential increase and a maximum of 30 seconds
-    retryCount++;
-    const backoffTime = Math.min(Math.pow(2, retryCount) * 1000, 30000);
-    console.log(`Will retry connecting in ${backoffTime/1000} seconds... (Attempt ${retryCount} of ${maxRetries})`);
-
-    if (retryCount < maxRetries) {
-      // Retry after a delay with exponential backoff
-      setTimeout(connectToDatabase, backoffTime);
-    } else {
-      console.error("Max retries reached. Please check your database configuration.");
-      // Continue with application startup despite database issues
-      // This allows the Express server to start even if DB isn't ready yet
-    }
+    console.error('Database connection test failed:', err);
+    // Wait 5 seconds and retry
+    setTimeout(testConnection, 5000);
   }
 }
 
-// Initialize connection
-connectToDatabase();
+testConnection();
 
-// Create Drizzle ORM instance with our schema using the pool
+// Create Drizzle ORM instance
 export const db = drizzle(pool, { schema });

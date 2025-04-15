@@ -16,6 +16,14 @@ const PgSession = connectPgSimple(expressSession);
 
 // Interface for storage operations
 export interface IStorage {
+  // Support request operations
+  createSupportRequest(request: InsertSupportRequest): Promise<SupportRequest>;
+  getSupportRequest(id: number): Promise<SupportRequest | undefined>;
+  getAllSupportRequests(): Promise<SupportRequest[]>;
+  updateSupportRequest(id: number, request: Partial<InsertSupportRequest>): Promise<SupportRequest | undefined>;
+  deleteSupportRequest(id: number): Promise<boolean>;
+  assignSupportRequest(id: number, userId: number): Promise<SupportRequest | undefined>;
+  completeSupportRequest(id: number, responseContent: string, responderId: number): Promise<SupportRequest | undefined>;
   // User management operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -70,6 +78,77 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Support request implementations
+  async createSupportRequest(request: InsertSupportRequest): Promise<SupportRequest> {
+    const result = await db.insert(supportRequests).values(request).returning();
+    return result[0];
+  }
+
+  async getSupportRequest(id: number): Promise<SupportRequest | undefined> {
+    const result = await db.select().from(supportRequests).where(eq(supportRequests.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getAllSupportRequests(): Promise<SupportRequest[]> {
+    return await db.select().from(supportRequests).orderBy(desc(supportRequests.created_at));
+  }
+
+  async getSupportRequestsByAssignee(userId: number): Promise<SupportRequest[]> {
+    return await db
+      .select()
+      .from(supportRequests)
+      .where(eq(supportRequests.assigned_to_id, userId))
+      .orderBy(desc(supportRequests.created_at));
+  }
+
+  async updateSupportRequest(id: number, request: Partial<InsertSupportRequest>): Promise<SupportRequest | undefined> {
+    const result = await db
+      .update(supportRequests)
+      .set({
+        ...request,
+        updated_at: new Date()
+      })
+      .where(eq(supportRequests.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteSupportRequest(id: number): Promise<boolean> {
+    const result = await db
+      .delete(supportRequests)
+      .where(eq(supportRequests.id, id))
+      .returning({ id: supportRequests.id });
+    return result.length > 0;
+  }
+
+  async assignSupportRequest(id: number, userId: number): Promise<SupportRequest | undefined> {
+    const result = await db
+      .update(supportRequests)
+      .set({
+        assigned_to_id: userId,
+        assigned_at: new Date(),
+        status: 'processing',
+        updated_at: new Date()
+      })
+      .where(eq(supportRequests.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async completeSupportRequest(id: number, responseContent: string, responderId: number): Promise<SupportRequest | undefined> {
+    const result = await db
+      .update(supportRequests)
+      .set({
+        status: 'completed',
+        response_content: responseContent,
+        responder_id: responderId,
+        response_time: new Date(),
+        updated_at: new Date()
+      })
+      .where(eq(supportRequests.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
   sessionStore: any;
 
   constructor() {
