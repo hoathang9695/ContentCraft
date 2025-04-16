@@ -38,10 +38,16 @@ export async function setupKafkaConsumer() {
     const kafka = new Kafka({
       clientId: 'content-processing-service',
       brokers: process.env.KAFKA_BROKERS?.split(',') || [],
-      ssl: false,
+      ssl: true,
       sasl: sasl,
-      connectionTimeout: 3000,
-      authenticationTimeout: 1000,
+      connectionTimeout: 10000,
+      authenticationTimeout: 5000,
+      retry: {
+        initialRetryTime: 1000,
+        retries: 8,
+        maxRetryTime: 30000,
+        factor: 1.5,
+      }
     });
 
     consumer = kafka.consumer({
