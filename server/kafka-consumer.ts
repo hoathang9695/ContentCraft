@@ -35,20 +35,30 @@ export async function setupKafkaConsumer() {
       password: process.env.KAFKA_SASL_PASSWORD || ''
     } : undefined;
 
+    const brokers = process.env.KAFKA_BROKERS?.split(',') || [];
+    log(`Connecting to Kafka brokers: ${brokers.join(', ')}`, 'kafka');
+    
     const kafka = new Kafka({
-      clientId: 'content-processing-service',
-      brokers: process.env.KAFKA_BROKERS?.split(',') || [],
+      clientId: 'content-processing-service', 
+      brokers: brokers,
       ssl: true,
       sasl: sasl,
-      connectionTimeout: 10000,
-      authenticationTimeout: 5000,
+      connectionTimeout: 30000,
+      authenticationTimeout: 10000,
       retry: {
-        initialRetryTime: 1000,
-        retries: 8,
-        maxRetryTime: 30000,
-        factor: 1.5,
+        initialRetryTime: 3000,
+        retries: 10,
+        maxRetryTime: 60000,
+        factor: 2
       }
     });
+
+    log(`Kafka configuration: ${JSON.stringify({
+      ssl: true,
+      sasl: !!sasl,
+      connectionTimeout: 30000,
+      authenticationTimeout: 10000,
+    })}`, 'kafka');
 
     consumer = kafka.consumer({
       groupId: process.env.KAFKA_GROUP_ID || 'emso-processor'
