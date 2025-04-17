@@ -1,15 +1,15 @@
-import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
-import { db } from './db';
-import { users, supportRequests } from '../shared/schema';
-import { eq } from 'drizzle-orm';
-import { log } from './vite';
+import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
+import { db } from "./db";
+import { users, supportRequests, contents } from "../shared/schema";
+import { eq } from "drizzle-orm";
+import { log } from "./vite";
 
 let consumer: Consumer;
 
 export interface ContentMessage {
   externalId: string;
   source?: string;
-  sourceVerification?: 'verified' | 'unverified';
+  sourceVerification?: "verified" | "unverified";
 }
 
 export interface SupportMessage {
@@ -24,121 +24,208 @@ export interface SupportMessage {
  */
 export async function setupKafkaConsumer() {
   try {
-    if (process.env.KAFKA_ENABLED !== 'true') {
-      log('Kafka is not enabled', 'kafka');
+    if (process.env.KAFKA_ENABLED !== "true") {
+      log("Kafka is not enabled", "kafka");
       return;
     }
 
-    const sasl = process.env.KAFKA_SASL == 'true' ? {
-      mechanism: process.env.KAFKA_SASL_MECHANISMS as 'PLAIN',
-      username: process.env.KAFKA_SASL_USERNAME || '',
-      password: process.env.KAFKA_SASL_PASSWORD || ''
-    } : undefined;
+    const sasl =
+      process.env.KAFKA_SASL == "true"
+        ? {
+            mechanism: process.env.KAFKA_SASL_MECHANISMS as "PLAIN",
+            username: process.env.KAFKA_SASL_USERNAME || "",
+            password: process.env.KAFKA_SASL_PASSWORD || "",
+          }
+        : undefined;
 
-    const brokers = process.env.KAFKA_BROKERS?.split(',') || [];
-    log(`Connecting to Kafka brokers: ${brokers.join(', ')}`, 'kafka');
-    
-    log(`Attempting Kafka connection with SSL config...`, 'kafka');
-    
+    const brokers = process.env.KAFKA_BROKERS?.split(",") || [];
+    log(
+      `Initializing Kafka connection to brokers: ${brokers.join(", ")}`,
+      "kafka",
+    );
+
     const kafkaConfig = {
-      clientId: 'content-processing-service',
-      brokers: brokers,
+      clientId: "content-processing-service",
+      brokers,
       ssl: true,
-      sasl: sasl,
-      connectionTimeout: 30000,
-      authenticationTimeout: 10000,
+      sasl,
+      connectionTimeout: 120000, // Tăng timeout
+      authenticationTimeout: 60000,
       retry: {
-        initialRetryTime: 3000,
-        retries: 10,
-        maxRetryTime: 60000,
-        factor: 2
+        initialRetryTime: 5000,
+        retries: 30,
+        maxRetryTime: 300000,
+        factor: 1.2, // Giảm hệ số để retry thường xuyên hơn
       },
-      logLevel: 2 // INFO level
+      logLevel: 4, // DEBUG level để log chi tiết hơn
+      requestTimeout: 120000,
+      enforceRequestTimeout: true,
     };
 
-    log(`Kafka configuration: ${JSON.stringify({
-      ssl: true,
-      sasl: !!sasl,
-      brokers: brokers,
-      connectionTimeout: 30000,
-      authenticationTimeout: 10000,
-      retryConfig: kafkaConfig.retry
-    }, null, 2)}`, 'kafka');
+    // Add connection error handler
+    process.on("unhandledRejection", (error) => {
+      log(`Kafka unhandled rejection: ${error}`, "kafka-error");
+    });
+
+    log(
+      `Kafka configuration: ${JSON.stringify(
+        {
+          ssl: true,
+          sasl: !!sasl,
+          brokers,
+          connectionTimeout: kafkaConfig.connectionTimeout,
+          authenticationTimeout: kafkaConfig.authenticationTimeout,
+          retry: kafkaConfig.retry,
+        },
+        null,
+        2,
+      )}`,
+      "kafka",
+    );
 
     const kafka = new Kafka(kafkaConfig);
 
     consumer = kafka.consumer({
-      groupId: process.env.KAFKA_GROUP_ID || 'emso-processor'
+      groupId: process.env.KAFKA_GROUP_ID || "emso-processor",
     });
 
-    await consumer.connect();
+    try {
+      await consumer.connect();
+      log("Successfully connected to Kafka", "kafka");
 
-    const topics = process.env.KAFKA_TOPICS?.split(',') || ['content_management'];
-    for (const topic of topics) {
-      await consumer.subscribe({ topic, fromBeginning: true });
-    }
+      const topics = process.env.KAFKA_TOPICS?.split(",") || [
+        "content_management",
+      ];
 
-    log('Connected to Kafka and subscribed to topics: ' + topics.join(', '), 'kafka');
+      // Retry topic subscription
+      let retries = 0;
+      const maxRetries = 5;
 
-    await consumer.run({
-      eachMessage: async (payload: EachMessagePayload) => {
-        const { message } = payload;
-        const parsedMessage = parseMessage(message.value);
-
-        if (!parsedMessage) return;
-
-        if ('externalId' in parsedMessage) {
-          await processContentMessage(parsedMessage as ContentMessage);
-        } else if ('full_name' in parsedMessage) {
-          await processSupportMessage(parsedMessage as SupportMessage);
+      while (retries < maxRetries) {
+        try {
+          for (const topic of topics) {
+            await consumer.subscribe({ topic, fromBeginning: true });
+            log(`Subscribed to topic: ${topic}`, "kafka");
+          }
+          break;
+        } catch (error) {
+          retries++;
+          log(
+            `Failed to subscribe to topics (attempt ${retries}/${maxRetries}): ${error}`,
+            "kafka-error",
+          );
+          if (retries === maxRetries) {
+            throw new Error(
+              `Failed to subscribe to topics after ${maxRetries} attempts`,
+            );
+          }
+          await new Promise((resolve) => setTimeout(resolve, 5000));
         }
-      },
-    });
+      }
 
-    return consumer;
-  } catch (error) {
-    log(`Error setting up Kafka consumer: ${error}`, 'kafka-error');
-    throw error;
+      // Enhanced health check with reconnection logic
+      setInterval(async () => {
+        try {
+          const health = await kafka.admin().listTopics();
+          log(
+            `Kafka health check - Connected to topics: ${health.join(", ")}`,
+            "kafka",
+          );
+        } catch (error) {
+          log(`Kafka health check failed: ${error}`, "kafka-error");
+          try {
+            await consumer.disconnect();
+            await consumer.connect();
+            log("Reconnected to Kafka after health check failure", "kafka");
+          } catch (reconnectError) {
+            log(
+              `Failed to reconnect to Kafka: ${reconnectError}`,
+              "kafka-error",
+            );
+          }
+        }
+      }, 60000);
+
+      log(
+        "Connected to Kafka and subscribed to topics: " + topics.join(", "),
+        "kafka",
+      );
+
+      await consumer.run({
+        eachMessage: async (payload: EachMessagePayload) => {
+          const { message } = payload;
+          const parsedMessage = parseMessage(message.value);
+
+          if (!parsedMessage) return;
+
+          if ("externalId" in parsedMessage) {
+            await processContentMessage(parsedMessage as ContentMessage);
+          } else if ("full_name" in parsedMessage) {
+            await processSupportMessage(parsedMessage as SupportMessage);
+          }
+        },
+      });
+
+      return consumer;
+    } catch (error) {
+      log(`Error setting up Kafka consumer: ${error}`, "kafka-error");
+      throw error;
+    }
+  } finally {
+    log("Kafka consumer setup completed", "kafka");
   }
 }
 
-function parseMessage(messageValue: Buffer | null): ContentMessage | SupportMessage | null {
+function parseMessage(
+  messageValue: Buffer | null,
+): ContentMessage | SupportMessage | null {
   if (!messageValue) return null;
 
   try {
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
-    if ('full_name' in message && 'email' in message) {
+    if ("full_name" in message && "email" in message) {
       return message as SupportMessage;
-    } else if ('externalId' in message) {
+    } else if ("externalId" in message) {
       return message as ContentMessage;
     }
 
     return null;
   } catch (error) {
-    log(`Error parsing message: ${error}`, 'kafka-error');
+    log(`Error parsing message: ${error}`, "kafka-error");
     return null;
   }
 }
 
 async function processContentMessage(contentMessage: ContentMessage) {
   try {
-    const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
+    log(
+      `Processing content message: ${JSON.stringify(contentMessage)}`,
+      "kafka",
+    );
+
+    const activeUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.status, "active"));
+    log(`Found ${activeUsers.length} active users`, "kafka");
 
     if (!activeUsers || activeUsers.length === 0) {
-      log('No active users found to assign request.', 'kafka');
+      log("No active users found to assign request.", "kafka");
       return;
     }
 
     const lastAssignedRequest = await db.query.supportRequests.findFirst({
-      orderBy: (supportRequests, { desc }) => [desc(supportRequests.assigned_at)],
+      orderBy: (supportRequests, { desc }) => [
+        desc(supportRequests.assigned_at),
+      ],
     });
 
     let nextAssigneeIndex = 0;
     if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedRequest.assigned_to_id
+        (user) => user.id === lastAssignedRequest.assigned_to_id,
       );
       if (lastAssigneeIndex !== -1) {
         nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
@@ -149,44 +236,75 @@ async function processContentMessage(contentMessage: ContentMessage) {
     const now = new Date();
 
     const insertData = {
-      full_name: "System Generated",
-      email: "system@example.com",
-      subject: `Auto Request content:${contentMessage.externalId}`,
-      content: `Auto-generated request from Kafka message: ${JSON.stringify(contentMessage)}`,
-      status: 'pending',
-      assigned_to_id,
-      assigned_at: now,
-      created_at: now,
-      updated_at: now
+      externalId: contentMessage.externalId,
+      source: contentMessage.source || null,
+      categories: contentMessage.categories || null,
+      labels: contentMessage.labels || null,
+      status: "pending",
+      sourceVerification: contentMessage.sourceVerification || "unverified",
+      assigned_to_id: assigned_to_id,
+      assignedAt: now,
+      createdAt: now,
+      updatedAt: now,
     };
 
-    const newRequest = await db.insert(supportRequests).values(insertData).returning();
-    log(`Content request created and assigned to user ID ${assigned_to_id}`, 'kafka');
+    const newContent = await db.insert(contents).values(insertData).returning();
+    log(`New content created with ID ${newContent[0].id}`, "kafka");
+    log(
+      `Content request created and assigned to user ID ${assigned_to_id}`,
+      "kafka",
+    );
 
-    return newRequest[0];
+    return newContent[0];
   } catch (error) {
-    log(`Error processing content message: ${error}`, 'kafka-error');
+    log(`Error processing content message: ${error}`, "kafka-error");
     throw error;
   }
 }
 
 async function processSupportMessage(message: SupportMessage) {
   try {
-    const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
-
-    if (!activeUsers || activeUsers.length === 0) {
-      log('No active users found to assign request.', 'kafka');
+    // Validate required fields
+    if (
+      !message.full_name ||
+      !message.email ||
+      !message.subject ||
+      !message.content
+    ) {
+      log(`Invalid support message: ${JSON.stringify(message)}`, "kafka-error");
       return;
     }
 
-    const lastAssignedRequest = await db.query.supportRequests.findFirst({
-      orderBy: (supportRequests, { desc }) => [desc(supportRequests.assigned_at)],
-    });
+    log(`Processing support message: ${JSON.stringify(message)}`, "kafka");
 
+    // Get active users
+    const activeUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.status, "active"));
+
+    if (!activeUsers || activeUsers.length === 0) {
+      log("No active users found to assign request.", "kafka");
+      return;
+    }
+    log(`Found ${activeUsers.length} active users for assignment`, "kafka");
+
+    // Find last assigned request
+    const lastAssignedRequest = await db.query.supportRequests.findFirst({
+      orderBy: (supportRequests, { desc }) => [
+        desc(supportRequests.assigned_at),
+      ],
+    });
+    log(
+      `Last assigned request: ${JSON.stringify(lastAssignedRequest)}`,
+      "kafka",
+    );
+
+    // Calculate next assignee (round-robin)
     let nextAssigneeIndex = 0;
     if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedRequest.assigned_to_id
+        (user) => user.id === lastAssignedRequest.assigned_to_id,
       );
       if (lastAssigneeIndex !== -1) {
         nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
@@ -196,21 +314,37 @@ async function processSupportMessage(message: SupportMessage) {
     const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
+    // Prepare insert data
     const insertData = {
-      ...message,
-      status: 'pending',
+      full_name: message.full_name,
+      email: message.email,
+      subject: message.subject,
+      content: message.content,
+      status: "pending",
       assigned_to_id,
       assigned_at: now,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     };
 
-    const newRequest = await db.insert(supportRequests).values(insertData).returning();
-    log(`Support request created and assigned to user ID ${assigned_to_id}`, 'kafka');
-
-    return newRequest[0];
+    try {
+      // Insert into DB
+      const newRequest = await db
+        .insert(supportRequests)
+        .values(insertData)
+        .returning();
+      log(`Support request created with ID ${newRequest[0].id}`, "kafka");
+      log(`Support request assigned to user ID ${assigned_to_id}`, "kafka");
+      return newRequest[0];
+    } catch (dbError) {
+      log(
+        `Database error while inserting support request: ${dbError}`,
+        "kafka-error",
+      );
+      throw dbError;
+    }
   } catch (error) {
-    log(`Error processing support message: ${error}`, 'kafka-error');
+    log(`Error processing support message: ${error}`, "kafka-error");
     throw error;
   }
 }
@@ -218,6 +352,6 @@ async function processSupportMessage(message: SupportMessage) {
 export async function disconnectKafkaConsumer() {
   if (consumer) {
     await consumer.disconnect();
-    log('Disconnected from Kafka', 'kafka');
+    log("Disconnected from Kafka", "kafka");
   }
 }
