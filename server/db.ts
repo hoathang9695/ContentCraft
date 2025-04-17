@@ -2,17 +2,23 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
+import { log } from "./vite";
+
+// Tăng số lần retry và thời gian timeout
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 5000;
+const CONNECTION_TIMEOUT = 60000;
 
 // Create a connection pool with detailed logging
 export const pool = new pg.Pool({
   host: process.env.PGHOST || '172.16.0.231',
-  user: process.env.PGUSER || 'postgres',
+  user: process.env.PGUSER || 'postgres', 
   password: process.env.PGPASSWORD || 'chiakhoathanhcong',
   database: process.env.PGDATABASE || 'content',
   port: parseInt(process.env.PGPORT || '5432'),
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 30000,
+  max: 20,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: CONNECTION_TIMEOUT,
   ssl: {
     rejectUnauthorized: false
   },
@@ -20,45 +26,61 @@ export const pool = new pg.Pool({
 });
 
 // Log connection details
-console.log('Database connection config:', {
-  host: process.env.PGHOST,
-  database: process.env.PGDATABASE,
-  user: process.env.PGUSER,
-  port: process.env.PGPORT
-});
+log('Database connection config:', {
+  host: process.env.PGHOST || '172.16.0.231',
+  database: process.env.PGDATABASE || 'content',
+  user: process.env.PGUSER || 'postgres',
+  port: process.env.PGPORT || '5432'
+}, 'db');
 
-// Add detailed connection logging and error handling
+// Add detailed connection logging and error handling with retry
 pool.on('connect', () => {
-  console.log('Database connected successfully');
-  console.log('Connection config:', {
+  log('Database connected successfully', 'db');
+  log('Connection config:', {
     host: pool.options.host,
-    database: pool.options.database,  
+    database: pool.options.database,
     user: pool.options.user,
     port: pool.options.port,
     ssl: pool.options.ssl ? 'enabled' : 'disabled',
     max: pool.options.max,
     idleTimeoutMillis: pool.options.idleTimeoutMillis,
     connectionTimeoutMillis: pool.options.connectionTimeoutMillis
-  });
+  }, 'db');
 });
 
 pool.on('error', (err) => {
-  console.error('Database pool error:', err);
-  // Attempt to reconnect on error
-  pool.connect().catch(connectErr => {
-    console.error('Failed to reconnect to database:', connectErr);
-  });
+  log(`Database pool error: ${err}`, 'db-error');
+  retryConnection();
 });
 
-// Test connection immediately and retry if needed
-async function testConnection() {
+// Retry connection function
+async function retryConnection(retries = 0) {
+  if (retries >= MAX_RETRIES) {
+    log(`Failed to connect after ${MAX_RETRIES} retries`, 'db-error');
+    return;
+  }
+
+  try {
+    const client = await pool.connect();
+    client.release();
+    log('Successfully reconnected to database', 'db');
+  } catch (err) {
+    log(`Retry ${retries + 1}/${MAX_RETRIES} failed: ${err}`, 'db-error');
+    setTimeout(() => retryConnection(retries + 1), RETRY_DELAY);
+  }
+}
+
+// Test connection with retry
+async function testConnection(retries = 0) {
   try {
     const res = await pool.query('SELECT NOW()');
-    console.log('Database connection test successful:', res.rows[0]);
+    log('Database connection test successful:', res.rows[0], 'db');
   } catch (err) {
-    console.error('Database connection test failed:', err);
-    // Wait 5 seconds and retry
-    setTimeout(testConnection, 5000);
+    log(`Database connection test failed: ${err}`, 'db-error');
+    if (retries < MAX_RETRIES) {
+      log(`Retrying connection in ${RETRY_DELAY}ms...`, 'db');
+      setTimeout(() => testConnection(retries + 1), RETRY_DELAY);
+    }
   }
 }
 
