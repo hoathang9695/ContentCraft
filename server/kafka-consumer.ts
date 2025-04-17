@@ -1,6 +1,6 @@
 import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
 import { db } from './db';
-import { users, supportRequests } from '../shared/schema';
+import { users, supportRequests, contents } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 import { log } from './vite';
 
@@ -186,7 +186,7 @@ async function processContentMessage(contentMessage: ContentMessage) {
     log(`New content created with ID ${newContent[0].id}`, 'kafka');
     log(`Content request created and assigned to user ID ${assigned_to_id}`, 'kafka');
 
-    return newRequest[0];
+    return newContent[0];
   } catch (error) {
     log(`Error processing content message: ${error}`, 'kafka-error');
     throw error;
