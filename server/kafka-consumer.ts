@@ -142,7 +142,10 @@ function parseMessage(messageValue: Buffer | null): ContentMessage | SupportMess
 
 async function processContentMessage(contentMessage: ContentMessage) {
   try {
+    log(`Processing content message: ${JSON.stringify(contentMessage)}`, 'kafka');
+    
     const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
+    log(`Found ${activeUsers.length} active users`, 'kafka');
 
     if (!activeUsers || activeUsers.length === 0) {
       log('No active users found to assign request.', 'kafka');
