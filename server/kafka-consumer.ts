@@ -36,22 +36,20 @@ export async function setupKafkaConsumer() {
     } : undefined;
 
     const brokers = process.env.KAFKA_BROKERS?.split(',') || [];
-    log(`Connecting to Kafka brokers: ${brokers.join(', ')}`, 'kafka');
-    
-    log(`Attempting Kafka connection with SSL config...`, 'kafka');
-    
+    log(`Initializing Kafka connection to brokers: ${brokers.join(', ')}`, 'kafka');
+
     const kafkaConfig = {
       clientId: 'content-processing-service',
-      brokers: brokers,
+      brokers,
       ssl: true,
-      sasl: sasl,
+      sasl,
       connectionTimeout: 30000,
-      authenticationTimeout: 10000,
+      authenticationTimeout: 15000,
       retry: {
-        initialRetryTime: 3000,
-        retries: 10,
+        initialRetryTime: 5000,
+        retries: 15,
         maxRetryTime: 60000,
-        factor: 2
+        factor: 2,
       },
       logLevel: 2 // INFO level
     };
@@ -59,10 +57,10 @@ export async function setupKafkaConsumer() {
     log(`Kafka configuration: ${JSON.stringify({
       ssl: true,
       sasl: !!sasl,
-      brokers: brokers,
-      connectionTimeout: 30000,
-      authenticationTimeout: 10000,
-      retryConfig: kafkaConfig.retry
+      brokers,
+      connectionTimeout: kafkaConfig.connectionTimeout,
+      authenticationTimeout: kafkaConfig.authenticationTimeout,
+      retry: kafkaConfig.retry
     }, null, 2)}`, 'kafka');
 
     const kafka = new Kafka(kafkaConfig);
