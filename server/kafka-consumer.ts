@@ -96,27 +96,30 @@ export async function setupKafkaConsumer() {
         }
       }, 60000);
 
-    log('Connected to Kafka and subscribed to topics: ' + topics.join(', '), 'kafka');
+      log('Connected to Kafka and subscribed to topics: ' + topics.join(', '), 'kafka');
 
-    await consumer.run({
-      eachMessage: async (payload: EachMessagePayload) => {
-        const { message } = payload;
-        const parsedMessage = parseMessage(message.value);
+      await consumer.run({
+        eachMessage: async (payload: EachMessagePayload) => {
+          const { message } = payload;
+          const parsedMessage = parseMessage(message.value);
 
-        if (!parsedMessage) return;
+          if (!parsedMessage) return;
 
-        if ('externalId' in parsedMessage) {
-          await processContentMessage(parsedMessage as ContentMessage);
-        } else if ('full_name' in parsedMessage) {
-          await processSupportMessage(parsedMessage as SupportMessage);
-        }
-      },
-    });
+          if ('externalId' in parsedMessage) {
+            await processContentMessage(parsedMessage as ContentMessage);
+          } else if ('full_name' in parsedMessage) {
+            await processSupportMessage(parsedMessage as SupportMessage);
+          }
+        },
+      });
 
-    return consumer;
-  } catch (error) {
-    log(`Error setting up Kafka consumer: ${error}`, 'kafka-error');
-    throw error;
+      return consumer;
+    } catch (error) {
+      log(`Error setting up Kafka consumer: ${error}`, 'kafka-error');
+      throw error;
+    }
+  } finally {
+    log('Kafka consumer setup completed', 'kafka');
   }
 }
 
@@ -143,7 +146,7 @@ function parseMessage(messageValue: Buffer | null): ContentMessage | SupportMess
 async function processContentMessage(contentMessage: ContentMessage) {
   try {
     log(`Processing content message: ${JSON.stringify(contentMessage)}`, 'kafka');
-    
+
     const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
     log(`Found ${activeUsers.length} active users`, 'kafka');
 
