@@ -195,17 +195,30 @@ async function processContentMessage(contentMessage: ContentMessage) {
 
 async function processSupportMessage(message: SupportMessage) {
   try {
+    // Validate required fields
+    if (!message.full_name || !message.email || !message.subject || !message.content) {
+      log(`Invalid support message: ${JSON.stringify(message)}`, 'kafka-error');
+      return;
+    }
+
+    log(`Processing support message: ${JSON.stringify(message)}`, 'kafka');
+
+    // Get active users
     const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
 
     if (!activeUsers || activeUsers.length === 0) {
       log('No active users found to assign request.', 'kafka');
       return;
     }
+    log(`Found ${activeUsers.length} active users for assignment`, 'kafka');
 
+    // Find last assigned request
     const lastAssignedRequest = await db.query.supportRequests.findFirst({
       orderBy: (supportRequests, { desc }) => [desc(supportRequests.assigned_at)],
     });
+    log(`Last assigned request: ${JSON.stringify(lastAssignedRequest)}`, 'kafka');
 
+    // Calculate next assignee (round-robin)
     let nextAssigneeIndex = 0;
     if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
@@ -219,8 +232,12 @@ async function processSupportMessage(message: SupportMessage) {
     const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
+    // Prepare insert data
     const insertData = {
-      ...message,
+      full_name: message.full_name,
+      email: message.email,
+      subject: message.subject,
+      content: message.content,
       status: 'pending',
       assigned_to_id,
       assigned_at: now,
@@ -228,10 +245,16 @@ async function processSupportMessage(message: SupportMessage) {
       updated_at: now
     };
 
-    const newRequest = await db.insert(supportRequests).values(insertData).returning();
-    log(`Support request created and assigned to user ID ${assigned_to_id}`, 'kafka');
-
-    return newRequest[0];
+    try {
+      // Insert into DB
+      const newRequest = await db.insert(supportRequests).values(insertData).returning();
+      log(`Support request created with ID ${newRequest[0].id}`, 'kafka');
+      log(`Support request assigned to user ID ${assigned_to_id}`, 'kafka');
+      return newRequest[0];
+    } catch (dbError) {
+      log(`Database error while inserting support request: ${dbError}`, 'kafka-error');
+      throw dbError;
+    }
   } catch (error) {
     log(`Error processing support message: ${error}`, 'kafka-error');
     throw error;
