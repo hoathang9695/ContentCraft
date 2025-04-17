@@ -43,16 +43,23 @@ export async function setupKafkaConsumer() {
       brokers,
       ssl: true,
       sasl,
-      connectionTimeout: 60000,
-      authenticationTimeout: 30000,
+      connectionTimeout: 120000, // Tăng timeout
+      authenticationTimeout: 60000,
       retry: {
-        initialRetryTime: 3000,
-        retries: 20,
-        maxRetryTime: 120000,
-        factor: 1.5,
+        initialRetryTime: 5000,
+        retries: 30,
+        maxRetryTime: 300000,
+        factor: 1.2, // Giảm hệ số để retry thường xuyên hơn
       },
-      logLevel: 2 // INFO level
+      logLevel: 4, // DEBUG level để log chi tiết hơn
+      requestTimeout: 120000,
+      enforceRequestTimeout: true
     };
+
+    // Add connection error handler
+    process.on('unhandledRejection', (error) => {
+      log(`Kafka unhandled rejection: ${error}`, 'kafka-error');
+    });
 
     log(`Kafka configuration: ${JSON.stringify({
       ssl: true,
@@ -69,12 +76,25 @@ export async function setupKafkaConsumer() {
       groupId: process.env.KAFKA_GROUP_ID || 'emso-processor'
     });
 
-    await consumer.connect();
+    try {
+      await consumer.connect();
+      log('Successfully connected to Kafka', 'kafka');
 
-    const topics = process.env.KAFKA_TOPICS?.split(',') || ['content_management'];
-    for (const topic of topics) {
-      await consumer.subscribe({ topic, fromBeginning: true });
-    }
+      const topics = process.env.KAFKA_TOPICS?.split(',') || ['content_management'];
+      for (const topic of topics) {
+        await consumer.subscribe({ topic, fromBeginning: true });
+        log(`Subscribed to topic: ${topic}`, 'kafka');
+      }
+
+      // Add health check
+      setInterval(async () => {
+        try {
+          const health = await kafka.admin().listTopics();
+          log(`Kafka health check - Connected to topics: ${health.join(', ')}`, 'kafka');
+        } catch (error) {
+          log(`Kafka health check failed: ${error}`, 'kafka-error');
+        }
+      }, 60000);
 
     log('Connected to Kafka and subscribed to topics: ' + topics.join(', '), 'kafka');
 
