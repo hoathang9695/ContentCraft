@@ -43,13 +43,13 @@ export async function setupKafkaConsumer() {
       brokers,
       ssl: true,
       sasl,
-      connectionTimeout: 30000,
-      authenticationTimeout: 15000,
+      connectionTimeout: 60000,
+      authenticationTimeout: 30000,
       retry: {
-        initialRetryTime: 5000,
-        retries: 15,
-        maxRetryTime: 60000,
-        factor: 2,
+        initialRetryTime: 3000,
+        retries: 20,
+        maxRetryTime: 120000,
+        factor: 1.5,
       },
       logLevel: 2 // INFO level
     };
