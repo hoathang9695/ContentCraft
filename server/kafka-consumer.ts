@@ -170,18 +170,20 @@ async function processContentMessage(contentMessage: ContentMessage) {
     const now = new Date();
 
     const insertData = {
-      full_name: "System Generated",
-      email: "system@example.com",
-      subject: `Auto Request content:${contentMessage.externalId}`,
-      content: `Auto-generated request from Kafka message: ${JSON.stringify(contentMessage)}`,
+      externalId: contentMessage.externalId,
+      source: contentMessage.source || null,
+      categories: contentMessage.categories || null,
+      labels: contentMessage.labels || null,
       status: 'pending',
-      assigned_to_id,
-      assigned_at: now,
-      created_at: now,
-      updated_at: now
+      sourceVerification: contentMessage.sourceVerification || 'unverified',
+      assigned_to_id: assigned_to_id,
+      assignedAt: now,
+      createdAt: now,
+      updatedAt: now
     };
 
-    const newRequest = await db.insert(supportRequests).values(insertData).returning();
+    const newContent = await db.insert(contents).values(insertData).returning();
+    log(`New content created with ID ${newContent[0].id}`, 'kafka');
     log(`Content request created and assigned to user ID ${assigned_to_id}`, 'kafka');
 
     return newRequest[0];
