@@ -151,15 +151,16 @@ export function ContentTable({
     return statusMatch && verificationMatch && dateMatch && searchMatch;
   });
 
-  // Pagination
-  const itemsPerPage = 10;
-  const totalContents = allContents.length; 
-  const totalPages = Math.ceil(totalContents / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedContents = allContents.slice(startIndex, endIndex).filter(content => {
+  // Apply filters first
+  const filteredContents = allContents.filter(content => {
     const statusMatch = !statusFilter || content.status === statusFilter;
     const verificationMatch = content.sourceVerification === sourceVerification;
+    
+    // Date filter
+    const contentDate = new Date(content.createdAt);
+    const dateMatch = (!startDate || contentDate >= startDate) && 
+                     (!endDate || contentDate <= endDate);
+    
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
       !searchQuery ||
@@ -168,8 +169,15 @@ export function ContentTable({
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
 
-    return statusMatch && verificationMatch && searchMatch;
+    return statusMatch && verificationMatch && dateMatch && searchMatch;
   });
+
+  // Then apply pagination
+  const itemsPerPage = 10;
+  const totalContents = filteredContents.length;
+  const totalPages = Math.ceil(totalContents / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedContents = filteredContents.slice(startIndex, startIndex + itemsPerPage);
 
   // Show toast for empty date filter results
   useEffect(() => {
