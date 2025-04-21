@@ -21,7 +21,7 @@ async function processRealUsers() {
     const now = new Date();
 
     // Create first user
-    const user1Index = 0;
+    const user1Index = 0; 
     const assignedToId1 = activeUsers[user1Index].id;
 
     const newRealUser1 = await db.insert(realUsers).values({
@@ -37,13 +37,13 @@ async function processRealUsers() {
     console.log(`Created real user 1 with ID ${newRealUser1[0].id}, assigned to user ID ${assignedToId1}`);
 
     // Create second user
-    const user2Index = 1 % activeUsers.length; // Use modulo in case there's only 1 active user
+    const user2Index = 1 % activeUsers.length;
     const assignedToId2 = activeUsers[user2Index].id;
 
     const newRealUser2 = await db.insert(realUsers).values({
-      fullName: "Hoàng Ngọc Dương", 
-      email: "example2@gmail.com", // Changed email since it needs to be unique
-      verified: 'verified',
+      fullName: "Hoàng Ngọc Dương",
+      email: "example2@gmail.com",
+      verified: 'verified', 
       lastLogin: now,
       assignedToId: assignedToId2,
       createdAt: now,
