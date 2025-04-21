@@ -38,7 +38,7 @@ async function processRealUsers() {
     // Create first user
     console.log('Inserting first user...');
     const insertQuery1 = `
-      INSERT INTO real_users (id, full_name, email, verified, last_login, assigned_to_id, created_at, updated_at)
+      INSERT INTO "realUsers" (id, "fullName", email, verified, "lastLogin", "assignedToId", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
@@ -59,7 +59,7 @@ async function processRealUsers() {
     // Create second user
     console.log('Inserting second user...');
     const insertQuery2 = `
-      INSERT INTO real_users (id, full_name, email, verified, last_login, assigned_to_id, created_at, updated_at)
+      INSERT INTO "realUsers" (id, "fullName", email, verified, "lastLogin", "assignedToId", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
@@ -78,7 +78,7 @@ async function processRealUsers() {
     console.log('Second user inserted:', result2.rows[0]);
 
     // Verify final results
-    const finalUsers = await client.query('SELECT * FROM real_users');
+    const finalUsers = await client.query('SELECT * FROM "realUsers"');
     console.log('Total real users after insert:', finalUsers.rows.length);
     console.log('All real users:', finalUsers.rows);
 
