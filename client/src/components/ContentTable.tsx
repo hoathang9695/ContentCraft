@@ -127,15 +127,17 @@ export function ContentTable({
     }
   }, [allContents, apiEndpoint]);
 
-  // Apply all filters at once
+  // Apply all filters first 
   const filteredContents = allContents.filter((content) => {
-    const statusMatch = !statusFilter || content.status === statusFilter;
-    const verificationMatch = content.sourceVerification === sourceVerification;
-    
-    // Date filter
+    // Apply date filter first
     const contentDate = new Date(content.createdAt);
     const dateMatch = (!startDate || contentDate >= startDate) && 
                      (!endDate || contentDate <= endDate);
+    if (!dateMatch) return false;
+
+    // Then apply other filters
+    const statusMatch = !statusFilter || content.status === statusFilter;
+    const verificationMatch = content.sourceVerification === sourceVerification;
     
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
@@ -145,7 +147,15 @@ export function ContentTable({
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
 
-    return statusMatch && verificationMatch && dateMatch && searchMatch;
+    return statusMatch && verificationMatch && searchMatch;
+  });
+
+  // Console log để debug
+  console.log('Filtered contents:', {
+    total: filteredContents.length,
+    dateRange: { startDate, endDate },
+    verification: sourceVerification,
+    firstItem: filteredContents[0]
   });
 
   // Then apply pagination
@@ -154,6 +164,16 @@ export function ContentTable({
   const totalPages = Math.ceil(totalContents / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedContents = filteredContents.slice(startIndex, startIndex + itemsPerPage);
+
+  // Console log để debug phân trang
+  console.log('Pagination info:', {
+    totalContents,
+    totalPages,
+    currentPage,
+    itemsPerPage,
+    startIndex,
+    paginatedLength: paginatedContents.length
+  });
 
   // Show toast for empty date filter results
   useEffect(() => {
