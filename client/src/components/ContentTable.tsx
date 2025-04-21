@@ -678,10 +678,10 @@ export function ContentTable({
             },
           ]}
           pagination={
-            showActions && totalPages > 1
+            showActions
               ? {
                   currentPage,
-                  totalPages,
+                  totalPages: Math.max(1, totalPages),
                   onPageChange: setCurrentPage,
                 }
               : undefined
