@@ -162,13 +162,13 @@ export type SupportRequest = typeof supportRequests.$inferSelect;
 // Real users table
 export const realUsers = pgTable("real_users", {
   id: serial("id").primaryKey(),
-  fullName: text("full_name").notNull(),
-  email: text("email").notNull().unique(),
+  fullName: varchar("full_name", { length: 100 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
   verified: boolean("verified").notNull().default(false),
-  lastLogin: timestamp("last_login"),
+  lastLogin: timestamp("last_login", { withTimezone: true }),
   assignedToId: integer("assigned_to_id").references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const insertRealUserSchema = createInsertSchema(realUsers).omit({ 
