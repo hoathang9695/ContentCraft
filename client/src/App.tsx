@@ -1,5 +1,5 @@
 import { Switch, Route } from "wouter";
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -38,7 +38,9 @@ function Router() {
       <Route path="/user-feedback/support" component={SupportPage} />
       <Route path="/user-feedback/verification" component={VerificationPage} />
       <Route path="/user-feedback/tick" component={TickPage} />
-      <ProtectedRoute path="/real-user" component={lazy(() => import("./pages/real-user-page"))} adminOnly={true} />
+      <Suspense fallback={<div>Loading...</div>}>
+        <ProtectedRoute path="/real-user" component={lazy(() => import("./pages/real-user-page"))} adminOnly={true} />
+      </Suspense>
       <Route component={NotFound} />
     </Switch>
   );
