@@ -148,13 +148,23 @@ export function ContentTable({
 
   // Pagination
   const itemsPerPage = 10;
-  const totalContents = filteredContents.length;
+  const totalContents = allContents.length; 
   const totalPages = Math.ceil(totalContents / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedContents = filteredContents.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedContents = allContents.slice(startIndex, endIndex).filter(content => {
+    const statusMatch = !statusFilter || content.status === statusFilter;
+    const verificationMatch = content.sourceVerification === sourceVerification;
+    const searchTerm = searchQuery?.toLowerCase() || "";
+    const searchMatch =
+      !searchQuery ||
+      content.externalId?.toLowerCase().includes(searchTerm) ||
+      content.source?.toLowerCase().includes(searchTerm) ||
+      content.categories?.toLowerCase().includes(searchTerm) ||
+      content.labels?.toLowerCase().includes(searchTerm);
+
+    return statusMatch && verificationMatch && searchMatch;
+  });
 
   // Show toast for empty date filter results
   useEffect(() => {
