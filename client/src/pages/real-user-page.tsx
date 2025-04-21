@@ -295,12 +295,20 @@ export default function RealUserPage() {
               key: "createdAt",
               header: "Ngày tạo",
               render: (row) => {
-                const date = new Date(row.createdAt);
-                return (
-                  <div className="text-muted-foreground whitespace-nowrap">
-                    {format(date, "dd/MM/yyyy HH:mm")}
-                  </div>
-                );
+                if (!row.createdAt) return <div>N/A</div>;
+                try {
+                  const date = new Date(row.createdAt);
+                  if (isNaN(date.getTime())) {
+                    return <div>Định dạng thời gian không hợp lệ</div>;
+                  }
+                  return (
+                    <div className="text-muted-foreground whitespace-nowrap">
+                      {format(date, "dd/MM/yyyy HH:mm")}
+                    </div>
+                  );
+                } catch (error) {
+                  return <div>Định dạng thời gian không hợp lệ</div>;
+                }
               },
             },
             {
