@@ -25,7 +25,7 @@ export default function RealUserPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [startDate, setStartDate] = useState<Date>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
@@ -61,8 +61,8 @@ export default function RealUserPage() {
 
     const statusMatch = 
       activeTab === 'all' || 
-      (activeTab === 'verified' && user.verified) ||
-      (activeTab === 'unverified' && !user.verified);
+      (activeTab === 'processed' && user.verified) ||
+      (activeTab === 'unprocessed' && !user.verified);
 
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
@@ -90,18 +90,18 @@ export default function RealUserPage() {
                     Tất cả
                   </Button>
                   <Button 
-                    variant={activeTab === 'verified' ? 'default' : 'ghost'} 
+                    variant={activeTab === 'processed' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => setActiveTab('verified')}
+                    onClick={() => setActiveTab('processed')}
                   >
-                    Đã xác minh
+                    Đã xử lý
                   </Button>
                   <Button 
-                    variant={activeTab === 'unverified' ? 'default' : 'ghost'} 
+                    variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => setActiveTab('unverified')}
+                    onClick={() => setActiveTab('unprocessed')}
                   >
-                    Chưa xác minh
+                    Chưa xử lý
                   </Button>
                 </div>
               </div>
