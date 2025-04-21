@@ -74,8 +74,9 @@ export default function RealUserPage() {
   // Filter users based on date range, status and search query
   const filteredUsers = users ? users.filter((user) => {
     if (!user) return false;
-    const createdDate = new Date(user.createdAt);
+    const createdDate = user.createdAt ? new Date(user.createdAt) : null;
     const dateMatch =
+      !createdDate || // Include if no date (temporary fix)
       (!startDate || createdDate >= startDate) &&
       (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
 
@@ -98,8 +99,8 @@ export default function RealUserPage() {
     const searchMatch =
       !searchQuery ||
       user.id.toString().includes(searchTerm) ||
-      user.fullName?.toLowerCase().includes(searchTerm) ||
-      user.email?.toLowerCase().includes(searchTerm);
+      (user.fullName || '').toLowerCase().includes(searchTerm) ||
+      (user.email || '').toLowerCase().includes(searchTerm);
 
     return dateMatch && statusMatch && searchMatch && verificationMatch;
   }) : [];
