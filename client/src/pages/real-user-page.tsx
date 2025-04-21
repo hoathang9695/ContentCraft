@@ -56,12 +56,14 @@ export default function RealUserPage() {
       if (!response.ok) throw new Error("Failed to fetch real users");
       const data = await response.json();
       console.log("Fetched real users:", data);
-      return data;
+      return Array.isArray(data) ? data : [];
     }
   });
 
+  console.log("Users before filtering:", users);
+
   // Filter users based on date range, status and search query
-  const filteredUsers = Array.isArray(users) ? users.filter((user) => {
+  const filteredUsers = users.filter((user) => {
     if (!user) return false;
     const createdDate = new Date(user.createdAt);
     const dateMatch =
