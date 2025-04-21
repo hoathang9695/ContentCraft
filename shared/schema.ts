@@ -166,6 +166,7 @@ export const realUsers = pgTable("real_users", {
   email: text("email").notNull().unique(),
   verified: boolean("verified").notNull().default(false),
   lastLogin: timestamp("last_login"),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
