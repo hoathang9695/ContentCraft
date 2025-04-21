@@ -51,10 +51,15 @@ export default function RealUserPage() {
   // Fetch real users
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["/api/real-users"],
+    queryFn: async () => {
+      const response = await fetch("/api/real-users");
+      if (!response.ok) throw new Error("Failed to fetch real users");
+      return response.json();
+    }
   });
 
   // Filter users based on date range, status and search query
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = Array.isArray(users) ? users.filter((user) => {
     const createdDate = new Date(user.createdAt);
     const dateMatch =
       (!startDate || createdDate >= startDate) &&
@@ -75,7 +80,7 @@ export default function RealUserPage() {
       user.email?.toLowerCase().includes(searchTerm);
 
     return dateMatch && statusMatch && searchMatch && verificationMatch;
-  });
+  }) : [];
 
   return (
     <DashboardLayout>
