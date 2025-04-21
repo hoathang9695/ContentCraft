@@ -1,7 +1,7 @@
 
 import { db } from './server/db';
 import { users, realUsers } from './shared/schema';
-import { eq, ne } from 'drizzle-orm';
+import { eq, ne, sql } from 'drizzle-orm';
 
 async function processRealUsers() {
   try {
@@ -36,7 +36,7 @@ async function processRealUsers() {
     console.log('Creating first user with assigned_to_id:', assignedToId1);
 
     const newRealUser1 = await db.insert(realUsers).values({
-      id: '113728049762216423',
+      id: 113728049762216423,
       fullName: "Hoàng Ngọc Lan",
       email: "example@gmail.com",
       verified: 'verified',
@@ -55,7 +55,7 @@ async function processRealUsers() {
     console.log('Creating second user with assigned_to_id:', assignedToId2);
 
     const newRealUser2 = await db.insert(realUsers).values({
-      id: '113728049762216424',
+      id: 113728049762216424,
       fullName: "Hoàng Ngọc Dương", 
       email: "example@gmail.com",
       verified: 'verified',
