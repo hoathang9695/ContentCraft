@@ -138,7 +138,7 @@ export function ContentTable({
 
     // Then apply other filters  
     const statusMatch = !statusFilter || content.status === statusFilter;
-    const verificationMatch = content.sourceVerification === sourceVerification;
+    const verificationMatch = sourceVerification ? content.sourceVerification === sourceVerification : true;
     
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
