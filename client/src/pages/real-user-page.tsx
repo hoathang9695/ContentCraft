@@ -59,12 +59,12 @@ export default function RealUserPage() {
       // Map response data to match expected structure
       return data?.map(user => ({
         id: user.id,
-        fullName: user.full_name,
+        fullName: user.fullName, // Changed from full_name to fullName
         email: user.email,
         verified: user.verified,
-        lastLogin: user.last_login,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       })) || [];
     }
   });
