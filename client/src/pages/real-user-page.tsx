@@ -74,27 +74,26 @@ export default function RealUserPage() {
   // Filter users based on date range, status and search query
   const filteredUsers = users ? users.filter((user) => {
     if (!user) return false;
+    
+    // Date filtering
     const createdDate = user.createdAt ? new Date(user.createdAt) : null;
-    const dateMatch =
-      !createdDate || // Include if no date (temporary fix)
+    const dateMatch = !createdDate || (
       (!startDate || createdDate >= startDate) &&
-      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
+      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000))
+    );
 
-    console.log("Filtering user:", {
-      user,
-      dateMatch,
-      createdDate,
-      startDate,
-      endDate
-    });
-
+    // Status filtering
     const statusMatch = 
       activeTab === 'all' || 
-      (activeTab === 'processed' && user.verified === 'verified') ||
-      (activeTab === 'unprocessed' && user.verified === 'unverified');
+      (activeTab === 'processed' && user.verified === true) ||
+      (activeTab === 'unprocessed' && user.verified === false);
 
-    const verificationMatch = verificationStatus === user.verified;
+    // Verification status filtering  
+    const verificationMatch = 
+      (verificationStatus === 'verified' && user.verified === true) ||
+      (verificationStatus === 'unverified' && user.verified === false);
 
+    // Search filtering
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
       !searchQuery ||
