@@ -85,13 +85,11 @@ export default function RealUserPage() {
     // Status filtering
     const statusMatch = 
       activeTab === 'all' || 
-      (activeTab === 'processed' && user.verified === true) ||
-      (activeTab === 'unprocessed' && user.verified === false);
+      (activeTab === 'processed' && user.verified === 'verified') ||
+      (activeTab === 'unprocessed' && user.verified === 'unverified');
 
     // Verification status filtering  
-    const verificationMatch = 
-      (verificationStatus === 'verified' && user.verified === true) ||
-      (verificationStatus === 'unverified' && user.verified === false);
+    const verificationMatch = verificationStatus === user.verified;
 
     // Search filtering
     const searchTerm = searchQuery?.toLowerCase() || "";
