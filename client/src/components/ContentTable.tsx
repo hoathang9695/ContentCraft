@@ -148,13 +148,12 @@ export function ContentTable({
 
   // Pagination
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredContents.length / itemsPerPage);
+  const totalContents = limit ? Math.min(filteredContents.length, limit) : filteredContents.length;
+  const totalPages = Math.ceil(totalContents / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedContents = filteredContents.slice(
     startIndex,
-    limit
-      ? Math.min(startIndex + itemsPerPage, startIndex + limit)
-      : startIndex + itemsPerPage,
+    Math.min(startIndex + itemsPerPage, totalContents)
   );
 
   // Show toast for empty date filter results
