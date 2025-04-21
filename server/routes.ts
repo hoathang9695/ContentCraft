@@ -1257,6 +1257,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fakeUser) {
         return res.status(404).json({ message: "Fake user not found" });
       }
+    } catch (error) {
+      res.status(500).json({
+        message: "Error fetching fake user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Get all real users 
+  app.get("/api/real-users", isAdmin, async (req, res) => {
+    try {
+      const result = await db.query.realUsers.findMany({
+        orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)]
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching real users:", error);
+      res.status(500).json({
+        message: "Error fetching real users",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+      }
 
       res.json(fakeUser);
     } catch (error) {
