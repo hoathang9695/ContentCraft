@@ -62,10 +62,10 @@ export default function RealUserPage() {
 
     const statusMatch = 
       activeTab === 'all' || 
-      (activeTab === 'processed' && user.verified) ||
-      (activeTab === 'unprocessed' && !user.verified);
+      (activeTab === 'processed' && user.verified === 'verified') ||
+      (activeTab === 'unprocessed' && user.verified === 'unverified');
 
-    const verificationMatch = verificationStatus === 'unverified' ? !user.verified : user.verified;
+    const verificationMatch = verificationStatus === user.verified;
 
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
@@ -256,10 +256,10 @@ export default function RealUserPage() {
               header: "Trạng thái xác minh",
               render: (row) => (
                 <Badge
-                  variant={row.verified ? "success" : "secondary"}
+                  variant={row.verified === 'verified' ? "success" : "secondary"}
                   className="font-medium"
                 >
-                  {row.verified ? "Đã xác minh" : "Chưa xác minh"}
+                  {row.verified === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
                 </Badge>
               ),
             },
