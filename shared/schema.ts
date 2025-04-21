@@ -162,6 +162,7 @@ export type SupportRequest = typeof supportRequests.$inferSelect;
 // Real users table
 export const realUsers = pgTable("real_users", {
   id: serial("id").primaryKey(),
+  customId: bigint("custom_id"),
   fullName: varchar("full_name", { length: 100 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   verified: boolean("verified").notNull().default(false),
