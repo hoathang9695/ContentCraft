@@ -1,4 +1,3 @@
-
 import { db } from './server/db';
 import { users, realUsers } from './shared/schema';
 import { eq, ne } from 'drizzle-orm';
@@ -42,12 +41,12 @@ async function processRealUsers() {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
-    
+
     const result1 = await client.query(insertQuery1, [
       113728049762216423,
       'Hoàng Ngọc Lan',
       'example@gmail.com',
-      'verified',
+      'unverified',
       now,
       activeUsers[0].id,
       now,
@@ -68,7 +67,7 @@ async function processRealUsers() {
       113728049762216424,
       'Hoàng Ngọc Dương',
       'duong@example.com',
-      'verified',
+      'unverified',
       now,
       activeUsers[1 % activeUsers.length].id,
       now,
