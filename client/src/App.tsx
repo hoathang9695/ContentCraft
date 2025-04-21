@@ -1,131 +1,108 @@
-
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import NotFound from "@/pages/not-found";
-import AuthPage from "@/pages/auth-page";
-import DashboardPage from "@/pages/dashboard-page";
-import ContentPage from "@/pages/content-page";
-import ContentEditor from "@/pages/content-editor";
-import UsersPage from "@/pages/users-page";
-import ProfilePage from "@/pages/profile-page";
-import UserActivitiesPage from "@/pages/user-activities-page";
-import CategoriesPage from "@/pages/categories-page";
-import FakeUsersPage from "@/pages/fake-users-page";
-import RealUserPage from "@/pages/real-user-page";
-import UserFeedbackPage from "@/pages/user-feedback-page";
-import SupportPage from "@/pages/user-feedback/support-page";
-import VerificationPage from "@/pages/user-feedback/verification-page";
-import TickPage from "@/pages/user-feedback/tick-page";
+import { lazy, Suspense } from "react";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
+
+const NotFound = lazy(() => import("@/pages/not-found"));
+const AuthPage = lazy(() => import("@/pages/auth-page"));
+const DashboardPage = lazy(() => import("@/pages/dashboard-page"));
+const ContentPage = lazy(() => import("@/pages/content-page"));
+const ContentEditor = lazy(() => import("@/pages/content-editor"));
+const UsersPage = lazy(() => import("@/pages/users-page"));
+const ProfilePage = lazy(() => import("@/pages/profile-page"));
+const UserActivitiesPage = lazy(() => import("@/pages/user-activities-page"));
+const CategoriesPage = lazy(() => import("@/pages/categories-page"));  
+const FakeUsersPage = lazy(() => import("@/pages/fake-users-page"));
+const RealUserPage = lazy(() => import("@/pages/real-user-page"));
+const UserFeedbackPage = lazy(() => import("@/pages/user-feedback-page"));
+const SupportPage = lazy(() => import("@/pages/user-feedback/support-page"));
+const VerificationPage = lazy(() => import("@/pages/user-feedback/verification-page"));
+const TickPage = lazy(() => import("@/pages/user-feedback/tick-page"));
 
 export default function App() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Switch>
-            <Route path="/login">
-              {() => <AuthPage />}
-            </Route>
-            <Route path="/">
-              {() => (
+          <Suspense fallback={<div>Loading...</div>}>
+            <Switch>
+              <Route path="/login">
+                <AuthPage />
+              </Route>
+              <Route path="/">
                 <ProtectedRoute>
                   <DashboardPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/content">
-              {() => (
+              </Route>
+              <Route path="/content">
                 <ProtectedRoute>
                   <ContentPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/content/:id">
-              {() => (
+              </Route>
+              <Route path="/content/:id">
                 <ProtectedRoute>
                   <ContentEditor />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/users">
-              {() => (
+              </Route>
+              <Route path="/users">
                 <ProtectedRoute>
                   <UsersPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/real-user">
-              {() => (
+              </Route>
+              <Route path="/real-user">
                 <ProtectedRoute>
                   <RealUserPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/profile">
-              {() => (
+              </Route>
+              <Route path="/profile">
                 <ProtectedRoute>
                   <ProfilePage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/activities">
-              {() => (
+              </Route>
+              <Route path="/activities">
                 <ProtectedRoute>
                   <UserActivitiesPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/categories">
-              {() => (
+              </Route>
+              <Route path="/categories">
                 <ProtectedRoute>
                   <CategoriesPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/fake-users">
-              {() => (
+              </Route>
+              <Route path="/fake-users">
                 <ProtectedRoute>
                   <FakeUsersPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/feedback">
-              {() => (
+              </Route>
+              <Route path="/feedback">
                 <ProtectedRoute>
                   <UserFeedbackPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/feedback/support">
-              {() => (
+              </Route>
+              <Route path="/feedback/support">
                 <ProtectedRoute>
                   <SupportPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/feedback/verification">
-              {() => (
+              </Route>
+              <Route path="/feedback/verification">
                 <ProtectedRoute>
                   <VerificationPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route path="/feedback/tick">
-              {() => (
+              </Route>
+              <Route path="/feedback/tick">
                 <ProtectedRoute>
                   <TickPage />
                 </ProtectedRoute>
-              )}
-            </Route>
-            <Route>
-              {() => <NotFound />}
-            </Route>
-          </Switch>
+              </Route>
+              <Route>
+                <NotFound />
+              </Route>
+            </Switch>
+          </Suspense>
           <Toaster />
         </AuthProvider>
       </QueryClientProvider>
