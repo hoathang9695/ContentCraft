@@ -127,12 +127,17 @@ export function ContentTable({
     }
   }, [allContents, apiEndpoint]);
 
-  // Filter content based on search, status, and date range
+  // Filter content based on search, status, date range and verification
   const filteredContents = allContents.filter((content) => {
     // Status filter
     const statusMatch = !statusFilter || content.status === statusFilter;
     // Source verification filter
     const verificationMatch = content.sourceVerification === sourceVerification;
+    
+    // Date range filter
+    const contentDate = new Date(content.createdAt);
+    const dateMatch = (!startDate || contentDate >= startDate) && 
+                     (!endDate || contentDate <= endDate);
 
     // Enhanced search filter
     const searchTerm = searchQuery?.toLowerCase() || "";
@@ -143,7 +148,7 @@ export function ContentTable({
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
 
-    return statusMatch && verificationMatch && searchMatch;
+    return statusMatch && verificationMatch && dateMatch && searchMatch;
   });
 
   // Pagination
