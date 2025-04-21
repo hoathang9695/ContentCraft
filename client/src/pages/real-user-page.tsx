@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -30,6 +29,7 @@ export default function RealUserPage() {
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
+  const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified'); // Added state for verification filter
 
   // Redirect if not admin
   if (user?.role !== "admin") {
@@ -64,6 +64,8 @@ export default function RealUserPage() {
       (activeTab === 'processed' && user.verified) ||
       (activeTab === 'unprocessed' && !user.verified);
 
+    const verificationMatch = verificationStatus === 'unverified' ? !user.verified : user.verified; // Added verification filter
+
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
       !searchQuery ||
@@ -71,7 +73,7 @@ export default function RealUserPage() {
       user.fullName?.toLowerCase().includes(searchTerm) ||
       user.email?.toLowerCase().includes(searchTerm);
 
-    return dateMatch && statusMatch && searchMatch;
+    return dateMatch && statusMatch && searchMatch && verificationMatch; // Added verificationMatch to the filter
   });
 
   return (
@@ -79,31 +81,52 @@ export default function RealUserPage() {
       <div className="container mx-auto p-4">
         <div className="mb-4">
           <div className="flex items-center">
-            <div className="flex-shrink-0 mr-auto">
-              <div className="bg-background border rounded-md p-1">
-                <div className="flex space-x-1">
-                  <Button 
-                    variant={activeTab === 'all' ? 'default' : 'ghost'} 
-                    size="sm"
-                    onClick={() => setActiveTab('all')}
-                  >
-                    Tất cả
-                  </Button>
-                  <Button 
-                    variant={activeTab === 'processed' ? 'default' : 'ghost'} 
-                    size="sm"
-                    onClick={() => setActiveTab('processed')}
-                  >
-                    Đã xử lý
-                  </Button>
-                  <Button 
-                    variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
-                    size="sm"
-                    onClick={() => setActiveTab('unprocessed')}
-                  >
-                    Chưa xử lý
-                  </Button>
-                </div>
+            <div className="flex-shrink-0 mr-5"> {/* Added verification filter buttons */}
+              <Button
+                variant="outline"
+                className={cn(
+                  "whitespace-nowrap h-10 px-4 py-2",
+                  verificationStatus === 'unverified' ? "bg-muted" : ""
+                )}
+                onClick={() => setVerificationStatus('unverified')}
+              >
+                Chưa xác minh
+              </Button>
+              <Button
+                variant="outline" 
+                className={cn(
+                  "whitespace-nowrap h-10 px-4 py-2 ml-2",
+                  verificationStatus === 'verified' ? "bg-muted" : ""
+                )}
+                onClick={() => setVerificationStatus('verified')}
+              >
+                Đã xác minh
+              </Button>
+            </div>
+
+            <div className="flex items-center">
+              <div className="flex space-x-1">
+                <Button 
+                  variant={activeTab === 'all' ? 'default' : 'ghost'} 
+                  size="sm"
+                  onClick={() => setActiveTab('all')}
+                >
+                  Tất cả
+                </Button>
+                <Button 
+                  variant={activeTab === 'processed' ? 'default' : 'ghost'} 
+                  size="sm"
+                  onClick={() => setActiveTab('processed')}
+                >
+                  Đã xử lý
+                </Button>
+                <Button 
+                  variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
+                  size="sm"
+                  onClick={() => setActiveTab('unprocessed')}
+                >
+                  Chưa xử lý
+                </Button>
               </div>
             </div>
 
