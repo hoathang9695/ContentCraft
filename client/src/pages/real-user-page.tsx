@@ -269,7 +269,7 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => (
-                <div className="font-medium">{row.fullName}</div>
+                <div className="font-medium">{row.fullName || 'N/A'}</div>
               ),
             },
             {
@@ -296,8 +296,9 @@ export default function RealUserPage() {
               header: "Ngày tạo",
               render: (row) => {
                 if (!row.createdAt) return <div>N/A</div>;
+                const dateStr = row.createdAt.toString();
                 try {
-                  const date = new Date(row.createdAt);
+                  const date = new Date(dateStr);
                   if (isNaN(date.getTime())) {
                     return <div>Định dạng thời gian không hợp lệ</div>;
                   }
@@ -307,6 +308,7 @@ export default function RealUserPage() {
                     </div>
                   );
                 } catch (error) {
+                  console.error("Date parsing error:", error);
                   return <div>Định dạng thời gian không hợp lệ</div>;
                 }
               },
