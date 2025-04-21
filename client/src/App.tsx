@@ -9,11 +9,11 @@ import DashboardPage from "@/pages/dashboard-page";
 import ContentPage from "@/pages/content-page";
 import ContentEditor from "@/pages/content-editor";
 import UsersPage from "@/pages/users-page";
-import RealUserPage from "@/pages/real-user-page";
 import ProfilePage from "@/pages/profile-page";
 import UserActivitiesPage from "@/pages/user-activities-page";
 import CategoriesPage from "@/pages/categories-page";
 import FakeUsersPage from "@/pages/fake-users-page";
+import RealUserPage from "@/pages/real-user-page";
 import UserFeedbackPage from "@/pages/user-feedback-page";
 import SupportPage from "@/pages/user-feedback/support-page";
 import VerificationPage from "@/pages/user-feedback/verification-page";
@@ -28,74 +28,102 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Switch>
-            <Route path="/login" component={AuthPage} />
+            <Route path="/login">
+              {() => <AuthPage />}
+            </Route>
             <Route path="/">
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/content">
-              <ProtectedRoute>
-                <ContentPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <ContentPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/content/:id">
-              <ProtectedRoute>
-                <ContentEditor />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <ContentEditor />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/users">
-              <ProtectedRoute>
-                <UsersPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <UsersPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/real-user">
-              <ProtectedRoute>
-                <RealUserPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <RealUserPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/profile">
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/activities">
-              <ProtectedRoute>
-                <UserActivitiesPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <UserActivitiesPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/categories">
-              <ProtectedRoute>
-                <CategoriesPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <CategoriesPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/fake-users">
-              <ProtectedRoute>
-                <FakeUsersPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <FakeUsersPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/feedback">
-              <ProtectedRoute>
-                <UserFeedbackPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <UserFeedbackPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/feedback/support">
-              <ProtectedRoute>
-                <SupportPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <SupportPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/feedback/verification">
-              <ProtectedRoute>
-                <VerificationPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <VerificationPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route path="/feedback/tick">
-              <ProtectedRoute>
-                <TickPage />
-              </ProtectedRoute>
+              {() => (
+                <ProtectedRoute>
+                  <TickPage />
+                </ProtectedRoute>
+              )}
             </Route>
             <Route>
-              <NotFound />
+              {() => <NotFound />}
             </Route>
           </Switch>
           <Toaster />
