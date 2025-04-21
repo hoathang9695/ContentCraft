@@ -5,6 +5,8 @@ import { eq, ne } from 'drizzle-orm';
 
 async function processRealUsers() {
   try {
+    console.log('Starting to process real users...');
+    
     // Get active non-admin users for assignment
     const activeUsers = await db
       .select()
@@ -17,6 +19,8 @@ async function processRealUsers() {
     if (!activeUsers || activeUsers.length === 0) {
       throw new Error('No active non-admin users found');
     }
+    
+    console.log('Found active users:', activeUsers.map(u => ({id: u.id, name: u.name})));
 
     const now = new Date();
 
