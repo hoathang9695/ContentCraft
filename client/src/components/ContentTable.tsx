@@ -1,16 +1,25 @@
-import { useState, useEffect, useRef } from 'react';
-import { useQuery, useMutation, UseQueryResult } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
-import { Content } from '@shared/schema';
-import { DataTable } from '@/components/ui/data-table';
-import { StatusBadge } from '@/components/ui/status-badge';
-import { Button } from '@/components/ui/button';
-import { Edit, Eye, Trash2, Plus, MoreHorizontal, MessageSquare, ThumbsUp, RefreshCw } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { CommentDialog } from '@/components/CommentDialog';
-import { ReactionDialog } from '@/components/ReactionDialog';
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, UseQueryResult } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { Content } from "@shared/schema";
+import { DataTable } from "@/components/ui/data-table";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Button } from "@/components/ui/button";
+import {
+  Edit,
+  Eye,
+  Trash2,
+  Plus,
+  MoreHorizontal,
+  MessageSquare,
+  ThumbsUp,
+  RefreshCw,
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { CommentDialog } from "@/components/CommentDialog";
+import { ReactionDialog } from "@/components/ReactionDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -28,9 +37,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useAuth } from '@/hooks/use-auth';
-import { UpdateContentDialog } from './UpdateContentDialog';
+} from "@/components/ui/alert-dialog";
+import { useAuth } from "@/hooks/use-auth";
+import { UpdateContentDialog } from "./UpdateContentDialog";
 
 type ContentTableProps = {
   title?: string;
@@ -38,23 +47,23 @@ type ContentTableProps = {
   statusFilter?: string;
   startDate?: Date;
   endDate?: Date;
-  sourceVerification?: 'verified' | 'unverified';
+  sourceVerification?: "verified" | "unverified";
   limit?: number;
 };
 
-export function ContentTable({ 
-  title = "Content", 
+export function ContentTable({
+  title = "Content",
   showActions = true,
   statusFilter,
   startDate,
   endDate,
-  sourceVerification = 'unverified',
-  limit
+  sourceVerification = "unverified",
+  limit,
 }: ContentTableProps) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
@@ -63,8 +72,12 @@ export function ContentTable({
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [contentToComment, setContentToComment] = useState<number | null>(null);
   const [contentToReact, setContentToReact] = useState<number | null>(null);
-  const [externalIdToComment, setExternalIdToComment] = useState<string | undefined>(undefined);
-  const [externalIdToReact, setExternalIdToReact] = useState<string | undefined>(undefined);
+  const [externalIdToComment, setExternalIdToComment] = useState<
+    string | undefined
+  >(undefined);
+  const [externalIdToReact, setExternalIdToReact] = useState<
+    string | undefined
+  >(undefined);
   const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
   const [authError, setAuthError] = useState(false);
 
@@ -72,17 +85,18 @@ export function ContentTable({
   const toastShownRef = useRef(false);
 
   // Simplify query to avoid TypeScript errors
-  const apiEndpoint = user?.role === 'admin' ? '/api/contents' : '/api/my-contents';
+  const apiEndpoint =
+    user?.role === "admin" ? "/api/contents" : "/api/my-contents";
 
   // Properly typed query for content data
-  const { 
-    data: allContents = [], 
-    isLoading, 
-    error 
+  const {
+    data: allContents = [],
+    isLoading,
+    error,
   } = useQuery<Content[], Error>({
     queryKey: [apiEndpoint],
     staleTime: 60000,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
   });
 
   // Xử lý lỗi từ query khi có cập nhật
@@ -93,8 +107,9 @@ export function ContentTable({
         setAuthError(true);
         toast({
           title: "Vui lòng đăng nhập",
-          description: "Bạn cần đăng nhập để xem nội dung này. Nếu đã đăng nhập, hãy thử làm mới trang.",
-          variant: "destructive"
+          description:
+            "Bạn cần đăng nhập để xem nội dung này. Nếu đã đăng nhập, hãy thử làm mới trang.",
+          variant: "destructive",
         });
       }
     }
@@ -107,13 +122,13 @@ export function ContentTable({
         endpointCalled: apiEndpoint,
         count: allContents.length,
         isArray: Array.isArray(allContents),
-        firstItem: allContents.length > 0 ? {...allContents[0]} : null
+        firstItem: allContents.length > 0 ? { ...allContents[0] } : null,
       });
     }
   }, [allContents, apiEndpoint]);
 
   // Filter content based on search, status, and date range
-  const filteredContents = allContents.filter(content => {
+  const filteredContents = allContents.filter((content) => {
     // Status filter
     const statusMatch = !statusFilter || content.status === statusFilter;
     // Source verification filter
@@ -121,7 +136,8 @@ export function ContentTable({
 
     // Enhanced search filter
     const searchTerm = searchQuery?.toLowerCase() || "";
-    const searchMatch = !searchQuery || 
+    const searchMatch =
+      !searchQuery ||
       content.externalId?.toLowerCase().includes(searchTerm) ||
       content.source?.toLowerCase().includes(searchTerm) ||
       content.categories?.toLowerCase().includes(searchTerm) ||
@@ -130,26 +146,31 @@ export function ContentTable({
     return statusMatch && verificationMatch && searchMatch;
   });
 
-
   // Pagination
   const itemsPerPage = 10;
   const totalPages = Math.ceil(filteredContents.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedContents = filteredContents.slice(
-    startIndex, 
-    limit ? Math.min(startIndex + itemsPerPage, startIndex + limit) : startIndex + itemsPerPage
+    startIndex,
+    limit
+      ? Math.min(startIndex + itemsPerPage, startIndex + limit)
+      : startIndex + itemsPerPage,
   );
 
-  // Show toast for empty date filter results 
+  // Show toast for empty date filter results
   useEffect(() => {
     const dateFilterApplied = startDate && endDate;
     if (dateFilterApplied && startDate && endDate) {
-      if (filteredContents.length === 0 && allContents.length > 0 && !toastShownRef.current) {
+      if (
+        filteredContents.length === 0 &&
+        allContents.length > 0 &&
+        !toastShownRef.current
+      ) {
         setTimeout(() => {
           toast({
             title: "Không tìm thấy dữ liệu",
             description: `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`,
-            variant: "destructive"
+            variant: "destructive",
           });
           toastShownRef.current = true;
         }, 0);
@@ -166,27 +187,33 @@ export function ContentTable({
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const content = allContents.find(c => c.id === id);
+      const content = allContents.find((c) => c.id === id);
       if (content?.externalId) {
         try {
-          const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': 'Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0'
-            }
-          });
-          
+          const response = await fetch(
+            `https://prod-sn.emso.vn/api/v1/statuses/${content.externalId}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization:
+                  "Bearer GSQTVxgv9_iIaleXmb4VxaLUQPXawFUXN9Zkd-E-jQ0",
+              },
+            },
+          );
+
           if (!response.ok) {
-            throw new Error('Không thể xóa từ hệ thống bên ngoài');
+            throw new Error("Không thể xóa từ hệ thống bên ngoài");
           }
-          
+
           toast({
-            title: 'Thành công',
+            title: "Thành công",
             description: `Đã xóa ExternalID ${content.externalId} thành công`,
           });
         } catch (error) {
-          console.error('Error deleting from external system:', error);
-          throw new Error('Không thể xóa từ hệ thống bên ngoài. Vui lòng thử lại sau.');
+          console.error("Error deleting from external system:", error);
+          throw new Error(
+            "Không thể xóa từ hệ thống bên ngoài. Vui lòng thử lại sau.",
+          );
         }
       }
       return id;
@@ -196,57 +223,61 @@ export function ContentTable({
     },
     onError: (error) => {
       toast({
-        title: 'Lỗi khi xóa',
+        title: "Lỗi khi xóa",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
 
   // Mutations for comment and reaction updates
   const commentMutation = useMutation({
-    mutationFn: async ({ id, count }: { id: number, count: number }) => {
-      return await apiRequest('PATCH', `/api/contents/${id}/comments`, { count });
+    mutationFn: async ({ id, count }: { id: number; count: number }) => {
+      return await apiRequest("PATCH", `/api/contents/${id}/comments`, {
+        count,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
       toast({
-        title: 'Cập nhật thành công',
-        description: 'Đã thêm comment vào nội dung.',
+        title: "Cập nhật thành công",
+        description: "Đã thêm comment vào nội dung.",
       });
     },
     onError: (error) => {
       toast({
-        title: 'Lỗi khi cập nhật comment',
+        title: "Lỗi khi cập nhật comment",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
 
   const reactionMutation = useMutation({
-    mutationFn: async ({ id, count }: { id: number, count: number }) => {
-      return await apiRequest('PATCH', `/api/contents/${id}/reactions`, { count });
+    mutationFn: async ({ id, count }: { id: number; count: number }) => {
+      return await apiRequest("PATCH", `/api/contents/${id}/reactions`, {
+        count,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
       toast({
-        title: 'Cập nhật thành công',
-        description: 'Đã thêm reaction vào nội dung.',
+        title: "Cập nhật thành công",
+        description: "Đã thêm reaction vào nội dung.",
       });
     },
     onError: (error) => {
       toast({
-        title: 'Lỗi khi cập nhật reaction',
+        title: "Lỗi khi cập nhật reaction",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
 
-  const handleCreateContent = () => navigate('/contents/new');
+  const handleCreateContent = () => navigate("/contents/new");
   const handleEditContent = (id: number) => {
     setContentToUpdate(id);
     setIsUpdateDialogOpen(true);
@@ -260,7 +291,7 @@ export function ContentTable({
 
   const handlePushComment = (id: number) => {
     // Tìm content trong danh sách để lấy externalId
-    const content = allContents.find(c => c.id === id);
+    const content = allContents.find((c) => c.id === id);
 
     // Open comment dialog instead of directly adding a comment
     setContentToComment(id);
@@ -268,21 +299,25 @@ export function ContentTable({
     // Kiểm tra để đảm bảo không có giá trị null
     if (content && content.externalId) {
       setExternalIdToComment(content.externalId);
-      console.log(`Gửi comment đến API ngoài cho externalId: ${content.externalId}`);
+      console.log(
+        `Gửi comment đến API ngoài cho externalId: ${content.externalId}`,
+      );
     } else {
       setExternalIdToComment(undefined);
-      console.log('Không có externalId, chỉ cập nhật số lượng comment trong database nội bộ');
+      console.log(
+        "Không có externalId, chỉ cập nhật số lượng comment trong database nội bộ",
+      );
     }
 
     setIsCommentDialogOpen(true);
   };
 
   const handlePushReaction = (id: number) => {
-    console.log('=== handlePushReaction START ===');
-    console.log('Content ID:', id);
-    
-    const content = allContents?.find(c => c.id === id);
-    console.log('Found Content:', content);
+    console.log("=== handlePushReaction START ===");
+    console.log("Content ID:", id);
+
+    const content = allContents?.find((c) => c.id === id);
+    console.log("Found Content:", content);
 
     if (content?.externalId) {
       setContentToReact(id);
@@ -292,7 +327,7 @@ export function ContentTable({
       toast({
         title: "Lỗi",
         description: "Không tìm thấy External ID cho nội dung này",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -326,16 +361,29 @@ export function ContentTable({
           <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
                 <p className="text-sm text-red-700">
-                  Vui lòng đăng nhập để xem nội dung. Nếu đã đăng nhập, hãy thử làm mới trang hoặc đăng nhập lại.
+                  Vui lòng đăng nhập để xem nội dung. Nếu đã đăng nhập, hãy thử
+                  làm mới trang hoặc đăng nhập lại.
                 </p>
                 <p className="mt-2 text-sm text-red-700">
-                  <Button size="sm" variant="outline" onClick={() => navigate("/auth")}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate("/auth")}
+                  >
                     Đi tới trang đăng nhập
                   </Button>
                 </p>
@@ -353,14 +401,14 @@ export function ContentTable({
           onSearch={setSearchQuery}
           columns={[
             {
-              key: 'externalId',
-              header: 'External ID',
+              key: "externalId",
+              header: "External ID",
               render: (row: Content) => (
                 <div className="font-medium text-xs">
                   {row.externalId ? (
-                    <a 
-                      href={`https://emso.vn/posts/${row.externalId}`} 
-                      target="_blank" 
+                    <a
+                      href={`https://emso.vn/posts/${row.externalId}`}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
                     >
@@ -373,8 +421,8 @@ export function ContentTable({
               ),
             },
             {
-              key: 'source',
-              header: 'Nguồn cấp',
+              key: "source",
+              header: "Nguồn cấp",
               render: (row: Content) => {
                 let sourceObj;
                 try {
@@ -384,128 +432,170 @@ export function ContentTable({
                 }
                 return (
                   <div className="font-medium">
-                    {sourceObj?.name || row.source || 'Không có nguồn'}
+                    {sourceObj?.name || row.source || "Không có nguồn"}
                   </div>
                 );
               },
             },
             {
-              key: 'categories',
-              header: 'Categories',
+              key: "categories",
+              header: "Categories",
               render: (row: Content) => (
                 <div className="text-blue-500 font-medium">
-                  {row.categories || 'Chưa phân loại'}
+                  {row.categories || "Chưa phân loại"}
                 </div>
               ),
             },
             {
-              key: 'label',
-              header: 'Label',
+              key: "label",
+              header: "Label",
               render: (row: Content) => (
                 <div className="flex gap-1 flex-wrap">
                   {row.labels ? (
-                    row.labels.split(',').map((label, index) => (
-                      <span key={index} className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100">
+                    row.labels.split(",").map((label, index) => (
+                      <span
+                        key={index}
+                        className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100"
+                      >
                         {label.trim()}
                       </span>
                     ))
                   ) : (
-                    <span className="text-muted-foreground text-xs">Chưa có nhãn</span>
+                    <span className="text-muted-foreground text-xs">
+                      Chưa có nhãn
+                    </span>
                   )}
                 </div>
               ),
             },
             {
-              key: 'status',
-              header: 'Trạng thái phê duyệt',
+              key: "status",
+              header: "Trạng thái phê duyệt",
               render: (row: Content) => (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  row.status === 'completed' 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
-                }`}>
-                  {row.status === 'completed' ? 'Đã xử lý' : 'Chưa xử lý'}
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    row.status === "completed"
+                      ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100"
+                  }`}
+                >
+                  {row.status === "completed" ? "Đã xử lý" : "Chưa xử lý"}
                 </span>
               ),
             },
             {
-              key: 'sourceVerification',
-              header: 'Trạng thái xác minh',
+              key: "sourceVerification",
+              header: "Trạng thái xác minh",
               render: (row: Content) => (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  row.sourceVerification === 'verified' 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
-                }`}>
-                  {row.sourceVerification === 'verified' ? 'Đã xác minh' : 'Chưa xác minh'}
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    row.sourceVerification === "verified"
+                      ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100"
+                  }`}
+                >
+                  {row.sourceVerification === "verified"
+                    ? "Đã xác minh"
+                    : "Chưa xác minh"}
                 </span>
               ),
             },
             {
-              key: 'safety',
-              header: 'Trạng thái an toàn',
+              key: "safety",
+              header: "Trạng thái an toàn",
               render: (row: Content) => (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  row.safe === true
-                    ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    row.safe === true
+                      ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+                      : row.safe === false
+                        ? "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+                  }`}
+                >
+                  {row.safe === true
+                    ? "An toàn"
                     : row.safe === false
-                    ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'
-                }`}>
-                  {row.safe === true ? 'An toàn' : row.safe === false ? 'Không an toàn' : 'Chưa đánh giá'}
+                      ? "Không an toàn"
+                      : "Chưa đánh giá"}
                 </span>
               ),
             },
             {
-              key: 'approver',
-              header: 'Người phê duyệt',
+              key: "approver",
+              header: "Người phê duyệt",
               render: (row: Content) => {
                 if (row.approver_id) {
                   // Hiển thị tên người phê duyệt nếu có
                   if ((row as any).approver && (row as any).approver.name) {
-                    return <span className="text-muted-foreground">{(row as any).approver.name}</span>;
+                    return (
+                      <span className="text-muted-foreground">
+                        {(row as any).approver.name}
+                      </span>
+                    );
                   }
-                  return <span className="text-muted-foreground">Người dùng ID: {row.approver_id}</span>;
+                  return (
+                    <span className="text-muted-foreground">
+                      Người dùng ID: {row.approver_id}
+                    </span>
+                  );
                 }
-                return <span className="text-muted-foreground">Chưa phê duyệt</span>;
+                return (
+                  <span className="text-muted-foreground">Chưa phê duyệt</span>
+                );
               },
             },
             {
-              key: 'approveTime',
-              header: 'Ngày/giờ phê duyệt',
+              key: "approveTime",
+              header: "Ngày/giờ phê duyệt",
               render: (row: Content) => {
                 if (row.approveTime) {
                   const date = new Date(row.approveTime);
                   return (
                     <span className="text-muted-foreground whitespace-nowrap">
-                      {`${date.getDate().toString().padStart(2, '0')} - ${(date.getMonth() + 1).toString().padStart(2, '0')} - ${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`}
+                      {`${date.getDate().toString().padStart(2, "0")} - ${(date.getMonth() + 1).toString().padStart(2, "0")} - ${date.getFullYear()} ${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`}
                     </span>
                   );
                 }
-                return <span className="text-muted-foreground">Chưa phê duyệt</span>;
+                return (
+                  <span className="text-muted-foreground">Chưa phê duyệt</span>
+                );
               },
             },
             {
-              key: 'comment',
-              header: 'Comment',
-              render: (row: Content) => <span className="text-muted-foreground">{row.comments || 0}</span>,
+              key: "comment",
+              header: "Comment",
+              render: (row: Content) => (
+                <span className="text-muted-foreground">
+                  {row.comments || 0}
+                </span>
+              ),
             },
             {
-              key: 'reactions',
-              header: 'Reactions',
-              render: (row: Content) => <span className="text-muted-foreground">{row.reactions || 0}</span>,
+              key: "reactions",
+              header: "Reactions",
+              render: (row: Content) => (
+                <span className="text-muted-foreground">
+                  {row.reactions || 0}
+                </span>
+              ),
             },
             {
-              key: 'createdAt',
-              header: 'Ngày tạo',
+              key: "createdAt",
+              header: "Ngày tạo",
               render: (row: Content) => {
                 if (row.createdAt) {
                   const date = new Date(row.createdAt);
                   const year = date.getUTCFullYear();
-                  const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-                  const day = date.getUTCDate().toString().padStart(2, '0');
-                  const hours = date.getUTCHours().toString().padStart(2, '0');
-                  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                  const month = (date.getUTCMonth() + 1)
+                    .toString()
+                    .padStart(2, "0");
+                  const day = date.getUTCDate().toString().padStart(2, "0");
+                  const hours = date.getUTCHours().toString().padStart(2, "0");
+                  const minutes = date
+                    .getUTCMinutes()
+                    .toString()
+                    .padStart(2, "0");
                   return (
                     <div className="text-muted-foreground">
                       <div>{`${year}-${month}-${day}`}</div>
@@ -517,9 +607,9 @@ export function ContentTable({
               },
             },
             {
-              key: 'actions',
-              header: 'Hành động',
-              className: 'text-right sticky right-0 bg-background',
+              key: "actions",
+              header: "Hành động",
+              className: "text-right sticky right-0 bg-background",
               render: (row: Content) => (
                 <div className="flex justify-end">
                   <DropdownMenu>
@@ -529,22 +619,32 @@ export function ContentTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditContent(row.id)}>
+                      <DropdownMenuItem
+                        onClick={() => handleEditContent(row.id)}
+                      >
                         <RefreshCw className="mr-2 h-4 w-4" />
                         <span>Cập nhật thông tin</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handlePushComment(row.id)}>
+                      <DropdownMenuItem
+                        onClick={() => handlePushComment(row.id)}
+                      >
                         <MessageSquare className="mr-2 h-4 w-4" />
-                        <span>{row.externalId ? 'Gửi comment qua API' : 'Thêm comment'}</span>
+                        <span>
+                          {row.externalId
+                            ? "Gửi comment qua API"
+                            : "Thêm comment"}
+                        </span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handlePushReaction(row.id)}>
+                      <DropdownMenuItem
+                        onClick={() => handlePushReaction(row.id)}
+                      >
                         <ThumbsUp className="mr-2 h-4 w-4" />
                         <span>Thêm reaction</span>
                       </DropdownMenuItem>
-                      {user?.role === 'admin' && (
+                      {user?.role === "admin" && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleDeleteClick(row.id)}
                             className="text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-950"
                           >
@@ -570,7 +670,7 @@ export function ContentTable({
           }
           caption={
             filteredContents.length === 0 && !isLoading
-              ? user?.role === 'admin' 
+              ? user?.role === "admin"
                 ? "No content found. Click 'New Content' to create one."
                 : "Hiện không có nội dung nào được phân công cho bạn."
               : undefined
@@ -579,7 +679,10 @@ export function ContentTable({
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Bạn có chắc chắn?</AlertDialogTitle>
@@ -589,18 +692,18 @@ export function ContentTable({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600 dark:bg-red-700 dark:hover:bg-red-800 dark:focus:ring-red-700"
             >
-              {deleteMutation.isPending ? 'Đang xóa...' : 'Xóa'}
+              {deleteMutation.isPending ? "Đang xóa..." : "Xóa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Update Content Dialog */}
-      <UpdateContentDialog 
+      <UpdateContentDialog
         open={isUpdateDialogOpen}
         onOpenChange={setIsUpdateDialogOpen}
         contentId={contentToUpdate}
