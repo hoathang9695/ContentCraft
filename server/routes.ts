@@ -1275,15 +1275,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching real users:", error);
       res.status(500).json({
-        message: "Error fetching real users",
+        message: "Error fetching real users", 
         error: error instanceof Error ? error.message : String(error)
       });
     }
   });
-      }
-
-      res.json(fakeUser);
-    } catch (error) {
       res.status(500).json({ 
         message: "Error fetching fake user",
         error: error instanceof Error ? error.message : String(error)
