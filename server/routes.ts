@@ -1280,12 +1280,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-      res.status(500).json({ 
-        message: "Error fetching fake user",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
 
   // Create fake user (admin only)
   app.post("/api/fake-users", isAdmin, async (req, res) => {
