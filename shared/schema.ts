@@ -159,6 +159,26 @@ export const insertSupportRequestSchema = createInsertSchema(supportRequests).om
 export type InsertSupportRequest = z.infer<typeof insertSupportRequestSchema>;
 export type SupportRequest = typeof supportRequests.$inferSelect;
 
+// Real users table
+export const realUsers = pgTable("real_users", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull().unique(),
+  verified: boolean("verified").notNull().default(false),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertRealUserSchema = createInsertSchema(realUsers).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertRealUser = z.infer<typeof insertRealUserSchema>;
+export type RealUser = typeof realUsers.$inferSelect;
+
 export interface ContentMessage {
   externalId: string;        // ID nội dung, kiểu string
   source?: {                // Nguồn cấp dạng object
