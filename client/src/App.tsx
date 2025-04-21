@@ -14,13 +14,13 @@ import UserActivitiesPage from "@/pages/user-activities-page";
 import CategoriesPage from "@/pages/categories-page";
 import FakeUsersPage from "@/pages/fake-users-page";
 import RealUserPage from "@/pages/real-user-page";
+import UserFeedbackPage from "@/pages/user-feedback-page";
+import SupportPage from "@/pages/user-feedback/support-page";
+import VerificationPage from "@/pages/user-feedback/verification-page";
+import TickPage from "@/pages/user-feedback/tick-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
-import UserFeedbackPage from './pages/user-feedback-page';
-import SupportPage from './pages/user-feedback/support-page';
-import VerificationPage from './pages/user-feedback/verification-page';
-import TickPage from './pages/user-feedback/tick-page';
 
 export default function App() {
   return (
