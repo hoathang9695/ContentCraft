@@ -25,6 +25,7 @@ export default function RealUserPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'unverified'>('all');
   const [startDate, setStartDate] = useState<Date>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
@@ -69,6 +70,11 @@ export default function RealUserPage() {
       (!startDate || createdDate >= startDate) &&
       (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
 
+    const statusMatch = 
+      statusFilter === 'all' || 
+      (statusFilter === 'verified' && user.verified) ||
+      (statusFilter === 'unverified' && !user.verified);
+
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
       !searchQuery ||
@@ -76,7 +82,7 @@ export default function RealUserPage() {
       user.fullName?.toLowerCase().includes(searchTerm) ||
       user.email?.toLowerCase().includes(searchTerm);
 
-    return dateMatch && searchMatch;
+    return dateMatch && statusMatch && searchMatch;
   });
 
   return (
@@ -90,6 +96,31 @@ export default function RealUserPage() {
         </div>
 
         {/* Date Filter */}
+        <div className="mb-4">
+          <div className="bg-background border rounded-md p-1 inline-flex">
+            <Button 
+              variant={statusFilter === 'all' ? 'default' : 'ghost'} 
+              size="sm"
+              onClick={() => setStatusFilter('all')}
+            >
+              Tất cả
+            </Button>
+            <Button 
+              variant={statusFilter === 'verified' ? 'default' : 'ghost'} 
+              size="sm"
+              onClick={() => setStatusFilter('verified')}
+            >
+              Đã xác minh
+            </Button>
+            <Button 
+              variant={statusFilter === 'unverified' ? 'default' : 'ghost'} 
+              size="sm"
+              onClick={() => setStatusFilter('unverified')}
+            >
+              Chưa xác minh
+            </Button>
+          </div>
+        </div>
         <div className="mb-6 flex items-center gap-2">
           <div className="grid gap-2">
             <Popover>
