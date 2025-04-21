@@ -54,16 +54,27 @@ export default function RealUserPage() {
     queryFn: async () => {
       const response = await fetch("/api/real-users");
       if (!response.ok) throw new Error("Failed to fetch real users");
-      return response.json();
+      const data = await response.json();
+      console.log("Fetched real users:", data);
+      return data;
     }
   });
 
   // Filter users based on date range, status and search query
   const filteredUsers = Array.isArray(users) ? users.filter((user) => {
+    if (!user) return false;
     const createdDate = new Date(user.createdAt);
     const dateMatch =
       (!startDate || createdDate >= startDate) &&
       (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
+
+    console.log("Filtering user:", {
+      user,
+      dateMatch,
+      createdDate,
+      startDate,
+      endDate
+    });
 
     const statusMatch = 
       activeTab === 'all' || 
