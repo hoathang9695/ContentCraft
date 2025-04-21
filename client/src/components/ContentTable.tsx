@@ -129,13 +129,11 @@ export function ContentTable({
 
   // Apply all filters first 
   const filteredContents = allContents.filter((content) => {
-    // Apply date filter first, check both createdAt and updatedAt
+    // Apply date filter first using only createdAt
     const createdDate = new Date(content.createdAt);
-    const updatedDate = content.updatedAt ? new Date(content.updatedAt) : createdDate;
-    const latestDate = updatedDate > createdDate ? updatedDate : createdDate;
     
-    const dateMatch = (!startDate || latestDate >= startDate) && 
-                     (!endDate || latestDate <= endDate);
+    const dateMatch = (!startDate || createdDate >= startDate) && 
+                     (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
     if (!dateMatch) return false;
 
     // Then apply other filters  
