@@ -262,7 +262,7 @@ export default function RealUserPage() {
               key: "id",
               header: "ID User",
               render: (row) => (
-                <div className="font-medium text-xs">ID-{row.id}</div>
+                <div className="font-medium text-xs">{row.id}</div>
               ),
             },
             {
