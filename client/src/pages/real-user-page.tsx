@@ -308,12 +308,19 @@ export default function RealUserPage() {
               header: "Đăng nhập gần nhất",
               render: (row) => {
                 if (!row.lastLogin) return <div>Chưa đăng nhập</div>;
-                const date = new Date(row.lastLogin);
-                return (
-                  <div className="text-muted-foreground whitespace-nowrap">
-                    {format(date, "dd/MM/yyyy HH:mm")}
-                  </div>
-                );
+                try {
+                  const date = new Date(row.lastLogin);
+                  if (isNaN(date.getTime())) {
+                    return <div>Định dạng thời gian không hợp lệ</div>;
+                  }
+                  return (
+                    <div className="text-muted-foreground whitespace-nowrap">
+                      {format(date, "dd/MM/yyyy HH:mm")}
+                    </div>
+                  );
+                } catch (error) {
+                  return <div>Định dạng thời gian không hợp lệ</div>;
+                }
               },
             },
             {
