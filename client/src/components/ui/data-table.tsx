@@ -126,7 +126,7 @@ export function DataTable<T>({
       {pagination && filteredData.length > 0 && (
         <div className="flex items-center justify-between px-4 py-3 border-t">
           <div className="flex-1 text-sm text-muted-foreground">
-            Hiển thị {((currentPage - 1) * pageSize) + 1} đến {Math.min(currentPage * pageSize, filteredData.length)} trong tổng số {data.length} kết quả
+            Hiển thị {((currentPage - 1) * pageSize) + 1} đến {Math.min(currentPage * pageSize, filteredData.length)} trong tổng số {filteredData.length} kết quả
           </div>
           <div className="flex items-center space-x-6 lg:space-x-8">
             <div className="flex items-center space-x-2">
@@ -140,7 +140,7 @@ export function DataTable<T>({
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                Trang {currentPage} / {Math.ceil(data.length / pageSize)}
+                Trang {currentPage} / {Math.ceil(filteredData.length / pageSize)}
               </div>
               <Button
                 variant="outline"
