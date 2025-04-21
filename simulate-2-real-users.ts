@@ -29,7 +29,7 @@ async function processRealUsers() {
     const result1 = await db.insert(realUsers).values({
       fullName: 'Hoàng Ngọc Lan',
       email: 'example@gmail.com',
-      verified: false,
+      verified: 'unverified',
       lastLogin: now,
       assignedToId: activeUsers[0].id,
       createdAt: now,
@@ -43,7 +43,7 @@ async function processRealUsers() {
     const result2 = await db.insert(realUsers).values({
       fullName: 'Hoàng Ngọc Dương', 
       email: 'duong@example.com',
-      verified: false,
+      verified: 'unverified',
       lastLogin: now,
       assignedToId: activeUsers[1 % activeUsers.length].id,
       createdAt: now,
