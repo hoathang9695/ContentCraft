@@ -32,11 +32,11 @@ export default function App() {
           <Suspense fallback={<div>Loading...</div>}>
             <Switch>
               <Route path="/login" component={AuthPage} />
-              <Route path="/real-user" component={() => (
+              <Route path="/real-user">
                 <ProtectedRoute>
                   <RealUserPage />
                 </ProtectedRoute>
-              )} />
+              </Route>
               <Route path="/content/:id" component={() => (
                 <ProtectedRoute>
                   <ContentEditor />
