@@ -29,72 +29,74 @@ export default function App() {
         <AuthProvider>
           <Switch>
             <Route path="/login" component={AuthPage} />
-            <Route path="/" component={() => (
+            <Route path="/">
               <ProtectedRoute>
                 <DashboardPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/content" component={() => (
+            </Route>
+            <Route path="/content">
               <ProtectedRoute>
                 <ContentPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/content/:id" component={() => (
+            </Route>
+            <Route path="/content/:id">
               <ProtectedRoute>
                 <ContentEditor />
               </ProtectedRoute>
-            )} />
-            <Route path="/users" component={() => (
+            </Route>
+            <Route path="/users">
               <ProtectedRoute>
                 <UsersPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/real-user" component={() => (
+            </Route>
+            <Route path="/real-user">
               <ProtectedRoute>
                 <RealUserPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/profile" component={() => (
+            </Route>
+            <Route path="/profile">
               <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
-            )} />
-            <Route path="/activities" component={() => (
+            </Route>
+            <Route path="/activities">
               <ProtectedRoute>
                 <UserActivitiesPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/categories" component={() => (
+            </Route>
+            <Route path="/categories">
               <ProtectedRoute>
                 <CategoriesPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/fake-users" component={() => (
+            </Route>
+            <Route path="/fake-users">
               <ProtectedRoute>
                 <FakeUsersPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/feedback" component={() => (
+            </Route>
+            <Route path="/feedback">
               <ProtectedRoute>
                 <UserFeedbackPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/feedback/support" component={() => (
+            </Route>
+            <Route path="/feedback/support">
               <ProtectedRoute>
                 <SupportPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/feedback/verification" component={() => (
+            </Route>
+            <Route path="/feedback/verification">
               <ProtectedRoute>
                 <VerificationPage />
               </ProtectedRoute>
-            )} />
-            <Route path="/feedback/tick" component={() => (
+            </Route>
+            <Route path="/feedback/tick">
               <ProtectedRoute>
                 <TickPage />
               </ProtectedRoute>
-            )} />
-            <Route component={NotFound} />
+            </Route>
+            <Route>
+              <NotFound />
+            </Route>
           </Switch>
           <Toaster />
         </AuthProvider>
