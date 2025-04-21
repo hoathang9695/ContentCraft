@@ -7,6 +7,10 @@ async function processRealUsers() {
   try {
     console.log('Starting to process real users...');
     
+    // Test database connection
+    const testResult = await db.execute(sql`SELECT NOW()`);
+    console.log('Database connection test:', testResult.rows[0]);
+    
     // Get active non-admin users for assignment
     const activeUsers = await db
       .select()
@@ -16,19 +20,23 @@ async function processRealUsers() {
         ne(users.role, 'admin')
       );
 
+    console.log('Found active users:', activeUsers);
+
     if (!activeUsers || activeUsers.length === 0) {
       throw new Error('No active non-admin users found');
     }
-    
-    console.log('Found active users:', activeUsers.map(u => ({id: u.id, name: u.name})));
 
     const now = new Date();
+    console.log('Using timestamp:', now);
 
     // Create first user
     const user1Index = 0; 
     const assignedToId1 = activeUsers[user1Index].id;
 
+    console.log('Creating first user with assigned_to_id:', assignedToId1);
+
     const newRealUser1 = await db.insert(realUsers).values({
+      id: '113728049762216423',
       fullName: "Hoàng Ngọc Lan",
       email: "example@gmail.com",
       verified: 'verified',
@@ -38,23 +46,27 @@ async function processRealUsers() {
       updatedAt: now
     }).returning();
 
-    console.log(`Created real user 1 with ID ${newRealUser1[0].id}, assigned to user ID ${assignedToId1}`);
+    console.log('Created real user 1:', newRealUser1[0]);
 
     // Create second user
     const user2Index = 1 % activeUsers.length;
     const assignedToId2 = activeUsers[user2Index].id;
 
+    console.log('Creating second user with assigned_to_id:', assignedToId2);
+
     const newRealUser2 = await db.insert(realUsers).values({
-      fullName: "Hoàng Ngọc Dương",
-      email: "example2@gmail.com",
-      verified: 'verified', 
+      id: '113728049762216424',
+      fullName: "Hoàng Ngọc Dương", 
+      email: "example@gmail.com",
+      verified: 'verified',
       lastLogin: now,
       assignedToId: assignedToId2,
       createdAt: now,
       updatedAt: now
     }).returning();
 
-    console.log(`Created real user 2 with ID ${newRealUser2[0].id}, assigned to user ID ${assignedToId2}`);
+    console
+.log('Created real user 2:', newRealUser2[0]);
 
   } catch (error) {
     console.error('Error processing real users:', error);
