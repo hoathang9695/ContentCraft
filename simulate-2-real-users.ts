@@ -1,4 +1,3 @@
-
 import { db } from './server/db';
 import { users, realUsers } from './shared/schema';
 import { eq, ne, sql } from 'drizzle-orm';
@@ -6,11 +5,11 @@ import { eq, ne, sql } from 'drizzle-orm';
 async function processRealUsers() {
   try {
     console.log('Starting to process real users...');
-    
+
     // Test database connection
     const testResult = await db.execute(sql`SELECT NOW()`);
     console.log('Database connection test:', testResult.rows[0]);
-    
+
     // Get active non-admin users for assignment
     const activeUsers = await db
       .select()
@@ -54,19 +53,23 @@ async function processRealUsers() {
 
     console.log('Creating second user with assigned_to_id:', assignedToId2);
 
-    const newRealUser2 = await db.insert(realUsers).values({
+    const newRealUser2Result = await db.insert(realUsers).values({
       id: 113728049762216424,
-      fullName: "Hoàng Ngọc Dương", 
-      email: "example@gmail.com",
-      verified: 'verified',
+      fullName: "Hoàng Ngọc Dương",
+      email: "duong@example.com",
+      verified: 'verified', 
       lastLogin: now,
       assignedToId: assignedToId2,
       createdAt: now,
       updatedAt: now
-    }).returning();
+    });
 
-    console
-.log('Created real user 2:', newRealUser2[0]);
+    const insertedUser2 = await db.select().from(realUsers).where(eq(realUsers.id, 113728049762216424));
+    console.log('Created real user 2:', insertedUser2[0]);
+
+    // Verify final results
+    const finalUsers = await db.select().from(realUsers);
+    console.log('Final real users count:', finalUsers.length);
 
   } catch (error) {
     console.error('Error processing real users:', error);
