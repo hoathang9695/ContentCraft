@@ -63,7 +63,7 @@ export default function RealUserPage() {
   console.log("Users before filtering:", users);
 
   // Filter users based on date range, status and search query
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = users ? users.filter((user) => {
     if (!user) return false;
     const createdDate = new Date(user.createdAt);
     const dateMatch =
