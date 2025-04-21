@@ -56,7 +56,16 @@ export default function RealUserPage() {
       if (!response.ok) throw new Error("Failed to fetch real users");
       const data = await response.json();
       console.log("Fetched real users:", data);
-      return Array.isArray(data) ? data : [];
+      // Map response data to match expected structure
+      return data?.map(user => ({
+        id: user.id,
+        fullName: user.full_name,
+        email: user.email,
+        verified: user.verified,
+        lastLogin: user.last_login,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at
+      })) || [];
     }
   });
 
