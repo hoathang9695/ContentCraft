@@ -305,8 +305,16 @@ export default function RealUserPage() {
 
                 const assignedUser = row.processor;
                 
-                return (
+                return assignedUser ? (
                   <div className="space-y-1">
+                    <div className="font-medium">{assignedUser.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      @{assignedUser.username}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Chưa phân công</div>
+                );
                     <div className="font-medium">
                       {assignedUser?.name || "Chưa phân công"}
                     </div>

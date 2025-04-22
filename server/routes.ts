@@ -874,7 +874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!comment) {
-        return res.status(400).json({ successfalse, message: "Comment content is required" });
+        return res.status(400).json{ successfalse, message: "Comment content is required" });
       }
 
       // Lấy thông tin fake user
@@ -1268,10 +1268,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all real users 
   app.get("/api/real-users", isAdmin, async (req, res) => {
     try {
-      const result = await db.query.realUsers.findMany({
-        orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)]
-      });
-      res.json(result);
+      const results = await db
+        .select({
+          id: realUsers.id,
+          fullName: realUsers.fullName,
+          email: realUsers.email,
+          verified: realUsers.verified,
+          lastLogin: realUsers.lastLogin,
+          assignedToId: realUsers.assigned_to_id,
+          createdAt: realUsers.createdAt,
+          updatedAt: realUsers.updatedAt,
+          processor: {
+            id: users.id,
+            name: users.name,
+            username: users.username
+          }
+        })
+        .from(realUsers)
+        .leftJoin(users, eq(realUsers.assigned_to_id, users.id))
+        .orderBy(desc(realUsers.createdAt));
+
+      console.log("Real users query results:", results);
+      res.json(results);
     } catch (error) {
       console.error("Error fetching real users:", error);
       res.status(500).json({
