@@ -281,9 +281,16 @@ export default function RealUserPage() {
             {
               key: "processor",
               header: "Người phê duyệt", 
-              render: (row) => (
-                <div className="font-medium text-sm">{row?.processor?.name}</div>
-              ),
+              render: (row) => {
+                if (!row.assignedToId) {
+                  return <div className="text-muted-foreground">Chưa phân công</div>;
+                }
+                return (
+                  <div className="space-y-1">
+                    <div className="font-medium text-sm">{row.processor?.name}</div>
+                  </div>
+                );
+              },
             },
             {
               key: "verified",
