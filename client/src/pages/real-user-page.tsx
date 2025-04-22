@@ -297,7 +297,7 @@ export default function RealUserPage() {
             },
             {
               key: "assignedToId",
-              header: "Người phê duyệt",
+              header: "Người phê duyệt", 
               render: (row) => {
                 const { data: users = [] } = useQuery({
                   queryKey: ["/api/users"],
@@ -308,18 +308,23 @@ export default function RealUserPage() {
                   },
                 });
 
-                if (!row.assignedToId) {
-                  return <div className="text-muted-foreground">Chưa phân công</div>;
+                if (!row.assignedToId || !users) {
+                  return <div>Chưa phân công</div>;
                 }
 
                 const assignedUser = users.find(u => u.id === row.assignedToId);
                 if (!assignedUser) {
-                  return <div className="text-muted-foreground">Chưa phân công</div>;
+                  return <div>Chưa phân công</div>;
                 }
 
                 return (
-                  <div className="font-medium">
-                    {assignedUser.name || assignedUser.username}
+                  <div>
+                    <div>{assignedUser.name}</div>
+                    {row.assignedAt && (
+                      <div className="text-muted-foreground">
+                        {format(new Date(row.assignedAt), "dd/MM/yyyy HH:mm")}
+                      </div>
+                    )}
                   </div>
                 );
               },
