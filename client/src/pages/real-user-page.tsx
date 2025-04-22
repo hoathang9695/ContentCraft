@@ -299,11 +299,11 @@ export default function RealUserPage() {
               key: "assignedToId",
               header: "Người phê duyệt", 
               render: (row) => {
-                const { data: users = [] } = useQuery({
+                const { data: users } = useQuery({
                   queryKey: ["/api/users"],
                   queryFn: async () => {
                     const response = await fetch("/api/users");
-                    if (!response.ok) return [];
+                    if (!response.ok) throw new Error("Failed to fetch users");
                     return response.json();
                   }
                 });
@@ -311,7 +311,7 @@ export default function RealUserPage() {
                 const assignedId = row.assignedToId;
                 if (!assignedId) return <div>Chưa phân công</div>;
 
-                const assignedUser = users.find(u => u.id === assignedId);
+                const assignedUser = users?.find(u => u.id === assignedId);
                 return (
                   <div className="font-medium">
                     {assignedUser?.name || 'Chưa phân công'}
