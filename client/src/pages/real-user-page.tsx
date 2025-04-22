@@ -283,8 +283,10 @@ export default function RealUserPage() {
               header: "Người phê duyệt", 
               render: (row) => (
                 <div className="space-y-1">
-                  <div className="font-medium text-sm">{row.processor?.name}</div>
-                  <div className="text-xs text-muted-foreground">@{row.processor?.username}</div>
+                  <div className="font-medium text-sm">{row.processor?.name || 'N/A'}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {row.processor?.username ? `@${row.processor.username}` : ''}
+                  </div>
                 </div>
               ),
             },
