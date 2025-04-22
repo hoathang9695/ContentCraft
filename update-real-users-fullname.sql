@@ -1,20 +1,15 @@
 
--- First update the column type to JSONB
+-- First make the column accept JSON
 ALTER TABLE real_users 
-ALTER COLUMN full_name TYPE JSONB USING full_name::jsonb;
+ALTER COLUMN full_name TYPE TEXT;
 
--- Then update the data for specific users with exact IDs
+-- Then update with properly formatted JSON strings
 UPDATE real_users 
-SET full_name = jsonb_build_object(
-  'id', CASE 
-    WHEN id = 2 THEN '113728049762216423'
-    WHEN id = 3 THEN '113728049762216424'
-    ELSE id::text
-  END,
-  'name', CASE 
-    WHEN id = 2 THEN 'Hoàng Ngọc Lan'
-    WHEN id = 3 THEN 'Hoàng Ngọc Dương'
-    ELSE full_name->>'name'
+SET full_name = (
+  CASE 
+    WHEN id = 2 THEN '{"id": "113728049762216423", "name": "Hoàng Ngọc Lan"}'
+    WHEN id = 3 THEN '{"id": "113728049762216424", "name": "Hoàng Ngọc Dương"}'
+    ELSE full_name
   END
-)
+)::jsonb
 WHERE id IN (2, 3);
