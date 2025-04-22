@@ -300,21 +300,21 @@ export default function RealUserPage() {
               key: "assignedToId",
               header: "Người phê duyệt",
               render: (row) => {
-                // Get user name from assignedToId using another query
-                const { data: userData } = useQuery({
-                  queryKey: [`/api/users/${row.assignedToId}`],
+                // Get user name from assignedToId using users query
+                const { data: users = [] } = useQuery({
+                  queryKey: ["/api/users"],
                   queryFn: async () => {
-                    if (!row.assignedToId) return null;
-                    const response = await fetch(`/api/users/${row.assignedToId}`);
-                    if (!response.ok) return null;
+                    const response = await fetch("/api/users");
+                    if (!response.ok) return [];
                     return response.json();
-                  },
-                  enabled: !!row.assignedToId
+                  }
                 });
+
+                const assignedUser = users.find(u => u.id === row.assignedToId);
 
                 return (
                   <div className="font-medium">
-                    {userData?.name || 'Chưa phân công'}
+                    {assignedUser ? assignedUser.name : 'Chưa phân công'}
                   </div>
                 );
               },
