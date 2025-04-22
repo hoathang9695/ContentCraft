@@ -296,18 +296,18 @@ export default function RealUserPage() {
               ),
             },
             {
-              key: "processor",
+              key: "assignedToId",
               header: "Người phê duyệt", 
               render: (row) => {
-                if (!row.processor) {
+                if (!row.assignedToId) {
                   return <div className="text-sm text-muted-foreground">Chưa phân công</div>;
                 }
                 
                 return (
                   <div className="space-y-1">
-                    <div className="font-medium">{row.processor.name}</div>
+                    <div className="font-medium">{row.processor?.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      @{row.processor.username}
+                      @{row.processor?.username || 'N/A'}
                     </div>
                   </div>
                 );
