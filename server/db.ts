@@ -4,11 +4,11 @@ import * as schema from "@shared/schema";
 
 // Create a connection pool with detailed logging
 export const pool = new pg.Pool({
-  host: process.env.PGHOST || "42.96.40.138",
-  user: process.env.PGUSER || "postgres", 
-  password: process.env.PGPASSWORD || "chiakhoathanhcong",
-  database: process.env.PGDATABASE || "content",
-  port: Number(process.env.PGPORT) || 5432,
+  host: "42.96.40.138",
+  user: "postgres",
+  password: "chiakhoathanhcong",
+  database: "content",
+  port: 5432,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
