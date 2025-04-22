@@ -268,7 +268,9 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => (
-                <div className="font-medium">{row.fullName?.name || 'N/A'}</div>
+                <div className="font-medium">
+                  {row.fullName?.name || row.fullName?.id || 'N/A'}
+                </div>
               ),
             },
             {
@@ -283,10 +285,10 @@ export default function RealUserPage() {
               header: "Người phê duyệt", 
               render: (row) => {
                 console.log("Row data for processor:", row);
-                return row.processor?.name ? (
+                return row.assignedToId ? (
                   <div className="space-y-1">
-                    <div className="font-medium text-sm">{row.processor.name}</div>
-                    <div className="text-xs text-muted-foreground">@{row.processor.username}</div>
+                    <div className="font-medium text-sm">{row.processor?.name}</div>
+                    <div className="text-xs text-muted-foreground">@{row.processor?.username}</div>
                   </div>
                 ) : (
                   <div className="text-muted-foreground">Chưa phân công</div>
