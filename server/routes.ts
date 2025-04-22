@@ -1268,11 +1268,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all real users 
   app.get("/api/real-users", isAdmin, async (req, res) => {
     try {
-      const { realUsers } = await import("@shared/schema");
+      const { realUsers, users } = await import("@shared/schema");
       
       const results = await db
         .select({
           id: realUsers.id,
+          fullName: realUsers.fullName,
+          email: realUsers.email,
+          verified: realUsers.verified,
+          lastLogin: realUsers.lastLogin,
+          assignedToId: realUsers.assignedToId,
+          createdAt: realUsers.createdAt,
+          updatedAt: realUsers.updatedAt,
+          processor: {
+            id: users.id,
+            name: users.name,
+            username: users.username
+          }
+        })
+        .from(realUsers)
+        .leftJoin(users, eq(realUsers.assignedToId, users.id))
+        .orderBy(desc(realUsers.createdAt));
           fullName: realUsers.fullName,
           email: realUsers.email,
           verified: realUsers.verified,
