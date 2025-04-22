@@ -297,26 +297,28 @@ export default function RealUserPage() {
             },
             {
               key: "assignedToId",
-              header: "Người phê duyệt", 
+              header: "Người phê duyệt",
               render: (row) => {
                 const { data: users = [] } = useQuery({
-                  queryKey: ["/api/users"],
+                  queryKey: ["users"],
                   queryFn: async () => {
                     const response = await fetch("/api/users");
                     if (!response.ok) throw new Error("Failed to fetch users");
                     return response.json();
                   },
-                  staleTime: 30000
+                  staleTime: 30000,
                 });
 
-                if (!row.assignedToId) {
+                const assignedId = row.assignedToId;
+                const assignedUser = users.find(u => u.id === assignedId);
+
+                if (!assignedId || !assignedUser) {
                   return <div className="text-muted-foreground">Chưa phân công</div>;
                 }
-                
-                const assignedUser = users.find(u => u.id === row.assignedToId);
+
                 return (
                   <div className="font-medium">
-                    {assignedUser?.name || <span className="text-muted-foreground">Đang tải...</span>}
+                    {assignedUser.name}
                   </div>
                 );
               },
