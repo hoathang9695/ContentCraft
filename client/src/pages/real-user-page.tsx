@@ -268,9 +268,12 @@ export default function RealUserPage() {
             {
               key: "fullName",
               header: "Họ và tên",
-              render: (row) => (
-                <div className="font-medium">{row.fullName || 'N/A'}</div>
-              ),
+              render: (row) => {
+                const fullName = typeof row.fullName === 'string' 
+                  ? row.fullName 
+                  : row.fullName?.name || 'N/A';
+                return <div className="font-medium">{fullName}</div>;
+              },
             },
             {
               key: "email",
