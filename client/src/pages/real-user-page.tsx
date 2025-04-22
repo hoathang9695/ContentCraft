@@ -297,7 +297,7 @@ export default function RealUserPage() {
             },
             {
               key: "assignedToId",
-              header: "Người phê duyệt",
+              header: "Người phê duyệt", 
               render: (row) => {
                 const { data: users = [] } = useQuery({
                   queryKey: ["/api/users"],
@@ -308,12 +308,13 @@ export default function RealUserPage() {
                   }
                 });
 
-                // Check if assignedToId exists in the row data
-                const assignedUser = users.find(u => u.id === row.assignedToId?.id || row.assignedToId);
+                const assignedId = row.assignedToId;
+                if (!assignedId) return <div>Chưa phân công</div>;
 
+                const assignedUser = users.find(u => u.id === assignedId);
                 return (
                   <div className="font-medium">
-                    {assignedUser ? assignedUser.name : 'Chưa phân công'}
+                    {assignedUser?.name || 'Chưa phân công'}
                   </div>
                 );
               },
