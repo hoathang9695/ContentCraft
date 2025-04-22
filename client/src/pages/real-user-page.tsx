@@ -299,7 +299,7 @@ export default function RealUserPage() {
               key: "processor",
               header: "Người phê duyệt", 
               render: (row) => {
-                if (!row.processor?.name) {
+                if (!row.assignedToId || !row.processor) {
                   return <div className="text-sm text-muted-foreground">Chưa phân công</div>;
                 }
                 
