@@ -285,10 +285,11 @@ export default function RealUserPage() {
               header: "Người phê duyệt", 
               render: (row) => {
                 console.log("Row data for processor:", row);
-                return row.assignedToId ? (
+                console.log("Processor info:", row.processor);
+                return row.processor?.name ? (
                   <div className="space-y-1">
-                    <div className="font-medium text-sm">{row.processor?.name}</div>
-                    <div className="text-xs text-muted-foreground">@{row.processor?.username}</div>
+                    <div className="font-medium text-sm">{row.processor.name}</div>
+                    <div className="text-xs text-muted-foreground">@{row.processor.username}</div>
                   </div>
                 ) : (
                   <div className="text-muted-foreground">Chưa phân công</div>
