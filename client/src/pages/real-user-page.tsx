@@ -311,19 +311,14 @@ export default function RealUserPage() {
                     <div className="text-xs text-muted-foreground">
                       @{assignedUser.username}
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">Chưa phân công</div>
-                );
-                    <div className="font-medium">
-                      {assignedUser?.name || "Chưa phân công"}
-                    </div>
                     {row.assignedAt && (
                       <div className="text-xs text-muted-foreground">
                         {format(new Date(row.assignedAt), "dd/MM/yyyy HH:mm")}
                       </div>
                     )}
                   </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Chưa phân công</div>
                 );
               },
             },
