@@ -313,9 +313,13 @@ export default function RealUserPage() {
                 }
 
                 const assignedUser = users.find(u => u.id === row.assignedToId);
+                if (!assignedUser) {
+                  return <div className="text-muted-foreground">Chưa phân công</div>;
+                }
+
                 return (
                   <div className="font-medium">
-                    {assignedUser?.name || "Chưa phân công"}
+                    {assignedUser.name || assignedUser.username}
                   </div>
                 );
               },
