@@ -308,7 +308,8 @@ export default function RealUserPage() {
                   }
                 });
 
-                const assignedUser = users.find(u => u.id === row.assignedToId);
+                // Check if assignedToId exists in the row data
+                const assignedUser = users.find(u => u.id === row.assignedToId?.id || row.assignedToId);
 
                 return (
                   <div className="font-medium">
