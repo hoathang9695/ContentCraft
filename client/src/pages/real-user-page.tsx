@@ -299,21 +299,23 @@ export default function RealUserPage() {
               key: "assignedToId",
               header: "Người phê duyệt",
               render: (row) => {
-                // Get the processor name from the data
-                const { data: processor } = useQuery({
-                  queryKey: [`/api/users/${row.assignedToId}`],
+                const { data: users = [] } = useQuery({
+                  queryKey: ["/api/users"],
                   queryFn: async () => {
-                    if (!row.assignedToId) return null;
-                    const response = await fetch(`/api/users/${row.assignedToId}`);
-                    if (!response.ok) return null;
+                    const response = await fetch("/api/users");
+                    if (!response.ok) throw new Error("Failed to fetch users");
                     return response.json();
                   },
-                  enabled: !!row.assignedToId,
                 });
 
+                if (!row.assignedToId) {
+                  return <div className="text-muted-foreground">Chưa phân công</div>;
+                }
+
+                const assignedUser = users.find(u => u.id === row.assignedToId);
                 return (
                   <div className="font-medium">
-                    {processor?.name || "Chưa phân công"}
+                    {assignedUser?.name || "Chưa phân công"}
                   </div>
                 );
               },
