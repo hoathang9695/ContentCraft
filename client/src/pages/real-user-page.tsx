@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -300,7 +299,6 @@ export default function RealUserPage() {
               key: "assignedToId",
               header: "Người phê duyệt",
               render: (row) => {
-                // Get user name from assignedToId using users query
                 const { data: users = [] } = useQuery({
                   queryKey: ["/api/users"],
                   queryFn: async () => {
