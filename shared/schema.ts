@@ -162,7 +162,7 @@ export type SupportRequest = typeof supportRequests.$inferSelect;
 // Real users table
 export const realUsers = pgTable("real_users", {
   id: serial("id").primaryKey(),
-  fullName: varchar("full_name", { length: 100 }).notNull(),
+  fullName: jsonb("full_name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   verified: boolean("verified").notNull().default(false),
   lastLogin: timestamp("last_login", { withTimezone: true }),
