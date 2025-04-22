@@ -309,19 +309,19 @@ export default function RealUserPage() {
                 });
 
                 if (!row.assignedToId || !users) {
-                  return <div>Chưa phân công</div>;
+                  return <div className="text-muted-foreground">Chưa phân công</div>;
                 }
 
                 const assignedUser = users.find(u => u.id === row.assignedToId);
                 if (!assignedUser) {
-                  return <div>Chưa phân công</div>;
+                  return <div className="text-muted-foreground">Chưa phân công</div>;
                 }
 
                 return (
-                  <div>
-                    <div>{assignedUser.name}</div>
+                  <div className="space-y-1">
+                    <div className="font-medium">{assignedUser.name}</div>
                     {row.assignedAt && (
-                      <div className="text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {format(new Date(row.assignedAt), "dd/MM/yyyy HH:mm")}
                       </div>
                     )}
