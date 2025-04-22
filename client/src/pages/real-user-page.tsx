@@ -281,17 +281,12 @@ export default function RealUserPage() {
             {
               key: "processor",
               header: "Người phê duyệt", 
-              render: (row) => {
-                console.log("Row data:", row);
-                return row.processor ? (
-                  <div className="space-y-1">
-                    <div className="font-medium text-sm">{row.processor.name}</div>
-                    <div className="text-xs text-muted-foreground">@{row.processor.username}</div>
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground">Chưa phân công</div>
-                );
-              },
+              render: (row) => (
+                <div className="space-y-1">
+                  <div className="font-medium text-sm">{row.processor.name}</div>
+                  <div className="text-xs text-muted-foreground">@{row.processor.username}</div>
+                </div>
+              ),
             },
             {
               key: "verified",
