@@ -1289,22 +1289,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(realUsers)
         .leftJoin(users, eq(realUsers.assignedToId, users.id))
         .orderBy(desc(realUsers.createdAt));
-          fullName: realUsers.fullName,
-          email: realUsers.email,
-          verified: realUsers.verified,
-          lastLogin: realUsers.lastLogin,
-          assignedToId: realUsers.assigned_to_id,
-          createdAt: realUsers.createdAt,
-          updatedAt: realUsers.updatedAt,
-          processor: {
-            id: users.id,
-            name: users.name,
-            username: users.username
-          }
-        })
-        .from(realUsers)
-        .leftJoin(users, eq(realUsers.assigned_to_id, users.id))
-        .orderBy(desc(realUsers.createdAt));
 
       console.log("Real users query results:", results);
       res.json(results);
