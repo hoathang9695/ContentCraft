@@ -269,10 +269,24 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                const fullName = typeof row.fullName === 'string' 
-                  ? row.fullName 
-                  : row.fullName?.name || 'N/A';
-                return <div className="font-medium">{fullName}</div>;
+                const fullName = row.fullName?.name || 'N/A';
+                const userId = row.fullName?.id;
+                return (
+                  <div className="font-medium">
+                    {userId ? (
+                      <a 
+                        href={`https://emso.vn/user/${userId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {fullName}
+                      </a>
+                    ) : (
+                      fullName
+                    )}
+                  </div>
+                );
               },
             },
             {
