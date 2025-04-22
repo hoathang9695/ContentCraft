@@ -268,7 +268,7 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => (
-                <div className="font-medium">{row.fullName?.name || row.fullName || 'N/A'}</div>
+                <div className="font-medium">{row.fullName?.name || 'N/A'}</div>
               ),
             },
             {
