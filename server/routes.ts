@@ -874,7 +874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!comment) {
-        return res.status(400).json{ successfalse, message: "Comment content is required" });
+        return res.status(400).json({ success: false, message: "Comment content is required" });
       }
 
       // Lấy thông tin fake user
