@@ -297,6 +297,29 @@ export default function RealUserPage() {
               ),
             },
             {
+              key: "assignedToId",
+              header: "Người phê duyệt",
+              render: (row) => {
+                // Get user name from assignedToId using another query
+                const { data: userData } = useQuery({
+                  queryKey: [`/api/users/${row.assignedToId}`],
+                  queryFn: async () => {
+                    if (!row.assignedToId) return null;
+                    const response = await fetch(`/api/users/${row.assignedToId}`);
+                    if (!response.ok) return null;
+                    return response.json();
+                  },
+                  enabled: !!row.assignedToId
+                });
+
+                return (
+                  <div className="font-medium">
+                    {userData?.name || 'Chưa phân công'}
+                  </div>
+                );
+              },
+            },
+            {
               key: "verified",
               header: "Trạng thái xác minh",
               render: (row) => (
