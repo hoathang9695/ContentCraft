@@ -1269,7 +1269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/real-users", isAdmin, async (req, res) => {
     try {
       const { realUsers, users } = await import("@shared/schema");
-      
+
       const results = await db
         .select({
           id: realUsers.id,
