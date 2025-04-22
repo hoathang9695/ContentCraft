@@ -74,26 +74,27 @@ export default function RealUserPage() {
   // Filter users based on date range, status and search query
   const filteredUsers = users ? users.filter((user) => {
     if (!user) return false;
-    
-    // Date filtering
     const createdDate = user.createdAt ? new Date(user.createdAt) : null;
-    const dateMatch = !createdDate || (
+    const dateMatch =
+      !createdDate || // Include if no date (temporary fix)
       (!startDate || createdDate >= startDate) &&
-      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000))
-    );
+      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
 
-    // Status filtering
+    console.log("Filtering user:", {
+      user,
+      dateMatch,
+      createdDate,
+      startDate,
+      endDate
+    });
+
     const statusMatch = 
       activeTab === 'all' || 
-      (activeTab === 'processed' && user.verified === true) ||
-      (activeTab === 'unprocessed' && user.verified === false);
+      (activeTab === 'processed' && user.verified === 'verified') ||
+      (activeTab === 'unprocessed' && user.verified === 'unverified');
 
-    // Verification status filtering  
-    const verificationMatch = 
-      (verificationStatus === 'verified' && user.verified === true) ||
-      (verificationStatus === 'unverified' && user.verified === false);
+    const verificationMatch = verificationStatus === user.verified;
 
-    // Search filtering
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
       !searchQuery ||
@@ -261,7 +262,7 @@ export default function RealUserPage() {
               key: "id",
               header: "ID User",
               render: (row) => (
-                <div className="font-medium text-xs">{row.id}</div>
+                <div className="font-medium text-xs">ID-{row.id}</div>
               ),
             },
             {
@@ -283,10 +284,10 @@ export default function RealUserPage() {
               header: "Trạng thái xác minh",
               render: (row) => (
                 <Badge
-                  variant={row.verified === true ? "success" : "secondary"}
+                  variant={row.verified === 'verified' ? "success" : "secondary"}
                   className="font-medium"
                 >
-                  {row.verified === true ? "Đã xác minh" : "Chưa xác minh"}
+                  {row.verified === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
                 </Badge>
               ),
             },

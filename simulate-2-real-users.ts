@@ -27,7 +27,6 @@ async function processRealUsers() {
     // Create first user
     console.log('Inserting first user...');
     const result1 = await db.insert(realUsers).values({
-      id: 113728049762216423,
       fullName: 'Hoàng Ngọc Lan',
       email: 'example@gmail.com',
       verified: 'unverified',
@@ -42,7 +41,6 @@ async function processRealUsers() {
     // Create second user
     console.log('Inserting second user...');
     const result2 = await db.insert(realUsers).values({
-      id: 113728049762216424,
       fullName: 'Hoàng Ngọc Dương', 
       email: 'duong@example.com',
       verified: 'unverified',
