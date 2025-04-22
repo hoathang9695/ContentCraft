@@ -296,7 +296,7 @@ export default function RealUserPage() {
               ),
             },
             {
-              key: "assignedToId",
+              key: "processor",
               header: "Người phê duyệt", 
               render: (row) => {
                 if (!row.assignedToId || !row.processor) {
