@@ -267,26 +267,9 @@ export default function RealUserPage() {
             {
               key: "fullName",
               header: "Họ và tên",
-              render: (row) => {
-                const fullName = row.fullName?.name || 'N/A';
-                const userId = row.fullName?.id;
-                return (
-                  <div className="font-medium">
-                    {userId ? (
-                      <a 
-                        href={`https://emso.vn/user/${userId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {fullName}
-                      </a>
-                    ) : (
-                      fullName
-                    )}
-                  </div>
-                );
-              },
+              render: (row) => (
+                <div className="font-medium">{row.fullName}</div>
+              ),
             },
             {
               key: "email",
@@ -299,16 +282,13 @@ export default function RealUserPage() {
               key: "processor",
               header: "Người phê duyệt", 
               render: (row) => {
-                if (!row.assignedToId || !row.processor) {
+                if (!row.assignedToId) {
                   return <div className="text-sm text-muted-foreground">Chưa phân công</div>;
                 }
                 
                 return (
                   <div className="space-y-1">
-                    <div className="font-medium">{row.processor.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      @{row.processor.username}
-                    </div>
+                    <div className="font-medium text-sm">Chưa phân công</div>
                   </div>
                 );
               },
