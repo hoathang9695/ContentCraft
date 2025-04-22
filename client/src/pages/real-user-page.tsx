@@ -283,10 +283,10 @@ export default function RealUserPage() {
               header: "Trạng thái xác minh",
               render: (row) => (
                 <Badge
-                  variant={row.verified === 'verified' ? "success" : "secondary"}
+                  variant={row.verified === true ? "success" : "secondary"}
                   className="font-medium"
                 >
-                  {row.verified === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
+                  {row.verified === true ? "Đã xác minh" : "Chưa xác minh"}
                 </Badge>
               ),
             },
