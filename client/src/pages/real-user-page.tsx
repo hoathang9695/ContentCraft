@@ -290,18 +290,12 @@ export default function RealUserPage() {
                   return (
                     <Button
                       type="button"
-                      variant="link"
+                      variant="link" 
+                      component="a"
+                      href={`https://emso.vn/user/${typeof row.fullName === 'string' ? JSON.parse(row.fullName)?.id : row.fullName?.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                      onClick={() => {
-                        try {
-                          const parsedName = typeof row.fullName === 'string' ? JSON.parse(row.fullName) : row.fullName;
-                          if (parsedName?.id) {
-                            window.open(`https://emso.vn/user/${parsedName.id}`, '_blank', 'noopener,noreferrer');
-                          }
-                        } catch (e) {
-                          console.error('Error opening user link:', e);
-                        }
-                      }}
                     >
                       {row.fullName?.name || String(row.fullName) || 'N/A'}
                     </Button>
