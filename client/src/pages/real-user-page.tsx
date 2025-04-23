@@ -275,27 +275,32 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                const fullName = row.fullName;
-                
-                if (!fullName || !fullName.id || !fullName.name) {
+                try {
+                  let fullName;
+                  if (typeof row.fullName === 'string') {
+                    fullName = JSON.parse(row.fullName);
+                  } else {
+                    fullName = row.fullName;
+                  }
+                  
+                  if (!fullName?.id || !fullName?.name) {
+                    return <span className="text-xs text-gray-500">N/A</span>;
+                  }
+
+                  return (
+                    <a
+                      href={`https://emso.vn/user/${fullName.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
+                    >
+                      {fullName.name}
+                    </a>
+                  );
+                } catch (error) {
+                  console.error('Error parsing fullName:', error);
                   return <span className="text-xs text-gray-500">N/A</span>;
                 }
-
-                const handleClick = (e: React.MouseEvent) => {
-                  e.preventDefault();
-                  const url = `https://emso.vn/user/${fullName.id}`;
-                  window.open(url, '_blank');
-                };
-
-                return (
-                  <a
-                    href={`https://emso.vn/user/${fullName.id}`}
-                    onClick={handleClick}
-                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
-                  >
-                    {fullName.name}
-                  </a>
-                );
               },
             },
             {
