@@ -276,29 +276,35 @@ export default function RealUserPage() {
               header: "Họ và tên",
               render: (row) => {
                 try {
-                  const fullName = typeof row.fullName === 'string' 
-                    ? JSON.parse(row.fullName) 
-                    : row.fullName;
-
-                  if (fullName && typeof fullName === 'object' && fullName.id && fullName.name) {
-                    return (
-                      <Button
-                        type="button"
-                        variant="link" 
-                        className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                        onClick={() => {
-                          window.open(`https://emso.vn/user/${fullName.id}`, '_blank');
-                        }}
-                      >
-                        {fullName.name}
-                      </Button>
-                    );
+                  let fullName = row.fullName;
+                  
+                  // Handle string JSON if needed
+                  if (typeof fullName === 'string') {
+                    try {
+                      fullName = JSON.parse(fullName);
+                    } catch (e) {
+                      console.error('Failed to parse fullName string:', e);
+                    }
                   }
 
-                  return <div className="font-medium">{row.fullName?.name || row.fullName || 'N/A'}</div>;
+                  return (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      onClick={() => {
+                        const userId = fullName?.id;
+                        if (userId) {
+                          window.open(`https://emso.vn/user/${userId}`, '_blank');
+                        }
+                      }}
+                    >
+                      {fullName?.name || String(fullName) || 'N/A'}
+                    </Button>
+                  );
                 } catch (e) {
-                  console.error('Error parsing fullName:', e);
-                  return <div className="font-medium">{String(row.fullName) || 'N/A'}</div>;
+                  console.error('Error in fullName render:', e);
+                  return <div className="font-medium">Error displaying name</div>;
                 }
               },
             },
