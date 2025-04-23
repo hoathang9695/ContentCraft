@@ -13,15 +13,14 @@ async function processRealUserMessage(userData: {
     const now = new Date();
 
     // Chuyển fullName thành JSON string đúng định dạng yêu cầu
-    const fullNameJson = JSON.stringify({
-      id: userData.id,
-      name: userData.fullName,
-    });
-
+    // Không cần stringify lại vì dữ liệu đã đúng định dạng
     const newRealUser = await db
       .insert(realUsers)
       .values({
-        fullName: fullNameJson,
+        fullName: {
+          id: userData.id,
+          name: userData.fullName
+        },
         email: userData.email,
         verified: userData.verified,
         lastLogin: now,
