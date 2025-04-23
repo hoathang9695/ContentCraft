@@ -277,21 +277,23 @@ export default function RealUserPage() {
               render: (row) => {
                 const fullName = row.fullName;
                 
-                // Handle when fullName is an object with id and name
-                if (fullName && typeof fullName === 'object' && 'id' in fullName && 'name' in fullName) {
+                if (fullName && typeof fullName === 'object') {
                   return (
                     <a 
                       href={`https://emso.vn/user/${fullName.id}`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.open(`https://emso.vn/user/${fullName.id}`, '_blank');
+                      }}
                     >
                       {fullName.name}
                     </a>
                   );
                 }
                 
-                // Fallback for string value
                 return <div className="font-medium">{fullName || 'N/A'}</div>;
               },
             },
