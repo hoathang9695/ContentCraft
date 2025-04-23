@@ -275,17 +275,12 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                let parsedFullName;
+                const fullName = row.fullName;
+                
                 try {
-                  // Handle both string JSON and object
-                  parsedFullName = typeof row.fullName === 'string' ? 
-                    JSON.parse(row.fullName) : row.fullName;
-                } catch (e) {
-                  console.error('Error parsing fullName:', e);
-                  return <div className="font-medium">Error parsing name</div>;
-                }
+                  const parsedFullName = typeof fullName === 'string' ? 
+                    JSON.parse(fullName) : fullName;
 
-                if (parsedFullName && parsedFullName.id && parsedFullName.name) {
                   return (
                     <Button
                       type="button"
@@ -299,9 +294,12 @@ export default function RealUserPage() {
                       {parsedFullName.name}
                     </Button>
                   );
+                } catch (e) {
+                  const displayName = typeof fullName === 'string' ? fullName : 
+                    (fullName && typeof fullName === 'object' && 'name' in fullName) ? 
+                    fullName.name : 'N/A';
+                  return <div className="font-medium">{displayName}</div>;
                 }
-
-                return <div className="font-medium">N/A</div>;
               },
             },
             {
