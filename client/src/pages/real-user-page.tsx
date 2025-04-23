@@ -55,11 +55,11 @@ export default function RealUserPage() {
       if (!response.ok) throw new Error("Failed to fetch real users");
       const data = await response.json();
       console.log("Fetched real users:", data);
-      
+
       // Standardize data structure
       return data?.map(user => ({
         id: user.id,
-        fullName: typeof user.fullName === 'object' ? user.fullName.name : user.fullName,
+        fullName: typeof user.fullName === 'string' ? { name: user.fullName, id: user.id } : user.fullName,
         email: user.email,
         verified: user.verified,
         lastLogin: user.lastLogin,
@@ -275,37 +275,25 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                try {
-                  let fullName = row.fullName;
-                  
-                  // Handle string JSON if needed
-                  if (typeof fullName === 'string') {
-                    try {
-                      fullName = JSON.parse(fullName);
-                    } catch (e) {
-                      console.error('Failed to parse fullName string:', e);
-                    }
-                  }
-
-                  return (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                      onClick={() => {
-                        const userId = fullName?.id;
-                        if (userId) {
-                          window.open(`https://emso.vn/user/${userId}`, '_blank');
-                        }
-                      }}
-                    >
-                      {fullName?.name || String(fullName) || 'N/A'}
-                    </Button>
-                  );
-                } catch (e) {
-                  console.error('Error in fullName render:', e);
-                  return <div className="font-medium">Error displaying name</div>;
+                if (!row.fullName?.id || !row.fullName?.name) {
+                  return <span className="text-xs text-gray-500">N/A</span>;
                 }
+
+                return (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
+                    onClick={() => {
+                      const userId = row.fullName?.id;
+                      if (userId) {
+                        window.open(`https://emso.vn/user/${userId}`, '_blank');
+                      }
+                    }}
+                  >
+                    {row.fullName.name}
+                  </Button>
+                );
               },
             },
             {
