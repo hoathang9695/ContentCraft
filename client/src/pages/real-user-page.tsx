@@ -279,24 +279,19 @@ export default function RealUserPage() {
                 const name = typeof fullName === 'object' ? fullName.name : fullName;
                 const id = typeof fullName === 'object' ? fullName.id : null;
                 
-                return (
-                  id ? (
-                    <a 
-                      href={`https://emso.vn/user/${id}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                    >
-                      {name}
-                    </a>
-                  ) : (
-                    <div className="font-medium">{name || 'N/A'}</div>
-                  )
-                );
-              },
+                return id ? (
+                  <a 
+                    href={`https://emso.vn/user/${id}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                   >
                     {name}
                   </a>
+                ) : (
+                  <div className="font-medium">{name || 'N/A'}</div>
+                );
+              },
                 ) : (
                   <div className="font-medium">{name || 'N/A'}</div>
                 );
