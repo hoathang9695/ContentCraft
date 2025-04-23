@@ -277,23 +277,21 @@ export default function RealUserPage() {
               render: (row) => {
                 const fullName = row.fullName;
 
-                // Debug log
-                console.log("row.fullName", fullName);
+                // Handle string or object format
+                const name = typeof fullName === 'string' ? fullName : (fullName?.name || 'N/A');
+                const id = typeof fullName === 'object' ? fullName?.id : null;
 
-                // Nếu không có fullName hoặc thiếu id/name → fallback
-                if (!fullName || !fullName.id || !fullName.name) {
-                  return <span className="text-xs text-gray-400">N/A</span>;
-                }
-
-                return (
+                return id ? (
                   <a
-                    href={`https://emso.vn/user/${fullName.id}`}
+                    href={`https://emso.vn/user/${id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
                   >
-                    {fullName.name}
+                    {name}
                   </a>
+                ) : (
+                  <span className="text-xs">{name}</span>
                 );
               },
             },
