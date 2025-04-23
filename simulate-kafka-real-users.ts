@@ -1,3 +1,4 @@
+
 import { db } from './server/db';
 import { users, realUsers } from './shared/schema';
 import { and, eq, ne } from 'drizzle-orm';
@@ -6,7 +7,7 @@ async function processRealUserMessage(userData: {
   id: string;
   fullName: string;
   email: string;
-  verified: boolean;
+  verified: 'verified' | 'unverified';
   assignedToId: number;
 }) {
   try {
@@ -36,15 +37,15 @@ async function simulateKafkaRealUsers() {
     {
       id: "113728049762216423",
       fullName: "Hoàng Ngọc Lan",
-      email: "lan@gmail.com", 
-      verified: false,
+      email: "lan@gmail.com",
+      verified: "unverified" as const,
       assignedToId: 2
     },
     {
-      id: "113752366387735850",
+      id: "113752366387735850", 
       fullName: "Hoàng Ngọc Dương",
       email: "duong@gmail.com",
-      verified: true,
+      verified: "verified" as const,
       assignedToId: 3
     }
   ];
