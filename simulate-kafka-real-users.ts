@@ -14,9 +14,9 @@ async function processRealUserMessage(userData: {
 
     // Insert real user data
     const newRealUser = await db.insert(realUsers).values({
-      fullName: { id: userData.id, name: userData.fullName },
+      fullName: JSON.stringify({ id: userData.id, name: userData.fullName }),
       email: userData.email,
-      verified: userData.verified === 'verified', // Convert to boolean
+      verified: userData.verified,
       lastLogin: now,
       createdAt: now,
       updatedAt: now,
