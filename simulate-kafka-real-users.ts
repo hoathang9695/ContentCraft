@@ -1,4 +1,3 @@
-
 import { db } from './server/db';
 import { users, realUsers } from './shared/schema';
 import { and, eq, ne } from 'drizzle-orm';
@@ -7,62 +6,25 @@ async function processRealUserMessage(userData: {
   id: string;
   fullName: string;
   email: string;
-  verified: 'verified' | 'unverified';
+  verified: boolean;
+  assignedToId: number;
 }) {
   try {
-    console.log(`Processing real user message: ${JSON.stringify(userData)}`);
-
-    // Get active non-admin users
-    const activeUsers = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.status, "active"),
-          ne(users.role, "admin")
-        )
-      );
-
-    if (!activeUsers || activeUsers.length === 0) {
-      throw new Error('No active non-admin users found');
-    }
-
-    // Get last assigned user to implement round-robin
-    const lastAssignedUser = await db.query.realUsers.findFirst({
-      orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)],
-    });
-
-    // Calculate next assignee index
-    let nextAssigneeIndex = 0;
-    if (lastAssignedUser) {
-      const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedUser.assignedToId
-      );
-      if (lastAssigneeIndex !== -1) {
-        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
-      }
-    }
-
-    const assignedToId = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
-    // Insert new real user
+    // Insert real user data
     const newRealUser = await db.insert(realUsers).values({
-      fullName: JSON.stringify({
-        id: userData.id,
-        name: userData.fullName
-      }),
+      fullName: JSON.stringify({ id: userData.id, name: userData.fullName }),
       email: userData.email,
-      verified: userData.verified === 'verified',
+      verified: userData.verified,
       lastLogin: now,
-      assignedToId: assignedToId,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      assignedToId: userData.assignedToId
     }).returning();
 
-    console.log(`Created real user with ID ${newRealUser[0].id}, assigned to user ID ${assignedToId}`);
+    console.log(`Created real user with ID ${newRealUser[0].id}, assigned to user ID ${userData.assignedToId}`);
     return newRealUser[0];
-
   } catch (error) {
     console.error('Error processing real user message:', error);
     throw error;
@@ -74,14 +36,16 @@ async function simulateKafkaRealUsers() {
     {
       id: "113728049762216423",
       fullName: "Hoàng Ngọc Lan",
-      email: "lan@gmail.com",
-      verified: "unverified" as const
+      email: "lan@gmail.com", 
+      verified: false,
+      assignedToId: 2
     },
     {
-      id: "113752366387735850", 
+      id: "113752366387735850",
       fullName: "Hoàng Ngọc Dương",
       email: "duong@gmail.com",
-      verified: "verified" as const
+      verified: true,
+      assignedToId: 3
     }
   ];
 
