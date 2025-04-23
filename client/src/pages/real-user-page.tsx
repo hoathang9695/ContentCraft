@@ -55,7 +55,7 @@ export default function RealUserPage() {
       if (!response.ok) throw new Error("Failed to fetch real users");
       const data = await response.json();
       console.log("Fetched real users:", data);
-      
+
       // Standardize data structure
       return data?.map(user => ({
         id: user.id,
@@ -276,17 +276,23 @@ export default function RealUserPage() {
               header: "Họ và tên",
               render: (row) => {
                 const fullName = row.fullName;
-                const id = fullName?.id;
-                const name = fullName?.name;
+
+                // Debug log
+                console.log("row.fullName", fullName);
+
+                // Nếu không có fullName hoặc thiếu id/name → fallback
+                if (!fullName || !fullName.id || !fullName.name) {
+                  return <span className="text-xs text-gray-400">N/A</span>;
+                }
 
                 return (
                   <a
-                    href={`https://emso.vn/user/${id}`}
+                    href={`https://emso.vn/user/${fullName.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
                   >
-                    {name || 'N/A'}
+                    {fullName.name}
                   </a>
                 );
               },
