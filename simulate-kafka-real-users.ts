@@ -14,7 +14,7 @@ async function processRealUserMessage(userData: {
 
     // Insert real user data
     const newRealUser = await db.insert(realUsers).values({
-      fullName: { id: userData.id, name: userData.fullName },
+      fullName: JSON.stringify({ id: userData.id, name: userData.fullName }),
       email: userData.email,
       verified: userData.verified,
       lastLogin: now,
@@ -34,9 +34,8 @@ async function processRealUserMessage(userData: {
 async function simulateKafkaRealUsers() {
   try {
     // Test database connection first
-    const testResult = await db.execute(sql`SELECT NOW()`);
-    console.log('Database connection test successful:', testResult);
-
+    console.log('Testing database connection...');
+    
     const testUsers = [
       {
         id: "113728049762216423",
@@ -59,6 +58,7 @@ async function simulateKafkaRealUsers() {
     for (const userData of testUsers) {
       try {
         await processRealUserMessage(userData);
+        console.log(`Processed user: ${userData.fullName}`);
         // Wait 1 second between messages
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
