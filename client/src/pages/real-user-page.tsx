@@ -272,21 +272,22 @@ export default function RealUserPage() {
               ),
             },
             {
-              key: "fullName",
+              key: "fullName", 
               header: "Họ và tên",
               render: (row) => {
                 const fullName = row.fullName;
                 
-                if (fullName && typeof fullName === 'object') {
+                if (fullName && typeof fullName === 'object' && 'id' in fullName) {
                   return (
                     <a 
                       href={`https://emso.vn/user/${fullName.id}`}
-                      target="_blank" 
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                       onClick={(e) => {
-                        e.preventDefault();
-                        window.open(`https://emso.vn/user/${fullName.id}`, '_blank');
+                        e.preventDefault(); 
+                        const url = `https://emso.vn/user/${fullName.id}`;
+                        window.open(url, '_blank', 'noopener,noreferrer');
                       }}
                     >
                       {fullName.name}
@@ -294,7 +295,7 @@ export default function RealUserPage() {
                   );
                 }
                 
-                return <div className="font-medium">{fullName || 'N/A'}</div>;
+                return <div className="font-medium">{typeof fullName === 'string' ? fullName : 'N/A'}</div>;
               },
             },
             {
