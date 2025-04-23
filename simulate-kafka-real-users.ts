@@ -41,9 +41,9 @@ async function processRealUserMessage(userData: {
     const assignedToId = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
-    // Insert real user data
+    // Insert real user data with correct JSON format
     const newRealUser = await db.insert(realUsers).values({
-      fullName: JSON.stringify({ id: userData.id, name: userData.fullName }),
+      fullName: `{"id":"${userData.id}","name":"${userData.fullName}"}`,
       email: userData.email,
       verified: userData.verified,
       lastLogin: now,
