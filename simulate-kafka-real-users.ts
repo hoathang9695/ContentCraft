@@ -1,7 +1,6 @@
 
 import { db } from './server/db';
-import { users, realUsers } from './shared/schema';
-import { eq, ne } from 'drizzle-orm';
+import { realUsers } from './shared/schema';
 
 async function processRealUserMessage(userData: {
   id: string;
@@ -10,13 +9,17 @@ async function processRealUserMessage(userData: {
   verified: 'verified' | 'unverified';
 }) {
   try {
-    // Get active non-admin users for assignment
+    console.log(`Processing real user message: ${JSON.stringify(userData)}`);
+
+    // Get active non-admin users
     const activeUsers = await db
       .select()
       .from(users)
       .where(
-        eq(users.status, 'active'),
-        ne(users.role, 'admin')
+        and(
+          eq(users.status, "active"),
+          ne(users.role, "admin")
+        )
       );
 
     if (!activeUsers || activeUsers.length === 0) {
@@ -28,6 +31,7 @@ async function processRealUserMessage(userData: {
       orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)],
     });
 
+    // Calculate next assignee index
     let nextAssigneeIndex = 0;
     if (lastAssignedUser) {
       const lastAssigneeIndex = activeUsers.findIndex(
@@ -41,22 +45,23 @@ async function processRealUserMessage(userData: {
     const assignedToId = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
-    // Insert real user data
+    // Insert new real user
     const newRealUser = await db.insert(realUsers).values({
-      fullName: {
+      fullName: JSON.stringify({
         id: userData.id,
         name: userData.fullName
-      },
+      }),
       email: userData.email,
-      verified: userData.verified,
+      verified: userData.verified === 'verified',
       lastLogin: now,
+      assignedToId: assignedToId,
       createdAt: now,
-      updatedAt: now,
-      assignedToId: assignedToId
+      updatedAt: now
     }).returning();
 
     console.log(`Created real user with ID ${newRealUser[0].id}, assigned to user ID ${assignedToId}`);
     return newRealUser[0];
+
   } catch (error) {
     console.error('Error processing real user message:', error);
     throw error;
