@@ -292,10 +292,6 @@ export default function RealUserPage() {
                   <div className="font-medium">{name || 'N/A'}</div>
                 );
               },
-                ) : (
-                  <div className="font-medium">{name || 'N/A'}</div>
-                );
-              },
             },
             {
               key: "email",
