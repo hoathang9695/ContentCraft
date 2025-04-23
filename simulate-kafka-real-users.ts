@@ -1,7 +1,6 @@
 
 import { db } from './server/db';
-import { users, realUsers } from './shared/schema';
-import { and, eq, ne } from 'drizzle-orm';
+import { realUsers } from './shared/schema';
 
 async function processRealUserMessage(userData: {
   id: string;
@@ -17,7 +16,7 @@ async function processRealUserMessage(userData: {
     const newRealUser = await db.insert(realUsers).values({
       fullName: { id: userData.id, name: userData.fullName },
       email: userData.email,
-      verified: userData.verified,
+      verified: userData.verified === 'verified', // Convert to boolean
       lastLogin: now,
       createdAt: now,
       updatedAt: now,
@@ -37,12 +36,12 @@ async function simulateKafkaRealUsers() {
     {
       id: "113728049762216423",
       fullName: "Hoàng Ngọc Lan",
-      email: "lan@gmail.com",
+      email: "lan@gmail.com", 
       verified: "unverified" as const,
       assignedToId: 2
     },
     {
-      id: "113752366387735850", 
+      id: "113752366387735850",
       fullName: "Hoàng Ngọc Dương",
       email: "duong@gmail.com",
       verified: "verified" as const,
