@@ -4,8 +4,10 @@ import { users, realUsers } from './shared/schema';
 import { eq, ne } from 'drizzle-orm';
 
 async function processRealUserMessage(userData: {
+  id: string;
   fullName: string;
   email: string;
+  verified: 'verified' | 'unverified';
 }) {
   try {
     // Get active non-admin users for assignment
@@ -29,7 +31,7 @@ async function processRealUserMessage(userData: {
     let nextAssigneeIndex = 0;
     if (lastAssignedUser) {
       const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedUser.id
+        user => user.id === lastAssignedUser.assignedToId
       );
       if (lastAssigneeIndex !== -1) {
         nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
@@ -41,11 +43,13 @@ async function processRealUserMessage(userData: {
 
     // Insert real user data
     const newRealUser = await db.insert(realUsers).values({
-      fullName: userData.fullName,
+      fullName: JSON.stringify({ id: userData.id, name: userData.fullName }),
       email: userData.email,
-      verified: 'unverified',
+      verified: userData.verified,
+      lastLogin: now,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      assignedToId: assignedToId
     }).returning();
 
     console.log(`Created real user with ID ${newRealUser[0].id}, assigned to user ID ${assignedToId}`);
@@ -59,12 +63,16 @@ async function processRealUserMessage(userData: {
 async function simulateKafkaRealUsers() {
   const testUsers = [
     {
-      fullName: "Nguyễn Văn A",
-      email: "nguyenvana@example.com"
+      id: "113728049762216423",
+      fullName: "Hoàng Ngọc Lan",
+      email: "lan@gmail.com",
+      verified: "unverified" as const
     },
     {
-      fullName: "Trần Thị B", 
-      email: "tranthib@example.com"
+      id: "113752366387735850", 
+      fullName: "Hoàng Ngọc Dương",
+      email: "duong@gmail.com",
+      verified: "verified" as const
     }
   ];
 
