@@ -275,29 +275,34 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                const fullName = typeof row.fullName === 'string' 
-                  ? JSON.parse(row.fullName)
-                  : row.fullName;
+                try {
+                  const fullName = row.fullName;
+                  
+                  if (!fullName) {
+                    return <span className="text-xs text-gray-500">N/A</span>;
+                  }
 
-                if (!fullName?.id || !fullName?.name) {
+                  // Handle the object format directly
+                  if (typeof fullName === 'object' && fullName.id && fullName.name) {
+                    return (
+                      <a
+                        href={`https://emso.vn/user/${fullName.id}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.open(`https://emso.vn/user/${fullName.id}`, '_blank', 'noopener,noreferrer');
+                        }}
+                        className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
+                      >
+                        {fullName.name}
+                      </a>
+                    );
+                  }
+
+                  return <span className="text-xs text-gray-500">{String(fullName)}</span>;
+                } catch (error) {
+                  console.error('Error rendering fullName:', error);
                   return <span className="text-xs text-gray-500">N/A</span>;
                 }
-
-                const handleClick = (e: React.MouseEvent) => {
-                  e.preventDefault();
-                  const url = `https://emso.vn/user/${fullName.id}`;
-                  window.open(url, '_blank', 'noopener,noreferrer');
-                };
-
-                return (
-                  <a
-                    href={`https://emso.vn/user/${fullName.id}`}
-                    onClick={handleClick}
-                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
-                  >
-                    {fullName.name}
-                  </a>
-                );
               },
             },
             {
