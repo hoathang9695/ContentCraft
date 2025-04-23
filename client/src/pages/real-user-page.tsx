@@ -277,16 +277,18 @@ export default function RealUserPage() {
               render: (row) => {
                 const fullName = row.fullName;
                 
-                if (fullName && typeof fullName === 'object' && 'id' in fullName && 'name' in fullName) {
+                if (typeof fullName === 'object' && fullName && 'id' in fullName) {
                   return (
                     <Button
+                      type="button"
                       variant="link" 
-                      className="h-auto p-0 font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline"
                       onClick={() => {
-                        window.open(`https://emso.vn/user/${fullName.id}`, '_blank', 'noopener,noreferrer');
+                        const url = `https://emso.vn/user/${fullName.id}`;
+                        window.open(url, '_blank');
                       }}
                     >
-                      {fullName.name}
+                      {fullName.name || 'N/A'}
                     </Button>
                   );
                 }
