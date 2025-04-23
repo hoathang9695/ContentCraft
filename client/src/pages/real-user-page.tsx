@@ -265,13 +265,6 @@ export default function RealUserPage() {
           onSearch={setSearchQuery}
           columns={[
             {
-              key: "id",
-              header: "ID User",
-              render: (row) => (
-                <div className="font-medium text-xs">ID-{row.id}</div>
-              ),
-            },
-            {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
