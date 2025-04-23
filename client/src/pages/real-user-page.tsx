@@ -272,28 +272,36 @@ export default function RealUserPage() {
               ),
             },
             {
-              key: "fullName", 
+              key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                const fullName = row.fullName;
-                
-                if (typeof fullName === 'object' && fullName && 'id' in fullName) {
+                let parsedFullName;
+                try {
+                  // Handle both string JSON and object
+                  parsedFullName = typeof row.fullName === 'string' ? 
+                    JSON.parse(row.fullName) : row.fullName;
+                } catch (e) {
+                  console.error('Error parsing fullName:', e);
+                  return <div className="font-medium">Error parsing name</div>;
+                }
+
+                if (parsedFullName && parsedFullName.id && parsedFullName.name) {
                   return (
                     <Button
                       type="button"
-                      variant="link" 
+                      variant="link"
                       className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline"
                       onClick={() => {
-                        const url = `https://emso.vn/user/${fullName.id}`;
+                        const url = `https://emso.vn/user/${parsedFullName.id}`;
                         window.open(url, '_blank');
                       }}
                     >
-                      {fullName.name || 'N/A'}
+                      {parsedFullName.name}
                     </Button>
                   );
                 }
-                
-                return <div className="font-medium">{typeof fullName === 'string' ? fullName : 'N/A'}</div>;
+
+                return <div className="font-medium">N/A</div>;
               },
             },
             {
