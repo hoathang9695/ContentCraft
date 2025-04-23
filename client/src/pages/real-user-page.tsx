@@ -293,13 +293,17 @@ export default function RealUserPage() {
                       variant="link"
                       className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                       onClick={() => {
-                        const userId = fullName?.id;
-                        if (userId) {
-                          window.open(`https://emso.vn/user/${userId}`, '_blank');
+                        try {
+                          const parsedName = typeof row.fullName === 'string' ? JSON.parse(row.fullName) : row.fullName;
+                          if (parsedName?.id) {
+                            window.open(`https://emso.vn/user/${parsedName.id}`, '_blank', 'noopener,noreferrer');
+                          }
+                        } catch (e) {
+                          console.error('Error opening user link:', e);
                         }
                       }}
                     >
-                      {fullName?.name || String(fullName) || 'N/A'}
+                      {row.fullName?.name || String(row.fullName) || 'N/A'}
                     </Button>
                   );
                 } catch (e) {
