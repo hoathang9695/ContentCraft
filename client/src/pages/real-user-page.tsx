@@ -287,8 +287,10 @@ export default function RealUserPage() {
                       variant="link"
                       className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline"
                       onClick={() => {
-                        const url = `https://emso.vn/user/${parsedFullName.id}`;
-                        window.open(url, '_blank');
+                        if (parsedFullName && parsedFullName.id) {
+                          const url = `https://emso.vn/user/${parsedFullName.id}`;
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                        }
                       }}
                     >
                       {parsedFullName.name}
