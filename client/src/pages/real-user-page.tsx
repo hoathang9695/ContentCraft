@@ -289,10 +289,6 @@ export default function RealUserPage() {
                     {name}
                   </a>
                 ) : (
-                  <span>{name}</span>
-                );
-              },
-                ) : (
                   <div className="font-medium">{name || 'N/A'}</div>
                 );
               },
