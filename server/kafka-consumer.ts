@@ -1,7 +1,7 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
-import { users, supportRequests, contents } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { users, supportRequests, contents, realUsers } from "../shared/schema";
+import { eq, and, ne } from "drizzle-orm";
 import { log } from "./vite";
 
 let consumer: Consumer;
@@ -162,6 +162,8 @@ export async function setupKafkaConsumer() {
             await processContentMessage(parsedMessage as ContentMessage);
           } else if ("full_name" in parsedMessage) {
             await processSupportMessage(parsedMessage as SupportMessage);
+          } else if ("id" in parsedMessage && "email" in parsedMessage) {
+            await processRealUserMessage(parsedMessage as RealUserMessage);
           }
         },
       });
@@ -178,7 +180,7 @@ export async function setupKafkaConsumer() {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | null {
+): ContentMessage | SupportMessage | RealUserMessage | null {
   if (!messageValue) return null;
 
   try {
@@ -189,6 +191,8 @@ function parseMessage(
       return message as SupportMessage;
     } else if ("externalId" in message) {
       return message as ContentMessage;
+    } else if ("id" in message && "email" in message && "fullName" in message) {
+      return message as RealUserMessage;
     }
 
     return null;
@@ -345,6 +349,74 @@ async function processSupportMessage(message: SupportMessage) {
     }
   } catch (error) {
     log(`Error processing support message: ${error}`, "kafka-error");
+    throw error;
+  }
+}
+
+export interface RealUserMessage {
+  id: string;
+  fullName: string;
+  email: string;
+  verified: 'verified' | 'unverified';
+}
+
+async function processRealUserMessage(message: RealUserMessage) {
+  try {
+    log(`Processing real user message: ${JSON.stringify(message)}`, "kafka");
+
+    // Get active non-admin users
+    const activeUsers = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.status, "active"),
+          ne(users.role, "admin")
+        )
+      );
+
+    if (!activeUsers || activeUsers.length === 0) {
+      throw new Error('No active non-admin users found');
+    }
+
+    // Get last assigned user to implement round-robin
+    const lastAssignedUser = await db.query.realUsers.findFirst({
+      orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)],
+    });
+
+    // Calculate next assignee index
+    let nextAssigneeIndex = 0;
+    if (lastAssignedUser) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        user => user.id === lastAssignedUser.assignedToId
+      );
+      if (lastAssigneeIndex !== -1) {
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+      }
+    }
+
+    const assignedToId = activeUsers[nextAssigneeIndex].id;
+    const now = new Date();
+
+    // Insert new real user
+    const newRealUser = await db.insert(realUsers).values({
+      fullName: JSON.stringify({
+        id: message.id,
+        name: message.fullName
+      }),
+      email: message.email,
+      verified: message.verified === 'verified',
+      lastLogin: now,
+      assignedToId: assignedToId,
+      createdAt: now,
+      updatedAt: now
+    }).returning();
+
+    log(`Created real user with ID ${newRealUser[0].id}, assigned to user ID ${assignedToId}`, "kafka");
+    return newRealUser[0];
+
+  } catch (error) {
+    log(`Error processing real user message: ${error}`, "kafka-error");
     throw error;
   }
 }
