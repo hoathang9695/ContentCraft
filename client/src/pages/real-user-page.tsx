@@ -275,35 +275,23 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                try {
-                  let fullName = row.fullName;
-                  
-                  // Handle string JSON if needed
-                  if (typeof fullName === 'string') {
-                    try {
-                      fullName = JSON.parse(fullName);
-                    } catch (e) {
-                      console.error('Failed to parse fullName string:', e);
-                    }
-                  }
-
-                  return (
-                    <Button
-                      type="button"
-                      variant="link" 
-                      component="a"
-                      href={`https://emso.vn/user/${typeof row.fullName === 'string' ? JSON.parse(row.fullName)?.id : row.fullName?.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                    >
-                      {row.fullName?.name || String(row.fullName) || 'N/A'}
-                    </Button>
-                  );
-                } catch (e) {
-                  console.error('Error in fullName render:', e);
-                  return <div className="font-medium">Error displaying name</div>;
-                }
+                const fullName = row.fullName;
+                const id = fullName?.id;
+                const name = fullName?.name;
+                
+                return (
+                  <Button
+                    type="button"
+                    variant="link" 
+                    component="a"
+                    href={`https://emso.vn/user/${id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                  >
+                    {name || 'N/A'}
+                  </Button>
+                );
               },
             },
             {
