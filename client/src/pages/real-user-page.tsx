@@ -276,21 +276,23 @@ export default function RealUserPage() {
               header: "Họ và tên",
               render: (row) => {
                 const fullName = row.fullName;
-                const name = typeof fullName === 'object' ? fullName.name : fullName;
-                const id = typeof fullName === 'object' ? fullName.id : null;
                 
-                return id ? (
-                  <a 
-                    href={`https://emso.vn/user/${id}`}
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                  >
-                    {name}
-                  </a>
-                ) : (
-                  <div className="font-medium">{name || 'N/A'}</div>
-                );
+                // Handle when fullName is an object with id and name
+                if (fullName && typeof fullName === 'object' && 'id' in fullName && 'name' in fullName) {
+                  return (
+                    <a 
+                      href={`https://emso.vn/user/${fullName.id}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      {fullName.name}
+                    </a>
+                  );
+                }
+                
+                // Fallback for string value
+                return <div className="font-medium">{fullName || 'N/A'}</div>;
               },
             },
             {
