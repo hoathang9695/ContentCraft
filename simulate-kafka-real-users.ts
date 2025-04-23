@@ -1,6 +1,7 @@
 
 import { db } from './server/db';
-import { realUsers } from './shared/schema';
+import { users, realUsers } from './shared/schema';
+import { and, eq, ne } from 'drizzle-orm';
 
 async function processRealUserMessage(userData: {
   id: string;
