@@ -275,25 +275,19 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                try {
-                  const fullName = typeof row.fullName === 'string' 
-                    ? JSON.parse(row.fullName) 
-                    : row.fullName;
-                    
-                  return (
-                    <a
-                      href={`https://emso.vn/user/${fullName?.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
-                    >
-                      {fullName?.name || 'N/A'}
-                    </a>
-                  );
-                } catch (error) {
-                  console.error('Error in fullName render:', error);
-                  return 'N/A';
-                }
+                const fullName = row.fullName;
+                if (!fullName || typeof fullName !== 'object') return 'N/A';
+                
+                return (
+                  <a
+                    href={`https://emso.vn/user/${fullName.id}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
+                  >
+                    {fullName.name || 'N/A'}
+                  </a>
+                );
               },
             },
             {
