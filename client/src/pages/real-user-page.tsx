@@ -275,27 +275,29 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                // Handle fullName from API response
-                const fullName = row.fullName;
-                
-                if (typeof fullName === 'object' && fullName?.id && fullName?.name) {
-                  return (
-                    <a
-                      href={`https://emso.vn/user/${fullName.id}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        window.open(`https://emso.vn/user/${fullName.id}`, '_blank');
-                      }}
-                    >
-                      {fullName.name}
-                    </a>
-                  );
+                const fullName = typeof row.fullName === 'string' 
+                  ? JSON.parse(row.fullName)
+                  : row.fullName;
+
+                if (!fullName?.id || !fullName?.name) {
+                  return <span className="text-xs text-gray-500">N/A</span>;
                 }
 
-                return <span className="text-xs text-gray-500">N/A</span>;
+                const handleClick = (e: React.MouseEvent) => {
+                  e.preventDefault();
+                  const url = `https://emso.vn/user/${fullName.id}`;
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                };
+
+                return (
+                  <a
+                    href={`https://emso.vn/user/${fullName.id}`}
+                    onClick={handleClick}
+                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
+                  >
+                    {fullName.name}
+                  </a>
+                );
               },
             },
             {
