@@ -276,29 +276,36 @@ export default function RealUserPage() {
               header: "Họ và tên",
               render: (row) => {
                 try {
-                  const fullName = row.fullName;
-                  
-                  if (!fullName) {
+                  let userId = null;
+                  let displayName = null;
+
+                  if (typeof row.fullName === 'string') {
+                    displayName = row.fullName;
+                  } else if (row.fullName && typeof row.fullName === 'object') {
+                    userId = row.fullName.id;
+                    displayName = row.fullName.name;
+                  }
+
+                  if (!displayName) {
                     return <span className="text-xs text-gray-500">N/A</span>;
                   }
 
-                  // Handle the object format directly
-                  if (typeof fullName === 'object' && fullName.id && fullName.name) {
+                  if (userId) {
                     return (
                       <a
-                        href={`https://emso.vn/user/${fullName.id}`}
+                        href={`https://emso.vn/user/${userId}`}
                         onClick={(e) => {
                           e.preventDefault();
-                          window.open(`https://emso.vn/user/${fullName.id}`, '_blank', 'noopener,noreferrer');
+                          window.open(`https://emso.vn/user/${userId}`, '_blank', 'noopener,noreferrer');
                         }}
                         className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
                       >
-                        {fullName.name}
+                        {displayName}
                       </a>
                     );
                   }
 
-                  return <span className="text-xs text-gray-500">{String(fullName)}</span>;
+                  return <span className="text-xs">{displayName}</span>;
                 } catch (error) {
                   console.error('Error rendering fullName:', error);
                   return <span className="text-xs text-gray-500">N/A</span>;
