@@ -276,16 +276,17 @@ export default function RealUserPage() {
               header: "Họ và tên",
               render: (row) => {
                 const fullName = row.fullName;
-                if (!fullName || typeof fullName !== 'object') return 'N/A';
-                
+                const id = fullName?.id;
+                const name = fullName?.name;
+
                 return (
                   <a
-                    href={`https://emso.vn/user/${fullName.id}`}
-                    target="_blank" 
+                    href={`https://emso.vn/user/${id}`}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
                   >
-                    {fullName.name || 'N/A'}
+                    {name || 'N/A'}
                   </a>
                 );
               },
