@@ -278,19 +278,16 @@ export default function RealUserPage() {
                 const fullName = row.fullName;
                 const id = fullName?.id;
                 const name = fullName?.name;
-                
+
                 return (
-                  <Button
-                    type="button"
-                    variant="link" 
-                    component="a"
-                    href={`https://emso.vn/user/${typeof fullName === 'object' ? fullName?.id : ''}`}
+                  <a
+                    href={`https://emso.vn/user/${id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
                   >
-                    {typeof fullName === 'object' ? fullName?.name : fullName || 'N/A'}
-                  </Button>
+                    {name || 'N/A'}
+                  </a>
                 );
               },
             },
