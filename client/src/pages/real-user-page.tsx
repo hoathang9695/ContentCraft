@@ -275,9 +275,9 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                // Handle both string and object fullName formats
-                const userId = row.fullName?.id;
-                const name = typeof row.fullName === 'string' ? row.fullName : row.fullName?.name;
+                const fullName = row.fullName;
+                const userId = fullName?.id;
+                const name = fullName?.name || fullName;
                 
                 return userId ? (
                   <a 
@@ -288,6 +288,10 @@ export default function RealUserPage() {
                   >
                     {name}
                   </a>
+                ) : (
+                  <span>{name}</span>
+                );
+              },
                 ) : (
                   <div className="font-medium">{name || 'N/A'}</div>
                 );
