@@ -275,26 +275,31 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                const fullName = row.fullName;
-                
-                // Handle fullName directly as an object since it's already parsed
-                if (fullName && typeof fullName === 'object' && 'id' in fullName && 'name' in fullName) {
-                  return (
-                    <Button
-                      type="button"
-                      variant="link" 
-                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                      onClick={() => {
-                        const url = `https://emso.vn/user/${fullName.id}`;
-                        window.open(url, '_blank', 'noopener,noreferrer');
-                      }}
-                    >
-                      {fullName.name}
-                    </Button>
-                  );
+                try {
+                  const fullName = typeof row.fullName === 'string' 
+                    ? JSON.parse(row.fullName) 
+                    : row.fullName;
+
+                  if (fullName && typeof fullName === 'object' && fullName.id && fullName.name) {
+                    return (
+                      <Button
+                        type="button"
+                        variant="link" 
+                        className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        onClick={() => {
+                          window.open(`https://emso.vn/user/${fullName.id}`, '_blank');
+                        }}
+                      >
+                        {fullName.name}
+                      </Button>
+                    );
+                  }
+
+                  return <div className="font-medium">{row.fullName?.name || row.fullName || 'N/A'}</div>;
+                } catch (e) {
+                  console.error('Error parsing fullName:', e);
+                  return <div className="font-medium">{String(row.fullName) || 'N/A'}</div>;
                 }
-                
-                return <div className="font-medium">Error displaying name</div>;
               },
             },
             {
