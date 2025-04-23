@@ -55,7 +55,7 @@ export default function RealUserPage() {
       if (!response.ok) throw new Error("Failed to fetch real users");
       const data = await response.json();
       console.log("Fetched real users:", data);
-
+      
       // Standardize data structure
       return data?.map(user => ({
         id: user.id,
@@ -275,22 +275,37 @@ export default function RealUserPage() {
               key: "fullName",
               header: "Họ và tên",
               render: (row) => {
-                const fullName = row.fullName;
-                
-                if (fullName && typeof fullName === 'object' && 'id' in fullName && 'name' in fullName) {
+                try {
+                  let fullName = row.fullName;
+                  
+                  // Handle string JSON if needed
+                  if (typeof fullName === 'string') {
+                    try {
+                      fullName = JSON.parse(fullName);
+                    } catch (e) {
+                      console.error('Failed to parse fullName string:', e);
+                    }
+                  }
+
                   return (
-                    <a
-                      href={`https://emso.vn/user/${fullName.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      onClick={() => {
+                        const userId = fullName?.id;
+                        if (userId) {
+                          window.open(`https://emso.vn/user/${userId}`, '_blank');
+                        }
+                      }}
                     >
-                      {fullName.name}
-                    </a>
+                      {fullName?.name || String(fullName) || 'N/A'}
+                    </Button>
                   );
+                } catch (e) {
+                  console.error('Error in fullName render:', e);
+                  return <div className="font-medium">Error displaying name</div>;
                 }
-                
-                return <span className="text-xs text-gray-500">N/A</span>;
               },
             },
             {
