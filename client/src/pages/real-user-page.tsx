@@ -277,31 +277,24 @@ export default function RealUserPage() {
               render: (row) => {
                 const fullName = row.fullName;
                 
-                try {
-                  const parsedFullName = typeof fullName === 'string' ? 
-                    JSON.parse(fullName) : fullName;
-
+                // Handle fullName directly as an object since it's already parsed
+                if (fullName && typeof fullName === 'object' && 'id' in fullName && 'name' in fullName) {
                   return (
                     <Button
                       type="button"
-                      variant="link"
-                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      variant="link" 
+                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                       onClick={() => {
-                        if (parsedFullName && parsedFullName.id) {
-                          const url = `https://emso.vn/user/${parsedFullName.id}`;
-                          window.open(url, '_blank', 'noopener,noreferrer');
-                        }
+                        const url = `https://emso.vn/user/${fullName.id}`;
+                        window.open(url, '_blank', 'noopener,noreferrer');
                       }}
                     >
-                      {parsedFullName.name}
+                      {fullName.name}
                     </Button>
                   );
-                } catch (e) {
-                  const displayName = typeof fullName === 'string' ? fullName : 
-                    (fullName && typeof fullName === 'object' && 'name' in fullName) ? 
-                    fullName.name : 'N/A';
-                  return <div className="font-medium">{displayName}</div>;
                 }
+                
+                return <div className="font-medium">Error displaying name</div>;
               },
             },
             {
