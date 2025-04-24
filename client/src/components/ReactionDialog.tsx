@@ -36,44 +36,73 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         throw new Error('Token người dùng không hợp lệ');
       }
 
-      try {
-        console.log('Making request to external API...');
-        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${fakeUser.token}`,
-            'Cache-Control': 'no-cache'
-          },
-          body: JSON.stringify({
-            custom_vote_type: reactionType,
-            page_id: null
-          })
-        });
+      const maxRetries = 3;
+      let retryCount = 0;
+      let lastError: any;
 
-        console.log('External API response status:', response.status);
-        
-        if (!response.ok) {
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`Making request to external API (attempt ${retryCount + 1})...`);
+          const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${fakeUser.token}`,
+              'Cache-Control': 'no-cache'
+            },
+            body: JSON.stringify({
+              custom_vote_type: reactionType,
+              page_id: null
+            })
+          });
+
+          console.log('External API response status:', response.status);
+          
+          if (response.ok) {
+            const result = await response.json().catch(e => {
+              console.warn('Failed to parse JSON response:', e);
+              return null;
+            });
+            console.log('External API response:', result);
+            return result;
+          }
+
           const errorText = await response.text();
           console.error('External API error:', {
             status: response.status,
             text: errorText,
             headers: Object.fromEntries(response.headers.entries())
           });
-          throw new Error(`Lỗi gửi reaction: ${response.status} ${errorText}`);
-        }
 
-        const result = await response.json().catch(e => {
-          console.warn('Failed to parse JSON response:', e);
-          return null;
-        });
-        console.log('External API response:', result);
-        return result;
-      } catch (error) {
-        console.error('Request failed:', error);
-        throw error;
+          // If we get a 500 error, retry after delay
+          if (response.status === 500) {
+            lastError = new Error(`Lỗi server (500) - lần ${retryCount + 1}`);
+            retryCount++;
+            if (retryCount < maxRetries) {
+              const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+          }
+
+          throw new Error(`Lỗi gửi reaction: ${response.status} ${errorText}`);
+        } catch (error) {
+          console.error('Request failed:', error);
+          lastError = error;
+          retryCount++;
+          
+          if (retryCount < maxRetries) {
+            const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          
+          throw new Error(`Lỗi sau ${maxRetries} lần thử: ${error.message}`);
+        }
       }
+
+      throw lastError;
     }
   });
 
