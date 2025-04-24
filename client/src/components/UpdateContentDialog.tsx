@@ -364,7 +364,17 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     if (matches) {
                       const newCats = matches.map(m => m.slice(1, -1).trim());
                       setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
-                      setNewCategories(''); // Clear input sau khi thêm
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const matches = newCategories.match(/\{([^}]+)\}/g);
+                      if (matches) {
+                        const newCats = matches.map(m => m.slice(1, -1).trim());
+                        setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
+                        setNewCategories(''); // Only clear on Enter
+                      }
                     }
                   }}
                 />
