@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { UpdateContentDialog } from "./UpdateContentDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@headlessui/react'
 
 type ContentTableProps = {
   title?: string;
@@ -131,7 +132,7 @@ export function ContentTable({
   const filteredContents = allContents.filter((content) => {
     // Apply date filter first using only createdAt
     const createdDate = new Date(content.createdAt);
-    
+
     const dateMatch = (!startDate || createdDate >= startDate) && 
                      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
     if (!dateMatch) return false;
@@ -139,7 +140,7 @@ export function ContentTable({
     // Then apply other filters  
     const statusMatch = !statusFilter || content.status === statusFilter;
     const verificationMatch = sourceVerification ? content.sourceVerification === sourceVerification : true;
-    
+
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
       !searchQuery ||
@@ -497,27 +498,28 @@ export function ContentTable({
                 <Dialog>
                   <DialogTrigger asChild>
                     <div className="max-w-[200px] cursor-pointer" title="Click để xem chi tiết">
-                  {row.labels ? (
-                    <div className="flex gap-1 flex-wrap">
-                      {row.labels.split(",").slice(0, 3).map((label, index) => (
-                        <span
-                          key={index}
-                          className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100 truncate max-w-[150px]"
-                        >
-                          {label.trim()}
-                        </span>
-                      ))}
-                      {row.labels.split(",").length > 3 && (
+                      {row.labels ? (
+                        <div className="flex gap-1 flex-wrap">
+                          {row.labels.split(",").slice(0, 3).map((label, index) => (
+                            <span
+                              key={index}
+                              className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100 truncate max-w-[150px]"
+                            >
+                              {label.trim()}
+                            </span>
+                          ))}
+                          {row.labels.split(",").length > 3 && (
+                            <span className="text-muted-foreground text-xs">
+                              +{row.labels.split(",").length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
                         <span className="text-muted-foreground text-xs">
-                          +{row.labels.split(",").length - 3}
+                          Chưa có nhãn
                         </span>
                       )}
                     </div>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">
-                      Chưa có nhãn
-                    </span>
-                  )}
                   </DialogTrigger>
                   <DialogContent className="max-w-[400px]">
                     <DialogHeader>
@@ -541,7 +543,6 @@ export function ContentTable({
                     </div>
                   </DialogContent>
                 </Dialog>
-                </div>
               ),
             },
             {
