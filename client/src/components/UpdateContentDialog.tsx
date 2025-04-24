@@ -317,6 +317,26 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   {selectedCategories.length} selected
                 </span>
               </div>
+              <div className="mb-4">
+                <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
+                  Thêm Categories mới
+                </Label>
+                <Textarea
+                  id="newCategories"
+                  placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
+                  className="min-h-[60px] text-sm"
+                  value={newCategories}
+                  onChange={(e) => {
+                    setNewCategories(e.target.value);
+                    // Parse và thêm categories mới
+                    const matches = e.target.value.match(/\{([^}]+)\}/g);
+                    if (matches) {
+                      const newCats = matches.map(m => m.slice(1, -1).trim());
+                      setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
+                    }
+                  }}
+                />
+              </div>
               <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm flex flex-col gap-4">
                 <div className="space-y-1">
                   {categories && categories.map((category) => (
@@ -345,27 +365,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   ))}
                 </div>
                 
-                {/* Input thêm Categories */}
-                <div className="mt-auto">
-                  <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
-                    Thêm Categories mới
-                  </Label>
-                  <Textarea
-                    id="newCategories"
-                    placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
-                    className="min-h-[80px] text-sm"
-                    value={newCategories}
-                    onChange={(e) => {
-                      setNewCategories(e.target.value);
-                      // Parse và thêm categories mới
-                      const matches = e.target.value.match(/\{([^}]+)\}/g);
-                      if (matches) {
-                        const newCats = matches.map(m => m.slice(1, -1).trim());
-                        setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
-                      }
-                    }}
-                  />
-                </div>
+                
               </div>
             </div>
             
@@ -378,6 +378,26 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                 </span>
               </div>
               
+              <div className="mb-4">
+                <Label htmlFor="newLabels" className="text-sm font-medium mb-2 block">
+                  Thêm Labels mới
+                </Label>
+                <Textarea
+                  id="newLabels"
+                  placeholder="Nhập labels cách nhau bởi {}. Ví dụ: {AI}{ChatGPT}{OpenAI}"
+                  className="min-h-[60px] text-sm"
+                  value={newLabels}
+                  onChange={(e) => {
+                    setNewLabels(e.target.value);
+                    // Parse và thêm labels mới
+                    const matches = e.target.value.match(/\{([^}]+)\}/g);
+                    if (matches) {
+                      const newLbls = matches.map(m => m.slice(1, -1).trim());
+                      setSelectedLabels([...new Set([...selectedLabels, ...newLbls])]);
+                    }
+                  }}
+                />
+              </div>
               <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm flex flex-col gap-4">
                 {allLabels && allLabels.length > 0 ? (
                   <div className="space-y-1">
@@ -414,27 +434,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   </div>
                 )}
                 
-                {/* Input thêm Labels */}
-                <div className="mt-auto">
-                  <Label htmlFor="newLabels" className="text-sm font-medium mb-2 block">
-                    Thêm Labels mới
-                  </Label>
-                  <Textarea
-                    id="newLabels"
-                    placeholder="Nhập labels cách nhau bởi {}. Ví dụ: {AI}{ChatGPT}{OpenAI}"
-                    className="min-h-[80px] text-sm"
-                    value={newLabels}
-                    onChange={(e) => {
-                      setNewLabels(e.target.value);
-                      // Parse và thêm labels mới
-                      const matches = e.target.value.match(/\{([^}]+)\}/g);
-                      if (matches) {
-                        const newLbls = matches.map(m => m.slice(1, -1).trim());
-                        setSelectedLabels([...new Set([...selectedLabels, ...newLbls])]);
-                      }
-                    }}
-                  />
-                </div>
+                
               </div>
             </div>
             
