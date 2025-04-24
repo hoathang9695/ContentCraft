@@ -167,10 +167,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         const comment = uniqueCommentsArray[index];
 
         try {
-          // Thêm độ trễ 1 phút trước khi gửi comment tiếp theo
+          // Thêm độ trễ ngẫu nhiên 1-5 phút trước khi gửi comment tiếp theo
           if (index > 0) {
-            console.log(`Chờ 1 phút trước khi gửi comment tiếp theo...`);
-            await delay(60000); // 60 giây = 1 phút
+            const randomMinutes = Math.floor(Math.random() * 4) + 1; // Random từ 1-5 phút
+            const delayMs = randomMinutes * 60000; // Chuyển đổi phút sang milliseconds
+            console.log(`Chờ ${randomMinutes} phút trước khi gửi comment tiếp theo...`);
+            await delay(delayMs);
           }
 
           // Chọn một user fake chưa được sử dụng
