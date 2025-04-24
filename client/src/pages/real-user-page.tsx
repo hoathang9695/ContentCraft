@@ -450,7 +450,8 @@ export default function RealUserPage() {
         <PushFollowDialog
           open={pushFollowOpen}
           onOpenChange={setPushFollowOpen}
-          onSubmit={handlePushFollow}
+          targetUserId={pushFollowUser?.fullName?.id}
+          targetUserName={pushFollowUser?.fullName?.name}
         />
       </div>
     </DashboardLayout>
