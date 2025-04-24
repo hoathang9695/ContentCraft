@@ -193,7 +193,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         const labelsArray = data.labels.split(',').map(l => l.trim()).filter(Boolean);
 
         // Call Gorse API
-        await fetch(`https://gorse-sn.emso.vn/api/item/${processedExternalId}`, {
+        await fetch(`http://prod-gorse-sn.emso.vn/api/item/${processedExternalId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json'
