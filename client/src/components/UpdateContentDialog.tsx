@@ -175,12 +175,11 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
           throw new Error('No response from update request');
         }
 
-        // 2. Send to Gorse service via Kafka
-        // Parse source JSON
+        // 2. Send to Gorse service
+        // Parse source JSON and process external_id
         const sourceData = content?.source ? JSON.parse(content.source) : null;
-        
-        // Process external_id based on source type
         let processedExternalId = content?.externalId;
+        
         if (sourceData) {
           if (sourceData.type === 'Account') {
             processedExternalId = `${content?.externalId}_user_${sourceData.id}`;
@@ -189,12 +188,23 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
           }
         }
 
-        await apiRequest('POST', '/api/kafka/send', {
-          externalId: processedExternalId,
-          categories: data.categories,
-          labels: data.labels,
-          safe: data.safe,
-          sourceVerification: data.sourceVerification
+        // Format categories and labels for Gorse API
+        const categoriesArray = data.categories.split(',').map(c => c.trim()).filter(Boolean);
+        const labelsArray = data.labels.split(',').map(l => l.trim()).filter(Boolean);
+
+        // Call Gorse API
+        await fetch(`https://gorse-sn.emso.vn/api/item/${processedExternalId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            Categories: categoriesArray,
+            Comment: "",
+            IsHidden: data.safe === false, // If safe is false or null, set IsHidden to true
+            Labels: labelsArray,
+            Timestamp: new Date().toISOString()
+          })
         });
         
         return updatedContent;
