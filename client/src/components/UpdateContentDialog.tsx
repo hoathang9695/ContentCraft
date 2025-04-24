@@ -360,7 +360,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                 <Textarea
                   id="newCategories"
                   placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
-                  className="min-h-[60px] text-sm"
+                  className="min-h-[120px] text-sm"
                   value={newCategories}
                   onChange={(e) => {
                     setNewCategories(e.target.value);
@@ -405,7 +405,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                 <Textarea
                   id="newLabels"
                   placeholder="Nhập labels cách nhau bởi {}. Ví dụ: {AI}{ChatGPT}{OpenAI}"
-                  className="min-h-[60px] text-sm"
+                  className="min-h-[120px] text-sm"
                   value={newLabels}
                   onChange={(e) => {
                     setNewLabels(e.target.value);
