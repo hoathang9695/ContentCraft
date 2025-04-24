@@ -15,7 +15,8 @@ interface ReactionDialogProps {
 }
 
 const REACTION_TYPES = ['like', 'yay', 'haha', 'love', 'sad', 'wow', 'angry'];
-const REACTION_DELAY = 60000; // 1 phút
+// Random delay từ 1-5 phút (60000-300000ms)
+const getRandomDelay = () => Math.floor(Math.random() * (300000 - 60000 + 1) + 60000);
 
 export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSubmit }: ReactionDialogProps) {
   const [count, setCount] = useState<string>('');
@@ -149,7 +150,9 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         }
 
         if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, REACTION_DELAY));
+          const delay = getRandomDelay();
+          console.log(`Chờ ${Math.round(delay/1000)} giây trước khi gửi reaction tiếp theo...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
 
         const randomUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
