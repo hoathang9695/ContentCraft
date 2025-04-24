@@ -431,11 +431,23 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   value={newLabels}
                   onChange={(e) => {
                     setNewLabels(e.target.value);
-                    // Parse và thêm labels mới
-                    const matches = e.target.value.match(/\{([^}]+)\}/g);
+                  }}
+                  onBlur={() => {
+                    const matches = newLabels.match(/\{([^}]+)\}/g);
                     if (matches) {
                       const newLbls = matches.map(m => m.slice(1, -1).trim());
                       setSelectedLabels([...new Set([...selectedLabels, ...newLbls])]);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const matches = newLabels.match(/\{([^}]+)\}/g);
+                      if (matches) {
+                        const newLbls = matches.map(m => m.slice(1, -1).trim());
+                        setSelectedLabels([...new Set([...selectedLabels, ...newLbls])]);
+                        setNewLabels(''); // Only clear on Enter
+                      }
                     }
                   }}
                 />
