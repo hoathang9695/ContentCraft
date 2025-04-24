@@ -308,22 +308,33 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
           <div className="grid grid-cols-3 gap-6 overflow-hidden h-[60vh]">
             {/* Categories */}
             <div className="flex flex-col h-full overflow-hidden">
-              <h3 className="font-bold text-lg mb-4">Categories</h3>
-              <div className="flex-1 border rounded-md p-2 overflow-y-auto">
-                <div className="space-y-2 pr-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg">Categories</h3>
+                <span className="text-xs text-muted-foreground">
+                  {selectedCategories.length} selected
+                </span>
+              </div>
+              <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm">
+                <div className="space-y-1">
                   {categories && categories.map((category) => (
                     <div 
                       key={category.id} 
-                      className="flex items-center space-x-2 py-1 px-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                      className={`flex items-center space-x-2 p-2 rounded-md transition-colors
+                        ${selectedCategories.includes(category.name) 
+                          ? 'bg-primary/10 hover:bg-primary/15' 
+                          : 'hover:bg-accent'
+                        }`}
+                      onClick={() => handleCategoryChange(category.name, !selectedCategories.includes(category.name))}
                     >
                       <Checkbox 
                         id={`category-${category.id}`} 
                         checked={selectedCategories.includes(category.name)}
                         onCheckedChange={(checked) => handleCategoryChange(category.name, checked === true)}
+                        className="data-[state=checked]:bg-primary"
                       />
                       <Label 
                         htmlFor={`category-${category.id}`}
-                        className="cursor-pointer w-full"
+                        className="cursor-pointer w-full text-sm font-medium"
                       >
                         {category.name}
                       </Label>
@@ -335,38 +346,45 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             
             {/* Labels */}
             <div className="flex flex-col h-full overflow-hidden">
-              <h3 className="font-bold text-lg mb-4">Label</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg">Labels</h3>
+                <span className="text-xs text-muted-foreground">
+                  {selectedLabels.length} selected
+                </span>
+              </div>
               
-              <div className="flex-1 border rounded-md p-2 overflow-y-auto">
-                {labelsByCategory.size > 0 ? (
-                  Array.from(labelsByCategory.entries()).map(([categoryName, labels]) => (
-                    <div key={categoryName} className="mb-4 last:mb-0">
-                      <div className="font-medium text-sm text-muted-foreground mb-2 px-1">
-                        {categoryName}
+              <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm">
+                {allLabels && allLabels.length > 0 ? (
+                  <div className="space-y-1">
+                    {allLabels.map((label) => (
+                      <div 
+                        key={label.id} 
+                        className={`flex items-center space-x-2 p-2 rounded-md transition-colors
+                          ${selectedLabels.includes(label.name)
+                            ? 'bg-primary/10 hover:bg-primary/15'
+                            : 'hover:bg-accent'
+                          }`}
+                        onClick={() => handleLabelChange(label.name, !selectedLabels.includes(label.name))}
+                      >
+                        <Checkbox 
+                          id={`label-${label.id}`} 
+                          checked={selectedLabels.includes(label.name)}
+                          onCheckedChange={(checked) => handleLabelChange(label.name, checked === true)}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                        <Label 
+                          htmlFor={`label-${label.id}`} 
+                          className="cursor-pointer w-full text-sm font-medium"
+                        >
+                          {label.name}
+                        </Label>
                       </div>
-                      <div className="space-y-1 px-1">
-                        {labels.map((label) => (
-                          <div 
-                            key={label.id} 
-                            className="flex items-center space-x-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                            onClick={() => handleLabelChange(label.name, !selectedLabels.includes(label.name))}
-                          >
-                            <Checkbox 
-                              id={`label-${label.id}`} 
-                              checked={selectedLabels.includes(label.name)}
-                              onCheckedChange={(checked) => handleLabelChange(label.name, checked === true)}
-                            />
-                            <Label htmlFor={`label-${label.id}`} className="cursor-pointer w-full">{label.name}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground p-4 flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <p>Vui lòng chọn danh mục trước</p>
-                      <ArrowLeft className="mx-auto mt-2 text-muted-foreground" />
+                  <div className="flex items-center justify-center h-full text-center text-sm text-muted-foreground">
+                    <div>
+                      <p>No labels available</p>
                     </div>
                   </div>
                 )}
