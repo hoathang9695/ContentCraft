@@ -236,21 +236,19 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   
   const handleCategoryChange = (category: string, checked: boolean) => {
     if (checked) {
-      // Kiểm tra xem category đã tồn tại trong danh sách chưa
-      if (!selectedCategories.includes(category)) {
-        setSelectedCategories(prev => [...prev, category]);
-      }
+      setSelectedCategories(prev => {
+        const newCategories = [...prev, category];
+        // Loại bỏ duplicates và trim
+        return Array.from(new Set(newCategories.map(c => c.trim()))).filter(Boolean);
+      });
     } else {
-      // Khi bỏ chọn một danh mục, cần lọc ra các nhãn thuộc danh mục đó và bỏ chọn chúng
       const categoryId = categoryNameToIdMap.get(category);
       
       if (categoryId && allLabels) {
-        // Tìm tất cả các nhãn thuộc danh mục này
         const labelsInCategory = allLabels
           .filter(label => label.categoryId === categoryId)
           .map(label => label.name);
           
-        // Loại bỏ các nhãn thuộc danh mục này khỏi danh sách đã chọn
         if (labelsInCategory.length > 0) {
           setSelectedLabels(prev => 
             prev.filter(labelName => !labelsInCategory.includes(labelName))
@@ -258,19 +256,23 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         }
       }
       
-      // Loại bỏ danh mục khỏi danh sách đã chọn
-      setSelectedCategories(prev => prev.filter(c => c !== category));
+      setSelectedCategories(prev => 
+        prev.filter(c => c.trim() !== category.trim())
+      );
     }
   };
   
   const handleLabelChange = (label: string, checked: boolean) => {
     if (checked) {
-      // Kiểm tra xem label đã tồn tại trong danh sách chưa
-      if (!selectedLabels.includes(label)) {
-        setSelectedLabels(prev => [...prev, label]);
-      }
+      setSelectedLabels(prev => {
+        const newLabels = [...prev, label];
+        // Loại bỏ duplicates và trim
+        return Array.from(new Set(newLabels.map(l => l.trim()))).filter(Boolean);
+      });
     } else {
-      setSelectedLabels(prev => prev.filter(l => l !== label));
+      setSelectedLabels(prev => 
+        prev.filter(l => l.trim() !== label.trim())
+      );
     }
   };
   
@@ -287,13 +289,17 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
       return;
     }
 
-    // Loại bỏ các labels trùng lặp và khoảng trắng
-    const uniqueCategories = Array.from(new Set(selectedCategories))
-      .map(c => c.trim())
-      .filter(Boolean);
-    const uniqueLabels = Array.from(new Set(selectedLabels))
+    // Xử lý và loại bỏ các giá trị trùng lặp cho categories
+    const processedCategories = selectedCategories
+      .filter(Boolean) // Loại bỏ empty strings
+      .map(c => c.trim()) // Trim whitespace
+      .filter((c, index, self) => self.indexOf(c) === index); // Loại bỏ duplicates
+
+    // Xử lý và loại bỏ các giá trị trùng lặp cho labels  
+    const processedLabels = selectedLabels
+      .filter(Boolean)
       .map(l => l.trim())
-      .filter(Boolean);
+      .filter((l, index, self) => self.indexOf(l) === index);
     
     // Tạo payload để gửi đi
     const payload: {
