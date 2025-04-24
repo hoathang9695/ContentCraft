@@ -441,7 +441,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             {/* Safety Status */}
             <div className="flex flex-col h-full overflow-hidden">
               <h3 className="font-bold text-lg mb-4">Hành động</h3>
-              <div className="space-y-2 border rounded-md p-4 overflow-y-auto">
+              <div className="space-y-2 border rounded-md p-4">
                 <div 
                   className="flex items-center space-x-2 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                   onClick={() => setIsSafe(isSafe === true ? null : true)}
@@ -468,7 +468,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                 {/* Hiển thị checkbox Xác minh khi nội dung đã chọn An toàn */}
                 {isSafe === true && (
                   <div 
-                    className="flex items-center space-x-2 mt-4 pt-4 border-t p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    className="flex items-center space-x-2 mt-4 pt-4 border-t p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer min-h-[80px]"
                     onClick={() => setIsVerified(!isVerified)}
                   >
                     <Checkbox 
