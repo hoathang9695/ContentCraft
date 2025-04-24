@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { UpdateContentDialog } from "./UpdateContentDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@headlessui/react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 type ContentTableProps = {
   title?: string;
