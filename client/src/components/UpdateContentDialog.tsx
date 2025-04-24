@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Content, Category, Label as LabelType } from '@shared/schema';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
