@@ -386,36 +386,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   }}
                 />
               </div>
-              <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm flex flex-col gap-4">
-                <div className="space-y-1">
-                  {categories && categories.map((category) => (
-                    <div 
-                      key={category.id} 
-                      className={`flex items-center space-x-2 p-2 rounded-md transition-colors
-                        ${selectedCategories.includes(category.name) 
-                          ? 'bg-primary/10 hover:bg-primary/15' 
-                          : 'hover:bg-accent'
-                        }`}
-                      onClick={() => handleCategoryChange(category.name, !selectedCategories.includes(category.name))}
-                    >
-                      <Checkbox 
-                        id={`category-${category.id}`} 
-                        checked={selectedCategories.includes(category.name)}
-                        onCheckedChange={(checked) => handleCategoryChange(category.name, checked === true)}
-                        className="data-[state=checked]:bg-primary"
-                      />
-                      <Label 
-                        htmlFor={`category-${category.id}`}
-                        className="cursor-pointer w-full text-sm font-medium"
-                      >
-                        {category.name}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-
-
-              </div>
+              <div className="flex-1"></div>
             </div>
 
             {/* Labels */}
@@ -459,44 +430,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   }}
                 />
               </div>
-              <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm flex flex-col gap-4">
-                {allLabels && allLabels.length > 0 ? (
-                  <div className="space-y-1">
-                    {allLabels.map((label) => (
-                      <div 
-                        key={label.id} 
-                        className={`flex items-center space-x-2 p-2 rounded-md transition-colors
-                          ${selectedLabels.includes(label.name)
-                            ? 'bg-primary/10 hover:bg-primary/15'
-                            : 'hover:bg-accent'
-                          }`}
-                        onClick={() => handleLabelChange(label.name, !selectedLabels.includes(label.name))}
-                      >
-                        <Checkbox 
-                          id={`label-${label.id}`} 
-                          checked={selectedLabels.includes(label.name)}
-                          onCheckedChange={(checked) => handleLabelChange(label.name, checked === true)}
-                          className="data-[state=checked]:bg-primary"
-                        />
-                        <Label 
-                          htmlFor={`label-${label.id}`} 
-                          className="cursor-pointer w-full text-sm font-medium"
-                        >
-                          {label.name}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-center text-sm text-muted-foreground">
-                    <div>
-                      <p>No labels available</p>
-                    </div>
-                  </div>
-                )}
-
-
-              </div>
+              <div className="flex-1"></div>
             </div>
 
             {/* Safety Status */}
