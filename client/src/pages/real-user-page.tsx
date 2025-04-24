@@ -20,10 +20,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { PushFollowDialog } from "@/components/PushFollowDialog";
+
 export default function RealUserPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [pushFollowOpen, setPushFollowOpen] = useState(false);
+  const [pushFollowUser, setPushFollowUser] = useState<any>(null);
+
+  const handlePushFollow = async (count: number) => {
+    if (!pushFollowUser?.fullName?.id) return;
+    
+    try {
+      // TODO: Implement actual API call here
+      toast({
+        title: "Push Follow",
+        description: `Đã push ${count} follow cho người dùng ${pushFollowUser.fullName?.name}`,
+      });
+    } catch (error) {
+      console.error('Error pushing follows:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể thực hiện push follow. Vui lòng thử lại.",
+        variant: "destructive"
+      });
+    }
+  };
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [startDate, setStartDate] = useState<Date>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -399,11 +422,8 @@ export default function RealUserPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        // TODO: Implement Follow action
-                        toast({
-                          title: "Push Follow",
-                          description: `Đã push follow cho người dùng ${row.fullName?.name}`,
-                        });
+                        setPushFollowUser(row);
+                        setPushFollowOpen(true);
                       }}
                     >
                       Push Follow
@@ -426,6 +446,11 @@ export default function RealUserPage() {
               ),
             },
           ]}
+        />
+        <PushFollowDialog
+          open={pushFollowOpen}
+          onOpenChange={setPushFollowOpen}
+          onSubmit={handlePushFollow}
         />
       </div>
     </DashboardLayout>
