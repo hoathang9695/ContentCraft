@@ -28,29 +28,52 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
 
   const sendExternalReactionMutation = useMutation({
     mutationFn: async ({ fakeUserId, externalId, reactionType }: { fakeUserId: number, externalId: string, reactionType: string }) => {
+      console.log('Sending reaction with:', { fakeUserId, externalId, reactionType });
+      
       const fakeUser = fakeUsers.find(u => u.id === fakeUserId);
-      if (!fakeUser?.token) throw new Error('Token người dùng không hợp lệ');
-
-      const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${fakeUser.token}`,
-          'Cache-Control': 'no-cache'
-        },
-        body: JSON.stringify({
-          custom_vote_type: reactionType,
-          page_id: null
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Lỗi gửi reaction: ${response.status} ${errorText}`);
+      if (!fakeUser?.token) {
+        console.error('Invalid user token for ID:', fakeUserId);
+        throw new Error('Token người dùng không hợp lệ');
       }
 
-      return response.json().catch(() => null);
+      try {
+        console.log('Making request to external API...');
+        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/favourite`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${fakeUser.token}`,
+            'Cache-Control': 'no-cache'
+          },
+          body: JSON.stringify({
+            custom_vote_type: reactionType,
+            page_id: null
+          })
+        });
+
+        console.log('External API response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('External API error:', {
+            status: response.status,
+            text: errorText,
+            headers: Object.fromEntries(response.headers.entries())
+          });
+          throw new Error(`Lỗi gửi reaction: ${response.status} ${errorText}`);
+        }
+
+        const result = await response.json().catch(e => {
+          console.warn('Failed to parse JSON response:', e);
+          return null;
+        });
+        console.log('External API response:', result);
+        return result;
+      } catch (error) {
+        console.error('Request failed:', error);
+        throw error;
+      }
     }
   });
 
@@ -131,16 +154,18 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         });
 
         if (failureCount >= 3) {
+          // Thử với user khác
+          usedUserIds.clear();
+          failureCount = 0;
           toast({
-            title: 'Dừng gửi reactions',
-            description: 'Đã thất bại quá nhiều lần, dừng quá trình gửi.',
-            variant: 'destructive'
+            title: 'Đổi người dùng',
+            description: 'Thử lại với người dùng khác',
+            variant: 'default'
           });
-          break;
         }
 
-        // Thử lại sau 30 giây nếu lỗi
-        await new Promise(resolve => setTimeout(resolve, 30000));
+        // Thử lại sau 10 giây nếu lỗi
+        await new Promise(resolve => setTimeout(resolve, 10000));
       }
     }
 
