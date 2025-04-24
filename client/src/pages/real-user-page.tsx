@@ -376,9 +376,49 @@ export default function RealUserPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
-                    <DropdownMenuItem>Chỉnh sửa</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        const userId = row.fullName?.id;
+                        if (userId) {
+                          window.open(`https://emso.vn/user/${userId}`, '_blank');
+                        }
+                      }}
+                    >
+                      Xem chi tiết
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        // TODO: Implement Gorse integration
+                        toast({
+                          title: "Đẩy sang Gorse",
+                          description: `Đã đẩy người dùng ${row.fullName?.name} sang Gorse`,
+                        });
+                      }}
+                    >
+                      Đẩy sang Gorse
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        // TODO: Implement Follow action
+                        toast({
+                          title: "Push Follow",
+                          description: `Đã push follow cho người dùng ${row.fullName?.name}`,
+                        });
+                      }}
+                    >
+                      Push Follow
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-red-600"
+                      onClick={() => {
+                        // TODO: Implement disable user
+                        toast({
+                          title: "Vô hiệu hóa",
+                          description: `Đã vô hiệu hóa người dùng ${row.fullName?.name}`,
+                          variant: "destructive"
+                        });
+                      }}
+                    >
                       Vô hiệu hóa
                     </DropdownMenuItem>
                   </DropdownMenuContent>
