@@ -460,7 +460,7 @@ export function ContentTable({
               key: "categories",
               header: "Categories",
               render: (row: Content) => (
-                <div className="text-blue-500 font-medium">
+                <div className="text-blue-500 font-medium truncate max-w-[200px]" title={row.categories || "Chưa phân loại"}>
                   {row.categories || "Chưa phân loại"}
                 </div>
               ),
@@ -469,16 +469,23 @@ export function ContentTable({
               key: "label",
               header: "Label",
               render: (row: Content) => (
-                <div className="flex gap-1 flex-wrap">
+                <div className="max-w-[200px]" title={row.labels || "Chưa có nhãn"}>
                   {row.labels ? (
-                    row.labels.split(",").map((label, index) => (
-                      <span
-                        key={index}
-                        className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100"
-                      >
-                        {label.trim()}
-                      </span>
-                    ))
+                    <div className="flex gap-1 flex-wrap">
+                      {row.labels.split(",").slice(0, 3).map((label, index) => (
+                        <span
+                          key={index}
+                          className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100 truncate max-w-[150px]"
+                        >
+                          {label.trim()}
+                        </span>
+                      ))}
+                      {row.labels.split(",").length > 3 && (
+                        <span className="text-muted-foreground text-xs">
+                          +{row.labels.split(",").length - 3}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span className="text-muted-foreground text-xs">
                       Chưa có nhãn
