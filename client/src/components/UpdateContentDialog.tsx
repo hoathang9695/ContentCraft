@@ -455,46 +455,51 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
               {/* Safety Status Section */}
               <div>
                 <h3 className="font-bold text-lg mb-4">Trạng thái nội dung</h3>
-                <div className="space-y-4 border rounded-md p-4 bg-slate-50 dark:bg-slate-900">
-                  <div 
-                    className="flex items-center space-x-3 p-3 rounded-md hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors"
-                    onClick={() => setIsSafe(isSafe === true ? null : true)}
-                  >
-                    <Checkbox 
-                      id="safe-yes" 
-                      checked={isSafe === true}
-                      onCheckedChange={(checked) => setIsSafe(checked === true ? true : null)}
-                    />
-                    <Label htmlFor="safe-yes" className="cursor-pointer w-full font-medium">An toàn</Label>
-                  </div>
-                  <div 
-                    className="flex items-center space-x-3 p-3 rounded-md hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors"
-                    onClick={() => setIsSafe(isSafe === false ? null : false)}
-                  >
-                    <Checkbox 
-                      id="safe-no" 
-                      checked={isSafe === false}
-                      onCheckedChange={(checked) => setIsSafe(checked === true ? false : null)}
-                    />
-                    <Label htmlFor="safe-no" className="cursor-pointer w-full font-medium">Không an toàn</Label>
+                <div className="space-y-2 border rounded-md bg-slate-50 dark:bg-slate-900">
+                  {/* Safety Options Group */}
+                  <div className="p-4 space-y-2">
+                    <div 
+                      className="flex items-center space-x-3 p-3 rounded-md hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                      onClick={() => setIsSafe(isSafe === true ? null : true)}
+                    >
+                      <Checkbox 
+                        id="safe-yes" 
+                        checked={isSafe === true}
+                        onCheckedChange={(checked) => setIsSafe(checked === true ? true : null)}
+                      />
+                      <Label htmlFor="safe-yes" className="cursor-pointer w-full font-medium">An toàn</Label>
+                    </div>
+                    <div 
+                      className="flex items-center space-x-3 p-3 rounded-md hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                      onClick={() => setIsSafe(isSafe === false ? null : false)}
+                    >
+                      <Checkbox 
+                        id="safe-no" 
+                        checked={isSafe === false}
+                        onCheckedChange={(checked) => setIsSafe(checked === true ? false : null)}
+                      />
+                      <Label htmlFor="safe-no" className="cursor-pointer w-full font-medium">Không an toàn</Label>
+                    </div>
                   </div>
 
-                  {isSafe === true && (
+                  {/* Verification Section - Always present but conditionally visible */}
+                  <div className={`border-t ${isSafe === true ? 'visible' : 'invisible h-0'}`}>
                     <div 
-                      className="flex items-center space-x-3 p-3 rounded-md hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors mt-4 pt-4 border-t"
-                      onClick={() => setIsVerified(!isVerified)}
+                      className="p-4 flex items-start space-x-3 hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                      onClick={() => isSafe === true && setIsVerified(!isVerified)}
                     >
                       <Checkbox 
                         id="verified" 
-                        checked={isVerified}
-                        onCheckedChange={(checked) => setIsVerified(checked === true)}
+                        checked={isVerified && isSafe === true}
+                        onCheckedChange={(checked) => isSafe === true && setIsVerified(checked === true)}
+                        disabled={isSafe !== true}
                       />
                       <div className="cursor-pointer flex-1">
                         <Label htmlFor="verified" className="font-medium block">Xác minh</Label>
                         <p className="text-xs text-muted-foreground mt-1">Nguồn dữ liệu này đã được xác minh</p>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
