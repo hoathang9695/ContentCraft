@@ -357,11 +357,14 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   value={newCategories}
                   onChange={(e) => {
                     setNewCategories(e.target.value);
-                    // Parse và thêm categories mới
-                    const matches = e.target.value.match(/\{([^}]+)\}/g);
+                  }}
+                  onBlur={() => {
+                    // Chỉ parse và thêm categories khi người dùng rời khỏi input
+                    const matches = newCategories.match(/\{([^}]+)\}/g);
                     if (matches) {
                       const newCats = matches.map(m => m.slice(1, -1).trim());
                       setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
+                      setNewCategories(''); // Clear input sau khi thêm
                     }
                   }}
                 />
