@@ -122,11 +122,22 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
         failureCount++;
         console.error('Lỗi gửi reaction:', error);
         
+        const errorMessage = error instanceof Error ? error.message : 'Không thể kết nối đến server';
+        
         toast({
           title: 'Lỗi gửi reaction',
-          description: `Reaction thứ ${i + 1} thất bại. Đã thất bại ${failureCount} lần.`,
+          description: `Reaction thứ ${i + 1} thất bại: ${errorMessage}. Đã thất bại ${failureCount} lần.`,
           variant: 'destructive'
         });
+
+        if (failureCount >= 3) {
+          toast({
+            title: 'Dừng gửi reactions',
+            description: 'Đã thất bại quá nhiều lần, dừng quá trình gửi.',
+            variant: 'destructive'
+          });
+          break;
+        }
 
         // Thử lại sau 30 giây nếu lỗi
         await new Promise(resolve => setTimeout(resolve, 30000));
