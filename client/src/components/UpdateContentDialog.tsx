@@ -21,6 +21,8 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [isSafe, setIsSafe] = useState<boolean | null>(null);
   const [isVerified, setIsVerified] = useState<boolean>(false);
+  const [newCategories, setNewCategories] = useState<string>('');
+  const [newLabels, setNewLabels] = useState<string>('');
   
   // Prefetch dữ liệu labels và categories sẵn khi app bắt đầu
   useEffect(() => {
@@ -314,7 +316,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                   {selectedCategories.length} selected
                 </span>
               </div>
-              <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm">
+              <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm flex flex-col gap-4">
                 <div className="space-y-1">
                   {categories && categories.map((category) => (
                     <div 
@@ -341,6 +343,28 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     </div>
                   ))}
                 </div>
+                
+                {/* Input thêm Categories */}
+                <div className="mt-auto">
+                  <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
+                    Thêm Categories mới
+                  </Label>
+                  <Textarea
+                    id="newCategories"
+                    placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
+                    className="min-h-[80px] text-sm"
+                    value={newCategories}
+                    onChange={(e) => {
+                      setNewCategories(e.target.value);
+                      // Parse và thêm categories mới
+                      const matches = e.target.value.match(/\{([^}]+)\}/g);
+                      if (matches) {
+                        const newCats = matches.map(m => m.slice(1, -1).trim());
+                        setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
             
@@ -353,7 +377,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                 </span>
               </div>
               
-              <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm">
+              <div className="flex-1 border rounded-md bg-card p-3 overflow-y-auto shadow-sm flex flex-col gap-4">
                 {allLabels && allLabels.length > 0 ? (
                   <div className="space-y-1">
                     {allLabels.map((label) => (
@@ -388,6 +412,28 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     </div>
                   </div>
                 )}
+                
+                {/* Input thêm Labels */}
+                <div className="mt-auto">
+                  <Label htmlFor="newLabels" className="text-sm font-medium mb-2 block">
+                    Thêm Labels mới
+                  </Label>
+                  <Textarea
+                    id="newLabels"
+                    placeholder="Nhập labels cách nhau bởi {}. Ví dụ: {AI}{ChatGPT}{OpenAI}"
+                    className="min-h-[80px] text-sm"
+                    value={newLabels}
+                    onChange={(e) => {
+                      setNewLabels(e.target.value);
+                      // Parse và thêm labels mới
+                      const matches = e.target.value.match(/\{([^}]+)\}/g);
+                      if (matches) {
+                        const newLbls = matches.map(m => m.slice(1, -1).trim());
+                        setSelectedLabels([...new Set([...selectedLabels, ...newLbls])]);
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
             
