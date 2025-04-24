@@ -460,16 +460,43 @@ export function ContentTable({
               key: "categories",
               header: "Categories",
               render: (row: Content) => (
-                <div className="text-blue-500 font-medium truncate max-w-[200px]" title={row.categories || "Chưa phân loại"}>
-                  {row.categories || "Chưa phân loại"}
-                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div className="text-blue-500 font-medium truncate max-w-[200px] cursor-pointer hover:underline" title="Click để xem chi tiết">
+                      {row.categories || "Chưa phân loại"}
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[400px]">
+                    <DialogHeader>
+                      <DialogTitle>Danh sách Categories</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4">
+                      {row.categories ? (
+                        <div className="flex flex-wrap gap-2">
+                          {row.categories.split(',').map((category, index) => (
+                            <span
+                              key={index}
+                              className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                            >
+                              {category.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">Chưa phân loại</p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               ),
             },
             {
               key: "label",
               header: "Label",
               render: (row: Content) => (
-                <div className="max-w-[200px]" title={row.labels || "Chưa có nhãn"}>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div className="max-w-[200px] cursor-pointer" title="Click để xem chi tiết">
                   {row.labels ? (
                     <div className="flex gap-1 flex-wrap">
                       {row.labels.split(",").slice(0, 3).map((label, index) => (
@@ -491,6 +518,29 @@ export function ContentTable({
                       Chưa có nhãn
                     </span>
                   )}
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[400px]">
+                    <DialogHeader>
+                      <DialogTitle>Danh sách Labels</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4">
+                      {row.labels ? (
+                        <div className="flex flex-wrap gap-2">
+                          {row.labels.split(',').map((label, index) => (
+                            <span
+                              key={index}
+                              className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                            >
+                              {label.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">Chưa có nhãn</p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 </div>
               ),
             },
