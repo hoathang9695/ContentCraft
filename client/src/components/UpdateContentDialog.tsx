@@ -176,8 +176,21 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         }
 
         // 2. Send to Gorse service via Kafka
+        // Parse source JSON
+        const sourceData = content?.source ? JSON.parse(content.source) : null;
+        
+        // Process external_id based on source type
+        let processedExternalId = content?.externalId;
+        if (sourceData) {
+          if (sourceData.type === 'Account') {
+            processedExternalId = `${content?.externalId}_user_${sourceData.id}`;
+          } else if (sourceData.type === 'Page') {
+            processedExternalId = `${content?.externalId}_page_${sourceData.id}`;
+          }
+        }
+
         await apiRequest('POST', '/api/kafka/send', {
-          externalId: content?.externalId,
+          externalId: processedExternalId,
           categories: data.categories,
           labels: data.labels,
           safe: data.safe,
