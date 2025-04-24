@@ -344,179 +344,225 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             <span>Đang tải thông tin...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-6 overflow-hidden h-[60vh]">
-            {/* Categories */}
-            <div className="flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg">Categories</h3>
-                <span className="text-xs text-muted-foreground">
-                  {selectedCategories.length} selected
-                </span>
-              </div>
-              <div className="mb-4">
-                <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
-                  Thêm Categories mới
-                </Label>
-                <Textarea
-                  id="newCategories"
-                  placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
-                  className="min-h-[120px] text-sm"
-                  value={newCategories}
-                  onChange={(e) => {
-                    setNewCategories(e.target.value);
-                  }}
-                  onBlur={() => {
-                    // Chỉ parse và thêm categories khi người dùng rời khỏi input
-                    const matches = newCategories.match(/\{([^}]+)\}/g);
-                    if (matches) {
-                      const newCats = matches.map(m => m.slice(1, -1).trim());
-                      setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
+          <div className="grid grid-cols-2 gap-6 overflow-hidden h-[70vh]">
+            {/* Left Column - Categories and Labels */}
+            <div className="flex flex-col h-full overflow-hidden space-y-6">
+              {/* Categories Section */}
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg">Categories</h3>
+                  <span className="text-xs text-muted-foreground px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                    {selectedCategories.length} selected
+                  </span>
+                </div>
+                <div>
+                  <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
+                    Thêm Categories mới
+                  </Label>
+                  <Textarea
+                    id="newCategories"
+                    placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
+                    className="min-h-[120px] text-sm mb-2"
+                    value={newCategories}
+                    onChange={(e) => {
+                      setNewCategories(e.target.value);
+                    }}
+                    onBlur={() => {
                       const matches = newCategories.match(/\{([^}]+)\}/g);
                       if (matches) {
                         const newCats = matches.map(m => m.slice(1, -1).trim());
                         setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
-                        setNewCategories(''); // Only clear on Enter
                       }
-                    }
-                  }}
-                />
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const matches = newCategories.match(/\{([^}]+)\}/g);
+                        if (matches) {
+                          const newCats = matches.map(m => m.slice(1, -1).trim());
+                          setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
+                          setNewCategories('');
+                        }
+                      }
+                    }}
+                  />
+                  {selectedCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {Array.from(new Set(selectedCategories)).map((cat) => (
+                        <span key={cat} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs">
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex-1"></div>
-            </div>
 
-            {/* Labels */}
-            <div className="flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg">Labels</h3>
-                <span className="text-xs text-muted-foreground">
-                  {selectedLabels.length} selected
-                </span>
-              </div>
-
-              <div className="mb-4">
-                <Label htmlFor="newLabels" className="text-sm font-medium mb-2 block">
-                  Thêm Labels mới
-                </Label>
-                <Textarea
-                  id="newLabels"
-                  placeholder="Nhập labels cách nhau bởi {}. Ví dụ: {AI}{ChatGPT}{OpenAI}"
-                  className="min-h-[120px] text-sm"
-                  value={newLabels}
-                  onChange={(e) => {
-                    setNewLabels(e.target.value);
-                  }}
-                  onBlur={() => {
-                    const matches = newLabels.match(/\{([^}]+)\}/g);
-                    if (matches) {
-                      const newLbls = matches.map(m => m.slice(1, -1).trim());
-                      setSelectedLabels([...new Set([...selectedLabels, ...newLbls])]);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
+              {/* Labels Section */}
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg">Labels</h3>
+                  <span className="text-xs text-muted-foreground px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                    {selectedLabels.length} selected
+                  </span>
+                </div>
+                <div>
+                  <Label htmlFor="newLabels" className="text-sm font-medium mb-2 block">
+                    Thêm Labels mới
+                  </Label>
+                  <Textarea
+                    id="newLabels"
+                    placeholder="Nhập labels cách nhau bởi {}. Ví dụ: {AI}{ChatGPT}{OpenAI}"
+                    className="min-h-[120px] text-sm mb-2"
+                    value={newLabels}
+                    onChange={(e) => {
+                      setNewLabels(e.target.value);
+                    }}
+                    onBlur={() => {
                       const matches = newLabels.match(/\{([^}]+)\}/g);
                       if (matches) {
                         const newLbls = matches.map(m => m.slice(1, -1).trim());
                         setSelectedLabels([...new Set([...selectedLabels, ...newLbls])]);
-                        setNewLabels(''); // Only clear on Enter
                       }
-                    }
-                  }}
-                />
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const matches = newLabels.match(/\{([^}]+)\}/g);
+                        if (matches) {
+                          const newLbls = matches.map(m => m.slice(1, -1).trim());
+                          setSelectedLabels([...new Set([...selectedLabels, ...newLbls])]);
+                          setNewLabels('');
+                        }
+                      }
+                    }}
+                  />
+                  {selectedLabels.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {Array.from(new Set(selectedLabels)).map((label) => (
+                        <span key={label} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs">
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex-1"></div>
             </div>
 
-            {/* Safety Status */}
-            <div className="flex flex-col h-full overflow-hidden">
-              <h3 className="font-bold text-lg mb-4">Hành động</h3>
-              <div className="space-y-2 border rounded-md p-4">
-                <div 
-                  className="flex items-center space-x-2 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                  onClick={() => setIsSafe(isSafe === true ? null : true)}
-                >
-                  <Checkbox 
-                    id="safe-yes" 
-                    checked={isSafe === true}
-                    onCheckedChange={(checked) => setIsSafe(checked === true ? true : null)}
-                  />
-                  <Label htmlFor="safe-yes" className="cursor-pointer w-full">An toàn</Label>
-                </div>
-                <div 
-                  className="flex items-center space-x-2 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                  onClick={() => setIsSafe(isSafe === false ? null : false)}
-                >
-                  <Checkbox 
-                    id="safe-no" 
-                    checked={isSafe === false}
-                    onCheckedChange={(checked) => setIsSafe(checked === true ? false : null)}
-                  />
-                  <Label htmlFor="safe-no" className="cursor-pointer w-full">Không an toàn</Label>
-                </div>
-
-                {/* Hiển thị checkbox Xác minh khi nội dung đã chọn An toàn */}
-                {isSafe === true && (
+            {/* Right Column - Safety Status and Summary */}
+            <div className="flex flex-col h-full overflow-hidden space-y-6">
+              {/* Safety Status Section */}
+              <div>
+                <h3 className="font-bold text-lg mb-4">Trạng thái nội dung</h3>
+                <div className="space-y-4 border rounded-md p-4 bg-slate-50 dark:bg-slate-900">
                   <div 
-                    className="flex items-center space-x-2 mt-4 pt-4 border-t p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer min-h-[80px]"
-                    onClick={() => setIsVerified(!isVerified)}
+                    className="flex items-center space-x-3 p-3 rounded-md hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                    onClick={() => setIsSafe(isSafe === true ? null : true)}
                   >
                     <Checkbox 
-                      id="verified" 
-                      checked={isVerified}
-                      onCheckedChange={(checked) => setIsVerified(checked === true)}
+                      id="safe-yes" 
+                      checked={isSafe === true}
+                      onCheckedChange={(checked) => setIsSafe(checked === true ? true : null)}
                     />
-                    <Label htmlFor="verified" className="cursor-pointer w-full">
-                      <span>Xác minh</span>
-                      <p className="text-xs text-muted-foreground mt-1">Nguồn dữ liệu này đã được xác minh</p>
-                    </Label>
+                    <Label htmlFor="safe-yes" className="cursor-pointer w-full font-medium">An toàn</Label>
                   </div>
-                )}
-              </div>
-
-              {/* Selected summary */}
-              <div className="mt-4 p-4 border rounded-md bg-slate-50 dark:bg-slate-900 flex-1">
-                <h4 className="font-medium text-sm mb-2">Đã chọn:</h4>
-                <div className="space-y-2">
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">Danh mục:</div>
-                    <div className="text-sm">
-                      {selectedCategories.length > 0 
-                        ? Array.from(new Set(selectedCategories)).join(', ') 
-                        : <span className="text-slate-400">Chưa chọn danh mục</span>}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">Nhãn:</div> 
-                    <div className="text-sm">
-                      {selectedLabels.length > 0 
-                        ? Array.from(new Set(selectedLabels)).join(', ') 
-                        : <span className="text-slate-400">Chưa chọn nhãn</span>}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">Trạng thái:</div>
-                    <div className="text-sm">
-                      {isSafe === true ? 'An toàn' : isSafe === false ? 'Không an toàn' : <span className="text-slate-400">Chưa xác định</span>}
-                    </div>
+                  <div 
+                    className="flex items-center space-x-3 p-3 rounded-md hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                    onClick={() => setIsSafe(isSafe === false ? null : false)}
+                  >
+                    <Checkbox 
+                      id="safe-no" 
+                      checked={isSafe === false}
+                      onCheckedChange={(checked) => setIsSafe(checked === true ? false : null)}
+                    />
+                    <Label htmlFor="safe-no" className="cursor-pointer w-full font-medium">Không an toàn</Label>
                   </div>
 
-                  {/* Hiển thị trạng thái xác minh cho nội dung an toàn */}
                   {isSafe === true && (
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Xác minh:</div>
-                      <div className="text-sm">
-                        {isVerified 
-                          ? <span className="text-green-600">Đã xác minh</span> 
-                          : <span className="text-orange-500">Chưa xác minh</span>}
+                    <div 
+                      className="flex items-center space-x-3 p-3 rounded-md hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-colors mt-4 pt-4 border-t"
+                      onClick={() => setIsVerified(!isVerified)}
+                    >
+                      <Checkbox 
+                        id="verified" 
+                        checked={isVerified}
+                        onCheckedChange={(checked) => setIsVerified(checked === true)}
+                      />
+                      <div className="cursor-pointer flex-1">
+                        <Label htmlFor="verified" className="font-medium block">Xác minh</Label>
+                        <p className="text-xs text-muted-foreground mt-1">Nguồn dữ liệu này đã được xác minh</p>
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Summary Section */}
+              <div className="flex-1">
+                <h3 className="font-bold text-lg mb-4">Tổng hợp thông tin</h3>
+                <div className="p-4 border rounded-md bg-white dark:bg-slate-900 space-y-4">
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">Trạng thái:</div>
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        isSafe === true ? 'bg-green-500' : 
+                        isSafe === false ? 'bg-red-500' : 
+                        'bg-gray-400'
+                      }`} />
+                      <span className="text-sm font-medium">
+                        {isSafe === true ? 'An toàn' : 
+                         isSafe === false ? 'Không an toàn' : 
+                         'Chưa xác định'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isSafe === true && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground mb-2">Xác minh:</div>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          isVerified ? 'bg-green-500' : 'bg-orange-500'
+                        }`} />
+                        <span className="text-sm font-medium">
+                          {isVerified ? 'Đã xác minh' : 'Chưa xác minh'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">Danh mục đã chọn:</div>
+                    <div className="text-sm">
+                      {selectedCategories.length > 0 
+                        ? <div className="flex flex-wrap gap-2">
+                            {Array.from(new Set(selectedCategories)).map((cat) => (
+                              <span key={cat} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs">
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        : <span className="text-slate-400">Chưa chọn danh mục</span>
+                      }
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">Nhãn đã chọn:</div>
+                    <div className="text-sm">
+                      {selectedLabels.length > 0 
+                        ? <div className="flex flex-wrap gap-2">
+                            {Array.from(new Set(selectedLabels)).map((label) => (
+                              <span key={label} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs">
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        : <span className="text-slate-400">Chưa chọn nhãn</span>
+                      }
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
