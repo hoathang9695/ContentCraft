@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/use-auth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ContentTable } from '@/components/ContentTable';
 import { format } from 'date-fns';
@@ -22,6 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 export default function ContentPage() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
   // Thiết lập ngày bắt đầu là ngày 1 của tháng hiện tại và ngày kết thúc là ngày hiện tại
