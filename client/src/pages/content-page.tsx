@@ -132,7 +132,7 @@ export default function ContentPage() {
               onValueChange={(value) => setSelectedUser(value ? parseInt(value) : null)}
             >
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Chọn nhân sự" />
+                <SelectValue placeholder="Tất cả" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
