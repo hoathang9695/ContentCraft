@@ -70,7 +70,7 @@ export async function setupKafkaConsumer() {
     log(
       `Kafka configuration: ${JSON.stringify(
         {
-          ssl: true,
+          ssl: false,
           sasl: !!sasl,
           brokers,
           connectionTimeout: kafkaConfig.connectionTimeout,
@@ -357,7 +357,7 @@ export interface RealUserMessage {
   id: string;
   fullName: string;
   email: string;
-  verified: 'verified' | 'unverified';
+  verified: "verified" | "unverified";
 }
 
 async function processRealUserMessage(message: RealUserMessage) {
@@ -368,15 +368,10 @@ async function processRealUserMessage(message: RealUserMessage) {
     const activeUsers = await db
       .select()
       .from(users)
-      .where(
-        and(
-          eq(users.status, "active"),
-          ne(users.role, "admin")
-        )
-      );
+      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
 
     if (!activeUsers || activeUsers.length === 0) {
-      throw new Error('No active non-admin users found');
+      throw new Error("No active non-admin users found");
     }
 
     // Get last assigned user to implement round-robin
@@ -388,7 +383,7 @@ async function processRealUserMessage(message: RealUserMessage) {
     let nextAssigneeIndex = 0;
     if (lastAssignedUser) {
       const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedUser.assignedToId
+        (user) => user.id === lastAssignedUser.assignedToId,
       );
       if (lastAssigneeIndex !== -1) {
         nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
@@ -399,22 +394,27 @@ async function processRealUserMessage(message: RealUserMessage) {
     const now = new Date();
 
     // Insert new real user
-    const newRealUser = await db.insert(realUsers).values({
-      fullName: JSON.stringify({
-        id: message.id,
-        name: message.fullName
-      }),
-      email: message.email,
-      verified: message.verified === 'verified',
-      lastLogin: now,
-      assignedToId: assignedToId,
-      createdAt: now,
-      updatedAt: now
-    }).returning();
+    const newRealUser = await db
+      .insert(realUsers)
+      .values({
+        fullName: JSON.stringify({
+          id: message.id,
+          name: message.fullName,
+        }),
+        email: message.email,
+        verified: message.verified === "verified",
+        lastLogin: now,
+        assignedToId: assignedToId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
 
-    log(`Created real user with ID ${newRealUser[0].id}, assigned to user ID ${assignedToId}`, "kafka");
+    log(
+      `Created real user with ID ${newRealUser[0].id}, assigned to user ID ${assignedToId}`,
+      "kafka",
+    );
     return newRealUser[0];
-
   } catch (error) {
     log(`Error processing real user message: ${error}`, "kafka-error");
     throw error;
