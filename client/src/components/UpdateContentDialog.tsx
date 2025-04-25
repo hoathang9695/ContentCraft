@@ -141,16 +141,13 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         }
 
         // 2. Send to Gorse service
-        // Parse source JSON and process external_id
+        // Process ID for Gorse following the format: externalId_type_sourceId
         const sourceData = content?.source ? JSON.parse(content.source) : null;
         let processedExternalId = content?.externalId;
 
-        if (sourceData) {
-          if (sourceData.type === 'Account') {
-            processedExternalId = `${content?.externalId}_user_${sourceData.id}`;
-          } else if (sourceData.type === 'Page') {
-            processedExternalId = `${content?.externalId}_page_${sourceData.id}`;
-          }
+        if (sourceData?.id && sourceData?.type) {
+          const type = sourceData.type.toLowerCase() === 'account' ? 'user' : 'page';
+          processedExternalId = `${content?.externalId}_${type}_${sourceData.id}`;
         }
 
         // Format categories and labels for Gorse API
