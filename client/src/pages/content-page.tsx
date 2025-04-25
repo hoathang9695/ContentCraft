@@ -30,7 +30,18 @@ export default function ContentPage() {
   const [endDate, setEndDate] = useState<Date>(today);
   // State cho bộ lọc trạng thái nguồn (mặc định là "Chưa xác minh")
   const [sourceStatus, setSourceStatus] = useState('unverified');
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
   
+  // Query to get editor users
+  const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
+    queryKey: ['/api/editors'],
+    queryFn: async () => {
+      const response = await fetch('/api/editors');
+      if (!response.ok) throw new Error('Failed to fetch editors');
+      return response.json();
+    }
+  });
+
   const handleSearch = (query: string) => {
     // In a real app, this might filter by API
     console.log('Search query:', query);
@@ -110,16 +121,37 @@ export default function ContentPage() {
           </div>
           
           <div className="flex items-center">
-            <Button
-              variant="outline"
-              className={cn(
-                "whitespace-nowrap h-10 px-4 py-2 mr-5",
-                sourceStatus === 'unverified' ? "bg-muted" : ""
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className={cn(
+                  "whitespace-nowrap h-10 px-4 py-2 mr-5",
+                  sourceStatus === 'unverified' ? "bg-muted" : ""
+                )}
+                onClick={toggleSourceStatus}
+              >
+                {sourceStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
+              </Button>
+              
+              {user?.role === 'admin' && (
+                <Select 
+                  value={selectedUser?.toString() || ""} 
+                  onValueChange={(value) => setSelectedUser(value ? parseInt(value) : null)}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Chọn nhân sự" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tất cả</SelectItem>
+                    {editorUsers?.map(user => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-              onClick={toggleSourceStatus}
-            >
-              {sourceStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
-            </Button>
+            </div>
 
             <div className="flex items-center gap-2">
               <div>
@@ -232,6 +264,7 @@ export default function ContentPage() {
           startDate={startDate}
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
+          assignedUserId={selectedUser}
         />
       )}
       
