@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { PushFollowDialog } from "@/components/PushFollowDialog";
 
@@ -29,31 +29,17 @@ export default function RealUserPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [pushFollowOpen, setPushFollowOpen] = useState(false);
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
-  const handlePushFollow = async (count: number) => {
-    if (!pushFollowUser?.fullName?.id) return;
-    
-    try {
-      // TODO: Implement actual API call here
-      toast({
-        title: "Push Follow",
-        description: `Đã push ${count} follow cho người dùng ${pushFollowUser.fullName?.name}`,
-      });
-    } catch (error) {
-      console.error('Error pushing follows:', error);
-      toast({
-        title: "Lỗi",
-        description: "Không thể thực hiện push follow. Vui lòng thử lại.",
-        variant: "destructive"
-      });
+  // Fetch editor users
+  const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
+    queryKey: ['/api/editors'],
+    queryFn: async () => {
+      const response = await fetch('/api/editors');
+      if (!response.ok) throw new Error('Failed to fetch editors');
+      return response.json();
     }
-  };
-  const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
-  const [startDate, setStartDate] = useState<Date>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  );
-  const [endDate, setEndDate] = useState<Date>(new Date());
-  const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
+  });
 
   // Redirect if not admin
   if (user?.role !== "admin") {
@@ -101,7 +87,7 @@ export default function RealUserPage() {
 
   console.log("Users before filtering:", users);
 
-  // Filter users based on date range, status and search query
+  // Filter users based on date range, status, search query, and selected user
   const filteredUsers = users ? users.filter((user) => {
     if (!user) return false;
     const createdDate = user.createdAt ? new Date(user.createdAt) : null;
@@ -132,8 +118,17 @@ export default function RealUserPage() {
       (user.fullName?.name || '').toLowerCase().includes(searchTerm) ||
       (user.email || '').toLowerCase().includes(searchTerm);
 
-    return dateMatch && statusMatch && searchMatch && verificationMatch;
+    const userMatch = selectedUserId === null || user.assignedToId === selectedUserId;
+
+    return dateMatch && statusMatch && searchMatch && verificationMatch && userMatch;
   }) : [];
+
+  const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
+  const [startDate, setStartDate] = useState<Date>(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  );
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
 
   return (
     <DashboardLayout>
@@ -165,6 +160,22 @@ export default function RealUserPage() {
                 </Button>
               </div>
             </div>
+
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger>
+                <Button variant="outline">
+                  {selectedUserId ? (editorUsers?.find(user => user.id === selectedUserId)?.name || "Chọn người dùng") : "Chọn người dùng"}
+                </Button>
+              </SelectTrigger>
+              <SelectContent>
+                {editorUsers?.map(user => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
 
             <Button
               variant="outline"
@@ -266,6 +277,10 @@ export default function RealUserPage() {
                     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
                     setStartDate(firstDayOfMonth);
                     setEndDate(today);
+                    setSelectedUserId(null);
+                    setVerificationStatus('unverified');
+                    setActiveTab('all');
+                    setSearchQuery('');
                     toast({
                       title: "Đã đặt lại bộ lọc",
                       description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, "dd/MM/yyyy")} đến ${format(today, "dd/MM/yyyy")}`,
