@@ -154,20 +154,37 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         const categoriesArray = data.categories.split(',').map(c => c.trim()).filter(Boolean);
         const labelsArray = data.labels.split(',').map(l => l.trim()).filter(Boolean);
 
-        // Call Gorse API
-        await fetch(`https://prod-gorse-sn.emso.vn/api/item/${processedExternalId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            Categories: categoriesArray,
-            Comment: "",
-            IsHidden: data.safe === false, // If safe is false or null, set IsHidden to true
-            Labels: labelsArray,
-            Timestamp: new Date().toISOString()
-          })
-        });
+        const gorsePayload = {
+          Categories: categoriesArray,
+          Comment: "",
+          IsHidden: data.safe === false,
+          Labels: labelsArray,
+          Timestamp: new Date().toISOString()
+        };
+
+        // Check initial verification status and current state
+        if (content?.sourceVerification === 'unverified' && data.safe === true && isVerified) {
+          // For previously unverified content that is now safe and verified
+          await fetch('https://prod-gorse-sn.emso.vn/api/item', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ...gorsePayload,
+              ItemId: processedExternalId
+            })
+          });
+        } else if (content?.sourceVerification === 'verified') {
+          // For already verified content
+          await fetch(`https://prod-gorse-sn.emso.vn/api/item/${processedExternalId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gorsePayload)
+          });
+        }
 
         return updatedContent;
       } catch (error) {
