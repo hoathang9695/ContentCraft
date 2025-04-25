@@ -4,6 +4,13 @@ import { useAuth } from '@/hooks/use-auth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ContentTable } from '@/components/ContentTable';
 import { format } from 'date-fns';
+import {
+  Select,
+  SelectContent, 
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from '@/components/ui/calendar';
 import { 
   Popover,
