@@ -39,26 +39,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     }
   });
 
-  // Load categories và labels song song khi dialog mở
-  const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
-    queryKey: ['/api/categories'],
-    enabled: open, // Chỉ load khi dialog mở
-    staleTime: 60 * 60 * 1000, // Cache 1 giờ
-    cacheTime: 2 * 60 * 60 * 1000, // Giữ cache 2 giờ
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    queryFn: () => apiRequest('GET', '/api/categories')
-  });
-
-  const { data: allLabels, isLoading: allLabelsLoading } = useQuery<LabelType[]>({
-    queryKey: ['/api/labels'],
-    enabled: open, // Chỉ load khi dialog mở
-    staleTime: 60 * 60 * 1000, // Cache 1 giờ
-    cacheTime: 2 * 60 * 60 * 1000, // Giữ cache 2 giờ
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    queryFn: () => apiRequest('GET', '/api/labels')
-  });
+  // Removed unnecessary API calls for categories and labels
 
   // Tạo một map hiệu suất cao lưu trữ ánh xạ từ category ID đến danh sách labels
   const categoryLabelsMap = useMemo(() => {
@@ -311,7 +292,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   };
 
   // Kiểm tra trạng thái loading
-  const isLoading = contentLoading || categoriesLoading || allLabelsLoading;
+  const isLoading = contentLoading;
 
   useEffect(() => {
     if (!open) {
