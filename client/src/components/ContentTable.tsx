@@ -663,20 +663,13 @@ export function ContentTable({
               render: (row: Content) => {
                 if (row.createdAt) {
                   const date = new Date(row.createdAt);
-                  const year = date.getUTCFullYear();
-                  const month = (date.getUTCMonth() + 1)
-                    .toString()
-                    .padStart(2, "0");
-                  const day = date.getUTCDate().toString().padStart(2, "0");
-                  const hours = date.getUTCHours().toString().padStart(2, "0");
-                  const minutes = date
-                    .getUTCMinutes()
-                    .toString()
-                    .padStart(2, "0");
                   return (
                     <div className="text-muted-foreground">
-                      <div>{`${year}-${month}-${day}`}</div>
-                      <div className="text-xs">{`${hours}:${minutes}`}</div>
+                      <div>{date.toLocaleDateString('vi-VN')}</div>
+                      <div className="text-xs">{date.toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}</div>
                     </div>
                   );
                 }
