@@ -279,13 +279,18 @@ export default function RealUserPage() {
         </div>
 
         {/* Users Table */}
-        <DataTable
-          data={filteredUsers}
-          isLoading={isLoading}
-          searchable={true}
-          searchPlaceholder="Tìm kiếm người dùng..."
-          searchValue={searchQuery}
-          onSearch={setSearchQuery}
+        <div className="space-y-4">
+          <DataTable
+            data={filteredUsers}
+            isLoading={isLoading}
+            searchable={true}
+            searchPlaceholder="Tìm kiếm người dùng..."
+            searchValue={searchQuery} 
+            onSearch={setSearchQuery}
+            pagination={{
+              itemsPerPage: 10,
+              showPagination: true
+            }}
           columns={[
             {
               key: "fullName",
