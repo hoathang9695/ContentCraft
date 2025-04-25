@@ -100,25 +100,32 @@ export function ContentTable({
     refetchOnWindowFocus: true,
   });
 
-  // Xử lý lỗi từ query khi có cập nhật
+  // Xử lý lỗi từ query khi có cập nhật với cleanup
   useEffect(() => {
-    if (error) {
+    let mounted = true;
+    
+    if (error && mounted) {
       console.error("Error fetching content:", error);
       if (error instanceof Error && error.message.includes("Unauthorized")) {
         setAuthError(true);
         toast({
-          title: "Vui lòng đăng nhập",
-          description:
-            "Bạn cần đăng nhập để xem nội dung này. Nếu đã đăng nhập, hãy thử làm mới trang.",
+          title: "Vui lòng đăng nhập", 
+          description: "Bạn cần đăng nhập để xem nội dung này. Nếu đã đăng nhập, hãy thử làm mới trang.",
           variant: "destructive",
         });
       }
     }
+
+    return () => {
+      mounted = false;
+    };
   }, [error, toast]);
 
-  // Add logging for debugging
+  // Add logging for debugging with cleanup
   useEffect(() => {
-    if (allContents && Array.isArray(allContents)) {
+    let mounted = true;
+
+    if (mounted && allContents && Array.isArray(allContents)) {
       console.log("API returned data:", {
         endpointCalled: apiEndpoint,
         count: allContents.length,
@@ -126,6 +133,10 @@ export function ContentTable({
         firstItem: allContents.length > 0 ? { ...allContents[0] } : null,
       });
     }
+
+    return () => {
+      mounted = false;
+    };
   }, [allContents, apiEndpoint]);
 
   // Apply all filters first 
@@ -177,32 +188,39 @@ export function ContentTable({
     paginatedLength: paginatedContents.length
   });
 
-  // Show toast for empty date filter results
+  // Show toast for empty date filter results with optimization
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
     const dateFilterApplied = startDate && endDate;
-    if (dateFilterApplied && startDate && endDate) {
+
+    if (dateFilterApplied) {
       if (
         filteredContents.length === 0 &&
         allContents.length > 0 &&
         !toastShownRef.current
       ) {
-        setTimeout(() => {
-          toast({
-            title: "Không tìm thấy dữ liệu",
-            description: `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`,
-            variant: "destructive",
-          });
-          toastShownRef.current = true;
-        }, 0);
+        timeoutId = setTimeout(() => {
+          if (!toastShownRef.current) {
+            toast({
+              title: "Không tìm thấy dữ liệu",
+              description: `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`,
+              variant: "destructive",
+            });
+            toastShownRef.current = true;
+          }
+        }, 100);
       }
     }
-    // Reset toast state when date range changes
+
     return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (startDate || endDate) {
         toastShownRef.current = false;
       }
     };
-  }, [filteredContents.length, toast, startDate, endDate]);
+  }, [filteredContents.length, allContents.length, toast, startDate, endDate]);
 
   // Delete mutation
   const deleteMutation = useMutation({
