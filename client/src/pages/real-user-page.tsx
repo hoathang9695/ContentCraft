@@ -417,17 +417,6 @@ export default function RealUserPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
-                          // TODO: Implement Gorse integration
-                          toast({
-                            title: "Đẩy sang Gorse",
-                            description: `Đã đẩy người dùng ${row.fullName?.name} sang Gorse`,
-                          });
-                        }}
-                      >
-                        Đẩy sang Gorse
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
                           setPushFollowUser(row);
                           setPushFollowOpen(true);
                         }}
