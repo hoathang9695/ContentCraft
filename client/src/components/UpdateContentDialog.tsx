@@ -314,7 +314,9 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Cập nhật thông tin</DialogTitle>
+          <DialogTitle>
+            Cập nhật thông tin: {content?.externalId}
+          </DialogTitle>
         </DialogHeader>
 
         {(contentLoading || !categories || !allLabels) ? (
