@@ -128,8 +128,8 @@ export default function ContentPage() {
 
           {user?.role === 'admin' && (
             <Select 
-              value={selectedUser?.toString() || ""} 
-              onValueChange={(value) => setSelectedUser(value ? parseInt(value) : null)}
+              value={selectedUser?.toString() || "all"} 
+              onValueChange={(value) => setSelectedUser(value === "all" ? null : parseInt(value))}
             >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Tất cả" />
