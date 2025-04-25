@@ -50,6 +50,7 @@ type ContentTableProps = {
   endDate?: Date;
   sourceVerification?: "verified" | "unverified";
   limit?: number;
+  assignedUserId?: number | null;
 };
 
 export function ContentTable({
@@ -160,7 +161,9 @@ export function ContentTable({
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
 
-    return statusMatch && verificationMatch && searchMatch;
+  const userMatch = !assignedUserId || content.assigned_to_id === assignedUserId;
+
+    return statusMatch && verificationMatch && searchMatch && userMatch;
   });
 
   // Console log để debug
