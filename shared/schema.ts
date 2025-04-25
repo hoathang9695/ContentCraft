@@ -85,7 +85,6 @@ export const categories = pgTable("categories", {
 export const labels = pgTable("labels", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(), // Tên nhãn
-  categoryId: integer("category_id").notNull().references(() => categories.id), // ID của danh mục cha
   description: text("description"), // Mô tả nhãn (tùy chọn)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
