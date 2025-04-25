@@ -45,20 +45,20 @@ export async function setupKafkaConsumer() {
     );
 
     const kafkaConfig = {
-      clientId: "content-processing-service",
+      clientId: "content-processing-service", 
       brokers,
       ssl: false,
       sasl,
-      connectionTimeout: 120000, // Tăng timeout
-      authenticationTimeout: 60000,
+      connectionTimeout: 30000, // Giảm timeout
+      authenticationTimeout: 30000,
       retry: {
-        initialRetryTime: 5000,
-        retries: 30,
-        maxRetryTime: 300000,
-        factor: 1.2, // Giảm hệ số để retry thường xuyên hơn
+        initialRetryTime: 1000, // Giảm thời gian retry đầu tiên
+        retries: 10, // Giảm số lần retry
+        maxRetryTime: 30000, // Giảm max retry time
+        factor: 2,
       },
-      logLevel: 4, // DEBUG level để log chi tiết hơn
-      requestTimeout: 120000,
+      logLevel: 4,
+      requestTimeout: 30000,
       enforceRequestTimeout: true,
     };
 
