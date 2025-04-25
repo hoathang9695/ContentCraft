@@ -95,6 +95,7 @@ export async function setupKafkaConsumer() {
 
       const topics = process.env.KAFKA_TOPICS?.split(",") || [
         "content_management",
+        "real_users",
       ];
 
       // Retry topic subscription
@@ -163,7 +164,9 @@ export async function setupKafkaConsumer() {
           } else if ("full_name" in parsedMessage) {
             await processSupportMessage(parsedMessage as SupportMessage);
           } else if ("id" in parsedMessage && "email" in parsedMessage) {
+            // Xử lý message từ topic real_users
             await processRealUserMessage(parsedMessage as RealUserMessage);
+            log(`Processed real user message for ${parsedMessage.email}`, "kafka");
           }
         },
       });
