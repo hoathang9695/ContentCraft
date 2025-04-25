@@ -405,7 +405,7 @@ async function processRealUserMessage(message: RealUserMessage) {
           name: message.fullName,
         }),
         email: message.email,
-        verified: message.verified === "verified",
+        verified: message.verified,
         lastLogin: now,
         assignedToId: assignedToId,
         createdAt: now,
