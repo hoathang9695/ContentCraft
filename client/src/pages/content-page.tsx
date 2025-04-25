@@ -41,7 +41,7 @@ export default function ContentPage() {
   // State cho bộ lọc trạng thái nguồn (mặc định là "Chưa xác minh")
   const [sourceStatus, setSourceStatus] = useState('unverified');
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
-  
+
   // Query to get editor users
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
@@ -56,7 +56,7 @@ export default function ContentPage() {
     // In a real app, this might filter by API
     console.log('Search query:', query);
   };
-  
+
   // Hàm xử lý khi thay đổi ngày
   const handleDateFilter = () => {
     // Tại đây, bạn có thể thêm logic lọc dữ liệu theo ngày
@@ -71,12 +71,12 @@ export default function ContentPage() {
       setEndDate(new Date(endDate));
     }, 0);
   };
-  
+
   // Hàm xử lý khi thay đổi trạng thái nguồn
   const toggleSourceStatus = () => {
     setSourceStatus(prev => prev === 'unverified' ? 'verified' : 'unverified');
   };
-  
+
   return (
     <DashboardLayout onSearch={handleSearch}>
       <div className="mb-4">
@@ -129,7 +129,7 @@ export default function ContentPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center">
             <div className="flex items-center gap-2">
               <Button
@@ -142,7 +142,7 @@ export default function ContentPage() {
               >
                 {sourceStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
               </Button>
-              
+
               {user?.role === 'admin' && (
                 <Select 
                   value={selectedUser?.toString() || ""} 
@@ -152,7 +152,7 @@ export default function ContentPage() {
                     <SelectValue placeholder="Chọn nhân sự" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tất cả</SelectItem>
+                    <SelectItem value="all">Tất cả</SelectItem>
                     {editorUsers?.map(user => (
                       <SelectItem key={user.id} value={user.id.toString()}>
                         {user.name}
@@ -196,7 +196,7 @@ export default function ContentPage() {
                   </PopoverContent>
                 </Popover>
               </div>
-              
+
               <div>
                 <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
                 <Popover>
@@ -229,7 +229,7 @@ export default function ContentPage() {
                   </PopoverContent>
                 </Popover>
               </div>
-              
+
               <div className="flex items-end gap-2 h-[74px]">
                 <Button 
                   variant="default" 
@@ -244,7 +244,7 @@ export default function ContentPage() {
                 >
                   Áp dụng
                 </Button>
-                
+
                 <Button 
                   variant="outline" 
                   className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
@@ -267,7 +267,7 @@ export default function ContentPage() {
           </div>
         </div>
       </div>
-      
+
       {activeTab === 'all' && (
         <ContentTable 
           title="Tất cả nội dung" 
@@ -277,7 +277,7 @@ export default function ContentPage() {
           assignedUserId={selectedUser}
         />
       )}
-      
+
       {activeTab === 'processed' && (
         <ContentTable 
           title="Nội dung đã xử lý" 
@@ -287,7 +287,7 @@ export default function ContentPage() {
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
         />
       )}
-      
+
       {activeTab === 'unprocessed' && (
         <ContentTable 
           title="Nội dung chưa xử lý" 
