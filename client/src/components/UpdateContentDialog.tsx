@@ -41,25 +41,10 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
 
   // Removed unnecessary API calls for categories and labels
 
-  // Tạo một map hiệu suất cao lưu trữ ánh xạ từ category ID đến danh sách labels
-  const categoryLabelsMap = useMemo(() => {
-    if (!allLabels) return new Map<number, LabelType[]>();
-
-    // Sử dụng reduce để tạo map nhanh hơn với ít lần truy cập
-    return allLabels.reduce((map, label) => {
-      if (!map.has(label.categoryId)) {
-        map.set(label.categoryId, []);
-      }
-      map.get(label.categoryId)?.push(label);
-      return map;
-    }, new Map<number, LabelType[]>());
-  }, [allLabels]);
-
-  // Tạo một map nhanh ánh xạ từ category name đến id
+  // Tạo một map hiệu suất cao lưu trữ ánh xạ từ category name đến id
   const categoryNameToIdMap = useMemo(() => {
-    if (!categories) return new Map<string, number>();
-    return new Map(categories.map(c => [c.name, c.id]));
-  }, [categories]);
+    return new Map<string, number>();
+  }, []);
 
   // Lọc danh sách nhãn dựa trên danh mục đã chọn
   const relevantLabels = useMemo(() => {
