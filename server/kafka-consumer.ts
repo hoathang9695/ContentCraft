@@ -47,7 +47,7 @@ export async function setupKafkaConsumer() {
     const kafkaConfig = {
       clientId: "content-processing-service",
       brokers,
-      ssl: true,
+      ssl: false,
       sasl,
       connectionTimeout: 120000, // Tăng timeout
       authenticationTimeout: 60000,
