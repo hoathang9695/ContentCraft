@@ -162,13 +162,6 @@ export default function RealUserPage() {
     return dateMatch && statusMatch && searchMatch && verificationMatch && userMatch;
   }) : [];
 
-  const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
-  const [startDate, setStartDate] = useState<Date>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  );
-  const [endDate, setEndDate] = useState<Date>(new Date());
-  const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
-
   return (
     <DashboardLayout>
       <div className="container mx-auto p-4">
