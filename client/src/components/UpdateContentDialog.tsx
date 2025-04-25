@@ -303,7 +303,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
           <DialogTitle>Cập nhật thông tin</DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
+        {(contentLoading || !categories || !allLabels) ? (
           <div className="flex justify-center items-center p-10">
             <Loader2 className="w-6 h-6 animate-spin mr-2" />
             <span>Đang tải thông tin...</span>
