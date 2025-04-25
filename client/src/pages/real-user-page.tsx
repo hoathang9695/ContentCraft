@@ -423,19 +423,6 @@ export default function RealUserPage() {
                       >
                         Push Follow
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-red-600"
-                        onClick={() => {
-                          // TODO: Implement disable user
-                          toast({
-                            title: "Vô hiệu hóa",
-                            description: `Đã vô hiệu hóa người dùng ${row.fullName?.name}`,
-                            variant: "destructive"
-                          });
-                        }}
-                      >
-                        Vô hiệu hóa
-                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ),
