@@ -61,6 +61,7 @@ export function ContentTable({
   endDate,
   sourceVerification = "unverified",
   limit,
+  assignedUserId,
 }: ContentTableProps) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -161,7 +162,7 @@ export function ContentTable({
       content.categories?.toLowerCase().includes(searchTerm) ||
       content.labels?.toLowerCase().includes(searchTerm);
 
-  const userMatch = !assignedUserId || content.assigned_to_id === assignedUserId;
+    const userMatch = assignedUserId ? content.assigned_to_id === assignedUserId : true;
 
     return statusMatch && verificationMatch && searchMatch && userMatch;
   });
