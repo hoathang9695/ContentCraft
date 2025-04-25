@@ -31,6 +31,39 @@ export default function RealUserPage() {
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
+  const handlePushFollow = async (userIds: string[]) => {
+    try {
+      const response = await fetch("/api/real-users/push-follow", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          targetUserId: pushFollowUser?.fullName?.id,
+          userIds,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to push follow");
+      }
+
+      toast({
+        title: "Thành công",
+        description: "Đã push follow thành công",
+      });
+
+      setPushFollowOpen(false);
+    } catch (error) {
+      console.error("Error pushing follow:", error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể push follow. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Fetch editor users
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
