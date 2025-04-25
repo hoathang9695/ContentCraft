@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, UseQueryResult } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Content } from "@shared/schema";
@@ -103,7 +103,7 @@ export function ContentTable({
   // Xử lý lỗi từ query khi có cập nhật với cleanup
   useEffect(() => {
     let mounted = true;
-    
+
     if (error && mounted) {
       console.error("Error fetching content:", error);
       if (error instanceof Error && error.message.includes("Unauthorized")) {
@@ -382,6 +382,17 @@ export function ContentTable({
     }
   };
 
+  //Memoizing derived states for performance
+  const memoizedPaginatedContents = useMemo(() => {
+    const itemsPerPage = 10;
+    const totalContents = filteredContents.length;
+    const totalPages = Math.ceil(totalContents / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredContents.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredContents, currentPage]);
+
+  const memoizedTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredContents.length / 10)), [filteredContents.length]);
+
   return (
     <>
       <div className="mb-6">
@@ -431,7 +442,7 @@ export function ContentTable({
         )}
 
         <DataTable
-          data={paginatedContents}
+          data={memoizedPaginatedContents}
           isLoading={isLoading}
           searchable={showActions}
           searchPlaceholder="Tìm kiếm nội dung..."
@@ -751,7 +762,7 @@ export function ContentTable({
             showActions
               ? {
                   currentPage,
-                  totalPages: Math.max(1, totalPages),
+                  totalPages: memoizedTotalPages,
                   onPageChange: setCurrentPage,
                 }
               : undefined
