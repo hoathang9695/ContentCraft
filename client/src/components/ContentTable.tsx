@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, UseQueryResult } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Content } from "@shared/schema";
