@@ -25,50 +25,39 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const [newCategories, setNewCategories] = useState<string>('');
   const [newLabels, setNewLabels] = useState<string>('');
 
-  // Prefetch dữ liệu labels và categories sẵn khi app bắt đầu
-  useEffect(() => {
-    // Prefetch categories - Dù dialog có mở hay không
-    queryClient.prefetchQuery({
-      queryKey: ['/api/categories'],
-      queryFn: async () => await apiRequest('GET', '/api/categories'),
-      staleTime: 30 * 60 * 1000, // Cache lâu hơn - 30 phút
-    });
-
-    // Prefetch all labels - Dù dialog có mở hay không
-    queryClient.prefetchQuery({
-      queryKey: ['/api/labels'],
-      queryFn: async () => await apiRequest('GET', '/api/labels'),
-      staleTime: 30 * 60 * 1000, // Cache lâu hơn - 30 phút
-    });
-  }, []);
-
-  // Chỉ tải dữ liệu content khi cần thiết
+  // Tải dữ liệu content và metadata cần thiết chỉ khi dialog mở
   const { data: content, isLoading: contentLoading } = useQuery<any>({
-    queryKey: [contentId ? `/api/contents/${contentId}` : 'empty'],
+    queryKey: [`/api/contents/${contentId}`],
     enabled: !!contentId && open,
-    staleTime: 2 * 60 * 1000, // 2 phút - đủ để không phải tải lại quá nhiều
-    refetchOnWindowFocus: false, // Không tải lại khi focus vào cửa sổ
-    refetchOnMount: false, // Chỉ tải một lần khi component được mount
+    staleTime: 5 * 60 * 1000, // Cache 5 phút
+    cacheTime: 10 * 60 * 1000, // Giữ cache 10 phút
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     queryFn: async () => {
       if (!contentId) return {};
       return await apiRequest('GET', `/api/contents/${contentId}`);
     }
   });
 
-  // Sử dụng kết quả từ cache cho categories
+  // Load categories và labels song song khi dialog mở
   const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
-    staleTime: 30 * 60 * 1000, // Tăng thời gian cache - 30 phút 
+    enabled: open, // Chỉ load khi dialog mở
+    staleTime: 60 * 60 * 1000, // Cache 1 giờ
+    cacheTime: 2 * 60 * 60 * 1000, // Giữ cache 2 giờ
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    queryFn: () => apiRequest('GET', '/api/categories')
   });
 
-  // Sử dụng kết quả từ cache cho labels
   const { data: allLabels, isLoading: allLabelsLoading } = useQuery<LabelType[]>({
     queryKey: ['/api/labels'],
-    staleTime: 30 * 60 * 1000, // Tăng thời gian cache - 30 phút
-    refetchOnWindowFocus: false, 
+    enabled: open, // Chỉ load khi dialog mở
+    staleTime: 60 * 60 * 1000, // Cache 1 giờ
+    cacheTime: 2 * 60 * 60 * 1000, // Giữ cache 2 giờ
+    refetchOnWindowFocus: false,
     refetchOnMount: false,
+    queryFn: () => apiRequest('GET', '/api/labels')
   });
 
   // Tạo một map hiệu suất cao lưu trữ ánh xạ từ category ID đến danh sách labels
