@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -128,7 +129,7 @@ export default function RealUserPage() {
     const searchMatch =
       !searchQuery ||
       user.id.toString().includes(searchTerm) ||
-      (user.fullName || '').toLowerCase().includes(searchTerm) ||
+      (user.fullName?.name || '').toLowerCase().includes(searchTerm) ||
       (user.email || '').toLowerCase().includes(searchTerm);
 
     return dateMatch && statusMatch && searchMatch && verificationMatch;
@@ -291,120 +292,20 @@ export default function RealUserPage() {
               itemsPerPage: 10,
               showPagination: true
             }}
-          columns={[
-            {
-              key: "fullName",
-              header: "Họ và tên",
-              render: (row) => {
-                if (!row.fullName?.id || !row.fullName?.name) {
-                  return <span className="text-xs text-gray-500">N/A</span>;
-                }
+            columns={[
+              {
+                key: "fullName",
+                header: "Họ và tên",
+                render: (row) => {
+                  if (!row.fullName?.id || !row.fullName?.name) {
+                    return <span className="text-xs text-gray-500">N/A</span>;
+                  }
 
-                return (
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
-                    onClick={() => {
-                      const userId = row.fullName?.id;
-                      if (userId) {
-                        window.open(`https://emso.vn/user/${userId}`, '_blank');
-                      }
-                    }}
-                  >
-                    {row.fullName.name}
-                  </Button>
-                );
-              },
-            },
-            {
-              key: "email",
-              header: "Email",
-              render: (row) => (
-                <div className="text-muted-foreground">{row.email}</div>
-              ),
-            },
-            {
-              key: "processor",
-              header: "Người phê duyệt", 
-              render: (row) => {
-                return row.assignedToId && row.processor ? (
-                  <div className="space-y-1">
-                    <div className="font-medium text-sm">{row.processor.name}</div>
-                    <div className="text-xs text-muted-foreground">@{row.processor.username}</div>
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground">Chưa phân công</div>
-                );
-              },
-            },
-            {
-              key: "verified",
-              header: "Trạng thái xác minh",
-              render: (row) => (
-                <Badge
-                  variant={row.verified === 'verified' ? "success" : "secondary"}
-                  className="font-medium"
-                >
-                  {row.verified === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
-                </Badge>
-              ),
-            },
-            {
-              key: "createdAt",
-              header: "Ngày tạo",
-              render: (row) => {
-                if (!row.createdAt) return <div>N/A</div>;
-                const dateStr = row.createdAt.toString();
-                try {
-                  const date = new Date(dateStr);
-                  if (isNaN(date.getTime())) {
-                    return <div>Định dạng thời gian không hợp lệ</div>;
-                  }
                   return (
-                    <div className="text-muted-foreground whitespace-nowrap">
-                      {format(date, "dd/MM/yyyy HH:mm")}
-                    </div>
-                  );
-                } catch (error) {
-                  console.error("Date parsing error:", error);
-                  return <div>Định dạng thời gian không hợp lệ</div>;
-                }
-              },
-            },
-            {
-              key: "lastLogin",
-              header: "Đăng nhập gần nhất",
-              render: (row) => {
-                if (!row.lastLogin) return <div>Chưa đăng nhập</div>;
-                try {
-                  const date = new Date(row.lastLogin);
-                  if (isNaN(date.getTime())) {
-                    return <div>Định dạng thời gian không hợp lệ</div>;
-                  }
-                  return (
-                    <div className="text-muted-foreground whitespace-nowrap">
-                      {format(date, "dd/MM/yyyy HH:mm")}
-                    </div>
-                  );
-                } catch (error) {
-                  return <div>Định dạng thời gian không hợp lệ</div>;
-                }
-              },
-            },
-            {
-              key: "actions",
-              header: "Hành động",
-              className: "text-right",
-              render: (row) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
                       onClick={() => {
                         const userId = row.fullName?.id;
                         if (userId) {
@@ -412,51 +313,153 @@ export default function RealUserPage() {
                         }
                       }}
                     >
-                      Xem chi tiết
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        // TODO: Implement Gorse integration
-                        toast({
-                          title: "Đẩy sang Gorse",
-                          description: `Đã đẩy người dùng ${row.fullName?.name} sang Gorse`,
-                        });
-                      }}
-                    >
-                      Đẩy sang Gorse
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setPushFollowUser(row);
-                        setPushFollowOpen(true);
-                      }}
-                    >
-                      Push Follow
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      className="text-red-600"
-                      onClick={() => {
-                        // TODO: Implement disable user
-                        toast({
-                          title: "Vô hiệu hóa",
-                          description: `Đã vô hiệu hóa người dùng ${row.fullName?.name}`,
-                          variant: "destructive"
-                        });
-                      }}
-                    >
-                      Vô hiệu hóa
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ),
-            },
-          ]}
-        />
+                      {row.fullName.name}
+                    </Button>
+                  );
+                },
+              },
+              {
+                key: "email",
+                header: "Email",
+                render: (row) => (
+                  <div className="text-muted-foreground">{row.email}</div>
+                ),
+              },
+              {
+                key: "processor",
+                header: "Người phê duyệt", 
+                render: (row) => {
+                  return row.assignedToId && row.processor ? (
+                    <div className="space-y-1">
+                      <div className="font-medium text-sm">{row.processor.name}</div>
+                      <div className="text-xs text-muted-foreground">@{row.processor.username}</div>
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground">Chưa phân công</div>
+                  );
+                },
+              },
+              {
+                key: "verified",
+                header: "Trạng thái xác minh",
+                render: (row) => (
+                  <Badge
+                    variant={row.verified === 'verified' ? "success" : "secondary"}
+                    className="font-medium"
+                  >
+                    {row.verified === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
+                  </Badge>
+                ),
+              },
+              {
+                key: "createdAt",
+                header: "Ngày tạo",
+                render: (row) => {
+                  if (!row.createdAt) return <div>N/A</div>;
+                  const dateStr = row.createdAt.toString();
+                  try {
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) {
+                      return <div>Định dạng thời gian không hợp lệ</div>;
+                    }
+                    return (
+                      <div className="text-muted-foreground whitespace-nowrap">
+                        {format(date, "dd/MM/yyyy HH:mm")}
+                      </div>
+                    );
+                  } catch (error) {
+                    console.error("Date parsing error:", error);
+                    return <div>Định dạng thời gian không hợp lệ</div>;
+                  }
+                },
+              },
+              {
+                key: "lastLogin",
+                header: "Đăng nhập gần nhất",
+                render: (row) => {
+                  if (!row.lastLogin) return <div>Chưa đăng nhập</div>;
+                  try {
+                    const date = new Date(row.lastLogin);
+                    if (isNaN(date.getTime())) {
+                      return <div>Định dạng thời gian không hợp lệ</div>;
+                    }
+                    return (
+                      <div className="text-muted-foreground whitespace-nowrap">
+                        {format(date, "dd/MM/yyyy HH:mm")}
+                      </div>
+                    );
+                  } catch (error) {
+                    return <div>Định dạng thời gian không hợp lệ</div>;
+                  }
+                },
+              },
+              {
+                key: "actions",
+                header: "Hành động",
+                className: "text-right",
+                render: (row) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => {
+                          const userId = row.fullName?.id;
+                          if (userId) {
+                            window.open(`https://emso.vn/user/${userId}`, '_blank');
+                          }
+                        }}
+                      >
+                        Xem chi tiết
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          // TODO: Implement Gorse integration
+                          toast({
+                            title: "Đẩy sang Gorse",
+                            description: `Đã đẩy người dùng ${row.fullName?.name} sang Gorse`,
+                          });
+                        }}
+                      >
+                        Đẩy sang Gorse
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setPushFollowUser(row);
+                          setPushFollowOpen(true);
+                        }}
+                      >
+                        Push Follow
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-red-600"
+                        onClick={() => {
+                          // TODO: Implement disable user
+                          toast({
+                            title: "Vô hiệu hóa",
+                            description: `Đã vô hiệu hóa người dùng ${row.fullName?.name}`,
+                            variant: "destructive"
+                          });
+                        }}
+                      >
+                        Vô hiệu hóa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ),
+              },
+            ]}
+          />
+        </div>
         <PushFollowDialog
           open={pushFollowOpen}
           onOpenChange={setPushFollowOpen}
           targetUserId={pushFollowUser?.fullName?.id}
           targetUserName={pushFollowUser?.fullName?.name}
+          onPushFollow={handlePushFollow}
         />
       </div>
     </DashboardLayout>
