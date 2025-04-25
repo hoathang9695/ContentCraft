@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { UpdateContentDialog } from "./UpdateContentDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 type ContentTableProps = {
   title?: string;
@@ -131,7 +132,7 @@ export function ContentTable({
   const filteredContents = allContents.filter((content) => {
     // Apply date filter first using only createdAt
     const createdDate = new Date(content.createdAt);
-    
+
     const dateMatch = (!startDate || createdDate >= startDate) && 
                      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
     if (!dateMatch) return false;
@@ -139,7 +140,7 @@ export function ContentTable({
     // Then apply other filters  
     const statusMatch = !statusFilter || content.status === statusFilter;
     const verificationMatch = sourceVerification ? content.sourceVerification === sourceVerification : true;
-    
+
     const searchTerm = searchQuery?.toLowerCase() || "";
     const searchMatch =
       !searchQuery ||
@@ -460,31 +461,88 @@ export function ContentTable({
               key: "categories",
               header: "Categories",
               render: (row: Content) => (
-                <div className="text-blue-500 font-medium">
-                  {row.categories || "Chưa phân loại"}
-                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div className="text-blue-500 font-medium truncate max-w-[200px] cursor-pointer hover:underline" title="Click để xem chi tiết">
+                      {row.categories || "Chưa phân loại"}
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[400px]">
+                    <DialogHeader>
+                      <DialogTitle>Danh sách Categories</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4">
+                      {row.categories ? (
+                        <div className="flex flex-wrap gap-2">
+                          {row.categories.split(',').map((category, index) => (
+                            <span
+                              key={index}
+                              className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                            >
+                              {category.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">Chưa phân loại</p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               ),
             },
             {
               key: "label",
               header: "Label",
               render: (row: Content) => (
-                <div className="flex gap-1 flex-wrap">
-                  {row.labels ? (
-                    row.labels.split(",").map((label, index) => (
-                      <span
-                        key={index}
-                        className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100"
-                      >
-                        {label.trim()}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-muted-foreground text-xs">
-                      Chưa có nhãn
-                    </span>
-                  )}
-                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div className="max-w-[200px] cursor-pointer" title="Click để xem chi tiết">
+                      {row.labels ? (
+                        <div className="flex gap-1 flex-wrap">
+                          {row.labels.split(",").slice(0, 3).map((label, index) => (
+                            <span
+                              key={index}
+                              className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded dark:bg-blue-800 dark:text-blue-100 truncate max-w-[150px]"
+                            >
+                              {label.trim()}
+                            </span>
+                          ))}
+                          {row.labels.split(",").length > 3 && (
+                            <span className="text-muted-foreground text-xs">
+                              +{row.labels.split(",").length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          Chưa có nhãn
+                        </span>
+                      )}
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[400px]">
+                    <DialogHeader>
+                      <DialogTitle>Danh sách Labels</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4">
+                      {row.labels ? (
+                        <div className="flex flex-wrap gap-2">
+                          {row.labels.split(',').map((label, index) => (
+                            <span
+                              key={index}
+                              className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                            >
+                              {label.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">Chưa có nhãn</p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               ),
             },
             {
@@ -605,20 +663,13 @@ export function ContentTable({
               render: (row: Content) => {
                 if (row.createdAt) {
                   const date = new Date(row.createdAt);
-                  const year = date.getUTCFullYear();
-                  const month = (date.getUTCMonth() + 1)
-                    .toString()
-                    .padStart(2, "0");
-                  const day = date.getUTCDate().toString().padStart(2, "0");
-                  const hours = date.getUTCHours().toString().padStart(2, "0");
-                  const minutes = date
-                    .getUTCMinutes()
-                    .toString()
-                    .padStart(2, "0");
                   return (
                     <div className="text-muted-foreground">
-                      <div>{`${year}-${month}-${day}`}</div>
-                      <div className="text-xs">{`${hours}:${minutes}`}</div>
+                      <div>{date.toLocaleDateString('vi-VN')}</div>
+                      <div className="text-xs">{date.toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}</div>
                     </div>
                   );
                 }
