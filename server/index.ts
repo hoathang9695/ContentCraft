@@ -118,11 +118,8 @@ app.use((req, res, next) => {
     // Khởi động Kafka consumer (có thể bỏ comment nếu có Kafka server)
     // Chỉ kết nối với Kafka khi có biến môi trường KAFKA_ENABLED=true
     if (process.env.KAFKA_ENABLED === 'true') {
-      const kafkaBrokers = process.env.KAFKA_BROKERS?.split(',') || ['localhost:9092'];
-      const kafkaGroupId = process.env.KAFKA_GROUP_ID || 'content-processing-group';
-      const kafkaTopic = process.env.KAFKA_TOPIC || 'content-topic';
-      
-      setupKafkaConsumer(kafkaBrokers, kafkaGroupId, kafkaTopic)
+  
+      setupKafkaConsumer()
         .then(() => log('Kafka consumer started successfully', 'kafka'))
         .catch(err => log(`Failed to start Kafka consumer: ${err}`, 'kafka-error'));
     } else {
