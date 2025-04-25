@@ -194,10 +194,10 @@ export default function RealUserPage() {
             </div>
 
             <Select value={selectedUserId?.toString() || "all"} onValueChange={(value) => setSelectedUserId(value === "all" ? null : parseInt(value))}>
-              <SelectTrigger>
-                <Button variant="outline">
+              <SelectTrigger className="w-[180px]">
+                <SelectValue>
                   {selectedUserId ? (editorUsers?.find(user => user.id === selectedUserId)?.name || "Chọn người dùng") : "Tất cả"}
-                </Button>
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
