@@ -39,12 +39,22 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     }
   });
 
-  // Removed unnecessary API calls for categories and labels
+  // Load categories and labels data when dialog opens
+  const { data: allLabels } = useQuery<any[]>({
+    queryKey: ['/api/labels'],
+    enabled: open,
+  });
+
+  const { data: categories } = useQuery<any[]>({
+    queryKey: ['/api/categories'],
+    enabled: open,
+  });
 
   // Tạo một map hiệu suất cao lưu trữ ánh xạ từ category name đến id
   const categoryNameToIdMap = useMemo(() => {
-    return new Map<string, number>();
-  }, []);
+    if (!categories) return new Map<string, number>();
+    return new Map(categories.map(c => [c.name, c.id]));
+  }, [categories]);
 
   // Lọc danh sách nhãn dựa trên danh mục đã chọn
   const relevantLabels = useMemo(() => {
