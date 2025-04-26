@@ -41,6 +41,7 @@ async function processRealUserMessage(userData: {
 }
 
 async function simulateKafkaRealUsers() {
+  console.log("Starting Kafka simulation...");
   const testUsers = [
     {
       id: "113725869733725553",
@@ -62,11 +63,19 @@ async function simulateKafkaRealUsers() {
 
   for (const userData of testUsers) {
     try {
-      await processRealUserMessage(userData);
+      console.log("Processing user data:", userData);
+      const result = await processRealUserMessage(userData);
+      console.log("Successfully processed user:", result);
       // Wait 1 second between messages
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.error(`Failed to process user ${userData.email}:`, error);
+      // Log full error details
+      console.error("Full error:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
     }
   }
 
