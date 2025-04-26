@@ -98,7 +98,7 @@ task = "shell.exec"
 args = "npx tsx simulate-2-real-users.ts"
 
 [[workflows.workflow]]
-name = "Debug Simulation"
+name = "Simulate Users"
 author = 41108408
 mode = "sequential"
 
