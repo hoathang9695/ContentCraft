@@ -1,4 +1,3 @@
-
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
 
@@ -27,12 +26,13 @@ async function processRealUserMessage(userData: {
     const newRealUser = await db
       .insert(realUsers)
       .values({
-        fullName: {
+        id: userData.id,
+        fullName: JSON.stringify({
           id: userData.id,
           name: userData.fullName
-        },
+        }),
         email: userData.email,
-        verified: userData.verified === "verified" ? "verified" : "unverified",
+        verified: userData.verified,
         lastLogin: now,
         createdAt: now,
         updatedAt: now,
@@ -50,7 +50,7 @@ async function processRealUserMessage(userData: {
 
 async function simulateKafkaRealUsers() {
   console.log("🚀 Starting Kafka simulation...");
-  
+
   const testUsers = [
     {
       id: "113725869733725553",
