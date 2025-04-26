@@ -54,15 +54,15 @@ async function simulateKafkaRealUsers() {
   const testUsers = [
     {
       id: "113725869733725553",
-      fullName: "Trần Văn A",
-      email: "trana@gmail.com",
+      fullName: "Bùi Tự",
+      email: "btu@gmail.com",
       verified: "unverified" as const,
       assignedToId: 2
     },
     {
       id: "114040296560430925",
-      fullName: "Nguyễn Thị B", 
-      email: "thib@gmail.com",
+      fullName: "Tuyền Dream", 
+      email: "tuyen@gmail.com",
       verified: "verified" as const,
       assignedToId: 3
     }
