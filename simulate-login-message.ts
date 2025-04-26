@@ -1,23 +1,43 @@
+
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
-import { processRealUserMessage } from "./server/kafka-consumer";
+import { eq } from "drizzle-orm";
 
 async function simulateUserLogin() {
-  console.log("🚀 Simulating login message for Lệ Quyên...");
-
-  const loginMessage = {
-    id: "114161342588621045",
-    fullName: "Lệ Quyên",
-    email: "quyen@gmail.com",
-    verified: "unverified" as const,
-    lastLogin: new Date("2025-04-26T01:00:50.629Z")
-  };
-
+  console.log("🚀 Simulating login for Lệ Quyên...");
+  
   try {
-    await processRealUserMessage(loginMessage);
-    console.log("✅ Successfully processed login message");
+    // First find the user
+    const user = await db.query.realUsers.findFirst({
+      where: eq(realUsers.email, "quyen@gmail.com")
+    });
+
+    if (!user) {
+      console.error("❌ User Lệ Quyên not found in database");
+      return;
+    }
+
+    console.log("✅ Found user:", user);
+
+    // Update lastLogin and updatedAt
+    const now = new Date();
+    const result = await db
+      .update(realUsers)
+      .set({
+        lastLogin: now,
+        updatedAt: now
+      })
+      .where(eq(realUsers.email, "quyen@gmail.com"))
+      .returning();
+
+    if (result.length > 0) {
+      console.log("✅ Successfully updated login time for Lệ Quyên");
+      console.log("Updated user:", result[0]);
+    } else {
+      console.log("❌ Failed to update user");
+    }
   } catch (error) {
-    console.error("⚠️ Error processing login message:", error);
+    console.error("❌ Error updating login time:", error);
   }
 }
 
