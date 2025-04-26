@@ -28,10 +28,7 @@ async function processRealUserMessage(userData: {
       .insert(realUsers)
       .values({
         id: userData.id,
-        fullName: JSON.stringify({
-        id: userData.id,
-        name: userData.fullName
-      }),
+        fullName: userData.fullName,
         email: userData.email,
         verified: userData.verified,
         lastLogin: now,
@@ -55,15 +52,21 @@ async function simulateKafkaRealUsers() {
   const testUsers = [
     {
       id: "113725869733725553",
-      fullName: "Bùi Tự", 
+      fullName: JSON.stringify({
+        id: "113725869733725553",
+        name: "Bùi Tự"
+      }),
       email: "btu@gmail.com",
       verified: "unverified" as const,
       assignedToId: 2
     },
     {
-      id: "114040296560430925", 
-      fullName: "Tuyền Dream",
-      email: "tuyen@gmail.com", 
+      id: "114040296560430925",
+      fullName: JSON.stringify({
+        id: "114040296560430925", 
+        name: "Tuyền Dream"
+      }),
+      email: "tuyen@gmail.com",
       verified: "verified" as const,
       assignedToId: 3
     }
