@@ -7,9 +7,9 @@ async function simulateUserLogin() {
   console.log("🚀 Simulating login for Lệ Quyên...");
   
   try {
-    // First find the user
+    // Tìm user với id cụ thể
     const user = await db.query.realUsers.findFirst({
-      where: eq(realUsers.email, "quyen@gmail.com")
+      where: eq(realUsers.fullName.id, "114161342588621045")
     });
 
     if (!user) {
@@ -19,7 +19,7 @@ async function simulateUserLogin() {
 
     console.log("✅ Found user:", user);
 
-    // Update lastLogin and updatedAt
+    // Cập nhật lastLogin
     const now = new Date();
     const result = await db
       .update(realUsers)
@@ -27,7 +27,7 @@ async function simulateUserLogin() {
         lastLogin: now,
         updatedAt: now
       })
-      .where(eq(realUsers.email, "quyen@gmail.com"))
+      .where(eq(realUsers.fullName.id, "114161342588621045"))
       .returning();
 
     if (result.length > 0) {
