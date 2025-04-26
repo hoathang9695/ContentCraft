@@ -6,16 +6,19 @@ import { eq } from "drizzle-orm";
 async function simulateUserLogin() {
   console.log("🚀 Simulating login for Lệ Quyên...");
 
-  const loginTime = new Date("2025-04-26T01:00:50.629+07:00");
-
   try {
+    const loginTime = new Date("2025-04-26T01:00:50.629+07:00");
+
+    // Update lastLogin directly in database
     const result = await db
       .update(realUsers)
       .set({
         lastLogin: loginTime,
         updatedAt: loginTime
       })
-      .where(eq(realUsers.fullName.id, "114161342588621045"))
+      .where(
+        eq(realUsers.fullName.id, "114161342588621045")
+      )
       .returning();
 
     if (result.length > 0) {
