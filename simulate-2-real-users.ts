@@ -1,3 +1,4 @@
+
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
 
@@ -10,9 +11,19 @@ async function processRealUserMessage(userData: {
 }) {
   try {
     const now = new Date();
-    console.log("Processing user data:", userData);
+    console.log("🔄 Processing user data:", userData);
 
-    // Insert new real user with proper format
+    // Check if user already exists
+    const existingUser = await db.select().from(realUsers).where({
+      email: userData.email
+    });
+
+    if (existingUser.length > 0) {
+      console.log(`⚠️ User with email ${userData.email} already exists`);
+      return existingUser[0];
+    }
+
+    // Insert new real user
     const newRealUser = await db
       .insert(realUsers)
       .values({
@@ -29,7 +40,7 @@ async function processRealUserMessage(userData: {
       })
       .returning();
 
-    console.log(`✅ Created real user with ID ${newRealUser[0].id}, assigned to user ID ${userData.assignedToId}`);
+    console.log(`✅ Created new real user:`, newRealUser[0]);
     return newRealUser[0];
   } catch (error) {
     console.error("❌ Error processing real user message:", error);
@@ -39,41 +50,33 @@ async function processRealUserMessage(userData: {
 
 async function simulateKafkaRealUsers() {
   console.log("🚀 Starting Kafka simulation...");
-  const now = new Date();
-  console.log("Current timestamp:", now.toISOString());
   
   const testUsers = [
     {
       id: "113725869733725553",
-      fullName: "Bùi Tự",
-      email: "btu@gmail.com", 
+      fullName: "Trần Văn A",
+      email: "trana@gmail.com",
       verified: "unverified" as const,
-      assignedToId: 2,
-      lastLogin: now,
-      createdAt: now,
-      updatedAt: now
+      assignedToId: 2
     },
     {
       id: "114040296560430925",
-      fullName: "Tuyền Dream", 
-      email: "tuyen@gmail.com",
+      fullName: "Nguyễn Thị B", 
+      email: "thib@gmail.com",
       verified: "verified" as const,
-      assignedToId: 3,
-      lastLogin: now,
-      createdAt: now,
-      updatedAt: now
+      assignedToId: 3
     }
   ];
 
   for (const userData of testUsers) {
     try {
-      console.log("Processing user:", userData);
+      console.log("\n📝 Processing user:", userData);
       const result = await processRealUserMessage(userData);
-      console.log("Successfully processed user:", result);
+      console.log("✨ Successfully processed user:", result);
       // Wait 1 second between messages
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error(`Failed to process user ${userData.email}:`, error);
+      console.error(`❌ Failed to process user ${userData.email}:`, error);
       console.error("Full error:", {
         name: error.name,
         message: error.message,
