@@ -1,21 +1,25 @@
 
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 async function simulateUserLogin() {
-  console.log("🚀 Simulating login message for Lệ Quyên...");
+  console.log("🚀 Simulating login for Lệ Quyên...");
+  const loginTime = new Date("2025-04-26T01:00:50.629Z");
 
   try {
-    // Update lastLogin time for Lệ Quyên
+    // Update lastLogin time for Lệ Quyên directly in DB
     const result = await db
       .update(realUsers)
       .set({
-        lastLogin: new Date("2025-04-26T01:00:50.629Z"),
+        lastLogin: loginTime,
         updatedAt: new Date()
       })
       .where(
-        eq(realUsers.email, "quyen@gmail.com")
+        and(
+          eq(realUsers.email, "quyen@gmail.com"),
+          eq(realUsers.fullName.id, "114161342588621045")
+        )
       )
       .returning();
 
