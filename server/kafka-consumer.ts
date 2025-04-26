@@ -361,6 +361,7 @@ export interface RealUserMessage {
   fullName: string;
   email: string;
   verified: "verified" | "unverified";
+  lastLogin?: Date; // Thêm lastLogin là optional
 }
 
 async function processRealUserMessage(message: RealUserMessage) {

@@ -45,6 +45,7 @@ async function simulateKafkaRealUsers() {
       fullName: "Lệ Quyên",
       email: "quyen@gmail.com", 
       verified: "unverified" as const,
+      lastLogin: new Date(),
       assignedToId: 2
     },
     {
