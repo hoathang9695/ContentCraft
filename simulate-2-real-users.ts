@@ -11,8 +11,9 @@ async function processRealUserMessage(userData: {
 }) {
   try {
     const now = new Date();
+    console.log("Inserting user data:", userData);
 
-    // Insert new real user with proper format
+    // Insert new real user with proper format 
     const newRealUser = await db
       .insert(realUsers)
       .values({
