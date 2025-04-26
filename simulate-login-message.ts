@@ -9,22 +9,24 @@ async function simulateUserLogin() {
   try {
     const loginTime = new Date("2025-04-26T01:00:50.629+07:00");
 
-    // Update lastLogin for user with specific ID
+    // Update lastLogin for user with specific ID in the fullName jsonb field
     const result = await db
       .update(realUsers)
       .set({
-        lastLogin: loginTime
+        lastLogin: loginTime,
+        updatedAt: loginTime,
+        verified: "unverified"
       })
       .where(
-        eq(realUsers.fullName['id'], "114161342588621045") // ID của Lệ Quyên
+        eq(realUsers.fullName['id'], "114161342588621045")
       )
       .returning();
 
     if (result.length > 0) {
-      console.log("✅ Successfully updated login time for Lệ Quyên");
+      console.log("✅ Successfully updated login time");
       console.log("Updated user:", result[0]);
     } else {
-      console.log("❌ No user was updated");
+      console.log("❌ No user was updated"); 
     }
   } catch (error) {
     console.error("❌ Error updating login time:", error);
