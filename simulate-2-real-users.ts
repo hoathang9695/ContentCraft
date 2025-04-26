@@ -23,7 +23,7 @@ async function processRealUserMessage(userData: {
       return existingUser[0];
     }
 
-    // Insert new real user
+    // Insert new real user with text verified field
     const newRealUser = await db
       .insert(realUsers)
       .values({
@@ -32,7 +32,7 @@ async function processRealUserMessage(userData: {
           name: userData.fullName
         },
         email: userData.email,
-        verified: userData.verified,
+        verified: userData.verified === "verified" ? "verified" : "unverified",
         lastLogin: now,
         createdAt: now,
         updatedAt: now,
