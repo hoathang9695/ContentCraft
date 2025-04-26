@@ -1,3 +1,4 @@
+
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
 
@@ -27,16 +28,16 @@ async function processRealUserMessage(userData: {
       .insert(realUsers)
       .values({
         id: userData.id,
-        fullName: JSON.stringify({
+        fullName: {
           id: userData.id,
           name: userData.fullName
-        }),
+        },
         email: userData.email,
         verified: userData.verified,
         lastLogin: now,
+        assignedToId: userData.assignedToId,
         createdAt: now,
         updatedAt: now,
-        assignedToId: userData.assignedToId,
       })
       .returning();
 
@@ -54,15 +55,15 @@ async function simulateKafkaRealUsers() {
   const testUsers = [
     {
       id: "113725869733725553",
-      fullName: "Bùi Tự",
+      fullName: "Bùi Tự", 
       email: "btu@gmail.com",
       verified: "unverified" as const,
       assignedToId: 2
     },
     {
-      id: "114040296560430925",
-      fullName: "Tuyền Dream", 
-      email: "tuyen@gmail.com",
+      id: "114040296560430925", 
+      fullName: "Tuyền Dream",
+      email: "tuyen@gmail.com", 
       verified: "verified" as const,
       assignedToId: 3
     }
