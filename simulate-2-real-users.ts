@@ -11,9 +11,9 @@ async function processRealUserMessage(userData: {
 }) {
   try {
     const now = new Date();
-    console.log("Inserting user data:", userData);
+    console.log("Processing user data:", userData);
 
-    // Insert new real user with proper format 
+    // Insert new real user with proper format
     const newRealUser = await db
       .insert(realUsers)
       .values({
@@ -30,9 +30,7 @@ async function processRealUserMessage(userData: {
       })
       .returning();
 
-    console.log(
-      `✅ Created real user with ID ${newRealUser[0].id}, assigned to user ID ${userData.assignedToId}`,
-    );
+    console.log(`✅ Created real user with ID ${newRealUser[0].id}, assigned to user ID ${userData.assignedToId}`);
     return newRealUser[0];
   } catch (error) {
     console.error("❌ Error processing real user message:", error);
@@ -41,7 +39,7 @@ async function processRealUserMessage(userData: {
 }
 
 async function simulateKafkaRealUsers() {
-  console.log("Starting Kafka simulation...");
+  console.log("🚀 Starting Kafka simulation...");
   const testUsers = [
     {
       id: "113725869733725553",
@@ -59,18 +57,15 @@ async function simulateKafkaRealUsers() {
     }
   ];
 
-  console.log('Starting simulation for real users...');
-
   for (const userData of testUsers) {
     try {
-      console.log("Processing user data:", userData);
+      console.log("Processing user:", userData);
       const result = await processRealUserMessage(userData);
       console.log("Successfully processed user:", result);
       // Wait 1 second between messages
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.error(`Failed to process user ${userData.email}:`, error);
-      // Log full error details
       console.error("Full error:", {
         name: error.name,
         message: error.message,
@@ -79,16 +74,16 @@ async function simulateKafkaRealUsers() {
     }
   }
 
-  console.log('Completed real users simulation');
+  console.log('✅ Completed real users simulation');
 }
 
 // Run simulation
 simulateKafkaRealUsers()
   .then(() => {
-    console.log('Script completed successfully');
+    console.log('🎉 Script completed successfully');
     process.exit(0);
   })
   .catch(err => {
-    console.error('Script failed:', err);
+    console.error('❌ Script failed:', err);
     process.exit(1);
   });
