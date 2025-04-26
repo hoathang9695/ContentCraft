@@ -7,14 +7,14 @@ async function simulateUserLogin() {
   console.log("🚀 Simulating login for Lệ Quyên...");
 
   try {
-    const loginTime = new Date("2025-04-26T01:00:50.629+07:00");
+    const loginTime = new Date();
 
-    // Update lastLogin for user with specific ID and email
+    // Update lastLogin for Lệ Quyên
     const result = await db
       .update(realUsers)
       .set({
         lastLogin: loginTime,
-        updatedAt: loginTime,
+        updatedAt: loginTime
       })
       .where(
         and(
