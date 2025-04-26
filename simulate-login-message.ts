@@ -7,8 +7,8 @@ async function simulateUserLogin() {
   console.log("🚀 Simulating login for Lệ Quyên...");
 
   try {
-    // Create login time with timezone offset
-    const loginTime = new Date("2025-04-26T01:00:50.629+07:00").toISOString();
+    // Create login time with explicit timezone
+    const loginTime = "2025-04-26 01:00:50.629+07";
     console.log("Setting login time to:", loginTime);
 
     // Update lastLogin directly in database
