@@ -39,20 +39,29 @@ async function processRealUserMessage(userData: {
 
 async function simulateKafkaRealUsers() {
   console.log("🚀 Starting Kafka simulation...");
+  const now = new Date();
+  console.log("Current timestamp:", now.toISOString());
+  
   const testUsers = [
     {
       id: "113725869733725553",
       fullName: "Bùi Tự",
-      email: "btu@gmail.com",
+      email: "btu@gmail.com", 
       verified: "unverified" as const,
-      assignedToId: 2
+      assignedToId: 2,
+      lastLogin: now,
+      createdAt: now,
+      updatedAt: now
     },
     {
-      id: "114040296560430925", 
-      fullName: "Tuyền Dream",
+      id: "114040296560430925",
+      fullName: "Tuyền Dream", 
       email: "tuyen@gmail.com",
       verified: "verified" as const,
-      assignedToId: 3
+      assignedToId: 3,
+      lastLogin: now,
+      createdAt: now,
+      updatedAt: now
     }
   ];
 
