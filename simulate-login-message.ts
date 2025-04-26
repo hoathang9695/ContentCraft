@@ -9,15 +9,14 @@ async function simulateUserLogin() {
   try {
     const loginTime = new Date("2025-04-26T01:00:50.629+07:00");
 
-    // Update lastLogin directly in database for user with specified fullName.id
+    // Update lastLogin for user with specific ID
     const result = await db
       .update(realUsers)
       .set({
-        lastLogin: loginTime,
-        updatedAt: loginTime
+        lastLogin: loginTime
       })
       .where(
-        eq(realUsers.fullName["id"], "114161342588621045") // ID của Lệ Quyên
+        eq(realUsers.fullName['id'], "114161342588621045") // ID của Lệ Quyên
       )
       .returning();
 
