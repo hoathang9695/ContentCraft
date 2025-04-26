@@ -1,4 +1,3 @@
-
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
 
@@ -11,34 +10,27 @@ async function processRealUserMessage(userData: {
 }) {
   try {
     const now = new Date();
-    console.log("🔄 Processing user data:", userData);
 
-    // Check if user already exists
-    const existingUser = await db.select().from(realUsers).where({
-      email: userData.email
-    });
-
-    if (existingUser.length > 0) {
-      console.log(`⚠️ User with email ${userData.email} already exists`);
-      return existingUser[0];
-    }
-
-    // Insert new real user with text verified field
+    // Insert new real user with proper format
     const newRealUser = await db
       .insert(realUsers)
       .values({
-        id: userData.id,
-        fullName: userData.fullName,
+        fullName: {
+          id: userData.id,
+          name: userData.fullName
+        },
         email: userData.email,
         verified: userData.verified,
         lastLogin: now,
-        assignedToId: userData.assignedToId,
         createdAt: now,
         updatedAt: now,
+        assignedToId: userData.assignedToId,
       })
       .returning();
 
-    console.log(`✅ Created new real user:`, newRealUser[0]);
+    console.log(
+      `✅ Created real user with ID ${newRealUser[0].id}, assigned to user ID ${userData.assignedToId}`,
+    );
     return newRealUser[0];
   } catch (error) {
     console.error("❌ Error processing real user message:", error);
@@ -47,58 +39,45 @@ async function processRealUserMessage(userData: {
 }
 
 async function simulateKafkaRealUsers() {
-  console.log("🚀 Starting Kafka simulation...");
-
   const testUsers = [
     {
-      id: "113725869733725553",
-      fullName: JSON.stringify({
-        id: "113725869733725553",
-        name: "Bùi Tự"
-      }),
-      email: "btu@gmail.com",
+      id: "114161342588621045",
+      fullName: "Lệ Quyên",
+      email: "quyen@gmail.com", 
       verified: "unverified" as const,
       assignedToId: 2
     },
     {
-      id: "114040296560430925",
-      fullName: JSON.stringify({
-        id: "114040296560430925", 
-        name: "Tuyền Dream"
-      }),
-      email: "tuyen@gmail.com",
-      verified: "verified" as const,
+      id: "113762295336825662",
+      fullName: "Nguyễn Huy Thành",
+      email: "thanh@gmail.com",
+      verified: "verified" as const, 
       assignedToId: 3
     }
   ];
 
+  console.log('Starting simulation for real users...');
+
   for (const userData of testUsers) {
     try {
-      console.log("\n📝 Processing user:", userData);
-      const result = await processRealUserMessage(userData);
-      console.log("✨ Successfully processed user:", result);
+      await processRealUserMessage(userData);
       // Wait 1 second between messages
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error(`❌ Failed to process user ${userData.email}:`, error);
-      console.error("Full error:", {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      });
+      console.error(`Failed to process user ${userData.email}:`, error);
     }
   }
 
-  console.log('✅ Completed real users simulation');
+  console.log('Completed real users simulation');
 }
 
 // Run simulation
 simulateKafkaRealUsers()
   .then(() => {
-    console.log('🎉 Script completed successfully');
+    console.log('Script completed successfully');
     process.exit(0);
   })
   .catch(err => {
-    console.error('❌ Script failed:', err);
+    console.error('Script failed:', err);
     process.exit(1);
   });

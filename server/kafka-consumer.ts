@@ -49,13 +49,13 @@ export async function setupKafkaConsumer() {
       brokers,
       ssl: false,
       sasl,
-      connectionTimeout: 60000,
-      authenticationTimeout: 60000,
+      connectionTimeout: 30000, // Giảm timeout
+      authenticationTimeout: 30000,
       retry: {
-        initialRetryTime: 5000,
-        retries: 15,
-        maxRetryTime: 60000,
-        factor: 1.5,
+        initialRetryTime: 1000, // Giảm thời gian retry đầu tiên
+        retries: 10, // Giảm số lần retry
+        maxRetryTime: 30000, // Giảm max retry time
+        factor: 2,
       },
       logLevel: 4,
       requestTimeout: 30000,
@@ -361,7 +361,6 @@ export interface RealUserMessage {
   fullName: string;
   email: string;
   verified: "verified" | "unverified";
-  lastLogin?: Date; // Thêm lastLogin là optional
 }
 
 async function processRealUserMessage(message: RealUserMessage) {

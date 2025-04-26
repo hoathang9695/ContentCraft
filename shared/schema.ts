@@ -161,9 +161,9 @@ export type SupportRequest = typeof supportRequests.$inferSelect;
 // Real users table
 export const realUsers = pgTable("real_users", {
   id: serial("id").primaryKey(),
-  fullName: text("full_name").notNull(),
+  fullName: jsonb("full_name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  verified: text("verified").notNull().default("unverified"),
+  verified: boolean("verified").notNull().default(false),
   lastLogin: timestamp("last_login", { withTimezone: true }),
   assignedToId: integer("assigned_to_id").references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
