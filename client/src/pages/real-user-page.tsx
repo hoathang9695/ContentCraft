@@ -108,7 +108,7 @@ export default function RealUserPage() {
       // Standardize data structure
       return data?.map(user => ({
         id: user.id,
-        fullName: typeof user.fullName === 'string' ? { name: user.fullName, id: user.id } : user.fullName,
+        fullName: user.fullName ? (typeof user.fullName === 'object' ? user.fullName : (typeof user.fullName === 'string' ? JSON.parse(user.fullName) : {name: '', id: user.id})) : {name: '', id: user.id},
         email: user.email,
         verified: user.verified,
         lastLogin: user.lastLogin,
@@ -345,7 +345,7 @@ export default function RealUserPage() {
                 key: "fullName",
                 header: "Họ và tên",
                 render: (row) => {
-                  if (!row.fullName?.id || !row.fullName?.name) {
+                  if (!row.fullName?.name) {
                     return <span className="text-xs text-gray-500">N/A</span>;
                   }
 
