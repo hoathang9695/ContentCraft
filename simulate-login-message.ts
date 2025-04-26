@@ -9,6 +9,7 @@ async function simulateUserLogin() {
     fullName: "Lệ Quyên",
     email: "quyen@gmail.com",
     verified: "unverified" as const,
+    lastLogin: "2025-04-26T01:00:50.629Z"
   };
 
   try {
