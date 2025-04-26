@@ -1,4 +1,4 @@
-import { db } from "./server/db";
+
 import { processRealUserMessage } from "./server/kafka-consumer";
 
 async function simulateUserLogin() {
@@ -6,20 +6,18 @@ async function simulateUserLogin() {
 
   const loginMessage = {
     id: "114161342588621045",
-    fullName: "Lệ Quyên", 
+    fullName: "Lệ Quyên",
     email: "quyen@gmail.com",
     verified: "unverified" as const,
-    assignedToId: 2, // Assigned to user ID 2
     lastLogin: new Date("2025-04-26T01:00:50.629+07:00")
   };
 
   try {
-    const result = await processRealUserMessage(loginMessage);
-    console.log("✅ Successfully simulated login message");
+    await processRealUserMessage(loginMessage);
+    console.log("✅ Successfully processed login message");
     console.log("Message:", loginMessage);
-    console.log("Result:", result);
   } catch (error) {
-    console.error("❌ Error simulating login:", error);
+    console.error("❌ Error processing login message:", error);
   }
 }
 
