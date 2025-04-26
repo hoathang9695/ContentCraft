@@ -1,36 +1,23 @@
-
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
-import { and, eq } from "drizzle-orm";
+import { processRealUserMessage } from "./server/kafka-consumer";
 
 async function simulateUserLogin() {
-  console.log("🚀 Simulating login for Lệ Quyên...");
-  const loginTime = new Date("2025-04-26T01:00:50.629Z");
+  console.log("🚀 Simulating login message for Lệ Quyên...");
+
+  const loginMessage = {
+    id: "114161342588621045",
+    fullName: "Lệ Quyên",
+    email: "quyen@gmail.com",
+    verified: "unverified" as const,
+    lastLogin: new Date("2025-04-26T01:00:50.629Z")
+  };
 
   try {
-    // Update lastLogin time for Lệ Quyên directly in DB
-    const result = await db
-      .update(realUsers)
-      .set({
-        lastLogin: loginTime,
-        updatedAt: new Date()
-      })
-      .where(
-        and(
-          eq(realUsers.email, "quyen@gmail.com"),
-          eq(realUsers.fullName.id, "114161342588621045")
-        )
-      )
-      .returning();
-
-    if (result.length > 0) {
-      console.log("✅ Successfully updated login time for Lệ Quyên");
-      console.log("Updated user:", result[0]);
-    } else {
-      console.log("❌ User not found");
-    }
+    await processRealUserMessage(loginMessage);
+    console.log("✅ Successfully processed login message");
   } catch (error) {
-    console.error("❌ Error updating login time:", error);
+    console.error("⚠️ Error processing login message:", error);
   }
 }
 
