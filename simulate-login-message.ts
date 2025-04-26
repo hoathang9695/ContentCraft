@@ -1,3 +1,4 @@
+
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
 import { and, eq } from "drizzle-orm";
@@ -14,7 +15,6 @@ async function simulateUserLogin() {
       .set({
         lastLogin: loginTime,
         updatedAt: loginTime,
-        verified: "unverified"
       })
       .where(
         and(
