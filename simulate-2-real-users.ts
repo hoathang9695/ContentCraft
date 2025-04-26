@@ -1,3 +1,4 @@
+
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
 
@@ -41,18 +42,17 @@ async function processRealUserMessage(userData: {
 async function simulateKafkaRealUsers() {
   const testUsers = [
     {
-      id: "114161342588621045",
-      fullName: "Lệ Quyên",
-      email: "quyen@gmail.com", 
+      id: "113725869733725553",
+      fullName: "Bùi Tự",
+      email: "btu@gmail.com",
       verified: "unverified" as const,
-      lastLogin: new Date(),
       assignedToId: 2
     },
     {
-      id: "113762295336825662",
-      fullName: "Nguyễn Huy Thành",
-      email: "thanh@gmail.com",
-      verified: "verified" as const, 
+      id: "114040296560430925", 
+      fullName: "Tuyền Dream",
+      email: "tuyen@gmail.com",
+      verified: "verified" as const,
       assignedToId: 3
     }
   ];
