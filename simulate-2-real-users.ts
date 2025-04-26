@@ -28,10 +28,10 @@ async function processRealUserMessage(userData: {
       .insert(realUsers)
       .values({
         id: userData.id,
-        fullName: {
-          id: userData.id,
-          name: userData.fullName
-        },
+        fullName: JSON.stringify({
+        id: userData.id,
+        name: userData.fullName
+      }),
         email: userData.email,
         verified: userData.verified,
         lastLogin: now,
