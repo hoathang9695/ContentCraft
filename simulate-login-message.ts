@@ -9,13 +9,13 @@ async function simulateUserLogin() {
   try {
     const loginTime = new Date("2025-04-26T01:00:50.629+07:00");
 
-    // Update lastLogin for user with specific ID in the fullName jsonb field
+    // Update lastLogin for user with specified fullName.id 
     const result = await db
       .update(realUsers)
       .set({
         lastLogin: loginTime,
         updatedAt: loginTime,
-        verified: "unverified"
+        verified: "unverified" as const
       })
       .where(
         eq(realUsers.fullName['id'], "114161342588621045")
