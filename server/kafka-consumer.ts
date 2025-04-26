@@ -361,7 +361,6 @@ export interface RealUserMessage {
   fullName: string;
   email: string;
   verified: "verified" | "unverified";
-  lastLogin?: Date;
 }
 
 async function processRealUserMessage(message: RealUserMessage) {
@@ -401,13 +400,13 @@ async function processRealUserMessage(message: RealUserMessage) {
     const newRealUser = await db
       .insert(realUsers)
       .values({
-        fullName: {
+        fullName: JSON.stringify({
           id: message.id,
           name: message.fullName,
-        },
+        }),
         email: message.email,
         verified: message.verified,
-        lastLogin: message.lastLogin || now,
+        lastLogin: now,
         assignedToId: assignedToId,
         createdAt: now,
         updatedAt: now,
