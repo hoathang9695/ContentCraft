@@ -1,7 +1,7 @@
 
 import { db } from "./server/db";
 import { realUsers } from "./shared/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 async function simulateUserLogin() {
   console.log("🚀 Simulating login for Lệ Quyên...");
@@ -9,16 +9,18 @@ async function simulateUserLogin() {
   try {
     const loginTime = new Date("2025-04-26T01:00:50.629+07:00");
 
-    // Update lastLogin for user with specified fullName.id 
+    // Update lastLogin for user with specific ID and email
     const result = await db
       .update(realUsers)
       .set({
         lastLogin: loginTime,
-        updatedAt: loginTime,
-        verified: "unverified" as const
+        updatedAt: loginTime
       })
       .where(
-        eq(realUsers.fullName['id'], "114161342588621045")
+        and(
+          eq(realUsers.fullName['id'], "114161342588621045"),
+          eq(realUsers.email, "quyen@gmail.com")
+        )
       )
       .returning();
 
