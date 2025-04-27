@@ -160,7 +160,7 @@ export async function setupKafkaConsumer() {
 
             let retryCount = 0;
             const maxRetries = 3;
-            
+
             while (retryCount < maxRetries) {
               try {
                 const message = messages[i];
@@ -182,21 +182,18 @@ export async function setupKafkaConsumer() {
                   isolationLevel: 'serializable' // Prevent race conditions
                 });
 
-                // After successful transaction
                 resolveOffset(message.offset);
                 await heartbeat();
-                retryCount = maxRetries; // Exit retry loop
-                
               } catch (error) {
                 retryCount++;
                 log(`Processing error (attempt ${retryCount}): ${error}`, "kafka-error");
-                
+
                 if (retryCount === maxRetries) {
                   // Send to Dead Letter Queue
                   await sendToDeadLetterQueue(messages[i]);
                   resolveOffset(message.offset); // Skip message after max retries
                 }
-                
+
                 // Wait before retry
                 await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
               }
