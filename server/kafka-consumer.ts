@@ -152,16 +152,35 @@ export async function setupKafkaConsumer() {
       );
 
       await consumer.run({
-        eachMessage: async (payload: EachMessagePayload) => {
-          const { message } = payload;
-          const parsedMessage = parseMessage(message.value);
+        eachBatchAutoResolve: true,
+        eachBatch: async ({ batch, resolveOffset, heartbeat, isRunning, isStale }) => {
+          const messages = batch.messages;
+          for (let i = 0; i < messages.length; i++) {
+            if (!isRunning() || isStale()) break;
 
-          if (!parsedMessage) return;
+            try {
+              const message = messages[i];
+              const parsedMessage = parseMessage(message.value);
 
-          if ("externalId" in parsedMessage) {
-            await processContentMessage(parsedMessage as ContentMessage);
-          } else if ("full_name" in parsedMessage) {
-            await processSupportMessage(parsedMessage as SupportMessage);
+              if (!parsedMessage) {
+                resolveOffset(message.offset);
+                continue;
+              }
+
+              await db.transaction(async (tx) => {
+                if ("externalId" in parsedMessage) {
+                  await processContentMessage(parsedMessage as ContentMessage, tx);
+                } else if ("full_name" in parsedMessage) {
+                  await processSupportMessage(parsedMessage as SupportMessage, tx);
+                }
+              });
+
+              resolveOffset(message.offset);
+              await heartbeat();
+            } catch (error) {
+              log(`Error processing message: ${error}`, "kafka-error");
+              // Consider implementing Dead Letter Queue here
+            }
           }
         },
       });
@@ -198,14 +217,14 @@ function parseMessage(
   }
 }
 
-async function processContentMessage(contentMessage: ContentMessage) {
+async function processContentMessage(contentMessage: ContentMessage, tx: any) {
   try {
     log(
       `Processing content message: ${JSON.stringify(contentMessage)}`,
       "kafka",
     );
 
-    const activeUsers = await db
+    const activeUsers = await tx
       .select()
       .from(users)
       .where(eq(users.status, "active"));
@@ -216,7 +235,7 @@ async function processContentMessage(contentMessage: ContentMessage) {
       return;
     }
 
-    const lastAssignedRequest = await db.query.supportRequests.findFirst({
+    const lastAssignedRequest = await tx.query.supportRequests.findFirst({
       orderBy: (supportRequests, { desc }) => [
         desc(supportRequests.assigned_at),
       ],
@@ -248,7 +267,7 @@ async function processContentMessage(contentMessage: ContentMessage) {
       updatedAt: now,
     };
 
-    const newContent = await db.insert(contents).values(insertData).returning();
+    const newContent = await tx.insert(contents).values(insertData).returning();
     log(`New content created with ID ${newContent[0].id}`, "kafka");
     log(
       `Content request created and assigned to user ID ${assigned_to_id}`,
@@ -262,7 +281,7 @@ async function processContentMessage(contentMessage: ContentMessage) {
   }
 }
 
-async function processSupportMessage(message: SupportMessage) {
+async function processSupportMessage(message: SupportMessage, tx: any) {
   try {
     // Validate required fields
     if (
@@ -278,7 +297,7 @@ async function processSupportMessage(message: SupportMessage) {
     log(`Processing support message: ${JSON.stringify(message)}`, "kafka");
 
     // Get active users
-    const activeUsers = await db
+    const activeUsers = await tx
       .select()
       .from(users)
       .where(eq(users.status, "active"));
@@ -290,7 +309,7 @@ async function processSupportMessage(message: SupportMessage) {
     log(`Found ${activeUsers.length} active users for assignment`, "kafka");
 
     // Find last assigned request
-    const lastAssignedRequest = await db.query.supportRequests.findFirst({
+    const lastAssignedRequest = await tx.query.supportRequests.findFirst({
       orderBy: (supportRequests, { desc }) => [
         desc(supportRequests.assigned_at),
       ],
@@ -329,7 +348,7 @@ async function processSupportMessage(message: SupportMessage) {
 
     try {
       // Insert into DB
-      const newRequest = await db
+      const newRequest = await tx
         .insert(supportRequests)
         .values(insertData)
         .returning();
