@@ -158,44 +158,57 @@ export async function setupKafkaConsumer() {
           for (let i = 0; i < messages.length; i++) {
             if (!isRunning() || isStale()) break;
 
+            const message = messages[i];
+            log(`Processing message ${i + 1}/${messages.length} (offset: ${message.offset})`, "kafka");
+            
             let retryCount = 0;
             const maxRetries = 3;
+            let success = false;
 
-            while (retryCount < maxRetries) {
+            while (retryCount < maxRetries && !success) {
               try {
-                const message = messages[i];
                 const parsedMessage = parseMessage(message.value);
-
                 if (!parsedMessage) {
                   log(`Invalid message format: ${message.value}`, "kafka-error");
-                  resolveOffset(message.offset);
                   break;
                 }
 
                 await db.transaction(async (tx) => {
-                  if ("externalId" in parsedMessage) {
-                    await processContentMessage(parsedMessage as ContentMessage, tx);
-                  } else if ("full_name" in parsedMessage) {
-                    await processSupportMessage(parsedMessage as SupportMessage, tx);
+                  try {
+                    if ("externalId" in parsedMessage) {
+                      log(`Processing content message: ${JSON.stringify(parsedMessage)}`, "kafka");
+                      await processContentMessage(parsedMessage as ContentMessage, tx);
+                    } else if ("full_name" in parsedMessage) {
+                      log(`Processing support message: ${JSON.stringify(parsedMessage)}`, "kafka");
+                      await processSupportMessage(parsedMessage as SupportMessage, tx);
+                    }
+                    success = true;
+                  } catch (txError) {
+                    log(`Transaction error: ${txError}`, "kafka-error");
+                    throw txError; // Trigger rollback
                   }
                 }, {
-                  isolationLevel: 'serializable' // Prevent race conditions
+                  isolationLevel: 'serializable'
                 });
 
-                resolveOffset(message.offset);
-                await heartbeat();
+                if (success) {
+                  log(`Successfully processed message (offset: ${message.offset})`, "kafka");
+                  resolveOffset(message.offset);
+                  await heartbeat();
+                }
               } catch (error) {
                 retryCount++;
-                log(`Processing error (attempt ${retryCount}): ${error}`, "kafka-error");
+                log(`Processing error (attempt ${retryCount}/${maxRetries}): ${error}`, "kafka-error");
 
                 if (retryCount === maxRetries) {
-                  // Send to Dead Letter Queue
-                  await sendToDeadLetterQueue(messages[i]);
-                  resolveOffset(message.offset); // Skip message after max retries
+                  log(`Max retries reached for message (offset: ${message.offset}), sending to DLQ`, "kafka-error");
+                  await sendToDeadLetterQueue(message);
+                  resolveOffset(message.offset);
+                } else {
+                  const retryDelay = 1000 * Math.pow(2, retryCount - 1); // Exponential backoff
+                  log(`Waiting ${retryDelay}ms before retry`, "kafka");
+                  await new Promise(resolve => setTimeout(resolve, retryDelay));
                 }
-
-                // Wait before retry
-                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
               }
             }
           }
