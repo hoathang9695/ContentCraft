@@ -173,24 +173,19 @@ export async function setupKafkaConsumer() {
                 }
 
                 await db.transaction(async (tx) => {
-                  try {
-                    if ("externalId" in parsedMessage) {
-                      await processContentMessage(parsedMessage as ContentMessage, tx);
-                    } else if ("full_name" in parsedMessage) {
-                      await processSupportMessage(parsedMessage as SupportMessage, tx);
-                    }
-                    resolveOffset(message.offset);
-                    await heartbeat();
-                    break; // Success - exit retry loop
-                  } catch (txError) {
-                    log(`Transaction error (attempt ${retryCount + 1}): ${txError}`, "kafka-error");
-                    throw txError; // Trigger rollback
+                  if ("externalId" in parsedMessage) {
+                    await processContentMessage(parsedMessage as ContentMessage, tx);
+                  } else if ("full_name" in parsedMessage) {
+                    await processSupportMessage(parsedMessage as SupportMessage, tx);
                   }
                 }, {
                   isolationLevel: 'serializable' // Prevent race conditions
                 });
-                
-                break; // Success - exit retry loop
+
+                // After successful transaction
+                resolveOffset(message.offset);
+                await heartbeat();
+                retryCount = maxRetries; // Exit retry loop
                 
               } catch (error) {
                 retryCount++;
