@@ -158,32 +158,68 @@ export async function setupKafkaConsumer() {
           for (let i = 0; i < messages.length; i++) {
             if (!isRunning() || isStale()) break;
 
-            try {
-              const message = messages[i];
-              const parsedMessage = parseMessage(message.value);
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            while (retryCount < maxRetries) {
+              try {
+                const message = messages[i];
+                const parsedMessage = parseMessage(message.value);
 
-              if (!parsedMessage) {
-                resolveOffset(message.offset);
-                continue;
-              }
-
-              await db.transaction(async (tx) => {
-                if ("externalId" in parsedMessage) {
-                  await processContentMessage(parsedMessage as ContentMessage, tx);
-                } else if ("full_name" in parsedMessage) {
-                  await processSupportMessage(parsedMessage as SupportMessage, tx);
+                if (!parsedMessage) {
+                  log(`Invalid message format: ${message.value}`, "kafka-error");
+                  resolveOffset(message.offset);
+                  break;
                 }
-              });
 
-              resolveOffset(message.offset);
-              await heartbeat();
-            } catch (error) {
-              log(`Error processing message: ${error}`, "kafka-error");
-              // Consider implementing Dead Letter Queue here
+                await db.transaction(async (tx) => {
+                  try {
+                    if ("externalId" in parsedMessage) {
+                      await processContentMessage(parsedMessage as ContentMessage, tx);
+                    } else if ("full_name" in parsedMessage) {
+                      await processSupportMessage(parsedMessage as SupportMessage, tx);
+                    }
+                    resolveOffset(message.offset);
+                    await heartbeat();
+                    break; // Success - exit retry loop
+                  } catch (txError) {
+                    log(`Transaction error (attempt ${retryCount + 1}): ${txError}`, "kafka-error");
+                    throw txError; // Trigger rollback
+                  }
+                }, {
+                  isolationLevel: 'serializable' // Prevent race conditions
+                });
+                
+                break; // Success - exit retry loop
+                
+              } catch (error) {
+                retryCount++;
+                log(`Processing error (attempt ${retryCount}): ${error}`, "kafka-error");
+                
+                if (retryCount === maxRetries) {
+                  // Send to Dead Letter Queue
+                  await sendToDeadLetterQueue(messages[i]);
+                  resolveOffset(message.offset); // Skip message after max retries
+                }
+                
+                // Wait before retry
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              }
             }
           }
         },
       });
+
+// Helper function to handle failed messages
+async function sendToDeadLetterQueue(message: any) {
+  try {
+    // Log failed message for manual review
+    log(`Message sent to DLQ: ${JSON.stringify(message)}`, "kafka-error");
+    // Here you could implement actual DLQ logic
+  } catch (error) {
+    log(`Error sending to DLQ: ${error}`, "kafka-error");
+  }
+}
 
       return consumer;
     } catch (error) {
