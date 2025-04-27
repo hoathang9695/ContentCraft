@@ -5,11 +5,26 @@ import { eq } from "drizzle-orm";
 import { log } from "./vite";
 
 let consumer: Consumer;
+let isShuttingDown = false;
+
+// Constants for configuration
+const KAFKA_CONFIG = {
+  RETRY_INITIAL_TIME: 5000,
+  RETRY_MAX_TIME: 300000,
+  RETRY_FACTOR: 1.2,
+  MAX_RETRIES: 30,
+  CONNECTION_TIMEOUT: 120000,
+  AUTH_TIMEOUT: 60000,
+  HEALTH_CHECK_INTERVAL: 60000,
+  BATCH_SIZE: 10
+};
 
 export interface ContentMessage {
   externalId: string;
   source?: string;
   sourceVerification?: "verified" | "unverified";
+  categories?: string[];
+  labels?: string[];
 }
 
 export interface SupportMessage {
@@ -19,203 +34,163 @@ export interface SupportMessage {
   content: string;
 }
 
-/**
- * Hàm khởi tạo và thiết lập kết nối với Kafka
- */
-export async function setupKafkaConsumer() {
+async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
-    if (process.env.KAFKA_ENABLED !== "true") {
-      log("Kafka is not enabled", "kafka");
-      return;
-    }
+    await consumer.disconnect();
+    await consumer.connect();
+    log("Successfully reconnected to Kafka", "kafka");
+  } catch (error) {
+    log(`Failed to reconnect: ${error}`, "kafka-error");
+    throw error;
+  }
+}
 
-    const sasl =
-      process.env.KAFKA_SASL == "true"
-        ? {
-            mechanism: process.env.KAFKA_SASL_MECHANISMS as "PLAIN",
-            username: process.env.KAFKA_SASL_USERNAME || "",
-            password: process.env.KAFKA_SASL_PASSWORD || "",
-          }
-        : undefined;
+async function initializeHealthCheck(kafka: Kafka, consumer: Consumer) {
+  setInterval(async () => {
+    if (isShuttingDown) return;
+
+    try {
+      const health = await kafka.admin().listTopics();
+      log(`Health check - Connected to topics: ${health.join(", ")}`, "kafka");
+    } catch (error) {
+      log(`Health check failed: ${error}`, "kafka-error");
+      await reconnectConsumer(kafka, consumer);
+    }
+  }, KAFKA_CONFIG.HEALTH_CHECK_INTERVAL);
+}
+
+async function processMessageWithRetry(message: any, process: Function, maxRetries = 3) {
+  let retryCount = 0;
+
+  while (retryCount < maxRetries) {
+    try {
+      await process(message);
+      return true;
+    } catch (error) {
+      retryCount++;
+      log(`Processing error (attempt ${retryCount}/${maxRetries}): ${error}`, "kafka-error");
+
+      if (retryCount === maxRetries) {
+        await sendToDeadLetterQueue(message);
+        return false;
+      }
+
+      const delay = Math.min(
+        KAFKA_CONFIG.RETRY_INITIAL_TIME * Math.pow(KAFKA_CONFIG.RETRY_FACTOR, retryCount - 1),
+        KAFKA_CONFIG.RETRY_MAX_TIME
+      );
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  return false;
+}
+
+export async function setupKafkaConsumer() {
+  if (process.env.KAFKA_ENABLED !== "true") {
+    log("Kafka is not enabled", "kafka");
+    return;
+  }
+
+  try {
+    const sasl = process.env.KAFKA_SASL === "true" ? {
+      mechanism: process.env.KAFKA_SASL_MECHANISMS as "PLAIN",
+      username: process.env.KAFKA_SASL_USERNAME || "",
+      password: process.env.KAFKA_SASL_PASSWORD || "",
+    } : undefined;
 
     const brokers = process.env.KAFKA_BROKERS?.split(",") || [];
-    log(
-      `Initializing Kafka connection to brokers: ${brokers.join(", ")}`,
-      "kafka",
-    );
+    log(`Initializing Kafka connection to brokers: ${brokers.join(", ")}`, "kafka");
 
-    const kafkaConfig = {
+    const kafka = new Kafka({
       clientId: "content-processing-service",
       brokers,
       ssl: false,
       sasl,
-      connectionTimeout: 120000, // Tăng timeout
-      authenticationTimeout: 60000,
+      connectionTimeout: KAFKA_CONFIG.CONNECTION_TIMEOUT,
+      authenticationTimeout: KAFKA_CONFIG.AUTH_TIMEOUT,
       retry: {
-        initialRetryTime: 5000,
-        retries: 30,
-        maxRetryTime: 300000,
-        factor: 1.2, // Giảm hệ số để retry thường xuyên hơn
+        initialRetryTime: KAFKA_CONFIG.RETRY_INITIAL_TIME,
+        retries: KAFKA_CONFIG.MAX_RETRIES,
+        maxRetryTime: KAFKA_CONFIG.RETRY_MAX_TIME,
+        factor: KAFKA_CONFIG.RETRY_FACTOR,
       },
-      logLevel: 4, // DEBUG level để log chi tiết hơn
-      requestTimeout: 120000,
-      enforceRequestTimeout: true,
-    };
-
-    // Add connection error handler
-    process.on("unhandledRejection", (error) => {
-      log(`Kafka unhandled rejection: ${error}`, "kafka-error");
+      logLevel: 4
     });
-
-    log(
-      `Kafka configuration: ${JSON.stringify(
-        {
-          ssl: true,
-          sasl: !!sasl,
-          brokers,
-          connectionTimeout: kafkaConfig.connectionTimeout,
-          authenticationTimeout: kafkaConfig.authenticationTimeout,
-          retry: kafkaConfig.retry,
-        },
-        null,
-        2,
-      )}`,
-      "kafka",
-    );
-
-    const kafka = new Kafka(kafkaConfig);
 
     consumer = kafka.consumer({
       groupId: process.env.KAFKA_GROUP_ID || "emso-processor",
+      maxWaitTimeInMs: 5000,
+      sessionTimeout: 30000,
     });
 
-    try {
-      await consumer.connect();
-      log("Successfully connected to Kafka", "kafka");
+    await consumer.connect();
+    log("Connected to Kafka", "kafka");
 
-      const topics = process.env.KAFKA_TOPICS?.split(",") || [
-        "content_management",
-      ];
+    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management"];
+    for (const topic of topics) {
+      await consumer.subscribe({ topic, fromBeginning: true });
+      log(`Subscribed to topic: ${topic}`, "kafka");
+    }
 
-      // Retry topic subscription
-      let retries = 0;
-      const maxRetries = 5;
+    await initializeHealthCheck(kafka, consumer);
 
-      while (retries < maxRetries) {
-        try {
-          for (const topic of topics) {
-            await consumer.subscribe({ topic, fromBeginning: true });
-            log(`Subscribed to topic: ${topic}`, "kafka");
-          }
-          break;
-        } catch (error) {
-          retries++;
-          log(
-            `Failed to subscribe to topics (attempt ${retries}/${maxRetries}): ${error}`,
-            "kafka-error",
-          );
-          if (retries === maxRetries) {
-            throw new Error(
-              `Failed to subscribe to topics after ${maxRetries} attempts`,
-            );
-          }
-          await new Promise((resolve) => setTimeout(resolve, 5000));
+    await consumer.run({
+      autoCommit: false,
+      eachBatchAutoResolve: true,
+      eachBatch: async ({ batch, resolveOffset, heartbeat, isRunning, isStale }) => {
+        const messages = batch.messages;
+        const messageChunks = [];
+
+        for (let i = 0; i < messages.length; i += KAFKA_CONFIG.BATCH_SIZE) {
+          messageChunks.push(messages.slice(i, i + KAFKA_CONFIG.BATCH_SIZE));
         }
-      }
 
-      // Enhanced health check with reconnection logic
-      setInterval(async () => {
-        try {
-          const health = await kafka.admin().listTopics();
-          log(
-            `Kafka health check - Connected to topics: ${health.join(", ")}`,
-            "kafka",
-          );
-        } catch (error) {
-          log(`Kafka health check failed: ${error}`, "kafka-error");
-          try {
-            await consumer.disconnect();
-            await consumer.connect();
-            log("Reconnected to Kafka after health check failure", "kafka");
-          } catch (reconnectError) {
-            log(
-              `Failed to reconnect to Kafka: ${reconnectError}`,
-              "kafka-error",
-            );
-          }
-        }
-      }, 60000);
+        for (const chunk of messageChunks) {
+          if (!isRunning() || isStale() || isShuttingDown) break;
 
-      log(
-        "Connected to Kafka and subscribed to topics: " + topics.join(", "),
-        "kafka",
-      );
-
-      await consumer.run({
-        eachBatchAutoResolve: true,
-        eachBatch: async ({ batch, resolveOffset, heartbeat, isRunning, isStale }) => {
-          const messages = batch.messages;
-          for (let i = 0; i < messages.length; i++) {
-            if (!isRunning() || isStale()) break;
-
-            const message = messages[i];
-            log(`Processing message ${i + 1}/${messages.length} (offset: ${message.offset})`, "kafka");
-            
-            let retryCount = 0;
-            const maxRetries = 3;
-            let success = false;
-
-            while (retryCount < maxRetries && !success) {
-              try {
-                const parsedMessage = parseMessage(message.value);
-                if (!parsedMessage) {
-                  log(`Invalid message format: ${message.value}`, "kafka-error");
-                  break;
-                }
-
-                await db.transaction(async (tx) => {
-                  try {
-                    if ("externalId" in parsedMessage) {
-                      log(`Processing content message: ${JSON.stringify(parsedMessage)}`, "kafka");
-                      await processContentMessage(parsedMessage as ContentMessage, tx);
-                    } else if ("full_name" in parsedMessage) {
-                      log(`Processing support message: ${JSON.stringify(parsedMessage)}`, "kafka");
-                      await processSupportMessage(parsedMessage as SupportMessage, tx);
-                    }
-                    success = true;
-                  } catch (txError) {
-                    log(`Transaction error: ${txError}`, "kafka-error");
-                    throw txError; // Trigger rollback
-                  }
-                }, {
-                  isolationLevel: 'serializable'
-                });
-
-                if (success) {
-                  log(`Successfully processed message (offset: ${message.offset})`, "kafka");
-                  resolveOffset(message.offset);
-                  await heartbeat();
-                }
-              } catch (error) {
-                retryCount++;
-                log(`Processing error (attempt ${retryCount}/${maxRetries}): ${error}`, "kafka-error");
-
-                if (retryCount === maxRetries) {
-                  log(`Max retries reached for message (offset: ${message.offset}), sending to DLQ`, "kafka-error");
-                  await sendToDeadLetterQueue(message);
-                  resolveOffset(message.offset);
-                } else {
-                  const retryDelay = 1000 * Math.pow(2, retryCount - 1); // Exponential backoff
-                  log(`Waiting ${retryDelay}ms before retry`, "kafka");
-                  await new Promise(resolve => setTimeout(resolve, retryDelay));
-                }
+          await Promise.all(chunk.map(async (message) => {
+            try {
+              const parsedMessage = parseMessage(message.value);
+              if (!parsedMessage) {
+                log(`Invalid message format: ${message.value}`, "kafka-error");
+                resolveOffset(message.offset);
+                return;
               }
-            }
-          }
-        },
-      });
 
-// Helper function to handle failed messages
+              const success = await processMessageWithRetry(
+                parsedMessage,
+                async (msg: ContentMessage | SupportMessage) => {
+                  await db.transaction(async (tx) => {
+                    if ("externalId" in msg) {
+                      await processContentMessage(msg as ContentMessage, tx);
+                    } else if ("full_name" in msg) {
+                      await processSupportMessage(msg as SupportMessage, tx);
+                    }
+                  }, { isolationLevel: 'serializable' });
+                }
+              );
+
+              if (success) {
+                resolveOffset(message.offset);
+                await heartbeat();
+              }
+            } catch (error) {
+              log(`Fatal error processing message: ${error}`, "kafka-error");
+              await sendToDeadLetterQueue(message);
+              resolveOffset(message.offset);
+            }
+          }));
+        }
+      },
+    });
+
+    return consumer;
+  } catch (error) {
+    log(`Error setting up Kafka consumer: ${error}`, "kafka-error");
+    throw error;
+  }
+}
+
 async function sendToDeadLetterQueue(message: any) {
   try {
     // Log failed message for manual review
@@ -223,16 +198,6 @@ async function sendToDeadLetterQueue(message: any) {
     // Here you could implement actual DLQ logic
   } catch (error) {
     log(`Error sending to DLQ: ${error}`, "kafka-error");
-  }
-}
-
-      return consumer;
-    } catch (error) {
-      log(`Error setting up Kafka consumer: ${error}`, "kafka-error");
-      throw error;
-    }
-  } finally {
-    log("Kafka consumer setup completed", "kafka");
   }
 }
 
@@ -415,3 +380,12 @@ export async function disconnectKafkaConsumer() {
     log("Disconnected from Kafka", "kafka");
   }
 }
+
+process.on('SIGTERM', async () => {
+  isShuttingDown = true;
+  if (consumer) {
+    await consumer.disconnect();
+    log("Kafka consumer disconnected gracefully", "kafka");
+  }
+  process.exit(0);
+});
