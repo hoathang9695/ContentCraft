@@ -230,6 +230,18 @@ async function processContentMessage(contentMessage: ContentMessage, tx: any) {
       "kafka",
     );
 
+    // Check if content with this external_id already exists
+    const existingContent = await tx
+      .select()
+      .from(contents)
+      .where(eq(contents.externalId, contentMessage.externalId))
+      .limit(1);
+
+    if (existingContent.length > 0) {
+      log(`Content with external_id ${contentMessage.externalId} already exists, skipping...`, "kafka");
+      return existingContent[0];
+    }
+
     const activeUsers = await tx
       .select()
       .from(users)
