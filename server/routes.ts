@@ -238,7 +238,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             start ? gte(realUsers.createdAt, start) : undefined,
             end ? lte(realUsers.createdAt, end) : undefined
           )
-        );
+        )
+        .execute();
+
+      console.log("Real users query results:", allRealUsers);
 
       // Tính toán các chỉ số
       const totalRealUsers = allRealUsers.length;
@@ -250,6 +253,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const created = new Date(u.createdAt);
         return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
       }).length;
+
+      console.log("Real users stats:", {
+        total: totalRealUsers,
+        verified: verifiedRealUsers, 
+        new: newRealUsers
+      });
 
       console.log("Real users stats results:", allRealUsers);
 
