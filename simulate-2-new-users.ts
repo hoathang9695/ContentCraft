@@ -6,11 +6,29 @@ async function processRealUserMessage(userData: {
   id: string;
   fullName: string;
   email: string;
-  verified: "verified" | "unverified";
+  verified: "verified" | "unverified"; 
   assignedToId: number;
 }) {
+  console.log("🔄 Start processing user data:", userData);
+  
   try {
+    // Test database connection
+    const testQuery = await db.select().from(realUsers).limit(1);
+    console.log("✅ Database connection test successful:", testQuery);
+
     const now = new Date();
+    console.log("📝 Preparing to insert with values:", {
+      fullName: {
+        id: userData.id,
+        name: userData.fullName
+      },
+      email: userData.email,
+      verified: userData.verified,
+      lastLogin: now,
+      createdAt: now,
+      updatedAt: now,
+      assignedToId: userData.assignedToId
+    });
 
     const newRealUser = await db
       .insert(realUsers)
@@ -28,12 +46,14 @@ async function processRealUserMessage(userData: {
       })
       .returning();
 
-    console.log(
-      `✅ Created real user with ID ${newRealUser[0].id}, assigned to user ID ${userData.assignedToId}`,
-    );
+    console.log("✅ Insert successful, returned data:", newRealUser);
     return newRealUser[0];
   } catch (error) {
-    console.error("❌ Error processing real user message:", error);
+    console.error("❌ Error details:", {
+      message: error.message,
+      code: error.code,
+      constraint: error.constraint
+    });
     throw error;
   }
 }
