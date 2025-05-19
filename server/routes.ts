@@ -268,7 +268,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Real users stats:", {
         total: totalRealUsers,
-        verified: verifiedRealUsers,
         new: newRealUsers
       });
 
