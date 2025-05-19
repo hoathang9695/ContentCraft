@@ -224,10 +224,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             startDate ? gte(realUsers.createdAt, new Date(startDate)) : undefined,
             endDate ? lte(realUsers.createdAt, new Date(endDate)) : undefined
           )
-        ) || [];
+        );
 
       const totalRealUsers = realUsersStats.length;
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
+      const newRealUsers = realUsersStats.filter(u => {
+        const created = new Date(u.createdAt);
+        const now = new Date();
+        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
+      }).length;
       const newRealUsers = realUsersStats.filter(u => {
         const created = new Date(u.createdAt);
         const now = new Date();
