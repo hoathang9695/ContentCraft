@@ -13,7 +13,9 @@ import {
   CheckCircle,
   FileEdit,
   Users,
-  FilePenLine
+  FilePenLine,
+  UserPlus,
+  UserCheck
 } from 'lucide-react';
 import { Content } from '@shared/schema';
 import { format } from 'date-fns';
@@ -249,74 +251,102 @@ export default function DashboardPage() {
         </div>
       )}
       
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard
-          title="Tổng số nội dung"
-          value={isLoadingStats ? '...' : stats?.totalContent || 0}
-          icon={LayoutDashboard}
-          iconBgColor="bg-primary"
-          onViewAll={handleViewAllContent}
-        />
-        
-        <StatCard
-          title="Đã xử lý"
-          value={isLoadingStats ? '...' : stats?.completed || 0}
-          icon={CheckCircle}
-          iconBgColor="bg-green-500"
-          onViewAll={() => navigate('/contents?status=completed')}
-        />
-        
-        <StatCard
-          title="Chưa xử lý"
-          value={isLoadingStats ? '...' : stats?.pending || 0}
-          icon={FilePenLine}
-          iconBgColor="bg-amber-500"
-          onViewAll={() => navigate('/contents?status=pending')}
-        />
-        
-        <StatCard
-          title="Phân công hoạt động"
-          value={isLoadingStats ? '...' : stats?.assigned || 0}
-          icon={Users}
-          iconBgColor="bg-blue-500"
-          onViewAll={() => navigate('/contents')}
-        />
+      {/* User Reports Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Báo cáo người dùng</h2>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <StatCard
+            title="Tổng số người dùng thật"
+            value={isLoadingStats ? '...' : stats?.totalRealUsers || 0}
+            icon={Users}
+            iconBgColor="bg-purple-500"
+            onViewAll={() => navigate('/real-user')}
+          />
+          
+          <StatCard
+            title="Người dùng mới (7 ngày)"
+            value={isLoadingStats ? '...' : stats?.newRealUsers || 0}
+            icon={UserPlus}
+            iconBgColor="bg-cyan-500"
+            onViewAll={() => navigate('/real-user')}
+          />
+        </div>
       </div>
+
+      {/* Content Reports Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Báo cáo nội dung</h2>
+        
+        {/* Basic Content Stats */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <StatCard
+            title="Tổng số nội dung"
+            value={isLoadingStats ? '...' : stats?.totalContent || 0}
+            icon={LayoutDashboard}
+            iconBgColor="bg-primary"
+            onViewAll={handleViewAllContent}
+          />
+          
+          <StatCard
+            title="Đã xử lý"
+            value={isLoadingStats ? '...' : stats?.completed || 0}
+            icon={CheckCircle}
+            iconBgColor="bg-green-500"
+            onViewAll={() => navigate('/contents?status=completed')}
+          />
+          
+          <StatCard
+            title="Chưa xử lý"
+            value={isLoadingStats ? '...' : stats?.pending || 0}
+            icon={FilePenLine}
+            iconBgColor="bg-amber-500"
+            onViewAll={() => navigate('/contents?status=pending')}
+          />
+          
+          <StatCard
+            title="Phân công hoạt động"
+            value={isLoadingStats ? '...' : stats?.assigned || 0}
+            icon={Users}
+            iconBgColor="bg-blue-500"
+            onViewAll={() => navigate('/contents')}
+          />
+        </div>
+        
+        {/* Content Verification Stats */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <StatCard
+            title="Đã xác minh"
+            value={isLoadingStats ? '...' : stats?.verified || 0}
+            icon={CheckCircle}
+            iconBgColor="bg-emerald-500"
+            onViewAll={() => navigate('/contents?sourceVerification=verified')}
+          />
+          
+          <StatCard
+            title="Chưa xác minh"
+            value={isLoadingStats ? '...' : stats?.unverified || 0}
+            icon={FileEdit}
+            iconBgColor="bg-orange-500"
+            onViewAll={() => navigate('/contents?sourceVerification=unverified')}
+          />
+          
+          <StatCard
+            title="Nội dung an toàn"
+            value={isLoadingStats ? '...' : stats?.safe || 0}
+            icon={CheckCircle}
+            iconBgColor="bg-green-600"
+            onViewAll={() => navigate('/contents?result=safe')}
+          />
+          
+          <StatCard
+            title="Nội dung không an toàn"
+            value={isLoadingStats ? '...' : stats?.unsafe || 0}
+            icon={FileEdit}
+            iconBgColor="bg-red-500"
+            onViewAll={() => navigate('/contents?result=unsafe')}
+          />
+        </div>
       
-      {/* Additional Stats Section */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard
-          title="Đã xác minh"
-          value={isLoadingStats ? '...' : stats?.verified || 0}
-          icon={CheckCircle}
-          iconBgColor="bg-emerald-500"
-          onViewAll={() => navigate('/contents?sourceVerification=verified')}
-        />
-        
-        <StatCard
-          title="Chưa xác minh"
-          value={isLoadingStats ? '...' : stats?.unverified || 0}
-          icon={FileEdit}
-          iconBgColor="bg-orange-500"
-          onViewAll={() => navigate('/contents?sourceVerification=unverified')}
-        />
-        
-        <StatCard
-          title="Nội dung an toàn"
-          value={isLoadingStats ? '...' : stats?.safe || 0}
-          icon={CheckCircle}
-          iconBgColor="bg-green-600"
-          onViewAll={() => navigate('/contents?result=safe')}
-        />
-        
-        <StatCard
-          title="Nội dung không an toàn"
-          value={isLoadingStats ? '...' : stats?.unsafe || 0}
-          icon={FileEdit}
-          iconBgColor="bg-red-500"
-          onViewAll={() => navigate('/contents?result=unsafe')}
-        />
       </div>
       
       {/* Section biểu đồ phân bổ dữ liệu theo người xử lý - chỉ hiển thị cho admin */}

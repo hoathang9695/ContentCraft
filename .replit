@@ -87,3 +87,30 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "NODE_ENV=development npm run dev"
+
+[[workflows.workflow]]
+name = "Simulate Kafka"
+author = 41108408
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx simulate-2-real-users.ts"
+
+[[workflows.workflow]]
+name = "Simulate New Users"
+author = 41108408
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx simulate-2-new-users.ts"
+
+[[workflows.workflow]]
+name = "Simulate More Users"
+author = 41108408
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx simulate-2-more-users.ts"
