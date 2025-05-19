@@ -215,6 +215,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedPerUser.sort((a, b) => b.count - a.count);
       }
 
+      // Lấy thống kê người dùng thật
+      const realUsersStats = await db
+        .select()
+        .from(realUsers)
+        .where(
+          and(
+            startDate ? gte(realUsers.createdAt, new Date(startDate)) : undefined,
+            endDate ? lte(realUsers.createdAt, new Date(endDate)) : undefined
+          )
+        );
+
+      const totalRealUsers = realUsersStats.length;
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
+      const newRealUsers = realUsersStats.filter(u => {
+        const created = new Date(u.createdAt);
+        const now = new Date();
+        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7; // Users created within last 7 days
+      }).length;
+
       res.json({
         totalContent: filteredContents.length,
         pending,
@@ -232,6 +251,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unassigned: filteredContents.filter(c => c.assigned_to_id === null).length,
         // Thêm thông tin số lượng nội dung trên mỗi người dùng (chỉ admin mới thấy)
         assignedPerUser: user.role === 'admin' ? assignedPerUser : [],
+        // Thống kê người dùng thật
+        totalRealUsers,
+        verifiedRealUsers,
+        newRealUsers,
         // Thông tin khoảng thời gian nếu có lọc
         period: startDate && endDate ? {
           start: startDate,
