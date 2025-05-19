@@ -231,11 +231,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newRealUsers = realUsersStats.filter(u => {
         const created = new Date(u.createdAt);
         const now = new Date();
-        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
-      }).length;
-      const newRealUsers = realUsersStats.filter(u => {
-        const created = new Date(u.createdAt);
-        const now = new Date();
         return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7; // Users created within last 7 days
       }).length;
 
