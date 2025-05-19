@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -164,7 +163,7 @@ export const realUsers = pgTable("real_users", {
   id: serial("id").primaryKey(),
   fullName: jsonb("full_name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  verified: text("verified").notNull().default('unverified').check(sql`verified IN ('verified', 'unverified')`),
+  verified: boolean("verified").notNull().default(false),
   lastLogin: timestamp("last_login", { withTimezone: true }),
   assignedToId: integer("assigned_to_id").references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
