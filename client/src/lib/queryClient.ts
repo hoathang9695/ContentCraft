@@ -1,3 +1,4 @@
+
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
@@ -35,12 +36,12 @@ export async function apiRequest<T = any>(
 
   await throwIfResNotOk(res);
   
-  // Nếu mã status 204 No Content, không cần parse JSON
+  // If status is 204 No Content, return empty object
   if (res.status === 204) {
     return {} as T;
   }
   
-  return await res.json() as T;
+  return await res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -64,7 +65,7 @@ export const getQueryFn: <T>(options: {
 
     await throwIfResNotOk(res);
     
-    // Nếu mã status 204 No Content, không cần parse JSON
+    // If status is 204 No Content, return empty object
     if (res.status === 204) {
       return {} as T;
     }
@@ -77,12 +78,12 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: true, // Cập nhật khi cửa sổ có focus
-      staleTime: 60000, // 1 phút thay vì Infinity để đảm bảo dữ liệu fresh
-      retry: 1, // Thử lại 1 lần nếu thất bại
+      refetchOnWindowFocus: true,
+      staleTime: 60000,
+      retry: 1,
     },
     mutations: {
-      retry: 1, // Thử lại 1 lần nếu thất bại
-    },
-  },
+      retry: 1
+    }
+  }
 });
