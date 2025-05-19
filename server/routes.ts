@@ -229,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
 
-      // Sửa lại phần truy vấn để lấy đúng dữ liệu
+      // Sửa lại phần truy vấn để lấy đúng dữ liệu và lọc theo ngày
       const realUsersStats = await db
         .select({
           id: realUsers.id,
@@ -245,7 +245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             start ? gte(realUsers.createdAt, start) : undefined,
-            end ? lte(realUsers.createdAt, end) : undefined
+            end ? lte(realUsers.createdAt, end) : undefined,
+            eq(realUsers.verified, true)
           )
         );
 
