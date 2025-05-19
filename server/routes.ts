@@ -225,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: realUsers.id,
           fullName: realUsers.fullName,
           email: realUsers.email,
-          verified: realUsers.verified,
+          verified: sql`CASE WHEN ${realUsers.verified} = 'verified' THEN true ELSE false END`.as('verified'),
           createdAt: realUsers.createdAt,
           updatedAt: realUsers.updatedAt,
           lastLogin: realUsers.lastLogin,
@@ -246,7 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const totalRealUsers = realUsersStats.length;
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
       const newRealUsers = realUsersStats.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
