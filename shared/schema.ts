@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -157,27 +157,6 @@ export const insertSupportRequestSchema = createInsertSchema(supportRequests).om
 
 export type InsertSupportRequest = z.infer<typeof insertSupportRequestSchema>;
 export type SupportRequest = typeof supportRequests.$inferSelect;
-
-// Real users table
-export const realUsers = pgTable("real_users", {
-  id: serial("id").primaryKey(),
-  fullName: jsonb("full_name").notNull(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  verified: boolean("verified").notNull().default(false),
-  lastLogin: timestamp("last_login", { withTimezone: true }),
-  assignedToId: integer("assigned_to_id").references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const insertRealUserSchema = createInsertSchema(realUsers).omit({ 
-  id: true, 
-  createdAt: true,
-  updatedAt: true
-});
-
-export type InsertRealUser = z.infer<typeof insertRealUserSchema>;
-export type RealUser = typeof realUsers.$inferSelect;
 
 export interface ContentMessage {
   externalId: string;        // ID nội dung, kiểu string

@@ -874,7 +874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!comment) {
-        return res.status(400).json({ success: false, message: "Comment content is required" });
+        return res.status(400).json({ successfalse, message: "Comment content is required" });
       }
 
       // Lấy thông tin fake user
@@ -1257,45 +1257,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fakeUser) {
         return res.status(404).json({ message: "Fake user not found" });
       }
+
+      res.json(fakeUser);
     } catch (error) {
-      res.status(500).json({
+      res.status(500).json({ 
         message: "Error fetching fake user",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // Get all real users 
-  app.get("/api/real-users", isAdmin, async (req, res) => {
-    try {
-      const { realUsers, users } = await import("@shared/schema");
-
-      const results = await db
-        .select({
-          id: realUsers.id,
-          fullName: realUsers.fullName,
-          email: realUsers.email,
-          verified: realUsers.verified,
-          lastLogin: realUsers.lastLogin,
-          assignedToId: realUsers.assignedToId,
-          createdAt: realUsers.createdAt,
-          updatedAt: realUsers.updatedAt,
-          processor: {
-            id: users.id,
-            name: users.name,
-            username: users.username
-          }
-        })
-        .from(realUsers)
-        .leftJoin(users, eq(realUsers.assignedToId, users.id))
-        .orderBy(desc(realUsers.createdAt));
-
-      console.log("Real users query results:", results);
-      res.json(results);
-    } catch (error) {
-      console.error("Error fetching real users:", error);
-      res.status(500).json({
-        message: "Error fetching real users", 
         error: error instanceof Error ? error.message : String(error)
       });
     }

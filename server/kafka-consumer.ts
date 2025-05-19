@@ -1,7 +1,7 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
-import { users, supportRequests, contents, realUsers } from "../shared/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { users, supportRequests, contents } from "../shared/schema";
+import { eq } from "drizzle-orm";
 import { log } from "./vite";
 
 let consumer: Consumer;
@@ -101,46 +101,21 @@ export async function setupKafkaConsumer() {
     const brokers = process.env.KAFKA_BROKERS?.split(",") || [];
     log(`Initializing Kafka connection to brokers: ${brokers.join(", ")}`, "kafka");
 
-    const kafkaConfig = {
-      clientId: "content-processing-service", 
+    const kafka = new Kafka({
+      clientId: "content-processing-service",
       brokers,
       ssl: false,
       sasl,
-      connectionTimeout: 30000, // Giảm timeout
-      authenticationTimeout: 30000,
+      connectionTimeout: KAFKA_CONFIG.CONNECTION_TIMEOUT,
+      authenticationTimeout: KAFKA_CONFIG.AUTH_TIMEOUT,
       retry: {
-        initialRetryTime: 1000, // Giảm thời gian retry đầu tiên
-        retries: 10, // Giảm số lần retry
-        maxRetryTime: 30000, // Giảm max retry time
-        factor: 2,
+        initialRetryTime: KAFKA_CONFIG.RETRY_INITIAL_TIME,
+        retries: KAFKA_CONFIG.MAX_RETRIES,
+        maxRetryTime: KAFKA_CONFIG.RETRY_MAX_TIME,
+        factor: KAFKA_CONFIG.RETRY_FACTOR,
       },
-      logLevel: 4,
-      requestTimeout: 30000,
-      enforceRequestTimeout: true,
-    };
-
-    // Add connection error handler
-    process.on("unhandledRejection", (error) => {
-      log(`Kafka unhandled rejection: ${error}`, "kafka-error");
+      logLevel: 4
     });
-
-    log(
-      `Kafka configuration: ${JSON.stringify(
-        {
-          ssl: false,
-          sasl: !!sasl,
-          brokers,
-          connectionTimeout: kafkaConfig.connectionTimeout,
-          authenticationTimeout: kafkaConfig.authenticationTimeout,
-          retry: kafkaConfig.retry,
-        },
-        null,
-        2,
-      )}`,
-      "kafka",
-    );
-
-    const kafka = new Kafka(kafkaConfig);
 
     consumer = kafka.consumer({
       groupId: process.env.KAFKA_GROUP_ID || "emso-processor",
@@ -148,40 +123,8 @@ export async function setupKafkaConsumer() {
       sessionTimeout: 30000,
     });
 
-    try {
-      await consumer.connect();
-      log("Successfully connected to Kafka", "kafka");
-
-      const topics = process.env.KAFKA_TOPICS?.split(",") || [
-        "content_management",
-        "real_users",
-      ];
-
-      // Retry topic subscription
-      let retries = 0;
-      const maxRetries = 5;
-
-      while (retries < maxRetries) {
-        try {
-          for (const topic of topics) {
-            await consumer.subscribe({ topic, fromBeginning: true });
-            log(`Subscribed to topic: ${topic}`, "kafka");
-          }
-          break;
-        } catch (error) {
-          retries++;
-          log(
-            `Failed to subscribe to topics (attempt ${retries}/${maxRetries}): ${error}`,
-            "kafka-error",
-          );
-          if (retries === maxRetries) {
-            throw new Error(
-              `Failed to subscribe to topics after ${maxRetries} attempts`,
-            );
-          }
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-        }
-      }
+    await consumer.connect();
+    log("Connected to Kafka", "kafka");
 
     const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management"];
     for (const topic of topics) {
@@ -202,17 +145,44 @@ export async function setupKafkaConsumer() {
           messageChunks.push(messages.slice(i, i + KAFKA_CONFIG.BATCH_SIZE));
         }
 
-          if ("externalId" in parsedMessage) {
-            await processContentMessage(parsedMessage as ContentMessage);
-          } else if ("full_name" in parsedMessage) {
-            await processSupportMessage(parsedMessage as SupportMessage);
-          } else if ("id" in parsedMessage && "email" in parsedMessage) {
-            // Xử lý message từ topic real_users
-            await processRealUserMessage(parsedMessage as RealUserMessage);
-            log(`Processed real user message for ${parsedMessage.email}`, "kafka");
-          }
-        },
-      });
+        for (const chunk of messageChunks) {
+          if (!isRunning() || isStale() || isShuttingDown) break;
+
+          await Promise.all(chunk.map(async (message) => {
+            try {
+              const parsedMessage = parseMessage(message.value);
+              if (!parsedMessage) {
+                log(`Invalid message format: ${message.value}`, "kafka-error");
+                resolveOffset(message.offset);
+                return;
+              }
+
+              const success = await processMessageWithRetry(
+                parsedMessage,
+                async (msg: ContentMessage | SupportMessage) => {
+                  await db.transaction(async (tx) => {
+                    if ("externalId" in msg) {
+                      await processContentMessage(msg as ContentMessage, tx);
+                    } else if ("full_name" in msg) {
+                      await processSupportMessage(msg as SupportMessage, tx);
+                    }
+                  }, { isolationLevel: 'serializable' });
+                }
+              );
+
+              if (success) {
+                resolveOffset(message.offset);
+                await heartbeat();
+              }
+            } catch (error) {
+              log(`Fatal error processing message: ${error}`, "kafka-error");
+              await sendToDeadLetterQueue(message);
+              resolveOffset(message.offset);
+            }
+          }));
+        }
+      },
+    });
 
     return consumer;
   } catch (error) {
@@ -233,7 +203,7 @@ async function sendToDeadLetterQueue(message: any) {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | RealUserMessage | null {
+): ContentMessage | SupportMessage | null {
   if (!messageValue) return null;
 
   try {
@@ -244,8 +214,6 @@ function parseMessage(
       return message as SupportMessage;
     } else if ("externalId" in message) {
       return message as ContentMessage;
-    } else if ("id" in message && "email" in message && "fullName" in message) {
-      return message as RealUserMessage;
     }
 
     return null;
@@ -423,77 +391,18 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
   }
 }
 
-export interface RealUserMessage {
-  id: string;
-  fullName: string;
-  email: string;
-  verified: "verified" | "unverified";
-}
-
-async function processRealUserMessage(message: RealUserMessage) {
-  try {
-    log(`Processing real user message: ${JSON.stringify(message)}`, "kafka");
-
-    // Get active non-admin users
-    const activeUsers = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
-
-    if (!activeUsers || activeUsers.length === 0) {
-      throw new Error("No active non-admin users found");
-    }
-
-    // Get last assigned user to implement round-robin
-    const lastAssignedUser = await db.query.realUsers.findFirst({
-      orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)],
-    });
-
-    // Calculate next assignee index
-    let nextAssigneeIndex = 0;
-    if (lastAssignedUser) {
-      const lastAssigneeIndex = activeUsers.findIndex(
-        (user) => user.id === lastAssignedUser.assignedToId,
-      );
-      if (lastAssigneeIndex !== -1) {
-        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
-      }
-    }
-
-    const assignedToId = activeUsers[nextAssigneeIndex].id;
-    const now = new Date();
-
-    // Insert new real user
-    const newRealUser = await db
-      .insert(realUsers)
-      .values({
-        fullName: JSON.stringify({
-          id: message.id,
-          name: message.fullName,
-        }),
-        email: message.email,
-        verified: message.verified,
-        lastLogin: now,
-        assignedToId: assignedToId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
-
-    log(
-      `Created real user with ID ${newRealUser[0].id}, assigned to user ID ${assignedToId}`,
-      "kafka",
-    );
-    return newRealUser[0];
-  } catch (error) {
-    log(`Error processing real user message: ${error}`, "kafka-error");
-    throw error;
-  }
-}
-
 export async function disconnectKafkaConsumer() {
   if (consumer) {
     await consumer.disconnect();
     log("Disconnected from Kafka", "kafka");
   }
 }
+
+process.on('SIGTERM', async () => {
+  isShuttingDown = true;
+  if (consumer) {
+    await consumer.disconnect();
+    log("Kafka consumer disconnected gracefully", "kafka");
+  }
+  process.exit(0);
+});
