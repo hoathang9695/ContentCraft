@@ -227,11 +227,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
       const totalRealUsers = realUsersStats.length;
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
       const newRealUsers = realUsersStats.filter(u => {
         const created = new Date(u.createdAt);
         const now = new Date();
-        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7; // Users created within last 7 days
+        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7; // Users created within last 7 days  
       }).length;
 
       res.json({
