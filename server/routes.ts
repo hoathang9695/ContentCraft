@@ -230,6 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const end = endDate ? new Date(endDate as string) : undefined;
 
       // Sửa lại phần truy vấn để lấy đúng dữ liệu và lọc theo ngày
+      // Lấy tất cả real users trong khoảng thời gian
       const realUsersStats = await db
         .select({
           id: realUsers.id,
@@ -245,21 +246,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             start ? gte(realUsers.createdAt, start) : undefined,
-            end ? lte(realUsers.createdAt, end) : undefined,
-            eq(realUsers.verified, true)
+            end ? lte(realUsers.createdAt, end) : undefined
           )
         );
 
       console.log("Real users stats results:", realUsersStats);
 
-      const totalRealUsers = realUsersStats.length;
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
+      // Tính toán các chỉ số
+      const totalRealUsers = realUsersStats.length; // Tổng số người dùng
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length; // Số người dùng đã xác minh
       const newRealUsers = realUsersStats.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
         const now = new Date();
         return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
-      }).length;
+      }).length; // Số người dùng mới trong 7 ngày
 
       console.log("Real users stats:", {
         total: totalRealUsers,
