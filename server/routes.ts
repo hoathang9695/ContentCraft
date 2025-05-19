@@ -226,10 +226,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
 
-      console.log("Real users query results:", realUsersStats);
+      console.log("Real users query:", {
+        startDate: startDate ? new Date(startDate as string) : null,
+        endDate: endDate ? new Date(endDate as string) : null,
+        results: realUsersStats
+      });
 
       const totalRealUsers = realUsersStats.length;
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
       const newRealUsers = realUsersStats.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
