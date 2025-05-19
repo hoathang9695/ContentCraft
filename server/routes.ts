@@ -229,37 +229,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
 
-      // Sửa lại phần truy vấn để lấy đúng dữ liệu và lọc theo ngày
-      const realUsersStats = await db
-        .select({
-          id: realUsers.id,
-          fullName: realUsers.fullName,
-          email: realUsers.email,
-          verified: realUsers.verified,
-          createdAt: realUsers.createdAt,
-          updatedAt: realUsers.updatedAt,
-          lastLogin: realUsers.lastLogin,
-          assignedToId: realUsers.assignedToId
-        })
+      // Lấy tất cả người dùng trong khoảng thời gian
+      const allRealUsers = await db
+        .select()
         .from(realUsers)
         .where(
           and(
             start ? gte(realUsers.createdAt, start) : undefined,
-            end ? lte(realUsers.createdAt, end) : undefined,
-            eq(realUsers.verified, true)
+            end ? lte(realUsers.createdAt, end) : undefined
           )
         );
 
-      console.log("Real users stats results:", realUsersStats);
-
-      const totalRealUsers = realUsersStats.length;
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
-      const newRealUsers = realUsersStats.filter(u => {
+      // Tính toán các chỉ số
+      const totalRealUsers = allRealUsers.length;
+      const verifiedRealUsers = allRealUsers.filter(u => u.verified === true).length;
+      
+      const now = new Date();
+      const newRealUsers = allRealUsers.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
-        const now = new Date();
         return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
       }).length;
+
+      console.log("Real users stats results:", allRealUsers);
 
       console.log("Real users stats:", {
         total: totalRealUsers,
