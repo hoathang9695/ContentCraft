@@ -300,6 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Error fetching statistics",
         error: error instanceof Error ? error.message : String(error)
       });
+    };
     }
   });
 
