@@ -140,10 +140,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats", isAuthenticated, async (req, res) => {
     try {
       console.log("Getting stats with params:", req.query);
-      
+
       const allContents = await storage.getAllContents();
       console.log("Total contents fetched:", allContents.length);
-      
+
       const allUsers = await storage.getAllUsers();
       const user = req.user as Express.User;
       const { startDate, endDate } = req.query;
@@ -152,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filteredContents = user.role === 'admin' 
         ? allContents 
         : allContents.filter(c => c.assigned_to_id === user.id);
-        
+
       console.log("Filtered contents for user:", {
         userId: user.id,
         role: user.role,
@@ -230,36 +230,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const end = endDate ? new Date(endDate as string) : undefined;
 
       // Sửa lại phần truy vấn để lấy đúng dữ liệu
-      try {
-        const realUsersStats = await db
-          .select({
-            id: realUsers.id,
-            fullName: realUsers.fullName,
-            email: realUsers.email,
-            verified: realUsers.verified,
-            createdAt: realUsers.createdAt,
-            updatedAt: realUsers.updatedAt,
-            lastLogin: realUsers.lastLogin,
-            assignedToId: realUsers.assignedToId
-          })
-          .from(realUsers)
-          .where(
-            and(
-              start ? gte(realUsers.createdAt, start) : undefined,
-              end ? lte(realUsers.createdAt, end) : undefined
-            )
-          );
+      const realUsersStats = await db
+        .select({
+          id: realUsers.id,
+          fullName: realUsers.fullName,
+          email: realUsers.email,
+          verified: realUsers.verified,
+          createdAt: realUsers.createdAt,
+          updatedAt: realUsers.updatedAt,
+          lastLogin: realUsers.lastLogin,
+          assignedToId: realUsers.assignedToId
+        })
+        .from(realUsers)
+        .where(
+          and(
+            start ? gte(realUsers.createdAt, start) : undefined,
+            end ? lte(realUsers.createdAt, end) : undefined
+          )
+        );
 
-        console.log("Real users stats results:", realUsersStats);
+      console.log("Real users stats results:", realUsersStats);
 
-        const totalRealUsers = realUsersStats.length;
-        const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
-        const newRealUsers = realUsersStats.filter(u => {
-          if (!u.createdAt) return false;
-          const created = new Date(u.createdAt);
-          const now = new Date();
-          return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
-        }).length;
+      const totalRealUsers = realUsersStats.length;
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
+      const newRealUsers = realUsersStats.filter(u => {
+        if (!u.createdAt) return false;
+        const created = new Date(u.createdAt);
+        const now = new Date();
+        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
+      }).length;
 
       console.log("Real users stats:", {
         total: totalRealUsers,
@@ -300,7 +299,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Error fetching statistics",
         error: error instanceof Error ? error.message : String(error)
       });
-    };
     }
   });
 
@@ -874,8 +872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Content processing completed successfully",
         data: completedContent
       });
-    } catch (error) {
-      res.status(500).json({ 
+    } catch (error) {res.status(500).json({ 
         success: false,
         message: "Error completing content processing",
         error: error instanceof Error ? error.message : String(error)
