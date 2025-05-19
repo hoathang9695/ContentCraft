@@ -221,18 +221,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(realUsers)
         .where(
           and(
-            startDate ? gte(realUsers.createdAt, new Date(startDate)) : undefined,
-            endDate ? lte(realUsers.createdAt, new Date(endDate)) : undefined
+            startDate ? gte(realUsers.createdAt, new Date(startDate as string)) : undefined,
+            endDate ? lte(realUsers.createdAt, new Date(endDate as string)) : undefined
           )
         );
+
+      console.log("Real users query results:", realUsersStats);
 
       const totalRealUsers = realUsersStats.length;
       const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
       const newRealUsers = realUsersStats.filter(u => {
+        if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
         const now = new Date();
-        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7; // Users created within last 7 days  
+        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
       }).length;
+
+      console.log("Real users stats:", {
+        total: totalRealUsers,
+        verified: verifiedRealUsers,
+        new: newRealUsers
+      });
 
       res.json({
         totalContent: filteredContents.length,
