@@ -3,8 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { desc, eq } from 'drizzle-orm';
-import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, users, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
+import { desc, eq, and, gte, lte } from 'drizzle-orm';
+import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, users, realUsers, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
 import { pool, db } from "./db";
 import multer from "multer";
 import path from "path";
@@ -139,7 +139,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard statistics
   app.get("/api/stats", isAuthenticated, async (req, res) => {
     try {
+      console.log("Getting stats with params:", req.query);
+
       const allContents = await storage.getAllContents();
+      console.log("Total contents fetched:", allContents.length);
+
       const allUsers = await storage.getAllUsers();
       const user = req.user as Express.User;
       const { startDate, endDate } = req.query;
@@ -148,6 +152,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filteredContents = user.role === 'admin' 
         ? allContents 
         : allContents.filter(c => c.assigned_to_id === user.id);
+
+      console.log("Filtered contents for user:", {
+        userId: user.id,
+        role: user.role,
+        contentCount: filteredContents.length
+      });
 
       // Lọc theo ngày nếu có
       if (startDate && endDate) {
@@ -215,14 +225,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedPerUser.sort((a, b) => b.count - a.count);
       }
 
+      // Lấy thống kê người dùng thật
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+
+      // Sửa lại phần truy vấn để lấy đúng dữ liệu và lọc theo ngày
+      // Lấy tất cả real users trong khoảng thời gian
+      const realUsersStats = await db
+        .select({
+          id: realUsers.id,
+          fullName: realUsers.fullName,
+          email: realUsers.email,
+          verified: realUsers.verified,
+          createdAt: realUsers.createdAt,
+          updatedAt: realUsers.updatedAt,
+          lastLogin: realUsers.lastLogin,
+          assignedToId: realUsers.assignedToId
+        })
+        .from(realUsers)
+        .where(
+          and(
+            start ? gte(realUsers.createdAt, start) : undefined,
+            end ? lte(realUsers.createdAt, end) : undefined
+          )
+        );
+
+      console.log("Real users stats results:", realUsersStats);
+
+      // Lấy tất cả real users từ DB
+      const allRealUsers = await db.select().from(realUsers);
+      
+      // Tính tổng số người dùng thật (không tính trùng lặp theo ID)
+      const uniqueIds = new Set(allRealUsers.map(u => u.fullName?.id));
+      const totalRealUsers = uniqueIds.size;
+
+      // Tính số người dùng mới trong 7 ngày
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const newRealUsers = allRealUsers.filter(u => {
+        if (!u.createdAt) return false;
+        const created = new Date(u.createdAt);
+        return created >= sevenDaysAgo;
+      }).length;
+
+      console.log("Real users stats:", {
+        total: totalRealUsers,
+        new: newRealUsers
+      });
+
       res.json({
         totalContent: filteredContents.length,
         pending,
         completed,
         // Thông tin trạng thái xác minh nguồn
         verified,
-        unverified,
-        // Thông tin trạng thái an toàn
+        unverified, 
+        // Thông tin trạng thái an toàn  
         safe,
         unsafe,
         unchecked,
@@ -232,6 +291,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unassigned: filteredContents.filter(c => c.assigned_to_id === null).length,
         // Thêm thông tin số lượng nội dung trên mỗi người dùng (chỉ admin mới thấy)
         assignedPerUser: user.role === 'admin' ? assignedPerUser : [],
+        // Thống kê người dùng thật
+        totalRealUsers,
+        newRealUsers,
         // Thông tin khoảng thời gian nếu có lọc
         period: startDate && endDate ? {
           start: startDate,
@@ -239,7 +301,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } : null
       });
     } catch (error) {
-      res.status(500).json({ message: "Error fetching statistics" });
+      console.error("Error in /api/stats:", error);
+      res.status(500).json({ 
+        message: "Error fetching statistics",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
@@ -813,8 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Content processing completed successfully",
         data: completedContent
       });
-    } catch (error) {
-      res.status(500).json({ 
+    } catch (error) {res.status(500).json({ 
         success: false,
         message: "Error completing content processing",
         error: error instanceof Error ? error.message : String(error)
@@ -1257,8 +1322,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fakeUser) {
         return res.status(404).json({ message: "Fake user not found" });
       }
-
+  // Get all real users 
       res.json(fakeUser);
+
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error fetching fake user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.get("/api/real-users", isAuthenticated, async (req, res) => {
+    try {
+      const { realUsers, users } = await import("@shared/schema");
+
+      const results = await db
+        .select({
+          id: realUsers.id,
+          fullName: realUsers.fullName,
+          email: realUsers.email,
+          verified: realUsers.verified,
+          lastLogin: realUsers.lastLogin,
+          assignedToId: realUsers.assignedToId,
+          createdAt: realUsers.createdAt,
+          updatedAt: realUsers.updatedAt,
+          processor: {
+            id: users.id,
+            name: users.name,
+            username: users.username
+          }
+        })
+        .from(realUsers)
+        .leftJoin(users, eq(realUsers.assignedToId, users.id))
+        .orderBy(desc(realUsers.createdAt));
+
+      console.log("Real users query results:", results);
+      res.json(results);
     } catch (error) {
       res.status(500).json({ 
         message: "Error fetching fake user",
