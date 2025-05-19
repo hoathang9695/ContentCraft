@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
 import { desc, eq, and, gte, lte } from 'drizzle-orm';
-import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, users, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
+import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, users, realUsers, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
 import { pool, db } from "./db";
 import multer from "multer";
 import path from "path";
@@ -224,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             startDate ? gte(realUsers.createdAt, new Date(startDate)) : undefined,
             endDate ? lte(realUsers.createdAt, new Date(endDate)) : undefined
           )
-        );
+        ) || [];
 
       const totalRealUsers = realUsersStats.length;
       const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
