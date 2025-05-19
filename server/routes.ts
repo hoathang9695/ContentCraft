@@ -230,39 +230,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const end = endDate ? new Date(endDate as string) : undefined;
 
       // Sửa lại phần truy vấn để lấy đúng dữ liệu
-      const realUsersStats = await db
-        .select({
-          id: realUsers.id,
-          fullName: realUsers.fullName,
-          email: realUsers.email,
-          verified: sql`CASE WHEN ${realUsers.verified} = 'verified' THEN true ELSE false END`.as('verified'),
-          createdAt: realUsers.createdAt,
-          updatedAt: realUsers.updatedAt,
-          lastLogin: realUsers.lastLogin,
-          assignedToId: realUsers.assignedToId
-        })
-        .from(realUsers)
-        .where(
-          and(
-            start ? gte(realUsers.createdAt, start) : undefined,
-            end ? lte(realUsers.createdAt, end) : undefined
-          )
-        );
+      try {
+        const realUsersStats = await db
+          .select({
+            id: realUsers.id,
+            fullName: realUsers.fullName,
+            email: realUsers.email,
+            verified: realUsers.verified,
+            createdAt: realUsers.createdAt,
+            updatedAt: realUsers.updatedAt,
+            lastLogin: realUsers.lastLogin,
+            assignedToId: realUsers.assignedToId
+          })
+          .from(realUsers)
+          .where(
+            and(
+              start ? gte(realUsers.createdAt, start) : undefined,
+              end ? lte(realUsers.createdAt, end) : undefined
+            )
+          );
 
-      console.log("Real users query:", {
-        startDate: start,
-        endDate: end,
-        results: realUsersStats
-      });
+        console.log("Real users stats results:", realUsersStats);
 
-      const totalRealUsers = realUsersStats.length;
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
-      const newRealUsers = realUsersStats.filter(u => {
-        if (!u.createdAt) return false;
-        const created = new Date(u.createdAt);
-        const now = new Date();
-        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
-      }).length;
+        const totalRealUsers = realUsersStats.length;
+        const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
+        const newRealUsers = realUsersStats.filter(u => {
+          if (!u.createdAt) return false;
+          const created = new Date(u.createdAt);
+          const now = new Date();
+          return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
+        }).length;
 
       console.log("Real users stats:", {
         total: totalRealUsers,
@@ -298,7 +295,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } : null
       });
     } catch (error) {
-      res.status(500).json({ message: "Error fetching statistics" });
+      console.error("Error in /api/stats:", error);
+      res.status(500).json({ 
+        message: "Error fetching statistics",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
