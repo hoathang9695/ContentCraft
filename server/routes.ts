@@ -1266,7 +1266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all real users 
-  app.get("/api/real-users", isAdmin, async (req, res) => {
+  app.get("/api/real-users", isAuthenticated, async (req, res) => {
     try {
       const { realUsers, users } = await import("@shared/schema");
 
