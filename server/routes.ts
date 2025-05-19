@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Kiểm tra ngày cập nhật nếu có
           if (content.updatedAt) {
             const updatedAt = new Date(content.updatedAt);
-            if (updatedAt >= start && createdAt <= end) return true;
+            if (updatedAt >= start && updatedAt <= end) return true;
           }
 
           return false; // Không thỏa mãn điều kiện nào
@@ -229,38 +229,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
 
-      // Lấy tất cả người dùng trong khoảng thời gian
-      const allRealUsers = await db
-        .select()
+      // Sửa lại phần truy vấn để lấy đúng dữ liệu và lọc theo ngày
+      const realUsersStats = await db
+        .select({
+          id: realUsers.id,
+          fullName: realUsers.fullName,
+          email: realUsers.email,
+          verified: realUsers.verified,
+          createdAt: realUsers.createdAt,
+          updatedAt: realUsers.updatedAt,
+          lastLogin: realUsers.lastLogin,
+          assignedToId: realUsers.assignedToId
+        })
         .from(realUsers)
         .where(
           and(
             start ? gte(realUsers.createdAt, start) : undefined,
-            end ? lte(realUsers.createdAt, end) : undefined
+            end ? lte(realUsers.createdAt, end) : undefined,
+            eq(realUsers.verified, true)
           )
         );
 
-      // Log raw query results  
-      console.log("Raw real users query:", allRealUsers);
+      console.log("Real users stats results:", realUsersStats);
 
-      // Tính toán các chỉ số
-      const totalRealUsers = allRealUsers ? allRealUsers.length : 0;
-      const verifiedRealUsers = allRealUsers ? allRealUsers.filter(u => u.verified === 'verified').length : 0;
-
-      const now = new Date();
-      const newRealUsers = allRealUsers ? allRealUsers.filter(u => {
+      const totalRealUsers = realUsersStats.length;
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
+      const newRealUsers = realUsersStats.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
+        const now = new Date();
         return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
-      }).length : 0;
-
-      console.log("Real users stats:", {
-        total: totalRealUsers,
-        verified: verifiedRealUsers, 
-        new: newRealUsers
-      });
-
-      console.log("Real users stats results:", allRealUsers);
+      }).length;
 
       console.log("Real users stats:", {
         total: totalRealUsers,
