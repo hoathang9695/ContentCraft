@@ -33,30 +33,30 @@ export interface IStorage {
   updateUserStatus(id: number, status: string): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>; // Add method to delete a user
   reassignUserContents(userId: number): Promise<number>; // Add method to reassign contents when deleting a user
-  
+
   // Content management operations
   createContent(content: InsertContent): Promise<Content>;
   getContent(id: number): Promise<Content | undefined>;
-  getAllContents(): Promise<Content[]>;
-  getContentsByAssignee(assigneeId: number): Promise<Content[]>;
+  getAllContents(): Promise<(Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[]>;
+  getContentsByAssignee(assigneeId: number): Promise<(Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[]>;
   assignContentToUser(id: number, userId: number): Promise<Content | undefined>;
   completeProcessing(id: number, result: string, approverId: number): Promise<Content | undefined>;
   updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined>;
   deleteContent(id: number): Promise<boolean>;
   updateAllContentStatuses(): Promise<number>; // Adds a method to update all content statuses
-  
+
   // User activity tracking operations
   logUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
   getUserActivities(userId?: number): Promise<UserActivity[]>;
   getRecentActivities(limit?: number): Promise<UserActivity[]>;
-  
+
   // Categories management operations
   getAllCategories(): Promise<Category[]>;
   getCategory(id: number): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category | undefined>;
   deleteCategory(id: number): Promise<boolean>;
-  
+
   // Labels management operations
   getAllLabels(): Promise<Label[]>;
   getLabelsByCategory(categoryId: number): Promise<Label[]>;
@@ -64,7 +64,7 @@ export interface IStorage {
   createLabel(label: InsertLabel): Promise<Label>;
   updateLabel(id: number, label: Partial<InsertLabel>): Promise<Label | undefined>;
   deleteLabel(id: number): Promise<boolean>;
-  
+
   // Fake User operations
   getAllFakeUsers(): Promise<FakeUser[]>;
   getFakeUser(id: number): Promise<FakeUser | undefined>;
@@ -73,7 +73,7 @@ export interface IStorage {
   updateFakeUser(id: number, fakeUser: Partial<InsertFakeUser>): Promise<FakeUser | undefined>;
   deleteFakeUser(id: number): Promise<boolean>;
   getRandomFakeUser(): Promise<FakeUser | undefined>; // Get a random fake user for comments
-  
+
   sessionStore: any; // Using 'any' as a workaround for ESM compatibility
 }
 
@@ -158,22 +158,22 @@ export class DatabaseStorage implements IStorage {
       createTableIfMissing: true, // Automatically create the session table if it doesn't exist
       pruneSessionInterval: 60, // Prune expired sessions every minute
     });
-    
+
     // Log when session store is initialized
     console.log('PostgreSQL session store initialized');
   }
-  
+
   // Update all content statuses based on categories
   async updateAllContentStatuses(): Promise<number> {
     // Get all contents
     const allContents = await db.select().from(contents);
     let updatedCount = 0;
-    
+
     // Process each content and update status based on categories
     for (const content of allContents) {
       const hasCategories = content.categories && content.categories.trim() !== '';
       const newStatus = hasCategories ? 'completed' : 'pending';
-      
+
       // Only update if status has changed
       if (content.status !== newStatus) {
         await db
@@ -183,11 +183,11 @@ export class DatabaseStorage implements IStorage {
             updatedAt: new Date()
           })
           .where(eq(contents.id, content.id));
-        
+
         updatedCount++;
       }
     }
-    
+
     return updatedCount;
   }
 
@@ -199,12 +199,12 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     // First try by username
     let result = await db.select().from(users).where(eq(users.username, username));
-    
+
     // If not found, try by email
     if (result.length === 0) {
       result = await db.select().from(users).where(eq(users.email, username));
     }
-    
+
     return result.length > 0 ? result[0] : undefined;
   }
 
@@ -219,7 +219,7 @@ export class DatabaseStorage implements IStorage {
       .set(userData)
       .where(eq(users.id, id))
       .returning();
-    
+
     return result.length > 0 ? result[0] : undefined;
   }
 
@@ -233,39 +233,39 @@ export class DatabaseStorage implements IStorage {
       .set({ status })
       .where(eq(users.id, id))
       .returning();
-    
+
     return result.length > 0 ? result[0] : undefined;
   }
-  
+
   async deleteUser(id: number): Promise<boolean> {
     // First, reassign any content assigned to this user
     await this.reassignUserContents(id);
-    
+
     // Delete user activities related to this user
     await db.delete(userActivities).where(eq(userActivities.userId, id));
-    
+
     // Delete the user
     const result = await db
       .delete(users)
       .where(eq(users.id, id))
       .returning({ id: users.id });
-    
+
     return result.length > 0;
   }
-  
+
   async reassignUserContents(userId: number): Promise<number> {
     // Get the user to find their role and department
     const user = await this.getUser(userId);
     if (!user) return 0;
-    
+
     // Get all contents assigned to this user
     const userContents = await db
       .select()
       .from(contents)
       .where(eq(contents.assigned_to_id, userId));
-    
+
     if (userContents.length === 0) return 0;
-    
+
     // Find suitable users to reassign content to - users with the same role and department
     const suitableUsers = await db
       .select()
@@ -278,7 +278,7 @@ export class DatabaseStorage implements IStorage {
           user.department ? eq(users.department, user.department) : undefined // Same department if specified
         )
       );
-    
+
     // If there are no suitable users, find any active users with the same role
     let reassignUsers = suitableUsers;
     if (reassignUsers.length === 0) {
@@ -293,7 +293,7 @@ export class DatabaseStorage implements IStorage {
           )
         );
     }
-    
+
     // If there are still no suitable users, find any active user
     if (reassignUsers.length === 0) {
       reassignUsers = await db
@@ -306,18 +306,18 @@ export class DatabaseStorage implements IStorage {
           )
         );
     }
-    
+
     // If there are no users to reassign to, just return 0
     if (reassignUsers.length === 0) return 0;
-    
+
     // Start reassigning contents
     let reassignedCount = 0;
-    
+
     for (const content of userContents) {
       // Round-robin assignment - get user index based on content position in list
       const assigneeIndex = reassignedCount % reassignUsers.length;
       const newAssigneeId = reassignUsers[assigneeIndex].id;
-      
+
       // Update the content assignment
       await db
         .update(contents)
@@ -326,10 +326,10 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date()
         })
         .where(eq(contents.id, content.id));
-      
+
       reassignedCount++;
     }
-    
+
     return reassignedCount;
   }
 
@@ -351,9 +351,9 @@ export class DatabaseStorage implements IStorage {
       .from(contents)
       .leftJoin(users, eq(contents.assigned_to_id, users.id))
       .where(eq(contents.id, id));
-    
+
     if (results.length === 0) return undefined;
-    
+
     // Format result to include processor as a nested object
     return {
       ...results[0].content,
@@ -362,6 +362,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllContents(): Promise<(Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[]> {
+    console.log("Fetching all contents from database...");
     const results = await db
       .select({
         content: contents,
@@ -373,10 +374,10 @@ export class DatabaseStorage implements IStorage {
       .from(contents)
       .leftJoin(users, eq(contents.assigned_to_id, users.id))
       .orderBy(desc(contents.createdAt));
-    
+
     // Get approver information in a separate query to avoid column naming conflicts
     const contentIds = results.map(item => item.content.id);
-    
+
     const approverInfo = contentIds.length > 0 
       ? await db
           .select({
@@ -390,12 +391,12 @@ export class DatabaseStorage implements IStorage {
           .leftJoin(users, eq(contents.approver_id, users.id))
           .where(inArray(contents.id, contentIds))
       : [];
-    
+
     // Create a map of content IDs to approver info
     const approverMap = new Map(
       approverInfo.map(item => [item.contentId, item.approver])
     );
-    
+
     // Format results to include processor and approver as nested objects
     return results.map(item => ({
       ...item.content,
@@ -417,10 +418,10 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(contents.assigned_to_id, users.id))
       .where(eq(contents.assigned_to_id, assigneeId))
       .orderBy(desc(contents.createdAt));
-    
+
     // Get approver information in a separate query to avoid column naming conflicts
     const contentIds = results.map(item => item.content.id);
-    
+
     const approverInfo = contentIds.length > 0 
       ? await db
           .select({
@@ -434,12 +435,12 @@ export class DatabaseStorage implements IStorage {
           .leftJoin(users, eq(contents.approver_id, users.id))
           .where(inArray(contents.id, contentIds))
       : [];
-    
+
     // Create a map of content IDs to approver info
     const approverMap = new Map(
       approverInfo.map(item => [item.contentId, item.approver])
     );
-    
+
     // Format results to include processor and approver as nested objects
     return results.map(item => ({
       ...item.content,
@@ -447,7 +448,7 @@ export class DatabaseStorage implements IStorage {
       approver: approverMap.get(item.content.id) || undefined
     }));
   }
-  
+
   async assignContentToUser(id: number, userId: number): Promise<Content | undefined> {
     const result = await db
       .update(contents)
@@ -459,10 +460,10 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(contents.id, id))
       .returning();
-    
+
     return result.length > 0 ? result[0] : undefined;
   }
-  
+
   async completeProcessing(id: number, result: string, approverId: number): Promise<Content | undefined> {
     const updateResult = await db
       .update(contents)
@@ -475,13 +476,13 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(contents.id, id))
       .returning();
-    
+
     return updateResult.length > 0 ? updateResult[0] : undefined;
   }
 
   async updateContent(id: number, contentUpdate: Partial<InsertContent>): Promise<Content | undefined> {
     console.log('Storage: Updating content', { id, contentUpdate });
-    
+
     try {
       const result = await db
         .update(contents)
@@ -505,7 +506,7 @@ export class DatabaseStorage implements IStorage {
       .delete(contents)
       .where(eq(contents.id, id))
       .returning({ id: contents.id });
-    
+
     return result.length > 0;
   }
 
@@ -562,20 +563,20 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(categories.id, id))
       .returning();
-    
+
     return result.length > 0 ? result[0] : undefined;
   }
 
   async deleteCategory(id: number): Promise<boolean> {
     // Xóa labels trước (vì có khóa ngoại)
     await db.delete(labels).where(eq(labels.categoryId, id));
-    
+
     // Sau đó xóa category
     const result = await db
       .delete(categories)
       .where(eq(categories.id, id))
       .returning({ id: categories.id });
-    
+
     return result.length > 0;
   }
 
@@ -611,7 +612,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(labels.id, id))
       .returning();
-    
+
     return result.length > 0 ? result[0] : undefined;
   }
 
@@ -620,7 +621,7 @@ export class DatabaseStorage implements IStorage {
       .delete(labels)
       .where(eq(labels.id, id))
       .returning({ id: labels.id });
-    
+
     return result.length > 0;
   }
 
@@ -633,7 +634,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(fakeUsers).where(eq(fakeUsers.id, id));
     return result.length > 0 ? result[0] : undefined;
   }
-  
+
   async getFakeUserByToken(token: string): Promise<FakeUser | undefined> {
     const result = await db.select().from(fakeUsers).where(eq(fakeUsers.token, token));
     return result.length > 0 ? result[0] : undefined;
@@ -653,7 +654,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(fakeUsers.id, id))
       .returning();
-    
+
     return result.length > 0 ? result[0] : undefined;
   }
 
@@ -662,7 +663,7 @@ export class DatabaseStorage implements IStorage {
       .delete(fakeUsers)
       .where(eq(fakeUsers.id, id))
       .returning({ id: fakeUsers.id });
-    
+
     return result.length > 0;
   }
 
@@ -672,9 +673,9 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(fakeUsers)
       .where(eq(fakeUsers.status, 'active'));
-    
+
     if (activeFakeUsers.length === 0) return undefined;
-    
+
     // Chọn ngẫu nhiên một người dùng ảo
     const randomIndex = Math.floor(Math.random() * activeFakeUsers.length);
     return activeFakeUsers[randomIndex];

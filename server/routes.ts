@@ -139,7 +139,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard statistics
   app.get("/api/stats", isAuthenticated, async (req, res) => {
     try {
+      console.log("Getting stats with params:", req.query);
+      
       const allContents = await storage.getAllContents();
+      console.log("Total contents fetched:", allContents.length);
+      
       const allUsers = await storage.getAllUsers();
       const user = req.user as Express.User;
       const { startDate, endDate } = req.query;
@@ -148,6 +152,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filteredContents = user.role === 'admin' 
         ? allContents 
         : allContents.filter(c => c.assigned_to_id === user.id);
+        
+      console.log("Filtered contents for user:", {
+        userId: user.id,
+        role: user.role,
+        contentCount: filteredContents.length
+      });
 
       // Lọc theo ngày nếu có
       if (startDate && endDate) {
