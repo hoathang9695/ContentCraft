@@ -31,31 +31,31 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  
+
   // Sử dụng ngày 1 tháng hiện tại làm giá trị mặc định cho ngày bắt đầu
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  
+
   const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
   const [endDate, setEndDate] = useState<Date>(today);
-  
+
   // Chuyển đổi khoảng ngày để truyền vào query
   const dateParams = { 
     startDate: format(startDate, 'yyyy-MM-dd'),
     endDate: format(endDate, 'yyyy-MM-dd') 
   };
-  
+
   // Thêm key để xác định khi nào cần refetch
   const dateFilterKey = `${dateParams.startDate}-${dateParams.endDate}`;
-  
+
   // Fetch content based on user role (all for admin, only user's content for regular users)
   const { data: contents = [], isLoading: isLoadingContents } = useQuery<Content[]>({
     queryKey: [user?.role === 'admin' ? '/api/contents' : '/api/my-contents'],
   });
-  
+
   // Sử dụng useQueryClient để lấy queryClient instance
   const queryClient = useQueryClient();
-  
+
   // Hàm xử lý khi thay đổi ngày
   const handleDateFilter = () => {
     // Log thông tin về khoảng thời gian đã chọn để debug
@@ -63,46 +63,46 @@ export default function DashboardPage() {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString()
     });
-    
+
     // Cập nhật state và buộc React Query refetch
     const updatedStartDate = new Date(startDate);
     const updatedEndDate = new Date(endDate);
-    
+
     setStartDate(updatedStartDate);
     setEndDate(updatedEndDate);
-    
+
     // Kích hoạt re-render để áp dụng bộ lọc - cần invalidate queryCache để đảm bảo refresh
     setTimeout(() => {
       // Force refetch bằng cách invalidate query
       const nextDateFilterKey = `${format(updatedStartDate, 'yyyy-MM-dd')}-${format(updatedEndDate, 'yyyy-MM-dd')}`;
       console.log('New date filter key:', nextDateFilterKey);
-      
+
       // Invalidate query cache để buộc refetch - thêm user.role để phân biệt cache
       queryClient.invalidateQueries({
         queryKey: ['/api/stats', user?.role]
       });
-      
+
       toast({
         title: "Đã áp dụng bộ lọc",
         description: `Hiển thị dữ liệu từ ${format(updatedStartDate, 'dd/MM/yyyy')} đến ${format(updatedEndDate, 'dd/MM/yyyy')}`,
       });
     }, 100);
   };
-  
+
   // Hàm xử lý khi nhấn nút xóa bộ lọc
   const handleResetDateFilter = () => {
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    
+
     setStartDate(firstDayOfMonth);
     setEndDate(today);
-    
+
     // Force refetch bằng cách invalidate query sau khi cập nhật state
     setTimeout(() => {
       queryClient.invalidateQueries({
         queryKey: ['/api/stats', user?.role]
       });
-      
+
       toast({
         title: "Đã đặt lại bộ lọc",
         description: "Hiển thị dữ liệu từ đầu tháng đến thời điểm hiện tại",
@@ -141,17 +141,17 @@ export default function DashboardPage() {
       return response.json();
     }
   });
-  
+
   // Hàm xử lý khi người dùng muốn xem tất cả nội dung
   const handleViewAllContent = () => {
     navigate('/contents');
   };
-  
+
   return (
     <DashboardLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
-        
+
         {/* Bộ lọc ngày tháng mới (từ ngày đến ngày) */}
         <div className="flex items-center">
           <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ export default function DashboardPage() {
                 </PopoverContent>
               </Popover>
             </div>
-            
+
             <div>
               <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
               <Popover>
@@ -220,7 +220,7 @@ export default function DashboardPage() {
                 </PopoverContent>
               </Popover>
             </div>
-            
+
             <div className="flex items-end gap-2 h-[74px]">
               <Button 
                 variant="default" 
@@ -229,7 +229,7 @@ export default function DashboardPage() {
               >
                 Áp dụng
               </Button>
-              
+
               <Button 
                 variant="outline" 
                 className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
@@ -241,7 +241,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Thông tin khoảng thời gian đã chọn */}
       {stats?.period && (
         <div className="bg-muted p-2 rounded-md mb-4 text-sm flex items-center justify-between">
@@ -250,9 +250,25 @@ export default function DashboardPage() {
           </span>
         </div>
       )}
-      
+
       {/* Stats Section */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <StatCard
+          title="Tổng số người dùng thật"
+          value={isLoadingStats ? '...' : stats?.totalRealUsers || 0}
+          icon={Users}
+          iconBgColor="bg-purple-500"
+          onViewAll={() => navigate('/real-user')}
+        />
+
+        <StatCard
+          title="Người dùng mới (7 ngày)"
+          value={isLoadingStats ? '...' : stats?.newRealUsers || 0}
+          icon={UserPlus}
+          iconBgColor="bg-cyan-500"
+          onViewAll={() => navigate('/real-user')}
+        />
+
         <StatCard
           title="Tổng số nội dung"
           value={isLoadingStats ? '...' : stats?.totalContent || 0}
@@ -260,7 +276,7 @@ export default function DashboardPage() {
           iconBgColor="bg-primary"
           onViewAll={handleViewAllContent}
         />
-        
+
         <StatCard
           title="Đã xử lý"
           value={isLoadingStats ? '...' : stats?.completed || 0}
@@ -268,7 +284,7 @@ export default function DashboardPage() {
           iconBgColor="bg-green-500"
           onViewAll={() => navigate('/contents?status=completed')}
         />
-        
+
         <StatCard
           title="Chưa xử lý"
           value={isLoadingStats ? '...' : stats?.pending || 0}
@@ -276,7 +292,7 @@ export default function DashboardPage() {
           iconBgColor="bg-amber-500"
           onViewAll={() => navigate('/contents?status=pending')}
         />
-        
+
         <StatCard
           title="Phân công hoạt động"
           value={isLoadingStats ? '...' : stats?.assigned || 0}
@@ -286,25 +302,6 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Real Users Stats Section */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 mb-8">
-        <StatCard
-          title="Tổng số người dùng thật"
-          value={isLoadingStats ? '...' : stats?.totalRealUsers || 0}
-          icon={Users}
-          iconBgColor="bg-purple-500"
-          onViewAll={() => navigate('/real-user')}
-        />
-        
-        <StatCard
-          title="Người dùng mới (7 ngày)"
-          value={isLoadingStats ? '...' : stats?.newRealUsers || 0}
-          icon={UserPlus}
-          iconBgColor="bg-cyan-500"
-          onViewAll={() => navigate('/real-user')}
-        />
-      </div>
-      
       {/* Additional Stats Section */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
@@ -314,7 +311,7 @@ export default function DashboardPage() {
           iconBgColor="bg-emerald-500"
           onViewAll={() => navigate('/contents?sourceVerification=verified')}
         />
-        
+
         <StatCard
           title="Chưa xác minh"
           value={isLoadingStats ? '...' : stats?.unverified || 0}
@@ -322,7 +319,7 @@ export default function DashboardPage() {
           iconBgColor="bg-orange-500"
           onViewAll={() => navigate('/contents?sourceVerification=unverified')}
         />
-        
+
         <StatCard
           title="Nội dung an toàn"
           value={isLoadingStats ? '...' : stats?.safe || 0}
@@ -330,7 +327,7 @@ export default function DashboardPage() {
           iconBgColor="bg-green-600"
           onViewAll={() => navigate('/contents?result=safe')}
         />
-        
+
         <StatCard
           title="Nội dung không an toàn"
           value={isLoadingStats ? '...' : stats?.unsafe || 0}
@@ -339,7 +336,7 @@ export default function DashboardPage() {
           onViewAll={() => navigate('/contents?result=unsafe')}
         />
       </div>
-      
+
       {/* Section biểu đồ phân bổ dữ liệu theo người xử lý - chỉ hiển thị cho admin */}
       {user?.role === 'admin' && (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-8">
@@ -349,7 +346,7 @@ export default function DashboardPage() {
             isLoading={isLoadingStats}
             onViewAll={() => navigate('/contents')}
           />
-          
+
           <div className="flex flex-col gap-4">
             <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <h3 className="text-lg font-medium mb-2">Thống kê tổng quan</h3>
@@ -371,7 +368,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-auto">
               <Button 
                 size="lg" 
@@ -386,7 +383,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-      
+
       {/* Button "Xem tất cả nội dung" cho người dùng không phải admin */}
       {user?.role !== 'admin' && (
         <div className="mb-8">
