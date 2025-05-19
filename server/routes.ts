@@ -253,14 +253,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Real users stats results:", realUsersStats);
 
       // Tính toán các chỉ số
-      const totalRealUsers = realUsersStats.length; // Tổng số người dùng
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length; // Số người dùng đã xác minh
+      // Tính tổng số người dùng thật (không tính trùng lặp theo ID)
+      const uniqueIds = new Set(realUsersStats.map(u => u.fullName?.id));
+      const totalRealUsers = uniqueIds.size;
+
+      // Tính số người dùng mới trong 7 ngày
       const newRealUsers = realUsersStats.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
         const now = new Date();
-        return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
-      }).length; // Số người dùng mới trong 7 ngày
+        const diffDays = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays <= 7;
+      }).length;
 
       console.log("Real users stats:", {
         total: totalRealUsers,
