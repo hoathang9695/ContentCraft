@@ -99,15 +99,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               Content
             </SidebarItem>
 
-            <SidebarItem
-              href="/real-user"
-              icon={Users}
-              isActive={isActivePath('/real-user')}
-              onClick={handleItemClick}
-            >
-              Người dùng thật
-            </SidebarItem>
-
             <div>
               <div className="relative">
                 <SidebarItem
