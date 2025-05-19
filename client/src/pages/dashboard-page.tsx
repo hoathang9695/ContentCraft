@@ -13,7 +13,9 @@ import {
   CheckCircle,
   FileEdit,
   Users,
-  FilePenLine
+  FilePenLine,
+  UserPlus,
+  UserCheck
 } from 'lucide-react';
 import { Content } from '@shared/schema';
 import { format } from 'date-fns';
@@ -281,6 +283,33 @@ export default function DashboardPage() {
           icon={Users}
           iconBgColor="bg-blue-500"
           onViewAll={() => navigate('/contents')}
+        />
+      </div>
+
+      {/* Real Users Stats Section */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
+        <StatCard
+          title="Tổng số người dùng thật"
+          value={isLoadingStats ? '...' : stats?.totalRealUsers || 0}
+          icon={Users}
+          iconBgColor="bg-purple-500"
+          onViewAll={() => navigate('/real-user')}
+        />
+        
+        <StatCard
+          title="Người dùng mới (7 ngày)"
+          value={isLoadingStats ? '...' : stats?.newRealUsers || 0}
+          icon={UserPlus}
+          iconBgColor="bg-cyan-500"
+          onViewAll={() => navigate('/real-user')}
+        />
+        
+        <StatCard
+          title="Người dùng đã xác minh"
+          value={isLoadingStats ? '...' : stats?.verifiedRealUsers || 0}
+          icon={UserCheck}
+          iconBgColor="bg-emerald-500"
+          onViewAll={() => navigate('/real-user')}
         />
       </div>
       
