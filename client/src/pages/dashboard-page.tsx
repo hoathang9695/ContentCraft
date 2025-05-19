@@ -287,7 +287,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Real Users Stats Section */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 mb-8">
         <StatCard
           title="Tổng số người dùng thật"
           value={isLoadingStats ? '...' : stats?.totalRealUsers || 0}
@@ -301,14 +301,6 @@ export default function DashboardPage() {
           value={isLoadingStats ? '...' : stats?.newRealUsers || 0}
           icon={UserPlus}
           iconBgColor="bg-cyan-500"
-          onViewAll={() => navigate('/real-user')}
-        />
-        
-        <StatCard
-          title="Người dùng đã xác minh"
-          value={isLoadingStats ? '...' : stats?.verifiedRealUsers || 0}
-          icon={UserCheck}
-          iconBgColor="bg-emerald-500"
           onViewAll={() => navigate('/real-user')}
         />
       </div>
