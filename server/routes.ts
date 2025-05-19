@@ -216,24 +216,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Lấy thống kê người dùng thật
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+
+      // Sửa lại phần truy vấn để lấy đúng dữ liệu
       const realUsersStats = await db
-        .select()
+        .select({
+          id: realUsers.id,
+          fullName: realUsers.fullName,
+          email: realUsers.email,
+          verified: realUsers.verified,
+          createdAt: realUsers.createdAt,
+          updatedAt: realUsers.updatedAt,
+          lastLogin: realUsers.lastLogin,
+          assignedToId: realUsers.assignedToId
+        })
         .from(realUsers)
         .where(
           and(
-            startDate ? gte(realUsers.createdAt, new Date(startDate as string)) : undefined,
-            endDate ? lte(realUsers.createdAt, new Date(endDate as string)) : undefined
+            start ? gte(realUsers.createdAt, start) : undefined,
+            end ? lte(realUsers.createdAt, end) : undefined
           )
         );
 
       console.log("Real users query:", {
-        startDate: startDate ? new Date(startDate as string) : null,
-        endDate: endDate ? new Date(endDate as string) : null,
+        startDate: start,
+        endDate: end,
         results: realUsersStats
       });
 
       const totalRealUsers = realUsersStats.length;
-      const verifiedRealUsers = realUsersStats.filter(u => u.verified === true).length;
+      const verifiedRealUsers = realUsersStats.filter(u => u.verified === 'verified').length;
       const newRealUsers = realUsersStats.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
