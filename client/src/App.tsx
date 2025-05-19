@@ -39,7 +39,7 @@ function Router() {
       <Route path="/user-feedback/support" component={SupportPage} />
       <Route path="/user-feedback/verification" component={VerificationPage} />
       <Route path="/user-feedback/tick" component={TickPage} />
-      <ProtectedRoute path="/real-user" component={RealUserPage} adminOnly={true} />
+      <ProtectedRoute path="/real-user" component={RealUserPage} adminOnly={false} />
       <Route component={NotFound} />
     </Switch>
   );
