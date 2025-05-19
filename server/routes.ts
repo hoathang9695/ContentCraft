@@ -238,21 +238,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             start ? gte(realUsers.createdAt, start) : undefined,
             end ? lte(realUsers.createdAt, end) : undefined
           )
-        )
-        .execute();
+        );
 
-      console.log("Real users query results:", allRealUsers);
+      // Log raw query results  
+      console.log("Raw real users query:", allRealUsers);
 
       // Tính toán các chỉ số
-      const totalRealUsers = allRealUsers.length;
-      const verifiedRealUsers = allRealUsers.filter(u => u.verified === true).length;
+      const totalRealUsers = allRealUsers ? allRealUsers.length : 0;
+      const verifiedRealUsers = allRealUsers ? allRealUsers.filter(u => u.verified === 'verified').length : 0;
       
       const now = new Date();
-      const newRealUsers = allRealUsers.filter(u => {
+      const newRealUsers = allRealUsers ? allRealUsers.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
         return (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
-      }).length;
+      }).length : 0;
 
       console.log("Real users stats:", {
         total: totalRealUsers,
