@@ -277,8 +277,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completed,
         // Thông tin trạng thái xác minh nguồn
         verified,
-        unverified,
-        // Thông tin trạng thái an toàn
+        unverified, 
+        // Thông tin trạng thái an toàn  
         safe,
         unsafe,
         unchecked,
@@ -290,7 +290,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedPerUser: user.role === 'admin' ? assignedPerUser : [],
         // Thống kê người dùng thật
         totalRealUsers,
-        verifiedRealUsers,
         newRealUsers,
         // Thông tin khoảng thời gian nếu có lọc
         period: startDate && endDate ? {
