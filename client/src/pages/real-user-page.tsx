@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -80,23 +81,7 @@ export default function RealUserPage() {
     }
   });
 
-  // Redirect if not admin
-  if (user?.role !== "admin") {
-    return (
-      <DashboardLayout>
-        <div className="container mx-auto p-4">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">Không có quyền truy cập</h2>
-            <p className="text-muted-foreground">
-              Bạn cần có quyền Admin để truy cập trang này.
-            </p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  // Fetch real users
+  // Fetch real users with role check
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["/api/real-users"],
     queryFn: async () => {
@@ -105,8 +90,13 @@ export default function RealUserPage() {
       const data = await response.json();
       console.log("Fetched real users:", data);
 
+      // Filter data based on user role
+      const filteredData = user?.role === 'admin' 
+        ? data 
+        : data.filter((u: any) => u.assignedToId === user?.id);
+
       // Standardize data structure
-      return data?.map(user => ({
+      return filteredData?.map((user: any) => ({
         id: user.id,
         fullName: user.fullName ? (typeof user.fullName === 'object' ? user.fullName : (typeof user.fullName === 'string' ? JSON.parse(user.fullName) : {name: '', id: user.id})) : {name: '', id: user.id},
         email: user.email,
@@ -193,22 +183,23 @@ export default function RealUserPage() {
               </div>
             </div>
 
-            <Select value={selectedUserId?.toString() || "all"} onValueChange={(value) => setSelectedUserId(value === "all" ? null : parseInt(value))}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue>
-                  {selectedUserId ? (editorUsers?.find(user => user.id === selectedUserId)?.name || "Chọn người dùng") : "Tất cả"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {editorUsers?.map(user => (
-                  <SelectItem key={user.id} value={user.id.toString()}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
+            {user?.role === 'admin' && (
+              <Select value={selectedUserId?.toString() || "all"} onValueChange={(value) => setSelectedUserId(value === "all" ? null : parseInt(value))}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue>
+                    {selectedUserId ? (editorUsers?.find(user => user.id === selectedUserId)?.name || "Chọn người dùng") : "Tất cả"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {editorUsers?.map(user => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <Button
               variant="outline"
