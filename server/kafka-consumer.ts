@@ -353,9 +353,13 @@ async function processContentMessage(contentMessage: ContentMessage, tx: any) {
 
     return newContent[0];
   } catch (error) {
-    log(`Error processing content message: ${error}`, "kafka-error");
-    throw error;
-  }
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      log(`Error processing content message: ${errorMessage}`, "kafka-error");
+      log(`Error stack: ${errorStack}`, "kafka-error");
+      metrics.failedMessages++;
+      throw error;
+    }
 }
 
 async function processSupportMessage(message: SupportMessage, tx: any) {
