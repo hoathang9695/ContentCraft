@@ -60,10 +60,18 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
     log("Successfully reconnected to Kafka", "kafka");
 
     // Resubscribe to topics after reconnect
-    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages"];
+    // Ensure all required topics are explicitly defined
+    const requiredTopics = ["content_management", "real_users", "contact-messages"];
+    const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
+    const topics = [...new Set([...requiredTopics, ...configuredTopics])];
+
     for (const topic of topics) {
-      await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false on production
-      log(`Resubscribed to topic: ${topic}`, "kafka");
+      try {
+        await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false on production
+        log(`Subscribed to topic: ${topic}`, "kafka");
+      } catch (error) {
+        log(`Failed to subscribe to topic ${topic}: ${error}`, "kafka-error");
+      }
     }
   } catch (error) {
     log(`Failed to reconnect: ${error}`, "kafka-error");
