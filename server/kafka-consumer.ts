@@ -1,6 +1,6 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
-import { users, supportRequests, contents } from "../shared/schema";
+import { users, supportRequests, contents, realUsers } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import { log } from "./vite";
 
@@ -198,7 +198,7 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
@@ -208,6 +208,29 @@ export async function setupKafkaConsumer() {
                         await processSupportMessage(msg as SupportMessage, tx);
                       } else if ("name" in msg && "message" in msg) {
                         await processContactMessage(msg as ContactMessage, tx);
+                      } else if ("fullName" in msg && "email" in msg && "verified" in msg) {
+                        // Handle real user message
+                        const realUserMsg = msg as {
+                          id: string;
+                          fullName: string;
+                          email: string;
+                          verified: "verified" | "unverified";
+                          assignedToId?: number;
+                        };
+
+                        const now = new Date();
+                        await tx.insert(realUsers).values({
+                          fullName: {
+                            id: realUserMsg.id,
+                            name: realUserMsg.fullName
+                          },
+                          email: realUserMsg.email,
+                          verified: realUserMsg.verified === "verified",
+                          lastLogin: now,
+                          createdAt: now,
+                          updatedAt: now,
+                          assignedToId: realUserMsg.assignedToId
+                        });
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
