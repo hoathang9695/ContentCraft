@@ -132,7 +132,11 @@ export async function setupKafkaConsumer() {
       password: process.env.KAFKA_SASL_PASSWORD || "",
     } : undefined;
 
-    const brokers = process.env.KAFKA_BROKERS?.split(",") || [];
+    // Ensure broker list is not empty and valid
+    const brokers = process.env.KAFKA_BROKERS?.split(",").filter(broker => broker.trim()) || [];
+    if (!brokers.length) {
+      throw new Error("No Kafka brokers configured");
+    }
     log(`Initializing Kafka connection to brokers: ${brokers.join(", ")}`, "kafka");
 
     const kafka = new Kafka({
@@ -140,15 +144,16 @@ export async function setupKafkaConsumer() {
       brokers,
       ssl: false,
       sasl,
-      connectionTimeout: KAFKA_CONFIG.CONNECTION_TIMEOUT,
-      authenticationTimeout: KAFKA_CONFIG.AUTH_TIMEOUT,
+      connectionTimeout: 30000, // Reduce timeout
+      authenticationTimeout: 20000,
       retry: {
-        initialRetryTime: KAFKA_CONFIG.RETRY_INITIAL_TIME,
-        retries: KAFKA_CONFIG.MAX_RETRIES,
-        maxRetryTime: KAFKA_CONFIG.RETRY_MAX_TIME,
-        factor: KAFKA_CONFIG.RETRY_FACTOR,
+        initialRetryTime: 1000,
+        retries: 5, // Reduce retries to fail fast
+        maxRetryTime: 30000,
+        factor: 1.5,
       },
-      logLevel: 4
+      logLevel: 4,
+      allowAutoTopicCreation: true // Enable auto topic creation
     });
 
     consumer = kafka.consumer({
