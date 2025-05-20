@@ -15,8 +15,9 @@ const KAFKA_CONFIG = {
   MAX_RETRIES: 30,
   CONNECTION_TIMEOUT: 120000,
   AUTH_TIMEOUT: 60000,
-  HEALTH_CHECK_INTERVAL: 60000,
-  BATCH_SIZE: 10
+  HEALTH_CHECK_INTERVAL: 30000, // Giảm interval check để phát hiện lỗi sớm hơn
+  BATCH_SIZE: 20, // Tăng batch size để xử lý hiệu quả hơn
+  RECONNECT_TIMEOUT: 5000 // Thêm timeout cho reconnect
 };
 
 interface ContactMessage {
@@ -45,8 +46,16 @@ export interface SupportMessage {
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
+    await new Promise(resolve => setTimeout(resolve, KAFKA_CONFIG.RECONNECT_TIMEOUT));
     await consumer.connect();
     log("Successfully reconnected to Kafka", "kafka");
+    
+    // Resubscribe to topics after reconnect
+    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages"];
+    for (const topic of topics) {
+      await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false on production
+      log(`Resubscribed to topic: ${topic}`, "kafka");
+    }
   } catch (error) {
     log(`Failed to reconnect: ${error}`, "kafka-error");
     throw error;
