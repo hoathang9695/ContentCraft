@@ -126,7 +126,7 @@ export async function setupKafkaConsumer() {
     await consumer.connect();
     log("Connected to Kafka", "kafka");
 
-    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management"];
+    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users"];
     for (const topic of topics) {
       await consumer.subscribe({ topic, fromBeginning: true });
       log(`Subscribed to topic: ${topic}`, "kafka");
