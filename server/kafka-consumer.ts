@@ -54,10 +54,15 @@ export interface SupportMessage {
 
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
+    log("Attempting to reconnect to Kafka...", "kafka");
     await consumer.disconnect();
-    await new Promise(resolve => setTimeout(resolve, KAFKA_CONFIG.RECONNECT_TIMEOUT));
+    await new Promise(resolve => setTimeout(resolve, 5000)); // 5s delay before reconnect
     await consumer.connect();
     log("Successfully reconnected to Kafka", "kafka");
+    
+    // Force resubscribe to all topics
+    const requiredTopics = ["content_management", "real_users", "contact-messages"];
+    log(`Resubscribing to topics: ${requiredTopics.join(", ")}`, "kafka");
 
     // Resubscribe to topics after reconnect
     // Ensure all required topics are explicitly defined
@@ -140,15 +145,21 @@ export async function setupKafkaConsumer() {
       brokers,
       ssl: false,
       sasl,
-      connectionTimeout: KAFKA_CONFIG.CONNECTION_TIMEOUT,
-      authenticationTimeout: KAFKA_CONFIG.AUTH_TIMEOUT,
+      connectionTimeout: 30000, // Giảm timeout để phát hiện lỗi sớm hơn
+      authenticationTimeout: 20000,
       retry: {
-        initialRetryTime: KAFKA_CONFIG.RETRY_INITIAL_TIME,
-        retries: KAFKA_CONFIG.MAX_RETRIES,
-        maxRetryTime: KAFKA_CONFIG.RETRY_MAX_TIME,
-        factor: KAFKA_CONFIG.RETRY_FACTOR,
+        initialRetryTime: 1000, // Bắt đầu retry sớm hơn
+        retries: 10, // Giảm số lần retry để tránh chờ quá lâu
+        maxRetryTime: 30000,
+        factor: 1.5,
       },
       logLevel: 4
+    });
+
+    // Thêm error handler cho kafka
+    kafka.logger().setLogLevel(logLevel.ERROR);
+    kafka.on('error', (error) => {
+      log(`Kafka client error: ${error}`, "kafka-error");
     });
 
     consumer = kafka.consumer({
