@@ -208,28 +208,50 @@ export async function setupKafkaConsumer() {
                         await processSupportMessage(msg as SupportMessage, tx);
                       } else if ("name" in msg && "message" in msg) {
                         await processContactMessage(msg as ContactMessage, tx);
-                      } else if ("fullName" in msg && "email" in msg && "verified" in msg) {
-                        // Handle real user message
-                        const realUserMsg = msg as {
-                          id: string;
-                          fullName: string;
-                          email: string;
-                          verified: "verified" | "unverified";
-                          assignedToId?: number;
-                        };
-
+                      } else if ("id" in msg && "fullName" in msg && "email" in msg && "verified" in msg) {
+                        // Handle real user message from Kafka
                         const now = new Date();
+
+                        // Get active users for round-robin assignment
+                        const activeUsers = await db
+                          .select()
+                          .from(users)
+                          .where(eq(users.status, "active"));
+
+                        if (!activeUsers || activeUsers.length === 0) {
+                          throw new Error("No active users found for assignment");
+                        }
+
+                        // Get last assigned request for round-robin
+                        const lastAssigned = await db.query.realUsers.findFirst({
+                          orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)]
+                        });
+
+                        // Calculate next assignee index
+                        let nextAssigneeIndex = 0;
+                        if (lastAssigned && lastAssigned.assignedToId) {
+                          const lastAssigneeIndex = activeUsers.findIndex(
+                            user => user.id === lastAssigned.assignedToId
+                          );
+                          if (lastAssigneeIndex !== -1) {
+                            nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                          }
+                        }
+
+                        const assignedToId = activeUsers[nextAssigneeIndex].id;
+
+                        // Insert new real user with proper format
                         await tx.insert(realUsers).values({
                           fullName: {
-                            id: realUserMsg.id,
-                            name: realUserMsg.fullName
+                            id: msg.id.toString(),
+                            name: msg.fullName
                           },
-                          email: realUserMsg.email,
-                          verified: realUserMsg.verified === "verified",
+                          email: msg.email,
+                          verified: msg.verified === "verified",
                           lastLogin: now,
                           createdAt: now,
                           updatedAt: now,
-                          assignedToId: realUserMsg.assignedToId
+                          assignedToId: assignedToId
                         });
                       }
                     }, { isolationLevel: 'serializable' });
