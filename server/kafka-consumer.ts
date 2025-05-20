@@ -240,19 +240,38 @@ export async function setupKafkaConsumer() {
 
                         const assignedToId = activeUsers[nextAssigneeIndex].id;
 
-                        // Insert new real user with proper format
-                        await tx.insert(realUsers).values({
-                          fullName: {
-                            id: msg.id.toString(),
-                            name: msg.fullName
-                          },
-                          email: msg.email,
-                          verified: msg.verified === "verified",
-                          lastLogin: now,
-                          createdAt: now,
-                          updatedAt: now,
-                          assignedToId: assignedToId
-                        });
+                        try {
+                          // Check if user already exists to avoid duplicates
+                          const existingUser = await tx
+                            .select()
+                            .from(realUsers)
+                            .where(eq(realUsers.email, msg.email))
+                            .limit(1);
+
+                          if (existingUser.length > 0) {
+                            log(`User with email ${msg.email} already exists, skipping...`, "kafka");
+                            return;
+                          }
+
+                          // Insert new real user with proper format
+                          const result = await tx.insert(realUsers).values({
+                            fullName: {
+                              id: msg.id.toString(),
+                              name: msg.fullName
+                            },
+                            email: msg.email,
+                            verified: msg.verified === "verified",
+                            lastLogin: now,
+                            createdAt: now,
+                            updatedAt: now,
+                            assignedToId: assignedToId
+                          }).returning();
+
+                          log(`Successfully inserted real user: ${JSON.stringify(result[0])}`, "kafka");
+                        } catch (error) {
+                          log(`Error inserting real user: ${error}`, "kafka-error");
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
