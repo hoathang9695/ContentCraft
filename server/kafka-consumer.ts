@@ -241,6 +241,11 @@ export async function setupKafkaConsumer() {
                         const assignedToId = activeUsers[nextAssigneeIndex].id;
 
                         try {
+                          // Validate required fields
+                          if (!msg.id || !msg.fullName || !msg.email || !msg.verified) {
+                            throw new Error(`Invalid message format: ${JSON.stringify(msg)}`);
+                          }
+
                           // Check if user already exists to avoid duplicates
                           const existingUser = await tx
                             .select()
@@ -250,7 +255,18 @@ export async function setupKafkaConsumer() {
 
                           if (existingUser.length > 0) {
                             log(`User with email ${msg.email} already exists, skipping...`, "kafka");
-                            return;
+                            return existingUser[0];
+                          }
+
+                          // Validate assigned user is still active
+                          const assignedUser = await tx
+                            .select()
+                            .from(users)
+                            .where(eq(users.id, assignedToId))
+                            .limit(1);
+
+                          if (!assignedUser.length || assignedUser[0].status !== 'active') {
+                            throw new Error(`Assigned user ${assignedToId} is not active`);
                           }
 
                           // Insert new real user with proper format
@@ -268,8 +284,11 @@ export async function setupKafkaConsumer() {
                           }).returning();
 
                           log(`Successfully inserted real user: ${JSON.stringify(result[0])}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
                         } catch (error) {
-                          log(`Error inserting real user: ${error}`, "kafka-error");
+                          log(`Error processing real user: ${error}`, "kafka-error");
+                          metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
                       }
