@@ -7,7 +7,6 @@ import { log } from "./vite";
 let consumer: Consumer;
 let isShuttingDown = false;
 
-// Constants for configuration
 const KAFKA_CONFIG = {
   RETRY_INITIAL_TIME: 5000,
   RETRY_MAX_TIME: 300000,
@@ -15,9 +14,19 @@ const KAFKA_CONFIG = {
   MAX_RETRIES: 30,
   CONNECTION_TIMEOUT: 120000,
   AUTH_TIMEOUT: 60000,
-  HEALTH_CHECK_INTERVAL: 30000, // Giảm interval check để phát hiện lỗi sớm hơn
-  BATCH_SIZE: 20, // Tăng batch size để xử lý hiệu quả hơn
-  RECONNECT_TIMEOUT: 5000 // Thêm timeout cho reconnect
+  HEALTH_CHECK_INTERVAL: 30000,
+  BATCH_SIZE: 20,
+  RECONNECT_TIMEOUT: 5000,
+  MONITOR_INTERVAL: 60000, // Monitor metrics mỗi phút
+  MESSAGE_TIMEOUT: 30000 // Timeout xử lý message
+};
+
+// Monitoring metrics
+let metrics = {
+  processedMessages: 0,
+  failedMessages: 0,
+  lastProcessingTime: 0,
+  avgProcessingTime: 0
 };
 
 interface ContactMessage {
@@ -49,7 +58,7 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
     await new Promise(resolve => setTimeout(resolve, KAFKA_CONFIG.RECONNECT_TIMEOUT));
     await consumer.connect();
     log("Successfully reconnected to Kafka", "kafka");
-    
+
     // Resubscribe to topics after reconnect
     const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages"];
     for (const topic of topics) {
@@ -177,15 +186,26 @@ export async function setupKafkaConsumer() {
               const success = await processMessageWithRetry(
                 parsedMessage,
                 async (msg: ContentMessage | SupportMessage) => {
-                  await db.transaction(async (tx) => {
-                    if ("externalId" in msg) {
-                      await processContentMessage(msg as ContentMessage, tx);
-                    } else if ("full_name" in msg) {
-                      await processSupportMessage(msg as SupportMessage, tx);
-                    } else if ("name" in msg && "message" in msg) {
-                      await processContactMessage(msg as ContactMessage, tx);
-                    }
-                  }, { isolationLevel: 'serializable' });
+                  const startTime = Date.now();
+                  try {
+                    await db.transaction(async (tx) => {
+                      if ("externalId" in msg) {
+                        await processContentMessage(msg as ContentMessage, tx);
+                      } else if ("full_name" in msg) {
+                        await processSupportMessage(msg as SupportMessage, tx);
+                      } else if ("name" in msg && "message" in msg) {
+                        await processContactMessage(msg as ContactMessage, tx);
+                      }
+                    }, { isolationLevel: 'serializable' });
+                    metrics.processedMessages++;
+                  } catch (e) {
+                    metrics.failedMessages++;
+                    throw e;
+                  } finally {
+                    const processingTime = Date.now() - startTime;
+                    metrics.lastProcessingTime = processingTime;
+                    metrics.avgProcessingTime = (metrics.avgProcessingTime * (metrics.processedMessages + metrics.failedMessages -1) + processingTime) / (metrics.processedMessages + metrics.failedMessages);
+                  }
                 }
               );
 
@@ -202,6 +222,11 @@ export async function setupKafkaConsumer() {
         }
       },
     });
+
+    // Setup monitoring interval
+    setInterval(() => {
+      log(`Metrics: ${JSON.stringify(metrics)}`, "kafka-monitor");
+    }, KAFKA_CONFIG.MONITOR_INTERVAL);
 
     return consumer;
   } catch (error) {
