@@ -37,6 +37,13 @@ interface ContactMessage {
   created_at?: string;
 }
 
+interface RealUsersMessage {
+  fullName: string;
+  email: string;
+  id: string;
+  verified: string;
+}
+
 export interface ContentMessage {
   externalId: string;
   source?: string;
@@ -198,7 +205,7 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
@@ -276,7 +283,7 @@ export async function setupKafkaConsumer() {
                               name: msg.fullName
                             },
                             email: msg.email,
-                            verified: msg.verified === "verified",
+                            verified: msg.verified,
                             lastLogin: now,
                             createdAt: now,
                             updatedAt: now,
@@ -343,7 +350,7 @@ async function sendToDeadLetterQueue(message: any) {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | ContactMessage | null {
+): ContentMessage | SupportMessage | ContactMessage |  RealUsersMessage {
   if (!messageValue) return null;
 
   try {
@@ -354,8 +361,10 @@ function parseMessage(
       return message as SupportMessage;
     } else if ("externalId" in message) {
       return message as ContentMessage;
-    } else if ("name" in message && "message" in message) {
-      return message as ContactMessage; 
+    // } else if ("name" in message && "message" in message) {
+    //   return message as ContactMessage; 
+    }else if ("fullName" in message && "id" in message&& "email" in message&& "verified" in message) {
+      return message as RealUsersMessage; 
     }
 
     return null;
