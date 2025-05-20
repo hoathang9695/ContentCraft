@@ -1,6 +1,6 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
-import { users, supportRequests, contents } from "../shared/schema";
+import { users, supportRequests, contents, realUsers } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import { log } from "./vite";
 
@@ -60,10 +60,18 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
     log("Successfully reconnected to Kafka", "kafka");
 
     // Resubscribe to topics after reconnect
-    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages"];
+    // Ensure all required topics are explicitly defined
+    const requiredTopics = ["content_management", "real_users", "contact-messages"];
+    const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
+    const topics = [...new Set([...requiredTopics, ...configuredTopics])];
+
     for (const topic of topics) {
-      await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false on production
-      log(`Resubscribed to topic: ${topic}`, "kafka");
+      try {
+        await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false on production
+        log(`Subscribed to topic: ${topic}`, "kafka");
+      } catch (error) {
+        log(`Failed to subscribe to topic ${topic}: ${error}`, "kafka-error");
+      }
     }
   } catch (error) {
     log(`Failed to reconnect: ${error}`, "kafka-error");
@@ -124,7 +132,11 @@ export async function setupKafkaConsumer() {
       password: process.env.KAFKA_SASL_PASSWORD || "",
     } : undefined;
 
-    const brokers = process.env.KAFKA_BROKERS?.split(",") || [];
+    // Ensure broker list is not empty and valid
+    const brokers = process.env.KAFKA_BROKERS?.split(",").filter(broker => broker.trim()) || [];
+    if (!brokers.length) {
+      throw new Error("No Kafka brokers configured");
+    }
     log(`Initializing Kafka connection to brokers: ${brokers.join(", ")}`, "kafka");
 
     const kafka = new Kafka({
@@ -132,15 +144,16 @@ export async function setupKafkaConsumer() {
       brokers,
       ssl: false,
       sasl,
-      connectionTimeout: KAFKA_CONFIG.CONNECTION_TIMEOUT,
-      authenticationTimeout: KAFKA_CONFIG.AUTH_TIMEOUT,
+      connectionTimeout: 30000, // Reduce timeout
+      authenticationTimeout: 20000,
       retry: {
-        initialRetryTime: KAFKA_CONFIG.RETRY_INITIAL_TIME,
-        retries: KAFKA_CONFIG.MAX_RETRIES,
-        maxRetryTime: KAFKA_CONFIG.RETRY_MAX_TIME,
-        factor: KAFKA_CONFIG.RETRY_FACTOR,
+        initialRetryTime: 1000,
+        retries: 5, // Reduce retries to fail fast
+        maxRetryTime: 30000,
+        factor: 1.5,
       },
-      logLevel: 4
+      logLevel: 4,
+      allowAutoTopicCreation: true // Enable auto topic creation
     });
 
     consumer = kafka.consumer({
@@ -185,7 +198,7 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
@@ -195,6 +208,89 @@ export async function setupKafkaConsumer() {
                         await processSupportMessage(msg as SupportMessage, tx);
                       } else if ("name" in msg && "message" in msg) {
                         await processContactMessage(msg as ContactMessage, tx);
+                      } else if ("id" in msg && "fullName" in msg && "email" in msg && "verified" in msg) {
+                        // Handle real user message from Kafka
+                        const now = new Date();
+
+                        // Get active users for round-robin assignment
+                        const activeUsers = await db
+                          .select()
+                          .from(users)
+                          .where(eq(users.status, "active"));
+
+                        if (!activeUsers || activeUsers.length === 0) {
+                          throw new Error("No active users found for assignment");
+                        }
+
+                        // Get last assigned request for round-robin
+                        const lastAssigned = await db.query.realUsers.findFirst({
+                          orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)]
+                        });
+
+                        // Calculate next assignee index
+                        let nextAssigneeIndex = 0;
+                        if (lastAssigned && lastAssigned.assignedToId) {
+                          const lastAssigneeIndex = activeUsers.findIndex(
+                            user => user.id === lastAssigned.assignedToId
+                          );
+                          if (lastAssigneeIndex !== -1) {
+                            nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                          }
+                        }
+
+                        const assignedToId = activeUsers[nextAssigneeIndex].id;
+
+                        try {
+                          // Validate required fields
+                          if (!msg.id || !msg.fullName || !msg.email || !msg.verified) {
+                            throw new Error(`Invalid message format: ${JSON.stringify(msg)}`);
+                          }
+
+                          // Check if user already exists to avoid duplicates
+                          const existingUser = await tx
+                            .select()
+                            .from(realUsers)
+                            .where(eq(realUsers.email, msg.email))
+                            .limit(1);
+
+                          if (existingUser.length > 0) {
+                            log(`User with email ${msg.email} already exists, skipping...`, "kafka");
+                            return existingUser[0];
+                          }
+
+                          // Validate assigned user is still active
+                          const assignedUser = await tx
+                            .select()
+                            .from(users)
+                            .where(eq(users.id, assignedToId))
+                            .limit(1);
+
+                          if (!assignedUser.length || assignedUser[0].status !== 'active') {
+                            throw new Error(`Assigned user ${assignedToId} is not active`);
+                          }
+
+                          // Insert new real user with proper format
+                          const result = await tx.insert(realUsers).values({
+                            fullName: {
+                              id: msg.id.toString(),
+                              name: msg.fullName
+                            },
+                            email: msg.email,
+                            verified: msg.verified === "verified",
+                            lastLogin: now,
+                            createdAt: now,
+                            updatedAt: now,
+                            assignedToId: assignedToId
+                          }).returning();
+
+                          log(`Successfully inserted real user: ${JSON.stringify(result[0])}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+                        } catch (error) {
+                          log(`Error processing real user: ${error}`, "kafka-error");
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
@@ -345,9 +441,13 @@ async function processContentMessage(contentMessage: ContentMessage, tx: any) {
 
     return newContent[0];
   } catch (error) {
-    log(`Error processing content message: ${error}`, "kafka-error");
-    throw error;
-  }
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      log(`Error processing content message: ${errorMessage}`, "kafka-error");
+      log(`Error stack: ${errorStack}`, "kafka-error");
+      metrics.failedMessages++;
+      throw error;
+    }
 }
 
 async function processSupportMessage(message: SupportMessage, tx: any) {
