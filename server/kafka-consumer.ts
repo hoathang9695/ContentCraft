@@ -20,12 +20,11 @@ const KAFKA_CONFIG = {
 };
 
 interface ContactMessage {
-  name: string;
+  full_name: string;
   email: string;
-  phone?: string;
-  message: string;
-  subject?: string;
-  created_at: string;
+  subject: string;
+  content: string;
+  created_at?: string;
 }
 
 export interface ContentMessage {
@@ -458,10 +457,10 @@ async function processContactMessage(message: ContactMessage, tx: any) {
 
     // Insert into support_requests table
     const insertData = {
-      full_name: message.name,
+      full_name: message.full_name,
       email: message.email,
-      subject: message.subject || "Contact Form Message",
-      content: message.message,
+      subject: message.subject,
+      content: message.content,
       status: "pending",
       assigned_to_id,
       assigned_at: now,
