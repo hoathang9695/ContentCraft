@@ -7,7 +7,6 @@ import { log } from "./vite";
 let consumer: Consumer;
 let isShuttingDown = false;
 
-// Constants for configuration
 const KAFKA_CONFIG = {
   RETRY_INITIAL_TIME: 5000,
   RETRY_MAX_TIME: 300000,
@@ -15,9 +14,28 @@ const KAFKA_CONFIG = {
   MAX_RETRIES: 30,
   CONNECTION_TIMEOUT: 120000,
   AUTH_TIMEOUT: 60000,
-  HEALTH_CHECK_INTERVAL: 60000,
-  BATCH_SIZE: 10
+  HEALTH_CHECK_INTERVAL: 30000,
+  BATCH_SIZE: 20,
+  RECONNECT_TIMEOUT: 5000,
+  MONITOR_INTERVAL: 60000, // Monitor metrics mỗi phút
+  MESSAGE_TIMEOUT: 30000 // Timeout xử lý message
 };
+
+// Monitoring metrics
+let metrics = {
+  processedMessages: 0,
+  failedMessages: 0,
+  lastProcessingTime: 0,
+  avgProcessingTime: 0
+};
+
+interface ContactMessage {
+  full_name: string;
+  email: string;
+  subject: string;
+  content: string;
+  created_at?: string;
+}
 
 export interface ContentMessage {
   externalId: string;
@@ -37,8 +55,16 @@ export interface SupportMessage {
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
+    await new Promise(resolve => setTimeout(resolve, KAFKA_CONFIG.RECONNECT_TIMEOUT));
     await consumer.connect();
     log("Successfully reconnected to Kafka", "kafka");
+
+    // Resubscribe to topics after reconnect
+    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages"];
+    for (const topic of topics) {
+      await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false on production
+      log(`Resubscribed to topic: ${topic}`, "kafka");
+    }
   } catch (error) {
     log(`Failed to reconnect: ${error}`, "kafka-error");
     throw error;
@@ -126,7 +152,7 @@ export async function setupKafkaConsumer() {
     await consumer.connect();
     log("Connected to Kafka", "kafka");
 
-    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management"];
+    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages"];
     for (const topic of topics) {
       await consumer.subscribe({ topic, fromBeginning: true });
       log(`Subscribed to topic: ${topic}`, "kafka");
@@ -160,13 +186,26 @@ export async function setupKafkaConsumer() {
               const success = await processMessageWithRetry(
                 parsedMessage,
                 async (msg: ContentMessage | SupportMessage) => {
-                  await db.transaction(async (tx) => {
-                    if ("externalId" in msg) {
-                      await processContentMessage(msg as ContentMessage, tx);
-                    } else if ("full_name" in msg) {
-                      await processSupportMessage(msg as SupportMessage, tx);
-                    }
-                  }, { isolationLevel: 'serializable' });
+                  const startTime = Date.now();
+                  try {
+                    await db.transaction(async (tx) => {
+                      if ("externalId" in msg) {
+                        await processContentMessage(msg as ContentMessage, tx);
+                      } else if ("full_name" in msg) {
+                        await processSupportMessage(msg as SupportMessage, tx);
+                      } else if ("name" in msg && "message" in msg) {
+                        await processContactMessage(msg as ContactMessage, tx);
+                      }
+                    }, { isolationLevel: 'serializable' });
+                    metrics.processedMessages++;
+                  } catch (e) {
+                    metrics.failedMessages++;
+                    throw e;
+                  } finally {
+                    const processingTime = Date.now() - startTime;
+                    metrics.lastProcessingTime = processingTime;
+                    metrics.avgProcessingTime = (metrics.avgProcessingTime * (metrics.processedMessages + metrics.failedMessages -1) + processingTime) / (metrics.processedMessages + metrics.failedMessages);
+                  }
                 }
               );
 
@@ -183,6 +222,11 @@ export async function setupKafkaConsumer() {
         }
       },
     });
+
+    // Setup monitoring interval
+    setInterval(() => {
+      log(`Metrics: ${JSON.stringify(metrics)}`, "kafka-monitor");
+    }, KAFKA_CONFIG.MONITOR_INTERVAL);
 
     return consumer;
   } catch (error) {
@@ -203,7 +247,7 @@ async function sendToDeadLetterQueue(message: any) {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | null {
+): ContentMessage | SupportMessage | ContactMessage | null {
   if (!messageValue) return null;
 
   try {
@@ -214,6 +258,8 @@ function parseMessage(
       return message as SupportMessage;
     } else if ("externalId" in message) {
       return message as ContentMessage;
+    } else if ("name" in message && "message" in message) {
+      return message as ContactMessage; 
     }
 
     return null;
@@ -406,3 +452,67 @@ process.on('SIGTERM', async () => {
   }
   process.exit(0);
 });
+
+async function processContactMessage(message: ContactMessage, tx: any) {
+  try {
+    log(`Processing contact message from: ${message.name}`, "kafka");
+
+    // Get active users for assignment
+    const activeUsers = await tx
+      .select()
+      .from(users)
+      .where(eq(users.status, "active"));
+
+    if (!activeUsers || activeUsers.length === 0) {
+      log("No active users found to assign contact.", "kafka");
+      return;
+    }
+
+    // Find last assigned request for round-robin
+    const lastAssignedRequest = await tx.query.supportRequests.findFirst({
+      orderBy: (supportRequests, { desc }) => [
+        desc(supportRequests.assigned_at),
+      ],
+    });
+
+    // Calculate next assignee using round-robin
+    let nextAssigneeIndex = 0;
+    if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        (user) => user.id === lastAssignedRequest.assigned_to_id,
+      );
+      if (lastAssigneeIndex !== -1) {
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+      }
+    }
+
+    const assigned_to_id = activeUsers[nextAssigneeIndex].id;
+    const now = new Date();
+
+    // Insert into support_requests table
+    const insertData = {
+      full_name: message.full_name,
+      email: message.email,
+      subject: message.subject,
+      content: message.content,
+      status: "pending",
+      assigned_to_id,
+      assigned_at: now,
+      created_at: message.created_at ? new Date(message.created_at) : now,
+      updated_at: now,
+    };
+
+    const newRequest = await tx
+      .insert(supportRequests)
+      .values(insertData)
+      .returning();
+
+    log(`Contact request created with ID ${newRequest[0].id}`, "kafka");
+    log(`Contact assigned to user ID ${assigned_to_id}`, "kafka");
+
+    return newRequest[0];
+  } catch (error) {
+    log(`Error processing contact message: ${error}`, "kafka-error");
+    throw error;
+  }
+}
