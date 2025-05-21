@@ -81,22 +81,32 @@ export default function RealUserPage() {
     }
   });
 
-  // Fetch real users with role check
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ["/api/real-users"],
+  // State for pagination
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+
+  // Fetch real users with server-side filtering
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, searchQuery],
     queryFn: async () => {
-      const response = await fetch("/api/real-users");
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(startDate && { startDate: startDate.toISOString() }),
+        ...(endDate && { endDate: endDate.toISOString() }),
+        ...(verificationStatus && { verificationStatus }),
+        ...(searchQuery && { search: searchQuery })
+      });
+
+      const response = await fetch(`/api/real-users?${params}`);
       if (!response.ok) throw new Error("Failed to fetch real users");
-      const data = await response.json();
-      console.log("Fetched real users:", data);
+      return response.json();
+    },
+    keepPreviousData: true
+  });
 
-      // Filter data based on user role
-      const filteredData = user?.role === 'admin' 
-        ? data 
-        : data.filter((u: any) => u.assignedToId === user?.id);
-
-      // Standardize data structure
-      return filteredData?.map((user: any) => ({
+  // Map data for display
+  const users = data?.data.map((user: any) => ({
         id: user.id,
         fullName: user.fullName ? (typeof user.fullName === 'object' ? user.fullName : (typeof user.fullName === 'string' ? JSON.parse(user.fullName) : {name: '', id: user.id})) : {name: '', id: user.id},
         email: user.email,
@@ -111,8 +121,6 @@ export default function RealUserPage() {
           username: user.processor.username
         } : null
       })) || [];
-    }
-  });
 
   console.log("Users before filtering:", users);
 

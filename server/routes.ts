@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Lấy tất cả real users từ DB
       const allRealUsers = await db.select().from(realUsers);
-      
+
       // Tính tổng số người dùng thật (không tính trùng lặp theo ID)
       const uniqueIds = new Set(allRealUsers.map(u => u.fullName?.id));
       const totalRealUsers = uniqueIds.size;
@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Tính số người dùng mới trong 7 ngày
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
+
       const newRealUsers = allRealUsers.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
@@ -1336,8 +1336,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/real-users", isAuthenticated, async (req, res) => {
     try {
       const { realUsers, users } = await import("@shared/schema");
+      const user = req.user as Express.User;
 
-      const results = await db
+      // Parse query params
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
+      const verificationStatus = req.query.verificationStatus as string;
+      const search = req.query.search as string;
+
+      // Build where conditions
+      let conditions = [];
+
+      // Date filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(realUsers.createdAt, startDate),
+            lte(realUsers.createdAt, endDate)
+          )
+        );
+      }
+
+      // Verification status filter  
+      if (verificationStatus) {
+        conditions.push(eq(realUsers.verified, verificationStatus));
+      }
+
+      // Role-based filtering
+      if (user.role !== 'admin') {
+        conditions.push(eq(realUsers.assignedToId, user.id));
+      }
+
+      // Search filter
+      if (search) {
+        conditions.push(
+          or(
+            sql`LOWER(realUsers.email) LIKE ${`%${search.toLowerCase()}%`}`,
+            sql`CAST(realUsers."fullName"->>'name' as TEXT) ILIKE ${`%${search}%`}`
+          )
+        );
+      }
+
+      // Get total count
+      let query = db.select().from(realUsers);
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      const totalCount = await query.execute();
+
+      // Get paginated data 
+      let resultsQuery = db
         .select({
           id: realUsers.id,
           fullName: realUsers.fullName,
@@ -1355,10 +1407,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(realUsers)
         .leftJoin(users, eq(realUsers.assignedToId, users.id))
-        .orderBy(desc(realUsers.createdAt));
+        .orderBy(desc(realUsers.createdAt))
+        .limit(limit)
+        .offset((page - 1) * limit);
 
-      console.log("Real users query results:", results);
-      res.json(results);
+      if (conditions.length > 0) {
+        resultsQuery = resultsQuery.where(and(...conditions));
+      }
+
+      const results = await resultsQuery.execute();
+
+      res.json({
+        data: results,
+        pagination: {
+          total: totalCount.length,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount.length / limit)
+        }
+      });
     } catch (error) {
       res.status(500).json({ 
         message: "Error fetching fake user",
@@ -1491,3 +1558,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+// The code has been updated to fix the real users API query by modifying the query building and execution logic.

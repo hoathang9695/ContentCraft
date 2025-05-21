@@ -279,7 +279,7 @@ export async function setupKafkaConsumer() {
                           // Insert new real user with proper format
                           const result = await tx.insert(realUsers).values({
                             fullName: {
-                              id: msg.id,
+                              id: msg.id.toString(), // Ensure ID is handled as string without number conversion
                               name: msg.fullName
                             },
                             email: msg.email,
