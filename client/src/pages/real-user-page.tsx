@@ -124,41 +124,8 @@ export default function RealUserPage() {
 
   console.log("Users before filtering:", users);
 
-  // Filter users based on date range, status, search query, and selected user
-  const filteredUsers = users ? users.filter((user) => {
-    if (!user) return false;
-    const createdDate = user.createdAt ? new Date(user.createdAt) : null;
-    const dateMatch =
-      !createdDate || // Include if no date (temporary fix)
-      (!startDate || createdDate >= startDate) &&
-      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
-
-    console.log("Filtering user:", {
-      user,
-      dateMatch,
-      createdDate,
-      startDate,
-      endDate
-    });
-
-    const statusMatch = 
-      activeTab === 'all' || 
-      (activeTab === 'processed' && user.verified === 'verified') ||
-      (activeTab === 'unprocessed' && user.verified === 'unverified');
-
-    const verificationMatch = verificationStatus === user.verified;
-
-    const searchTerm = searchQuery?.toLowerCase() || "";
-    const searchMatch =
-      !searchQuery ||
-      user.id.toString().includes(searchTerm) ||
-      (user.fullName?.name || '').toLowerCase().includes(searchTerm) ||
-      (user.email || '').toLowerCase().includes(searchTerm);
-
-    const userMatch = selectedUserId === null || user.assignedToId === selectedUserId;
-
-    return dateMatch && statusMatch && searchMatch && verificationMatch && userMatch;
-  }) : [];
+  // Use server-side filtered data directly
+  const filteredUsers = data?.data || [];
 
   return (
     <DashboardLayout>
@@ -344,25 +311,35 @@ export default function RealUserPage() {
                 key: "fullName",
                 header: "Họ và tên",
                 render: (row) => {
-                  if (!row.fullName?.name) {
-                    return <span className="text-xs text-gray-500">N/A</span>;
-                  }
+                  try {
+                    if (!row.fullName || typeof row.fullName !== 'object') {
+                      return <span className="text-xs text-gray-500">Dữ liệu không hợp lệ</span>;
+                    }
 
-                  return (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
-                      onClick={() => {
-                        const userId = row.fullName?.id;
-                        if (userId) {
-                          window.open(`https://emso.vn/user/${userId}`, '_blank');
-                        }
-                      }}
-                    >
-                      {row.fullName.name}
-                    </Button>
-                  );
+                    const { name, id } = row.fullName;
+                    
+                    if (!name) {
+                      return <span className="text-xs text-gray-500">N/A</span>;
+                    }
+
+                    return (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
+                        onClick={() => {
+                          if (id) {
+                            window.open(`https://emso.vn/user/${id}`, '_blank');
+                          }
+                        }}
+                      >
+                        {name}
+                      </Button>
+                    );
+                  } catch (error) {
+                    console.error("Error rendering fullName:", error);
+                    return <span className="text-xs text-gray-500">Lỗi hiển thị</span>;
+                  }
                 },
               },
               {
