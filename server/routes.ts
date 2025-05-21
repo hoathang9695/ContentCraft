@@ -1336,7 +1336,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/real-users", isAuthenticated, async (req, res) => {
     try {
       const { realUsers, users } = await import("@shared/schema");
+      const user = req.user as Express.User;
 
+      // Parse query params
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
+      const verificationStatus = req.query.verificationStatus as string;
+      const search = req.query.search as string;
+      
+      // Build where conditions
+      let conditions = [];
+      
+      // Date filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(realUsers.createdAt, startDate),
+            lte(realUsers.createdAt, endDate)
+          )
+        );
+      }
+
+      // Verification status filter  
+      if (verificationStatus) {
+        conditions.push(eq(realUsers.verified, verificationStatus));
+      }
+
+      // Role-based filtering
+      if (user.role !== 'admin') {
+        conditions.push(eq(realUsers.assignedToId, user.id));
+      }
+
+      // Search filter
+      if (search) {
+        conditions.push(
+          or(
+            sql`LOWER(realUsers.email) LIKE ${`%${search.toLowerCase()}%`}`,
+            sql`CAST(realUsers."fullName"->>'name' as TEXT) ILIKE ${`%${search}%`}`
+          )
+        );
+      }
+
+      // Get total count
+      const totalCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(realUsers)
+        .where(and(...conditions));
+
+      // Get paginated data
       const results = await db
         .select({
           id: realUsers.id,
@@ -1355,10 +1404,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(realUsers)
         .leftJoin(users, eq(realUsers.assignedToId, users.id))
-        .orderBy(desc(realUsers.createdAt));
+        .where(and(...conditions))
+        .orderBy(desc(realUsers.createdAt))
+        .limit(limit)
+        .offset((page - 1) * limit);
 
-      console.log("Real users query results:", results);
-      res.json(results);
+      res.json({
+        data: results,
+        pagination: {
+          total: totalCount[0].count,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount[0].count / limit)
+        }
+      });
     } catch (error) {
       res.status(500).json({ 
         message: "Error fetching fake user",
