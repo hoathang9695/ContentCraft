@@ -277,16 +277,9 @@ export async function setupKafkaConsumer() {
                           }
 
                           // Insert new real user with proper format
-                          // Validate and preserve original ID
-                          const originalId = msg.id;
-                          if (!originalId) {
-                            throw new Error('ID is required');
-                          }
-                          
-                          // Ensure ID is kept as string without any numeric conversion
                           const result = await tx.insert(realUsers).values({
                             fullName: {
-                              id: msg.id,
+                              id: msg.id.toString(), // Ensure ID is handled as string without number conversion
                               name: msg.fullName
                             },
                             email: msg.email,
