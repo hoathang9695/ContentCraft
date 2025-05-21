@@ -121,8 +121,6 @@ export default function RealUserPage() {
           username: user.processor.username
         } : null
       })) || [];
-    }
-  });
 
   console.log("Users before filtering:", users);
 
