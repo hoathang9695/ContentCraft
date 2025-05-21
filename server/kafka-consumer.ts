@@ -278,10 +278,10 @@ export async function setupKafkaConsumer() {
 
                           // Insert new real user with proper format
                           const result = await tx.insert(realUsers).values({
-                            fullName: JSON.parse(JSON.stringify({
-                              id: msg.id,
+                            fullName: {
+                              id: String(msg.id), // Đảm bảo giữ nguyên giá trị chính xác
                               name: msg.fullName
-                            })),
+                            },
                             email: msg.email,
                             verified: msg.verified,
                             lastLogin: now,
@@ -468,6 +468,10 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
       !message.subject ||
       !message.content
     ) {
+
+                          // Log ID để theo dõi
+                          log(`Original Kafka message ID: ${msg.id}`, "kafka");
+
       log(`Invalid support message: ${JSON.stringify(message)}`, "kafka-error");
       return;
     }
