@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Lấy tất cả real users từ DB
       const allRealUsers = await db.select().from(realUsers);
-      
+
       // Tính tổng số người dùng thật (không tính trùng lặp theo ID)
       const uniqueIds = new Set(allRealUsers.map(u => u.fullName?.id));
       const totalRealUsers = uniqueIds.size;
@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Tính số người dùng mới trong 7 ngày
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
+
       const newRealUsers = allRealUsers.filter(u => {
         if (!u.createdAt) return false;
         const created = new Date(u.createdAt);
@@ -1345,10 +1345,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
       const verificationStatus = req.query.verificationStatus as string;
       const search = req.query.search as string;
-      
+
       // Build where conditions
       let conditions = [];
-      
+
       // Date filter
       if (startDate && endDate) {
         conditions.push(
@@ -1380,13 +1380,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get total count
-      const totalCount = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(realUsers)
-        .where(and(...conditions));
+      let query = db.select().from(realUsers);
 
-      // Get paginated data
-      const results = await db
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      const totalCount = await query.execute();
+
+      // Get paginated data 
+      let resultsQuery = db
         .select({
           id: realUsers.id,
           fullName: realUsers.fullName,
@@ -1404,18 +1407,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(realUsers)
         .leftJoin(users, eq(realUsers.assignedToId, users.id))
-        .where(and(...conditions))
         .orderBy(desc(realUsers.createdAt))
         .limit(limit)
         .offset((page - 1) * limit);
 
+      if (conditions.length > 0) {
+        resultsQuery = resultsQuery.where(and(...conditions));
+      }
+
+      const results = await resultsQuery.execute();
+
       res.json({
         data: results,
         pagination: {
-          total: totalCount[0].count,
+          total: totalCount.length,
           page,
           limit,
-          totalPages: Math.ceil(totalCount[0].count / limit)
+          totalPages: Math.ceil(totalCount.length / limit)
         }
       });
     } catch (error) {
@@ -1550,3 +1558,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+// The code has been updated to fix the real users API query by modifying the query building and execution logic.
