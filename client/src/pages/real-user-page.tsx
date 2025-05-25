@@ -123,39 +123,8 @@ export default function RealUserPage() {
 
   console.log("Users before filtering:", users);
 
-  // Filter users based on date range, status, search query, and selected user
-  const filteredUsers = users ? users.filter((user) => {
-    if (!user) return false;
-    
-    // Date filtering
-    const createdDate = user.createdAt ? new Date(user.createdAt) : null;
-    const dateMatch =
-      !createdDate || // Include if no date (temporary fix)
-      (!startDate || createdDate >= startDate) &&
-      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
-
-    // Status filtering
-    const statusMatch = 
-      activeTab === 'all' || 
-      (activeTab === 'processed' && user.verified === 'verified') ||
-      (activeTab === 'unprocessed' && user.verified === 'unverified');
-
-    // Verification status filtering  
-    const verificationMatch = verificationStatus === user.verified;
-
-    // Search filtering - now properly handles fullName.name
-    const searchTerm = searchQuery?.toLowerCase().trim() || "";
-    const searchMatch = !searchTerm || (
-      (user.fullName?.name && user.fullName.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.processor?.name && user.processor.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-
-    // User assignment filtering
-    const userMatch = selectedUserId === null || user.assignedToId === selectedUserId;
-
-    return dateMatch && statusMatch && searchMatch && verificationMatch && userMatch;
-  }) : [];
+  // Display data directly from API response without additional filtering
+  const filteredUsers = data?.data || [];
 
   return (
     <DashboardLayout>
