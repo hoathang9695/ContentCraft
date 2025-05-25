@@ -300,18 +300,8 @@ export default function RealUserPage() {
             isLoading={isLoading}
             searchable={true}
             searchPlaceholder="Tìm kiếm người dùng..."
-            searchValue={searchQuery}
-            onSearch={(value, e) => {
-              if (e?.key === 'Enter') {
-                setSearchQuery(value);
-              }
-            }}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                const value = (e.target as HTMLInputElement).value;
-                setSearchQuery(value);
-              }
-            }}
+            searchValue={searchQuery} 
+            onSearch={setSearchQuery}
             pagination={{
               itemsPerPage: limit,
               currentPage: page,
