@@ -126,34 +126,31 @@ export default function RealUserPage() {
   // Filter users based on date range, status, search query, and selected user
   const filteredUsers = users ? users.filter((user) => {
     if (!user) return false;
+    
+    // Date filtering
     const createdDate = user.createdAt ? new Date(user.createdAt) : null;
     const dateMatch =
       !createdDate || // Include if no date (temporary fix)
       (!startDate || createdDate >= startDate) &&
       (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
 
-    console.log("Filtering user:", {
-      user,
-      dateMatch,
-      createdDate,
-      startDate,
-      endDate
-    });
-
+    // Status filtering
     const statusMatch = 
       activeTab === 'all' || 
       (activeTab === 'processed' && user.verified === 'verified') ||
       (activeTab === 'unprocessed' && user.verified === 'unverified');
 
+    // Verification status filtering  
     const verificationMatch = verificationStatus === user.verified;
 
-    const searchTerm = searchQuery?.toLowerCase() || "";
-    const searchMatch =
-      !searchQuery ||
-      user.id.toString().includes(searchTerm) ||
-      (user.fullName?.name || '').toLowerCase().includes(searchTerm) ||
-      (user.email || '').toLowerCase().includes(searchTerm);
+    // Search filtering - now properly handles fullName.name
+    const searchTerm = searchQuery?.toLowerCase().trim() || "";
+    const searchMatch = !searchTerm || 
+      (user.fullName?.name && user.fullName.name.toLowerCase().includes(searchTerm)) ||
+      (user.email && user.email.toLowerCase().includes(searchTerm)) ||
+      (user.processor?.name && user.processor.name.toLowerCase().includes(searchTerm));
 
+    // User assignment filtering
     const userMatch = selectedUserId === null || user.assignedToId === selectedUserId;
 
     return dateMatch && statusMatch && searchMatch && verificationMatch && userMatch;
