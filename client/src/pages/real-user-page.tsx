@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -336,8 +335,10 @@ export default function RealUserPage() {
             searchValue={searchQuery} 
             onSearch={setSearchQuery}
             pagination={{
-              itemsPerPage: 10,
-              showPagination: true
+              itemsPerPage: limit,
+              currentPage: page,
+              totalPages: Math.ceil((data?.total || 0) / limit),
+              onPageChange: setPage
             }}
             columns={[
               {
@@ -488,3 +489,4 @@ export default function RealUserPage() {
     </DashboardLayout>
   );
 }
+```
