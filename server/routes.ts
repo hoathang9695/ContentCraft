@@ -1378,8 +1378,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (search) {
         const searchLower = search.toLowerCase();
         query = query.where(
-          sql`LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE ${`%${searchLower}%`} OR 
-              LOWER(UNACCENT(${realUsers.email})) LIKE ${`%${searchLower}%`}`
+          sql`(LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE ${`%${searchLower}%`} OR 
+              LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE ${`%${searchLower}%`} OR
+              LOWER(UNACCENT(${realUsers.email})) LIKE ${`%${searchLower}%`} OR
+              LOWER(${realUsers.email}) LIKE ${`%${searchLower}%`})`
         );
       } else {
         // Only apply other filters if no search is present
