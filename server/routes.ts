@@ -1346,27 +1346,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const verificationStatus = req.query.verificationStatus as string;
       const search = req.query.search as string;
 
-      // Build where conditions
-      let conditions = [];
+      console.log("Search query:", {
+        search,
+        startDate,
+        endDate,
+        verificationStatus,
+        page,
+        limit
+      });
 
-      // Date filter
-      if (startDate && endDate) {
-        conditions.push(
-          and(
-            gte(realUsers.createdAt, startDate),
-            lte(realUsers.createdAt, endDate)
-          )
+      // Build base query
+      let query = db.select({
+        id: realUsers.id,
+        fullName: realUsers.fullName,
+        email: realUsers.email,
+        verified: realUsers.verified,
+        lastLogin: realUsers.lastLogin,
+        assignedToId: realUsers.assignedToId,
+        createdAt: realUsers.createdAt,
+        updatedAt: realUsers.updatedAt,
+        processor: {
+          id: users.id,
+          name: users.name,
+          username: users.username
+        }
+      })
+      .from(realUsers)
+      .leftJoin(users, eq(realUsers.assignedToId, users.id));
+
+      // Apply search if present (independent of other filters)
+      if (search) {
+        const searchLower = search.toLowerCase();
+        query = query.where(
+          sql`LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE ${`%${searchLower}%`} OR 
+              LOWER(${realUsers.email}) LIKE ${`%${searchLower}%`}`
         );
-      }
+      } else {
+        // Only apply other filters if no search is present
+        let conditions = [];
 
-      // Verification status filter  
-      if (verificationStatus) {
-        conditions.push(eq(realUsers.verified, verificationStatus));
-      }
+        // Date filter
+        if (startDate && endDate) {
+          conditions.push(
+            and(
+              gte(realUsers.createdAt, startDate),
+              lte(realUsers.createdAt, endDate)
+            )
+          );
+        }
 
-      // Role-based filtering
-      if (user.role !== 'admin') {
-        conditions.push(eq(realUsers.assignedToId, user.id));
+        // Verification status filter  
+        if (verificationStatus) {
+          conditions.push(eq(realUsers.verified, verificationStatus));
+        }
+
+        // Role-based filtering
+        if (user.role !== 'admin') {
+          conditions.push(eq(realUsers.assignedToId, user.id));
+        }
+
+        if (conditions.length > 0) {
+          query = query.where(and(...conditions));
+        }
       }
 
       // Search filter
