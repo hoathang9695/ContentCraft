@@ -40,6 +40,14 @@ export default function RealUserPage() {
   const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery?.trim() || '');
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     setDebouncedSearchQuery('');
   }, [startDate, endDate, verificationStatus]);
 
