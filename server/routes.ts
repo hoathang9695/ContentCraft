@@ -1371,15 +1371,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Search filter
       if (search) {
-        const searchTerms = search.toLowerCase().split(' ');
-        const searchConditions = searchTerms.map(term => 
+        const searchLower = search.toLowerCase();
+        conditions.push(
           or(
-            sql`LOWER(${realUsers.email}) LIKE ${`%${term}%`}`,
-            sql`LOWER(CAST(${realUsers.fullName}->>'name' as TEXT)) LIKE ${`%${term}%`}`,
-            sql`CAST(${realUsers.fullName}->>'id' as TEXT) LIKE ${`%${term}%`}`
+            sql`LOWER(${realUsers.email}) LIKE ${`%${searchLower}%`}`,
+            sql`LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE ${`%${searchLower}%`}`
           )
         );
-        conditions.push(and(...searchConditions));
       }
 
       // Get total count
