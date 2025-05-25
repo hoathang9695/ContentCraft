@@ -489,4 +489,3 @@ export default function RealUserPage() {
     </DashboardLayout>
   );
 }
-```
