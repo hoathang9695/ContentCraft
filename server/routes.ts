@@ -1376,9 +1376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply search if present (independent of other filters)
       if (search) {
-        const searchLower = search.toLowerCase();
+        const searchLower = search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         query = query.where(
-          sql`LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE ${`%${searchLower}%`} OR 
+          sql`LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE ${`%${searchLower}%`} OR 
               LOWER(${realUsers.email}) LIKE ${`%${searchLower}%`}`
         );
       } else {
