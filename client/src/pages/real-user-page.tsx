@@ -301,11 +301,16 @@ export default function RealUserPage() {
             searchable={true}
             searchPlaceholder="Tìm kiếm người dùng..."
             searchValue={searchQuery}
-            onSearch={(value) => {
-              clearTimeout((window as any).searchTimeout);
-              (window as any).searchTimeout = setTimeout(() => {
+            onSearch={(value, e) => {
+              if (e?.key === 'Enter') {
                 setSearchQuery(value);
-              }, 800);
+              }
+            }}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                const value = (e.target as HTMLInputElement).value;
+                setSearchQuery(value);
+              }
             }}
             pagination={{
               itemsPerPage: limit,
