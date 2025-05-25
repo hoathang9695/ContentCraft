@@ -57,5 +57,8 @@ async function testConnection() {
 
 testConnection();
 
+// Enable unaccent extension for search
+await pool.query('CREATE EXTENSION IF NOT EXISTS unaccent');
+
 // Create Drizzle ORM instance
 export const db = drizzle(pool, { schema });

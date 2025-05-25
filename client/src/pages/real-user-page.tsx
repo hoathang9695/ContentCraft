@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +27,8 @@ export default function RealUserPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
   const [pushFollowOpen, setPushFollowOpen] = useState(false);
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -37,6 +38,18 @@ export default function RealUserPage() {
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery?.trim() || '');
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setDebouncedSearchQuery('');
+  }, [startDate, endDate, verificationStatus]);
 
   const handlePushFollow = async (userIds: string[]) => {
     try {
@@ -87,7 +100,7 @@ export default function RealUserPage() {
 
   // Fetch real users with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, searchQuery],
+    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -95,7 +108,7 @@ export default function RealUserPage() {
         ...(startDate && { startDate: startDate.toISOString() }),
         ...(endDate && { endDate: endDate.toISOString() }),
         ...(verificationStatus && { verificationStatus }),
-        ...(searchQuery && { search: searchQuery })
+        ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery })
       });
 
       const response = await fetch(`/api/real-users?${params}`);
@@ -122,43 +135,11 @@ export default function RealUserPage() {
         } : null
       })) || [];
 
-  console.log("Users before filtering:", users);
+  // Lấy dữ liệu trực tiếp từ API response
+  const displayUsers = users || [];
 
-  // Filter users based on date range, status, search query, and selected user
-  const filteredUsers = users ? users.filter((user) => {
-    if (!user) return false;
-    const createdDate = user.createdAt ? new Date(user.createdAt) : null;
-    const dateMatch =
-      !createdDate || // Include if no date (temporary fix)
-      (!startDate || createdDate >= startDate) &&
-      (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
-
-    console.log("Filtering user:", {
-      user,
-      dateMatch,
-      createdDate,
-      startDate,
-      endDate
-    });
-
-    const statusMatch = 
-      activeTab === 'all' || 
-      (activeTab === 'processed' && user.verified === 'verified') ||
-      (activeTab === 'unprocessed' && user.verified === 'unverified');
-
-    const verificationMatch = verificationStatus === user.verified;
-
-    const searchTerm = searchQuery?.toLowerCase() || "";
-    const searchMatch =
-      !searchQuery ||
-      user.id.toString().includes(searchTerm) ||
-      (user.fullName?.name || '').toLowerCase().includes(searchTerm) ||
-      (user.email || '').toLowerCase().includes(searchTerm);
-
-    const userMatch = selectedUserId === null || user.assignedToId === selectedUserId;
-
-    return dateMatch && statusMatch && searchMatch && verificationMatch && userMatch;
-  }) : [];
+  // Log để kiểm tra dữ liệu
+  console.log("Display users:", displayUsers);
 
   return (
     <DashboardLayout>
@@ -329,15 +310,17 @@ export default function RealUserPage() {
         {/* Users Table */}
         <div className="space-y-4">
           <DataTable
-            data={filteredUsers}
+            data={displayUsers}
             isLoading={isLoading}
             searchable={true}
             searchPlaceholder="Tìm kiếm người dùng..."
             searchValue={searchQuery} 
             onSearch={setSearchQuery}
             pagination={{
-              itemsPerPage: 10,
-              showPagination: true
+              itemsPerPage: limit,
+              currentPage: page,
+              totalPages: Math.ceil((data?.total || 0) / limit),
+              onPageChange: setPage
             }}
             columns={[
               {
