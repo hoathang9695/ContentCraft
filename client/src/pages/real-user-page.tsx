@@ -302,10 +302,12 @@ export default function RealUserPage() {
             searchPlaceholder="Tìm kiếm người dùng..."
             searchValue={searchQuery}
             onSearch={(value) => {
+              setIsLoading(true);
               clearTimeout((window as any).searchTimeout);
               (window as any).searchTimeout = setTimeout(() => {
                 setSearchQuery(value);
-              }, 500);
+                setIsLoading(false);
+              }, 800);
             }}
             pagination={{
               itemsPerPage: limit,
