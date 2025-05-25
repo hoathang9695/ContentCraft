@@ -29,30 +29,19 @@ export default function RealUserPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
+  const [pushFollowOpen, setPushFollowOpen] = useState(false);
+  const [pushFollowUser, setPushFollowUser] = useState<any>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [startDate, setStartDate] = useState<Date>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
-  const [pushFollowOpen, setPushFollowOpen] = useState(false);
-  const [pushFollowUser, setPushFollowUser] = useState<any>(null);
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // Only update if search query is not empty
-      setDebouncedSearchQuery(searchQuery?.trim() || '');
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Reset search query when filters change
-  useEffect(() => {
-    setSearchQuery('');
     setDebouncedSearchQuery('');
   }, [startDate, endDate, verificationStatus]);
-  const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
 
   const handlePushFollow = async (userIds: string[]) => {
     try {
