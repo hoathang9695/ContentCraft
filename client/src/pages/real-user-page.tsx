@@ -121,10 +121,11 @@ export default function RealUserPage() {
         } : null
       })) || [];
 
-  console.log("Users before filtering:", users);
+  // Lấy dữ liệu trực tiếp từ API response
+  const displayUsers = users || [];
 
-  // Display data directly from API response without additional filtering
-  const filteredUsers = data?.data || [];
+  // Log để kiểm tra dữ liệu
+  console.log("Display users:", displayUsers);
 
   return (
     <DashboardLayout>
@@ -295,7 +296,7 @@ export default function RealUserPage() {
         {/* Users Table */}
         <div className="space-y-4">
           <DataTable
-            data={filteredUsers}
+            data={displayUsers}
             isLoading={isLoading}
             searchable={true}
             searchPlaceholder="Tìm kiếm người dùng..."
