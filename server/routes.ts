@@ -1375,7 +1375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(
           or(
             sql`LOWER(${realUsers.email}) LIKE ${`%${searchLower}%`}`,
-            sql`LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE ${`%${searchLower}%`}`
+            sql`LOWER(COALESCE(${realUsers.fullName}->>'name', '')) LIKE ${`%${searchLower}%`}`
           )
         );
       }

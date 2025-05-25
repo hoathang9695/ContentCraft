@@ -94,7 +94,7 @@ export default function RealUserPage() {
         ...(startDate && { startDate: startDate.toISOString() }),
         ...(endDate && { endDate: endDate.toISOString() }),
         ...(verificationStatus && { verificationStatus }),
-        ...(searchQuery && { search: searchQuery })
+        ...(searchQuery && searchQuery.trim() !== '' && { search: searchQuery.trim() })
       });
 
       const response = await fetch(`/api/real-users?${params}`);
