@@ -31,11 +31,18 @@ export default function RealUserPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
+      // Only update if search query is not empty
+      setDebouncedSearchQuery(searchQuery?.trim() || '');
     }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Reset search query when filters change
+  useEffect(() => {
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+  }, [startDate, endDate, verificationStatus]);
   const [pushFollowOpen, setPushFollowOpen] = useState(false);
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -103,7 +110,7 @@ export default function RealUserPage() {
         ...(startDate && { startDate: startDate.toISOString() }),
         ...(endDate && { endDate: endDate.toISOString() }),
         ...(verificationStatus && { verificationStatus }),
-        ...(searchQuery && searchQuery.trim() !== '' && { search: searchQuery.trim() })
+        ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery })
       });
 
       const response = await fetch(`/api/real-users?${params}`);
