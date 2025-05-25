@@ -27,6 +27,15 @@ export default function RealUserPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [pushFollowOpen, setPushFollowOpen] = useState(false);
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -86,7 +95,7 @@ export default function RealUserPage() {
 
   // Fetch real users with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, searchQuery],
+    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
