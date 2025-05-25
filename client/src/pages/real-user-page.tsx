@@ -145,10 +145,11 @@ export default function RealUserPage() {
 
     // Search filtering - now properly handles fullName.name
     const searchTerm = searchQuery?.toLowerCase().trim() || "";
-    const searchMatch = !searchTerm || 
-      (user.fullName?.name && user.fullName.name.toLowerCase().includes(searchTerm)) ||
-      (user.email && user.email.toLowerCase().includes(searchTerm)) ||
-      (user.processor?.name && user.processor.name.toLowerCase().includes(searchTerm));
+    const searchMatch = !searchTerm || (
+      (user.fullName?.name && user.fullName.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.processor?.name && user.processor.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
     // User assignment filtering
     const userMatch = selectedUserId === null || user.assignedToId === selectedUserId;
