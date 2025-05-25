@@ -53,11 +53,6 @@ export default function RealUserPage() {
     setDebouncedSearchQuery('');
   }, [startDate, endDate, verificationStatus]);
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
-  const [startDate, setStartDate] = useState<Date>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  );
-  const [endDate, setEndDate] = useState<Date>(new Date());
-  const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
 
   const handlePushFollow = async (userIds: string[]) => {
     try {
