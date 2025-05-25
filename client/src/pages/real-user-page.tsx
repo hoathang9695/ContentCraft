@@ -301,11 +301,9 @@ export default function RealUserPage() {
             searchable={true}
             searchPlaceholder="Tìm kiếm người dùng... (Nhấn Enter để tìm kiếm)"
             searchValue={searchQuery}
-            onSearch={(value, e) => {
-              // Only update search when Enter is pressed
-              if (e?.key === 'Enter') {
-                setSearchQuery(value);
-              }
+            onSearchChange={(value) => {
+              // Update local input value while typing
+              (document.querySelector('input[type="search"]') as HTMLInputElement).value = value;
             }}
             onKeyPress={(e) => {
               if (e.key === 'Enter') {
