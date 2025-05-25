@@ -1381,6 +1381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sql`(
             LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE LOWER(UNACCENT(${`%${searchLower}%`})) OR
             LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE LOWER(${`%${searchLower}%`}) OR
+            UNACCENT(LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE UNACCENT(LOWER(${`%${searchLower}%`})) OR
             LOWER(UNACCENT(${realUsers.email})) LIKE LOWER(UNACCENT(${`%${searchLower}%`})) OR
             LOWER(${realUsers.email}) LIKE LOWER(${`%${searchLower}%`})
           )`
