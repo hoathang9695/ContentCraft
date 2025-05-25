@@ -1422,13 +1422,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get total count
-      let query = db.select().from(realUsers);
+      let countQuery = db.select().from(realUsers);
 
       if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+        countQuery = countQuery.where(and(...conditions));
       }
 
-      const totalCount = await query.execute();
+      const totalCount = await countQuery.execute();
 
       // Get paginated data 
       let resultsQuery = db
