@@ -1410,19 +1410,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Get total count
+      let countQuery = db.select().from(realUsers);
+      const conditions = [];
+
+      // Apply date filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(realUsers.createdAt, startDate),
+            lte(realUsers.createdAt, endDate)
+          )
+        );
+      }
+
+      // Verification status filter  
+      if (verificationStatus) {
+        conditions.push(eq(realUsers.verified, verificationStatus));
+      }
+
+      // Role-based filtering
+      if (user.role !== 'admin') {
+        conditions.push(eq(realUsers.assignedToId, user.id));
+      }
+
       // Search filter
       if (search) {
         const searchLower = search.toLowerCase();
         conditions.push(
           or(
             sql`LOWER(${realUsers.email}) LIKE ${`%${searchLower}%`}`,
-            sql`LOWER(COALESCE(${realUsers.fullName}->>'name', '')) LIKE ${`%${searchLower}%`}`
+            sql`LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE ${`%${searchLower}%`}`
           )
         );
       }
-
-      // Get total count
-      let countQuery = db.select().from(realUsers);
 
       if (conditions.length > 0) {
         countQuery = countQuery.where(and(...conditions));
