@@ -300,8 +300,13 @@ export default function RealUserPage() {
             isLoading={isLoading}
             searchable={true}
             searchPlaceholder="Tìm kiếm người dùng..."
-            searchValue={searchQuery} 
-            onSearch={setSearchQuery}
+            searchValue={searchQuery}
+            onSearch={(value) => {
+              clearTimeout((window as any).searchTimeout);
+              (window as any).searchTimeout = setTimeout(() => {
+                setSearchQuery(value);
+              }, 500);
+            }}
             pagination={{
               itemsPerPage: limit,
               currentPage: page,
