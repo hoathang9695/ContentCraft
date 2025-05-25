@@ -1371,10 +1371,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Search filter
       if (search) {
+        const searchLower = search.toLowerCase();
         conditions.push(
           or(
-            sql`LOWER(realUsers.email) LIKE ${`%${search.toLowerCase()}%`}`,
-            sql`CAST(realUsers."fullName"->>'name' as TEXT) ILIKE ${`%${search}%`}`
+            sql`LOWER(${realUsers.email}) LIKE ${`%${searchLower}%`}`,
+            sql`LOWER(CAST(${realUsers.fullName}->>'name' as TEXT)) LIKE ${`%${searchLower}%`}`
           )
         );
       }
