@@ -39,6 +39,7 @@ export default function RealUserPage() {
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
+  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -55,7 +56,7 @@ export default function RealUserPage() {
   useEffect(() => {
     setDebouncedSearchQuery('');
     setPage(1); // Reset về trang 1 khi thay đổi filter
-  }, [startDate, endDate, verificationStatus, activeTab, selectedUserId]);
+  }, [startDate, endDate, verificationStatus, activeTab, selectedUserId, classificationFilter]);
 
   const handlePushFollow = async (userIds: string[]) => {
     try {
@@ -111,7 +112,7 @@ export default function RealUserPage() {
 
       // Refetch data using React Query instead of page reload
       queryClient.invalidateQueries({
-        queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery, activeTab, selectedUserId]
+        queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter]
       });
     } catch (error) {
       console.error("Error updating classification:", error);
@@ -139,7 +140,7 @@ export default function RealUserPage() {
 
   // Fetch real users with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery, activeTab, selectedUserId],
+    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -149,7 +150,8 @@ export default function RealUserPage() {
         ...(verificationStatus && { verificationStatus }),
         ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
         ...(activeTab !== 'all' && { activeTab }),
-        ...(selectedUserId && { assignedToId: selectedUserId.toString() })
+        ...(selectedUserId && { assignedToId: selectedUserId.toString() }),
+        ...(classificationFilter !== 'all' && { classification: classificationFilter })
       });
 
       const response = await fetch(`/api/real-users?${params}`);
@@ -231,6 +233,22 @@ export default function RealUserPage() {
                 </SelectContent>
               </Select>
             )}
+
+            <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue>
+                  {classificationFilter === 'all' ? 'Tất cả phân loại' : 
+                   classificationFilter === 'new' ? 'Mới' :
+                   classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả phân loại</SelectItem>
+                <SelectItem value="new">Mới</SelectItem>
+                <SelectItem value="potential">Tiềm năng</SelectItem>
+                <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+              </SelectContent>
+            </Select>
 
             <Button
               variant="outline"
@@ -334,6 +352,7 @@ export default function RealUserPage() {
                     setEndDate(today);
                     setSelectedUserId(null);
                     setVerificationStatus('unverified');
+                    setClassificationFilter('new');
                     setActiveTab('all');
                     setSearchQuery('');
                     toast({
