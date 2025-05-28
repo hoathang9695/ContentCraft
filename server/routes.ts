@@ -873,7 +873,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       //```python
       // Complete processing
-      const completedContent = await storage.completeProcessing(contentId, result, user.id);
+      const completed```text
+Content = await storage.completeProcessing(contentId, result, user.id);
 
       res.json({ 
         success: true, 
@@ -1490,6 +1491,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Support routes
   const supportRouter = (await import('./routes/support.router')).default;
   app.use("/api/support-requests", supportRouter);
+
+  // Get all real users 
+  app.get("/api/real-users", isAuthenticated, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const verificationStatus = req.query.verificationStatus as 'verified' | 'unverified' | undefined;
+      const search = req.query.search as string;
+      const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
+      const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+
+      console.log("Real users API called with params:", {
+        page, limit, offset, startDate, endDate, verificationStatus, search, activeTab, assignedToId
+      });
+
+      // Build conditions
+      const conditions = [];
+
+      // Date range filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(realUsers.createdAt, startDate),
+            lte(realUsers.createdAt, endDate)
+          )
+        );
+      }
+
+      // Verification status filter
+      if (verificationStatus === 'verified') {
+        conditions.push(eq(realUsers.verified, 'verified'));
+      } else if (verificationStatus === 'unverified') {
+        conditions.push(eq(realUsers.verified, 'unverified'));
+      }
+
+      // Assigned user filter
+      if (assignedToId) {
+        conditions.push(eq(realUsers.assignedToId, assignedToId));
+      }
+
+      // Search filter
+      if (search && search.trim()) {
+        const searchPattern = `%${search.toLowerCase()}%`;
+        conditions.push(
+          or(
+            sql`LOWER(UNACCENT(${realUsers.fullName}::jsonb->>'name')) LIKE ${searchPattern}`,
+            sql`LOWER(${realUsers.fullName}::jsonb->>'name') LIKE ${searchPattern}`,
+            sql`LOWER(${realUsers.email}) LIKE ${searchPattern}`
+          )
+        );
+      }
+
+      // Active tab filter (processed/unprocessed)
+      // This is for future implementation when we add processing status
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(realUsers)
+        .where(whereClause);
+
+      const total = Number(totalResult[0]?.count || 0);
+
+      // Get users with pagination and join with assigned user info
+      // Handle case where classification column might not exist
+      let users;
+      try {
+        users = await db
+          .select({
+            id: realUsers.id,
+            fullName: realUsers.fullName,
+            email: realUsers.email,
+            verified: realUsers.verified,
+            classification: realUsers.classification,
+            createdAt: realUsers.createdAt,
+            updatedAt: realUsers.updatedAt,
+            lastLogin: realUsers.lastLogin,
+            assignedToId: realUsers.assignedToId,
+            processor: {
+              id: users.id,
+              name: users.name,
+              username: users.username
+            }
+          })
+          .from(realUsers)
+          .leftJoin(users, eq(realUsers.assignedToId, users.id))
+          .where(whereClause)
+          .orderBy(desc(realUsers.createdAt))
+          .limit(limit)
+          .offset(offset);
+      } catch (classificationError) {
+        // Fallback query without classification column
+        console.log("Classification column not found, using fallback query");
+        users = await db
+          .select({
+            id: realUsers.id,
+            fullName: realUsers.fullName,
+            email: realUsers.email,
+            verified: realUsers.verified,
+            createdAt: realUsers.createdAt,
+            updatedAt: realUsers.updatedAt,
+            lastLogin: realUsers.lastLogin,
+            assignedToId: realUsers.assignedToId,
+            processor: {
+              id: users.id,
+              name: users.name,
+              username: users.username
+            }
+          })
+          .from(realUsers)
+          .leftJoin(users, eq(realUsers.assignedToId, users.id))
+          .where(whereClause)
+          .orderBy(desc(realUsers.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+        // Add default classification for compatibility
+        users = users.map(user => ({ ...user, classification: 'new' }));
+      }
+
+      console.log(`Found ${users.length} real users for page ${page}`);
+
+      res.json({
+        data: users,
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+          itemsPerPage: limit
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching real users:", error);
+      res.status(500).json({ 
+        message: "Error fetching real users",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
