@@ -350,9 +350,31 @@ export default function PageManagementPage() {
               {
                 key: "pageName",
                 header: "Tên Trang",
-                render: (row) => (
-                  <div className="font-medium">{row.pageName}</div>
-                ),
+                render: (row) => {
+                  const pageData = row.pageName;
+                  const pageId = pageData?.id;
+                  const pageName = pageData?.page_name || pageData?.name || "Không có tên";
+                  
+                  return (
+                    <div className="font-medium">
+                      {pageId ? (
+                        <a
+                          href={`https://emso.vn/page/${pageId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          {pageName}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">{pageName}</span>
+                      )}
+                    </div>
+                  );
+                },
               },
               {
                 key: "pageType",

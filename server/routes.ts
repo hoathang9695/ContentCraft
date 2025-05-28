@@ -1546,7 +1546,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const searchPattern = `%${search.toLowerCase()}%`;
         conditions.push(
           or(
-            sql`LOWER(${pages.pageName}) LIKE ${searchPattern}`,
+            sql`LOWER(${pages.pageName}::jsonb->>'page_name') LIKE ${searchPattern}`,
+            sql`LOWER(${pages.pageName}::jsonb->>'name') LIKE ${searchPattern}`,
             sql`LOWER(${pages.phoneNumber}) LIKE ${searchPattern}`
           )
         );
