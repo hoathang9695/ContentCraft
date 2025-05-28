@@ -1559,13 +1559,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const total = Number(totalResult[0]?.count || 0);
 
       // Get users with pagination and join with assigned user info
-      // Query without classification column since it doesn't exist yet
-      const users = await db
+      const realUsersData = await db
         .select({
           id: realUsers.id,
           fullName: realUsers.fullName,
           email: realUsers.email,
           verified: realUsers.verified,
+          classification: realUsers.classification,
           createdAt: realUsers.createdAt,
           updatedAt: realUsers.updatedAt,
           lastLogin: realUsers.lastLogin,
@@ -1582,9 +1582,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .offset(offset);
 
       // Transform the data to match expected format
-      const transformedUsers = users.map(user => ({
+      const transformedUsers = realUsersData.map(user => ({
         ...user,
-        classification: 'new', // Default classification
+        classification: user.classification || 'new', // Use DB classification or default
         processor: user.processorId ? {
           id: user.processorId,
           name: user.processorName,
