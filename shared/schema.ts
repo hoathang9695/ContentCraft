@@ -180,6 +180,29 @@ export const insertRealUserSchema = createInsertSchema(realUsers).omit({
 export type InsertRealUser = z.infer<typeof insertRealUserSchema>;
 export type RealUser = typeof realUsers.$inferSelect;
 
+// Pages table
+export const pages = pgTable("pages", {
+  id: serial("id").primaryKey(),
+  pageName: varchar("page_name", { length: 255 }).notNull(),
+  pageType: varchar("page_type", { length: 100 }).notNull(), // personal, business, community, etc.
+  classification: varchar("classification", { length: 50 }).default("new"), // new, potential, non_potential
+  managerId: integer("manager_id").references(() => users.id),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  monetizationEnabled: boolean("monetization_enabled").default(false),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertPageSchema = createInsertSchema(pages).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertPage = z.infer<typeof insertPageSchema>;
+export type Page = typeof pages.$inferSelect;
+
 export interface ContentMessage {
   externalId: string;        // ID nội dung, kiểu string
   source?: {                // Nguồn cấp dạng object
