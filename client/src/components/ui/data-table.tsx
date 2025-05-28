@@ -111,7 +111,7 @@ export function DataTable<T>({
       {pagination && (
         <div className="flex items-center justify-between px-4 py-3 border-t">
           <div className="flex-1 text-sm text-muted-foreground">
-            Trang {pagination.currentPage} / {pagination.totalPages}
+            Trang {pagination.currentPage} / {pagination.totalPages || 1}
           </div>
           <div className="flex items-center space-x-6 lg:space-x-8">
             <div className="flex items-center space-x-2">
@@ -125,7 +125,7 @@ export function DataTable<T>({
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                Trang {pagination.currentPage} / {pagination.totalPages}
+                Trang {pagination.currentPage} / {pagination.totalPages || 1}
               </div>
               <Button
                 variant="outline"
