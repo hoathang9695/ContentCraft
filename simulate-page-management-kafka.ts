@@ -92,6 +92,15 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
 async function simulatePageManagementKafka() {
   try {
     console.log('🚀 Starting Page Management Kafka simulation...\n');
+    
+    // Test database connection first
+    try {
+      const testResult = await db.select().from(users).limit(1);
+      console.log('✅ Database connection test successful');
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError);
+      throw new Error('Database connection failed');
+    }
 
     // Test pages data
     const testPages: PageManagementMessage[] = [
@@ -137,7 +146,20 @@ async function simulatePageManagementKafka() {
       const pageData = testPages[i];
 
       console.log(`📝 Processing page ${i + 1}/${testPages.length}`);
-      await simulatePageMessage(pageData);
+      
+      try {
+        // Add timeout to prevent hanging
+        await Promise.race([
+          simulatePageMessage(pageData),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Operation timeout')), 10000)
+          )
+        ]);
+        console.log(`✅ Page ${i + 1} processed successfully`);
+      } catch (error) {
+        console.error(`❌ Failed to process page ${i + 1}:`, error);
+        // Continue with next page instead of stopping
+      }
 
       // Wait 1 second between messages
       await new Promise(resolve => setTimeout(resolve, 1000));
