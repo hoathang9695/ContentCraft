@@ -173,7 +173,7 @@ export const realUsers = pgTable("real_users", {
 
 export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
-  pageName: varchar("page_name", { length: 255 }).notNull(),
+  pageName: jsonb("page_name").notNull(),
   pageType: varchar("page_type", { length: 100 }).notNull(),
   classification: varchar("classification", { length: 50 }).default("new"),
   managerId: integer("manager_id").references(() => users.id),
