@@ -284,6 +284,7 @@ export async function setupKafkaConsumer() {
                             },
                             email: msg.email,
                             verified: msg.verified,
+                            classification: 'new', // Default classification
                             lastLogin: now,
                             createdAt: now,
                             updatedAt: now,
