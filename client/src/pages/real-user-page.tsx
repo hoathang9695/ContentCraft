@@ -315,7 +315,7 @@ export default function RealUserPage() {
             data={displayUsers}
             isLoading={isLoading}
             searchable={true}
-            searchPlaceholder="Tìm kiếm người dùng..."
+            searchPlaceholder="Tìm kiếm theo tên hoặc email..."
             searchValue={searchQuery} 
             onSearch={setSearchQuery}
             pagination={{
