@@ -1559,66 +1559,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const total = Number(totalResult[0]?.count || 0);
 
       // Get users with pagination and join with assigned user info
-      // Handle case where classification column might not exist
-      let users;
-      try {
-        users = await db
-          .select({
-            id: realUsers.id,
-            fullName: realUsers.fullName,
-            email: realUsers.email,
-            verified: realUsers.verified,
-            classification: realUsers.classification,
-            createdAt: realUsers.createdAt,
-            updatedAt: realUsers.updatedAt,
-            lastLogin: realUsers.lastLogin,
-            assignedToId: realUsers.assignedToId,
-            processor: {
-              id: users.id,
-              name: users.name,
-              username: users.username
-            }
-          })
-          .from(realUsers)
-          .leftJoin(users, eq(realUsers.assignedToId, users.id))
-          .where(whereClause)
-          .orderBy(desc(realUsers.createdAt))
-          .limit(limit)
-          .offset(offset);
-      } catch (classificationError) {
-        // Fallback query without classification column
-        console.log("Classification column not found, using fallback query");
-        users = await db
-          .select({
-            id: realUsers.id,
-            fullName: realUsers.fullName,
-            email: realUsers.email,
-            verified: realUsers.verified,
-            createdAt: realUsers.createdAt,
-            updatedAt: realUsers.updatedAt,
-            lastLogin: realUsers.lastLogin,
-            assignedToId: realUsers.assignedToId,
-            processor: {
-              id: users.id,
-              name: users.name,
-              username: users.username
-            }
-          })
-          .from(realUsers)
-          .leftJoin(users, eq(realUsers.assignedToId, users.id))
-          .where(whereClause)
-          .orderBy(desc(realUsers.createdAt))
-          .limit(limit)
-          .offset(offset);
+      // Query without classification column since it doesn't exist yet
+      const users = await db
+        .select({
+          id: realUsers.id,
+          fullName: realUsers.fullName,
+          email: realUsers.email,
+          verified: realUsers.verified,
+          createdAt: realUsers.createdAt,
+          updatedAt: realUsers.updatedAt,
+          lastLogin: realUsers.lastLogin,
+          assignedToId: realUsers.assignedToId,
+          processorId: users.id,
+          processorName: users.name,
+          processorUsername: users.username
+        })
+        .from(realUsers)
+        .leftJoin(users, eq(realUsers.assignedToId, users.id))
+        .where(whereClause)
+        .orderBy(desc(realUsers.createdAt))
+        .limit(limit)
+        .offset(offset);
 
-        // Add default classification for compatibility
-        users = users.map(user => ({ ...user, classification: 'new' }));
-      }
+      // Transform the data to match expected format
+      const transformedUsers = users.map(user => ({
+        ...user,
+        classification: 'new', // Default classification
+        processor: user.processorId ? {
+          id: user.processorId,
+          name: user.processorName,
+          username: user.processorUsername
+        } : null
+      }));
 
-      console.log(`Found ${users.length} real users for page ${page}`);
+      console.log(`Found ${transformedUsers.length} real users for page ${page}`);
 
       res.json({
-        data: users,
+        data: transformedUsers,
         pagination: {
           total,
           totalPages: Math.ceil(total / limit),
