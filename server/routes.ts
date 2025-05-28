@@ -1393,9 +1393,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const searchPattern = `%${search.toLowerCase()}%`;
         conditions.push(
           or(
-            sql`LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE LOWER(${searchPattern})`,
-            sql`LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE LOWER(${searchPattern})`,
-            sql`LOWER(${realUsers.email}) LIKE LOWER(${searchPattern})`
+            sql`LOWER(UNACCENT(${realUsers.fullName}::jsonb->>'name')) LIKE ${searchPattern}`,
+            sql`LOWER(${realUsers.fullName}::jsonb->>'name') LIKE ${searchPattern}`,
+            sql`LOWER(${realUsers.email}) LIKE ${searchPattern}`
           )
         );
       }
