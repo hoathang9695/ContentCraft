@@ -184,3 +184,192 @@ simulatePageManagementKafka()
     console.error('\n💥 Script failed:', err);
     process.exit(1);
   });
+import { db } from './server/db';
+import { users, pages } from './shared/schema';
+import { eq, ne, and, sql } from 'drizzle-orm';
+
+interface PageMessage {
+  pageId: string;
+  pageName: string;
+  pageType: 'business' | 'community' | 'personal';
+  managerId?: string;
+  phoneNumber?: string;
+  monetizationEnabled?: boolean;
+}
+
+// Sample page data
+const samplePages: PageMessage[] = [
+  {
+    pageId: "114123456789012345",
+    pageName: "Cửa hàng Điện tử ABC",
+    pageType: "business",
+    phoneNumber: "0901234567",
+    monetizationEnabled: true
+  },
+  {
+    pageId: "114234567890123456", 
+    pageName: "Nhóm Yêu thích Công nghệ",
+    pageType: "community",
+    phoneNumber: "0902345678",
+    monetizationEnabled: false
+  },
+  {
+    pageId: "114345678901234567",
+    pageName: "Trang cá nhân Minh Quang",
+    pageType: "personal",
+    phoneNumber: "0903456789",
+    monetizationEnabled: false
+  },
+  {
+    pageId: "114456789012345678",
+    pageName: "Shop Thời trang XYZ",
+    pageType: "business", 
+    phoneNumber: "0904567890",
+    monetizationEnabled: true
+  },
+  {
+    pageId: "114567890123456789",
+    pageName: "Cộng đồng Game thủ Việt",
+    pageType: "community",
+    phoneNumber: "0905678901",
+    monetizationEnabled: false
+  }
+];
+
+async function processPageMessage(pageMessage: PageMessage) {
+  console.log(`Processing page message: ${JSON.stringify(pageMessage)}`);
+  
+  try {
+    // Get active non-admin users for round-robin assignment
+    const activeUsers = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+    if (!activeUsers || activeUsers.length === 0) {
+      throw new Error("No active non-admin users found for assignment");
+    }
+
+    // Get last assigned page for round-robin
+    const lastAssigned = await db.query.pages.findFirst({
+      orderBy: (pages, { desc }) => [desc(pages.createdAt)]
+    });
+
+    // Calculate next assignee index
+    let nextAssigneeIndex = 0;
+    if (lastAssigned && lastAssigned.assignedToId) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        user => user.id === lastAssigned.assignedToId
+      );
+      if (lastAssigneeIndex !== -1) {
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+      }
+    }
+
+    const assignedToId = activeUsers[nextAssigneeIndex].id;
+    const now = new Date();
+
+    // Check if page already exists
+    const existingPage = await db
+      .select()
+      .from(pages)
+      .where(sql`${pages.pageName}->>'id' = ${pageMessage.pageId}`)
+      .limit(1);
+
+    if (existingPage.length > 0) {
+      console.log(`Page with ID ${pageMessage.pageId} already exists, skipping...`);
+      return existingPage[0];
+    }
+
+    // Insert new page
+    const result = await db.insert(pages).values({
+      pageName: {
+        id: pageMessage.pageId,
+        page_name: pageMessage.pageName
+      },
+      pageType: pageMessage.pageType,
+      classification: 'new',
+      managerId: pageMessage.managerId ? parseInt(pageMessage.managerId) : null,
+      phoneNumber: pageMessage.phoneNumber || null,
+      monetizationEnabled: pageMessage.monetizationEnabled || false,
+      assignedToId: assignedToId,
+      createdAt: now,
+      updatedAt: now
+    }).returning();
+
+    console.log(`Successfully inserted page: ${result[0].id} assigned to user ${assignedToId}`);
+    return result[0];
+
+  } catch (error) {
+    console.error(`Error processing page message:`, error);
+    throw error;
+  }
+}
+
+async function simulatePageKafkaMessages() {
+  try {
+    console.log('Starting simulation of Page Management Kafka messages...');
+    
+    // Get active non-admin users
+    const activeUsers = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+    console.log(`Found ${activeUsers.length} active non-admin users for assignment`);
+    
+    if (activeUsers.length === 0) {
+      console.error('No active non-admin users found. Cannot proceed with simulation.');
+      return;
+    }
+
+    // Process each sample page
+    const createdPages = [];
+    for (let i = 0; i < samplePages.length; i++) {
+      try {
+        console.log(`Processing page ${i + 1}/${samplePages.length}`);
+        const page = await processPageMessage(samplePages[i]);
+        createdPages.push(page);
+        
+        // Wait between messages
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(`Error processing page ${i + 1}:`, error);
+      }
+    }
+
+    console.log('\n=== SIMULATION COMPLETE ===');
+    console.log(`Created ${createdPages.length} pages`);
+    
+    // Show assignment distribution
+    const assignmentStats = {};
+    activeUsers.forEach(user => {
+      assignmentStats[user.username] = 0;
+    });
+    
+    createdPages.forEach(page => {
+      const assignedUser = activeUsers.find(u => u.id === page.assignedToId);
+      if (assignedUser) {
+        assignmentStats[assignedUser.username]++;
+      }
+    });
+    
+    console.log('\nAssignment distribution:');
+    Object.entries(assignmentStats).forEach(([username, count]) => {
+      console.log(`- ${username}: ${count} pages`);
+    });
+
+  } catch (error) {
+    console.error('Error in page simulation:', error);
+    process.exit(1);
+  }
+}
+
+// Run simulation
+simulatePageKafkaMessages().then(() => {
+  console.log('Page management Kafka simulation completed successfully');
+  process.exit(0);
+}).catch(err => {
+  console.error('Simulation failed:', err);
+  process.exit(1);
+});
