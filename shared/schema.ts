@@ -164,6 +164,7 @@ export const realUsers = pgTable("real_users", {
   fullName: jsonb("full_name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   verified: boolean("verified").notNull().default(false),
+  classification: varchar("classification", { length: 50 }).default("new"),
   lastLogin: timestamp("last_login", { withTimezone: true }),
   assignedToId: integer("assigned_to_id").references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
