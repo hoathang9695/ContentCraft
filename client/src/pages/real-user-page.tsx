@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -89,6 +90,39 @@ export default function RealUserPage() {
     }
   };
 
+  const handleUpdateClassification = async (userId: number, classification: string) => {
+    try {
+      const response = await fetch(`/api/real-users/${userId}/classification`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ classification }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update classification");
+      }
+
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật phân loại thành công",
+      });
+
+      // Refetch data using React Query instead of page reload
+      queryClient.invalidateQueries({
+        queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery, activeTab, selectedUserId]
+      });
+    } catch (error) {
+      console.error("Error updating classification:", error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật phân loại. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Fetch editor users
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
@@ -131,6 +165,7 @@ export default function RealUserPage() {
         fullName: user.fullName ? (typeof user.fullName === 'object' ? user.fullName : (typeof user.fullName === 'string' ? JSON.parse(user.fullName) : {name: '', id: user.id})) : {name: '', id: user.id},
         email: user.email,
         verified: user.verified,
+        classification: user.classification,
         lastLogin: user.lastLogin,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -363,6 +398,27 @@ export default function RealUserPage() {
                 ),
               },
               {
+                key: "classification",
+                header: "Phân loại",
+                render: (row) => (
+                  <div className="space-y-1">
+                    <Select
+                      value={row.classification || 'new'}
+                      onValueChange={(value) => handleUpdateClassification(row.id, value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Chọn phân loại" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">Mới</SelectItem>
+                        <SelectItem value="potential">Tiềm năng</SelectItem>
+                        <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ),
+              },
+              {
                 key: "processor",
                 header: "Người phê duyệt", 
                 render: (row) => {
@@ -433,7 +489,7 @@ export default function RealUserPage() {
               {
                 key: "actions",
                 header: "Hành động",
-                className: "text-right",
+                className: "text-right sticky right-0 bg-background",
                 render: (row) => (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
