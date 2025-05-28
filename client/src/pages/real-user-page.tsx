@@ -42,6 +42,10 @@ export default function RealUserPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery?.trim() || '');
+      // Reset về trang 1 khi có search query mới
+      if (searchQuery?.trim()) {
+        setPage(1);
+      }
     }, 500);
 
     return () => clearTimeout(timer);
@@ -49,7 +53,8 @@ export default function RealUserPage() {
 
   useEffect(() => {
     setDebouncedSearchQuery('');
-  }, [startDate, endDate, verificationStatus]);
+    setPage(1); // Reset về trang 1 khi thay đổi filter
+  }, [startDate, endDate, verificationStatus, activeTab, selectedUserId]);
 
   const handlePushFollow = async (userIds: string[]) => {
     try {
