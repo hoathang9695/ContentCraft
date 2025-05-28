@@ -1425,13 +1425,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get total count using same conditions
-      let countQuery = db.select().from(realUsers);
+      let countQuery = db.select({
+        count: sql`count(*)`
+      }).from(realUsers);
 
       if (conditions.length > 0) {
         countQuery = countQuery.where(and(...conditions));
       }
 
-      const totalCount = await countQuery.execute();
+      const countResult = await countQuery.execute();
+      const totalCount = Number(countResult[0]?.count || 0);
 
       // Get paginated data using the same query with pagination
       const results = await query
@@ -1443,10 +1446,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         data: results,
         pagination: {
-          total: totalCount.length,
+          total: totalCount,
           page,
           limit,
-          totalPages: Math.ceil(totalCount.length / limit)
+          totalPages: Math.ceil(totalCount / limit)
         }
       });
     } catch (error) {
