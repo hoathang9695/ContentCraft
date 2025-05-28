@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
@@ -108,8 +109,10 @@ export default function RealUserPage() {
         description: "Đã cập nhật phân loại thành công",
       });
 
-      // Refresh data
-      window.location.reload();
+      // Refetch data using React Query instead of page reload
+      queryClient.invalidateQueries({
+        queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery, activeTab, selectedUserId]
+      });
     } catch (error) {
       console.error("Error updating classification:", error);
       toast({
