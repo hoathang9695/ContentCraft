@@ -489,7 +489,7 @@ export default function RealUserPage() {
               {
                 key: "actions",
                 header: "Hành động",
-                className: "text-right",
+                className: "text-right sticky right-0 bg-background",
                 render: (row) => (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
