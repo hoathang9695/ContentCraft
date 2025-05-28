@@ -100,7 +100,7 @@ export default function RealUserPage() {
 
   // Fetch real users with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery],
+    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery, activeTab, selectedUserId],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -108,7 +108,9 @@ export default function RealUserPage() {
         ...(startDate && { startDate: startDate.toISOString() }),
         ...(endDate && { endDate: endDate.toISOString() }),
         ...(verificationStatus && { verificationStatus }),
-        ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery })
+        ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
+        ...(activeTab !== 'all' && { activeTab }),
+        ...(selectedUserId && { assignedToId: selectedUserId.toString() })
       });
 
       const response = await fetch(`/api/real-users?${params}`);

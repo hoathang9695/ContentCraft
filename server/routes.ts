@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { desc, eq, and, gte, lte } from 'drizzle-orm';
+import { desc, eq, and, gte, lte, or, sql } from 'drizzle-orm';
 import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, users, realUsers, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
 import { pool, db } from "./db";
 import multer from "multer";
@@ -871,6 +871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only complete content assigned to you" });
       }
 
+      //```python
       // Complete processing
       const completedContent = await storage.completeProcessing(contentId, result, user.id);
 
@@ -1345,6 +1346,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
       const verificationStatus = req.query.verificationStatus as string;
       const search = req.query.search as string;
+      const activeTab = req.query.activeTab as string;
+      const assignedToId = req.query.assignedToId ? Number(req.query.assignedToId) : null;
 
       console.log("Search query:", {
         search,
@@ -1352,7 +1355,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate,
         verificationStatus,
         page,
-        limit
+        limit,
+        activeTab,
+        assignedToId
       });
 
       // Build base query
