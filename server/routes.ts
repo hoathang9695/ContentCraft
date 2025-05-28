@@ -1453,8 +1453,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
+      console.error("Error in /api/real-users:", error);
       res.status(500).json({ 
-        message: "Error fetching fake user",
+        message: "Error fetching real users",
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -1584,4 +1585,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
-// The code has been updated to fix the real users API query by modifying the query building and execution logic.
