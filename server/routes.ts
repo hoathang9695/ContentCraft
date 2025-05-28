@@ -871,10 +871,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only complete content assigned to you" });
       }
 
-      //```python
       // Complete processing
-      const completed```text
-Content = await storage.completeProcessing(contentId, result, user.id);
+      const completedContent = await storage.completeProcessing(contentId, result, user.id);
 
       res.json({ 
         success: true, 
