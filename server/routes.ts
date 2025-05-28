@@ -1619,37 +1619,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update page classification
   app.put("/api/pages/:id/classification", isAuthenticated, async (req, res) => {
     try {
-      const { id } = req.params;
+      const pageId = parseInt(req.params.id);
       const { classification } = req.body;
 
-      if (!['new', 'potential', 'non_potential'].includes(classification)) {
-        return res.status(400).json({ message: "Invalid classification value" });
+      // Validate classification value
+      const validClassifications = ['new', 'potential', 'non_potential'];
+      if (!validClassifications.includes(classification)) {
+        return res.status(400).json({ 
+          message: "Invalid classification value",
+          validValues: validClassifications
+        });
       }
 
       // Import pages from schema
       const { pages } = await import("../shared/schema");
 
+      // Update the page classification
       const updatedPage = await db
         .update(pages)
         .set({ 
           classification,
           updatedAt: new Date()
         })
-        .where(eq(pages.id, parseInt(id)))
+        .where(eq(pages.id, pageId))
         .returning();
 
-      if (updatedPage.length === 0) {
+      if (!updatedPage.length) {
         return res.status(404).json({ message: "Page not found" });
       }
 
       res.json({ 
+        success: true, 
         message: "Classification updated successfully",
-        page: updatedPage[0]
+        data: updatedPage[0] 
       });
     } catch (error) {
       console.error("Error updating page classification:", error);
       res.status(500).json({ 
-        message: "Error updating classification",
+        message: "Error updating page classification",
         error: error instanceof Error ? error.message : String(error)
       });
     }

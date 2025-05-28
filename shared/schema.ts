@@ -163,35 +163,25 @@ export const realUsers = pgTable("real_users", {
   id: serial("id").primaryKey(),
   fullName: jsonb("full_name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  verified: varchar("verified", { length: 50 }).notNull().default("unverified"),
+  verified: varchar("verified", { length: 50 }).default("unverified"),
   classification: varchar("classification", { length: 50 }).default("new"),
   lastLogin: timestamp("last_login", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   assignedToId: integer("assigned_to_id").references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const insertRealUserSchema = createInsertSchema(realUsers).omit({ 
-  id: true, 
-  createdAt: true,
-  updatedAt: true
-});
-
-export type InsertRealUser = z.infer<typeof insertRealUserSchema>;
-export type RealUser = typeof realUsers.$inferSelect;
-
-// Pages table
 export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
   pageName: varchar("page_name", { length: 255 }).notNull(),
-  pageType: varchar("page_type", { length: 100 }).notNull(), // personal, business, community, etc.
-  classification: varchar("classification", { length: 50 }).default("new"), // new, potential, non_potential
+  pageType: varchar("page_type", { length: 100 }).notNull(),
+  classification: varchar("classification", { length: 50 }).default("new"),
   managerId: integer("manager_id").references(() => users.id),
   phoneNumber: varchar("phone_number", { length: 20 }),
   monetizationEnabled: boolean("monetization_enabled").default(false),
   assignedToId: integer("assigned_to_id").references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
 export const insertPageSchema = createInsertSchema(pages).omit({ 
