@@ -1334,128 +1334,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/real-users", isAuthenticated, async (req, res) => {
+  // Update real user classification
+  app.put("/api/real-users/:id/classification", isAuthenticated, async (req, res) => {
     try {
-      const { realUsers, users } = await import("@shared/schema");
-      const user = req.user as Express.User;
+      const { id } = req.params;
+      const { classification } = req.body;
 
-      // Parse query params
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
-      const verificationStatus = req.query.verificationStatus as string;
-      const search = req.query.search as string;
-      const activeTab = req.query.activeTab as string;
-      const assignedToId = req.query.assignedToId ? Number(req.query.assignedToId) : null;
-
-      console.log("Search query:", {
-        search,
-        startDate,
-        endDate,
-        verificationStatus,
-        page,
-        limit,
-        activeTab,
-        assignedToId
-      });
-
-      // Build filtering conditions
-      let conditions = [];
-
-      // Date filter
-      if (startDate && endDate) {
-        conditions.push(
-          and(
-            gte(realUsers.createdAt, startDate),
-            lte(realUsers.createdAt, endDate)
-          )
-        );
+      if (!['new', 'potential', 'non_potential'].includes(classification)) {
+        return res.status(400).json({ message: "Invalid classification value" });
       }
 
-      // Verification status filter  
-      if (verificationStatus) {
-        conditions.push(eq(realUsers.verified, verificationStatus));
+      const updatedUser = await db
+        .update(realUsers)
+        .set({ 
+          classification,
+          updatedAt: new Date()
+        })
+        .where(eq(realUsers.id, parseInt(id)))
+        .returning();
+
+      if (updatedUser.length === 0) {
+        return res.status(404).json({ message: "User not found" });
       }
 
-      // Assigned user filter (for admin only)
-      if (assignedToId && user.role === 'admin') {
-        conditions.push(eq(realUsers.assignedToId, assignedToId));
-      }
-
-      // Role-based filtering (if not admin and no specific assignedToId filter)
-      if (user.role !== 'admin' && !assignedToId) {
-        conditions.push(eq(realUsers.assignedToId, user.id));
-      }
-
-      // Search filter
-      if (search) {
-        const searchPattern = `%${search.toLowerCase()}%`;
-        conditions.push(
-          or(
-            sql`LOWER(UNACCENT(${realUsers.fullName}::jsonb->>'name')) LIKE ${searchPattern}`,
-            sql`LOWER(${realUsers.fullName}::jsonb->>'name') LIKE ${searchPattern}`,
-            sql`LOWER(${realUsers.email}) LIKE ${searchPattern}`
-          )
-        );
-      }
-
-      // Build base query
-      let query = db.select({
-        id: realUsers.id,
-        fullName: realUsers.fullName,
-        email: realUsers.email,
-        verified: realUsers.verified,
-        lastLogin: realUsers.lastLogin,
-        assignedToId: realUsers.assignedToId,
-        createdAt: realUsers.createdAt,
-        updatedAt: realUsers.updatedAt,
-        processor: {
-          id: users.id,
-          name: users.name,
-          username: users.username
-        }
-      })
-      .from(realUsers)
-      .leftJoin(users, eq(realUsers.assignedToId, users.id));
-
-      // Apply all conditions
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
-
-      // Get total count using same conditions
-      let countQuery = db.select({
-        count: sql`count(*)`
-      }).from(realUsers);
-
-      if (conditions.length > 0) {
-        countQuery = countQuery.where(and(...conditions));
-      }
-
-      const countResult = await countQuery.execute();
-      const totalCount = Number(countResult[0]?.count || 0);
-
-      // Get paginated data using the same query with pagination
-      const results = await query
-        .orderBy(desc(realUsers.createdAt))
-        .limit(limit)
-        .offset((page - 1) * limit)
-        .execute();
-
-      res.json({
-        data: results,
-        pagination: {
-          total: totalCount,
-          page,
-          limit,
-          totalPages: Math.ceil(totalCount / limit)
-        }
+      res.json({ 
+        message: "Classification updated successfully",
+        user: updatedUser[0]
       });
     } catch (error) {
-      console.error("Error in /api/real-users:", error);
+      console.error("Error updating classification:", error);
       res.status(500).json({ 
-        message: "Error fetching real users",
+        message: "Error updating classification",
         error: error instanceof Error ? error.message : String(error)
       });
     }
