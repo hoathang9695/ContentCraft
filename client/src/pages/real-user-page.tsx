@@ -404,7 +404,7 @@ export default function RealUserPage() {
                       onValueChange={(value) => handleUpdateClassification(row.id, value)}
                     >
                       <SelectTrigger className="w-32">
-                        <SelectValue />
+                        <SelectValue placeholder="Chọn phân loại" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="new">Mới</SelectItem>
