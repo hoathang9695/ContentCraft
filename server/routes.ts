@@ -1360,6 +1360,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedToId
       });
 
+      // Build filtering conditions
+      let conditions = [];
+
+      // Date filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(realUsers.createdAt, startDate),
+            lte(realUsers.createdAt, endDate)
+          )
+        );
+      }
+
+      // Verification status filter  
+      if (verificationStatus) {
+        conditions.push(eq(realUsers.verified, verificationStatus));
+      }
+
+      // Assigned user filter (for admin only)
+      if (assignedToId && user.role === 'admin') {
+        conditions.push(eq(realUsers.assignedToId, assignedToId));
+      }
+
+      // Role-based filtering (if not admin and no specific assignedToId filter)
+      if (user.role !== 'admin' && !assignedToId) {
+        conditions.push(eq(realUsers.assignedToId, user.id));
+      }
+
+      // Search filter
+      if (search) {
+        const searchLower = search.toLowerCase();
+        conditions.push(
+          or(
+            sql`LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE ${'%' + searchLower + '%'}`,
+            sql`LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE ${'%' + searchLower + '%'}`,
+            sql`LOWER(${realUsers.email}) LIKE ${'%' + searchLower + '%'}`
+          )
+        );
+      }
+
       // Build base query
       let query = db.select({
         id: realUsers.id,
@@ -1379,79 +1419,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .from(realUsers)
       .leftJoin(users, eq(realUsers.assignedToId, users.id));
 
-      // Apply search if present (independent of other filters)
-      if (search) {
-        const searchLower = search.toLowerCase();
-        query = query.where(
-          sql`(
-            LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE LOWER(UNACCENT(${`%${searchLower}%`})) OR
-            LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE LOWER(${`%${searchLower}%`}) OR 
-            LOWER(${realUsers.email}) LIKE LOWER(${`%${searchLower}%`})
-          )`
-        );
-      } else {
-        // Only apply other filters if no search is present
-        let conditions = [];
-
-        // Date filter
-        if (startDate && endDate) {
-          conditions.push(
-            and(
-              gte(realUsers.createdAt, startDate),
-              lte(realUsers.createdAt, endDate)
-            )
-          );
-        }
-
-        // Verification status filter  
-        if (verificationStatus) {
-          conditions.push(eq(realUsers.verified, verificationStatus));
-        }
-
-        // Role-based filtering
-        if (user.role !== 'admin') {
-          conditions.push(eq(realUsers.assignedToId, user.id));
-        }
-
-        if (conditions.length > 0) {
-          query = query.where(and(...conditions));
-        }
+      // Apply all conditions
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
       }
 
-      // Get total count
+      // Get total count using same conditions
       let countQuery = db.select().from(realUsers);
-      const conditions = [];
-
-      // Apply date filter
-      if (startDate && endDate) {
-        conditions.push(
-          and(
-            gte(realUsers.createdAt, startDate),
-            lte(realUsers.createdAt, endDate)
-          )
-        );
-      }
-
-      // Verification status filter  
-      if (verificationStatus) {
-        conditions.push(eq(realUsers.verified, verificationStatus));
-      }
-
-      // Role-based filtering
-      if (user.role !== 'admin') {
-        conditions.push(eq(realUsers.assignedToId, user.id));
-      }
-
-      // Search filter
-      if (search) {
-        const searchLower = search.toLowerCase();
-        conditions.push(
-          or(
-            sql`LOWER(UNACCENT(${realUsers.email})) LIKE ${'%' + searchLower + '%'}`,
-            sql`LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE ${'%' + searchLower + '%'}`
-          )
-        );
-      }
 
       if (conditions.length > 0) {
         countQuery = countQuery.where(and(...conditions));
@@ -1459,34 +1433,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const totalCount = await countQuery.execute();
 
-      // Get paginated data 
-      let resultsQuery = db
-        .select({
-          id: realUsers.id,
-          fullName: realUsers.fullName,
-          email: realUsers.email,
-          verified: realUsers.verified,
-          lastLogin: realUsers.lastLogin,
-          assignedToId: realUsers.assignedToId,
-          createdAt: realUsers.createdAt,
-          updatedAt: realUsers.updatedAt,
-          processor: {
-            id: users.id,
-            name: users.name,
-            username: users.username
-          }
-        })
-        .from(realUsers)
-        .leftJoin(users, eq(realUsers.assignedToId, users.id))
+      // Get paginated data using the same query with pagination
+      const results = await query
         .orderBy(desc(realUsers.createdAt))
         .limit(limit)
-        .offset((page - 1) * limit);
-
-      if (conditions.length > 0) {
-        resultsQuery = resultsQuery.where(and(...conditions));
-      }
-
-      const results = await resultsQuery.execute();
+        .offset((page - 1) * limit)
+        .execute();
 
       res.json({
         data: results,
