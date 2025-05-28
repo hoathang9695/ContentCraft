@@ -1,7 +1,7 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
 import { users, supportRequests, contents, realUsers } from "../shared/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import { log } from "./vite";
 
 let consumer: Consumer;
@@ -44,6 +44,15 @@ interface RealUsersMessage {
   verified: string;
 }
 
+interface PageMessage {
+  pageId: string;
+  pageName: string;
+  pageType: 'business' | 'community' | 'personal';
+  managerId?: string;
+  phoneNumber?: string;
+  monetizationEnabled?: boolean;
+}
+
 export interface ContentMessage {
   externalId: string;
   source?: string;
@@ -57,15 +66,6 @@ export interface SupportMessage {
   email: string;
   subject: string;
   content: string;
-}
-
-export interface PageManagementMessage {
-  pageId: string;
-  pageName: string;
-  pageType: "personal" | "business" | "community";
-  managerId?: string;
-  phoneNumber?: string;
-  monetizationEnabled?: boolean;
 }
 
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
@@ -214,7 +214,7 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
@@ -224,8 +224,6 @@ export async function setupKafkaConsumer() {
                         await processSupportMessage(msg as SupportMessage, tx);
                       } else if ("name" in msg && "message" in msg) {
                         await processContactMessage(msg as ContactMessage, tx);
-                      } else if ("pageId" in msg && "pageName" in msg && "pageType" in msg) {
-                        await processPageManagementMessage(msg as PageManagementMessage, tx);
                       } else if ("id" in msg && "fullName" in msg && "email" in msg && "verified" in msg) {
                         // Handle real user message from Kafka
                         const now = new Date();
@@ -310,6 +308,93 @@ export async function setupKafkaConsumer() {
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
+                      } else if ("pageId" in msg && "pageName" in msg && "pageType" in msg) {
+                        // Handle page message from Kafka
+                        const pageMsg = msg as PageMessage;
+                        const now = new Date();
+
+                        // Get active users for round-robin assignment (exclude admin)
+                        const activeUsers = await db
+                          .select()
+                          .from(users)
+                          .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                        if (!activeUsers || activeUsers.length === 0) {
+                          throw new Error("No active non-admin users found for assignment");
+                        }
+
+                        // Get last assigned page for round-robin
+                        const { pages } = await import("../shared/schema");
+                        const lastAssigned = await db.query.pages.findFirst({
+                          orderBy: (pages, { desc }) => [desc(pages.createdAt)]
+                        });
+
+                        // Calculate next assignee index
+                        let nextAssigneeIndex = 0;
+                        if (lastAssigned && lastAssigned.assignedToId) {
+                          const lastAssigneeIndex = activeUsers.findIndex(
+                            user => user.id === lastAssigned.assignedToId
+                          );
+                          if (lastAssigneeIndex !== -1) {
+                            nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                          }
+                        }
+
+                        const assignedToId = activeUsers[nextAssigneeIndex].id;
+
+                        try {
+                          // Validate required fields
+                          if (!pageMsg.pageId || !pageMsg.pageName || !pageMsg.pageType) {
+                            throw new Error(`Invalid page message format: ${JSON.stringify(pageMsg)}`);
+                          }
+
+                          // Check if page already exists to avoid duplicates
+                          const existingPage = await tx
+                            .select()
+                            .from(pages)
+                            .where(sql`${pages.pageName}->>'id' = ${pageMsg.pageId}`)
+                            .limit(1);
+
+                          if (existingPage.length > 0) {
+                            log(`Page with ID ${pageMsg.pageId} already exists, skipping...`, "kafka");
+                            return existingPage[0];
+                          }
+
+                          // Validate assigned user is still active
+                          const assignedUser = await tx
+                            .select()
+                            .from(users)
+                            .where(eq(users.id, assignedToId))
+                            .limit(1);
+
+                          if (!assignedUser.length || assignedUser[0].status !== 'active') {
+                            throw new Error(`Assigned user ${assignedToId} is not active`);
+                          }
+
+                          // Insert new page with proper format
+                          const result = await tx.insert(pages).values({
+                            pageName: {
+                              id: pageMsg.pageId,
+                              page_name: pageMsg.pageName
+                            },
+                            pageType: pageMsg.pageType,
+                            classification: 'new', // Default classification
+                            managerId: pageMsg.managerId ? parseInt(pageMsg.managerId) : null,
+                            phoneNumber: pageMsg.phoneNumber || null,
+                            monetizationEnabled: pageMsg.monetizationEnabled || false,
+                            assignedToId: assignedToId,
+                            createdAt: now,
+                            updatedAt: now
+                          }).returning();
+
+                          log(`Successfully inserted page: ${JSON.stringify(result[0])}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+                        } catch (error) {
+                          log(`Error processing page: ${error}`, "kafka-error");
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
@@ -362,7 +447,7 @@ async function sendToDeadLetterQueue(message: any) {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageManagementMessage {
+): ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage {
   if (!messageValue) return null;
 
   try {
@@ -375,10 +460,10 @@ function parseMessage(
       return message as ContentMessage;
     // } else if ("name" in message && "message" in message) {
     //   return message as ContactMessage; 
-    } else if ("fullName" in message && "id" in message && "email" in message && "verified" in message) {
+    } else if ("fullName" in message && "id" in message&& "email" in message&& "verified" in message) {
       return message as RealUsersMessage; 
     } else if ("pageId" in message && "pageName" in message && "pageType" in message) {
-      return message as PageManagementMessage;
+      return message as PageMessage;
     }
 
     return null;
@@ -636,105 +721,6 @@ async function processContactMessage(message: ContactMessage, tx: any) {
     return newRequest[0];
   } catch (error) {
     log(`Error processing contact message: ${error}`, "kafka-error");
-    throw error;
-  }
-}
-
-async function processPageManagementMessage(message: PageManagementMessage, tx: any) {
-  try {
-    log(`Processing page management message: ${JSON.stringify(message)}`, "kafka");
-
-    // Import pages from schema
-    const { pages } = await import("../shared/schema");
-
-    // Get active non-admin users for round-robin assignment
-    const activeUsers = await tx
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.status, "active"),
-          ne(users.role, "admin")
-        )
-      );
-
-    if (!activeUsers || activeUsers.length === 0) {
-      throw new Error("No active non-admin users found for assignment");
-    }
-
-    // Get last assigned page for round-robin
-    const lastAssigned = await tx.query.pages.findFirst({
-      orderBy: (pages, { desc }) => [desc(pages.createdAt)]
-    });
-
-    // Calculate next assignee index
-    let nextAssigneeIndex = 0;
-    if (lastAssigned && lastAssigned.assignedToId) {
-      const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssigned.assignedToId
-      );
-      if (lastAssigneeIndex !== -1) {
-        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
-      }
-    }
-
-    const assignedToId = activeUsers[nextAssigneeIndex].id;
-
-    try {
-      // Validate required fields
-      if (!message.pageId || !message.pageName || !message.pageType) {
-        throw new Error(`Invalid page message format: ${JSON.stringify(message)}`);
-      }
-
-      // Check if page already exists to avoid duplicates
-      const existingPage = await tx
-        .select()
-        .from(pages)
-        .where(eq(pages.pageName, { id: message.pageId, page_name: message.pageName }))
-        .limit(1);
-
-      if (existingPage.length > 0) {
-        log(`Page with ID ${message.pageId} already exists, skipping...`, "kafka");
-        return existingPage[0];
-      }
-
-      // Validate assigned user is still active
-      const assignedUser = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, assignedToId))
-        .limit(1);
-
-      if (!assignedUser.length || assignedUser[0].status !== 'active') {
-        throw new Error(`Assigned user ${assignedToId} is not active`);
-      }
-
-      const now = new Date();
-
-      // Insert new page with proper format
-      const result = await tx.insert(pages).values({
-        pageName: {
-          id: message.pageId,
-          page_name: message.pageName
-        },
-        pageType: message.pageType,
-        classification: 'new', // Default classification
-        managerId: message.managerId ? parseInt(message.managerId) : null,
-        phoneNumber: message.phoneNumber || null,
-        monetizationEnabled: message.monetizationEnabled || false,
-        assignedToId: assignedToId,
-        createdAt: now,
-        updatedAt: now
-      }).returning();
-
-      log(`Successfully inserted page: ${JSON.stringify(result[0])}`, "kafka");
-      return result[0];
-    } catch (error) {
-      log(`Error processing page management message: ${error}`, "kafka-error");
-      throw error; // Re-throw to trigger transaction rollback
-    }
-  } catch (error) {
-    log(`Error processing page management message: ${error}`, "kafka-error");
     throw error;
   }
 }
