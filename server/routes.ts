@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { desc, eq, and, gte, lte } from 'drizzle-orm';
+import { desc, eq, and, gte, lte, or, sql } from 'drizzle-orm';
 import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, users, realUsers, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
 import { pool, db } from "./db";
 import multer from "multer";
@@ -871,6 +871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only complete content assigned to you" });
       }
 
+      //```python
       // Complete processing
       const completedContent = await storage.completeProcessing(contentId, result, user.id);
 
@@ -1345,6 +1346,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
       const verificationStatus = req.query.verificationStatus as string;
       const search = req.query.search as string;
+      const activeTab = req.query.activeTab as string;
+      const assignedToId = req.query.assignedToId ? Number(req.query.assignedToId) : null;
 
       console.log("Search query:", {
         search,
@@ -1352,8 +1355,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate,
         verificationStatus,
         page,
-        limit
+        limit,
+        activeTab,
+        assignedToId
       });
+
+      // Build filtering conditions
+      let conditions = [];
+
+      // Date filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(realUsers.createdAt, startDate),
+            lte(realUsers.createdAt, endDate)
+          )
+        );
+      }
+
+      // Verification status filter  
+      if (verificationStatus) {
+        conditions.push(eq(realUsers.verified, verificationStatus));
+      }
+
+      // Assigned user filter (for admin only)
+      if (assignedToId && user.role === 'admin') {
+        conditions.push(eq(realUsers.assignedToId, assignedToId));
+      }
+
+      // Role-based filtering (if not admin and no specific assignedToId filter)
+      if (user.role !== 'admin' && !assignedToId) {
+        conditions.push(eq(realUsers.assignedToId, user.id));
+      }
+
+      // Search filter
+      if (search) {
+        const searchPattern = `%${search.toLowerCase()}%`;
+        conditions.push(
+          or(
+            sql`LOWER(UNACCENT(${realUsers.fullName}::jsonb->>'name')) LIKE ${searchPattern}`,
+            sql`LOWER(${realUsers.fullName}::jsonb->>'name') LIKE ${searchPattern}`,
+            sql`LOWER(${realUsers.email}) LIKE ${searchPattern}`
+          )
+        );
+      }
 
       // Build base query
       let query = db.select({
@@ -1374,127 +1419,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .from(realUsers)
       .leftJoin(users, eq(realUsers.assignedToId, users.id));
 
-      // Apply search if present (independent of other filters)
-      if (search) {
-        const searchLower = search.toLowerCase();
-        query = query.where(
-          sql`(
-            LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE LOWER(UNACCENT(${`%${searchLower}%`})) OR
-            LOWER(CAST(${realUsers.fullName}->>'name' AS TEXT)) LIKE LOWER(${`%${searchLower}%`}) OR 
-            LOWER(${realUsers.email}) LIKE LOWER(${`%${searchLower}%`})
-          )`
-        );
-      } else {
-        // Only apply other filters if no search is present
-        let conditions = [];
-
-        // Date filter
-        if (startDate && endDate) {
-          conditions.push(
-            and(
-              gte(realUsers.createdAt, startDate),
-              lte(realUsers.createdAt, endDate)
-            )
-          );
-        }
-
-        // Verification status filter  
-        if (verificationStatus) {
-          conditions.push(eq(realUsers.verified, verificationStatus));
-        }
-
-        // Role-based filtering
-        if (user.role !== 'admin') {
-          conditions.push(eq(realUsers.assignedToId, user.id));
-        }
-
-        if (conditions.length > 0) {
-          query = query.where(and(...conditions));
-        }
+      // Apply all conditions
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
       }
 
-      // Get total count
-      let countQuery = db.select().from(realUsers);
-      const conditions = [];
-
-      // Apply date filter
-      if (startDate && endDate) {
-        conditions.push(
-          and(
-            gte(realUsers.createdAt, startDate),
-            lte(realUsers.createdAt, endDate)
-          )
-        );
-      }
-
-      // Verification status filter  
-      if (verificationStatus) {
-        conditions.push(eq(realUsers.verified, verificationStatus));
-      }
-
-      // Role-based filtering
-      if (user.role !== 'admin') {
-        conditions.push(eq(realUsers.assignedToId, user.id));
-      }
-
-      // Search filter
-      if (search) {
-        const searchLower = search.toLowerCase();
-        conditions.push(
-          or(
-            sql`LOWER(UNACCENT(${realUsers.email})) LIKE ${'%' + searchLower + '%'}`,
-            sql`LOWER(UNACCENT(CAST(${realUsers.fullName}->>'name' AS TEXT))) LIKE ${'%' + searchLower + '%'}`
-          )
-        );
-      }
+      // Get total count using same conditions
+      let countQuery = db.select({
+        count: sql`count(*)`
+      }).from(realUsers);
 
       if (conditions.length > 0) {
         countQuery = countQuery.where(and(...conditions));
       }
 
-      const totalCount = await countQuery.execute();
+      const countResult = await countQuery.execute();
+      const totalCount = Number(countResult[0]?.count || 0);
 
-      // Get paginated data 
-      let resultsQuery = db
-        .select({
-          id: realUsers.id,
-          fullName: realUsers.fullName,
-          email: realUsers.email,
-          verified: realUsers.verified,
-          lastLogin: realUsers.lastLogin,
-          assignedToId: realUsers.assignedToId,
-          createdAt: realUsers.createdAt,
-          updatedAt: realUsers.updatedAt,
-          processor: {
-            id: users.id,
-            name: users.name,
-            username: users.username
-          }
-        })
-        .from(realUsers)
-        .leftJoin(users, eq(realUsers.assignedToId, users.id))
+      // Get paginated data using the same query with pagination
+      const results = await query
         .orderBy(desc(realUsers.createdAt))
         .limit(limit)
-        .offset((page - 1) * limit);
-
-      if (conditions.length > 0) {
-        resultsQuery = resultsQuery.where(and(...conditions));
-      }
-
-      const results = await resultsQuery.execute();
+        .offset((page - 1) * limit)
+        .execute();
 
       res.json({
         data: results,
         pagination: {
-          total: totalCount.length,
+          total: totalCount,
           page,
           limit,
-          totalPages: Math.ceil(totalCount.length / limit)
+          totalPages: Math.ceil(totalCount / limit)
         }
       });
     } catch (error) {
+      console.error("Error in /api/real-users:", error);
       res.status(500).json({ 
-        message: "Error fetching fake user",
+        message: "Error fetching real users",
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -1624,4 +1585,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
-// The code has been updated to fix the real users API query by modifying the query building and execution logic.
