@@ -321,7 +321,7 @@ export default function RealUserPage() {
             pagination={{
               itemsPerPage: limit,
               currentPage: page,
-              totalPages: Math.ceil((data?.total || 0) / limit),
+              totalPages: data?.pagination?.totalPages || Math.ceil((data?.pagination?.total || 0) / limit),
               onPageChange: setPage
             }}
             columns={[
