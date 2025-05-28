@@ -1490,6 +1490,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const supportRouter = (await import('./routes/support.router')).default;
   app.use("/api/support-requests", supportRouter);
 
+  // Pages API endpoints
+  // Get all pages 
+  app.get("/api/pages", isAuthenticated, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const pageType = req.query.pageType as string;
+      const search = req.query.search as string;
+      const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
+      const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+      const classification = req.query.classification as string;
+
+      console.log("Pages API called with params:", {
+        page, limit, offset, startDate, endDate, pageType, search, activeTab, assignedToId, classification
+      });
+
+      // Import pages from schema
+      const { pages } = await import("../shared/schema");
+
+      // Build conditions
+      const conditions = [];
+
+      // Date range filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(pages.createdAt, startDate),
+            lte(pages.createdAt, endDate)
+          )
+        );
+      }
+
+      // Page type filter
+      if (pageType) {
+        conditions.push(eq(pages.pageType, pageType));
+      }
+
+      // Assigned user filter
+      if (assignedToId) {
+        conditions.push(eq(pages.assignedToId, assignedToId));
+      }
+
+      // Classification filter
+      if (classification) {
+        conditions.push(eq(pages.classification, classification));
+      }
+
+      // Search filter
+      if (search && search.trim()) {
+        const searchPattern = `%${search.toLowerCase()}%`;
+        conditions.push(
+          or(
+            sql`LOWER(${pages.pageName}) LIKE ${searchPattern}`,
+            sql`LOWER(${pages.phoneNumber}) LIKE ${searchPattern}`
+          )
+        );
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(pages)
+        .where(whereClause);
+
+      const total = Number(totalResult[0]?.count || 0);
+
+      // Get pages with pagination and join with assigned user info
+      const pagesData = await db
+        .select({
+          id: pages.id,
+          pageName: pages.pageName,
+          pageType: pages.pageType,
+          classification: pages.classification,
+          phoneNumber: pages.phoneNumber,
+          monetizationEnabled: pages.monetizationEnabled,
+          createdAt: pages.createdAt,
+          updatedAt: pages.updatedAt,
+          assignedToId: pages.assignedToId,
+          processorId: users.id,
+          processorName: users.name,
+          processorUsername: users.username
+        })
+        .from(pages)
+        .leftJoin(users, eq(pages.assignedToId, users.id))
+        .where(whereClause)
+        .orderBy(desc(pages.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Transform the data to match expected format
+      const transformedPages = pagesData.map(page => ({
+        ...page,
+        classification: page.classification || 'new',
+        processor: page.processorId ? {
+          id: page.processorId,
+          name: page.processorName,
+          username: page.processorUsername
+        } : null
+      }));
+
+      console.log(`Found ${transformedPages.length} pages for page ${page}`);
+
+      res.json({
+        data: transformedPages,
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+          itemsPerPage: limit
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching pages:", error);
+      res.status(500).json({ 
+        message: "Error fetching pages",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Update page classification
+  app.put("/api/pages/:id/classification", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { classification } = req.body;
+
+      if (!['new', 'potential', 'non_potential'].includes(classification)) {
+        return res.status(400).json({ message: "Invalid classification value" });
+      }
+
+      // Import pages from schema
+      const { pages } = await import("../shared/schema");
+
+      const updatedPage = await db
+        .update(pages)
+        .set({ 
+          classification,
+          updatedAt: new Date()
+        })
+        .where(eq(pages.id, parseInt(id)))
+        .returning();
+
+      if (updatedPage.length === 0) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+
+      res.json({ 
+        message: "Classification updated successfully",
+        page: updatedPage[0]
+      });
+    } catch (error) {
+      console.error("Error updating page classification:", error);
+      res.status(500).json({ 
+        message: "Error updating classification",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Get all real users 
   app.get("/api/real-users", isAuthenticated, async (req, res) => {
     try {
