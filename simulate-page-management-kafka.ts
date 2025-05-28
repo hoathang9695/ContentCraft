@@ -1,3 +1,4 @@
+
 import { db } from './server/db';
 import { users, pages } from './shared/schema';
 import { eq, and, ne, sql } from 'drizzle-orm';
@@ -29,6 +30,8 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
     if (!activeUsers || activeUsers.length === 0) {
       throw new Error("No active non-admin users found for assignment");
     }
+
+    console.log(`Found ${activeUsers.length} active users for assignment`);
 
     // Get last assigned page for round-robin
     const lastAssigned = await db.query.pages.findFirst({
@@ -91,15 +94,21 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
 
 async function simulatePageManagementKafka() {
   try {
-    console.log('🚀 Starting Page Management Kafka simulation...\n');
+    console.log('🚀 Starting Page Management simulation...\n');
     
-    // Test database connection first
+    // Test database connection first with timeout
+    console.log('Testing database connection...');
+    const dbTestPromise = db.select().from(users).limit(1);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Database connection timeout')), 5000)
+    );
+    
     try {
-      const testResult = await db.select().from(users).limit(1);
-      console.log('✅ Database connection test successful');
+      await Promise.race([dbTestPromise, timeoutPromise]);
+      console.log('✅ Database connection successful');
     } catch (dbError) {
       console.error('❌ Database connection failed:', dbError);
-      throw new Error('Database connection failed');
+      process.exit(1);
     }
 
     // Test pages data
@@ -141,52 +150,63 @@ async function simulatePageManagementKafka() {
       }
     ];
 
+    console.log(`Will process ${testPages.length} pages...\n`);
+
+    let successCount = 0;
+    let failCount = 0;
+
     // Process each page message
     for (let i = 0; i < testPages.length; i++) {
       const pageData = testPages[i];
 
-      console.log(`📝 Processing page ${i + 1}/${testPages.length}`);
+      console.log(`📝 Processing page ${i + 1}/${testPages.length}: ${pageData.pageName}`);
       
       try {
-        // Add timeout to prevent hanging
-        await Promise.race([
-          simulatePageMessage(pageData),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Operation timeout')), 10000)
-          )
-        ]);
-        console.log(`✅ Page ${i + 1} processed successfully`);
+        await simulatePageMessage(pageData);
+        successCount++;
+        console.log(`✅ Page ${i + 1} processed successfully\n`);
       } catch (error) {
-        console.error(`❌ Failed to process page ${i + 1}:`, error);
-        // Continue with next page instead of stopping
+        failCount++;
+        console.error(`❌ Failed to process page ${i + 1}: ${error}\n`);
       }
 
-      // Wait 1 second between messages
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log(''); // Empty line for better readability
+      // Wait 500ms between messages
+      if (i < testPages.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
 
-    console.log('🎉 Page Management Kafka simulation completed successfully!');
+    console.log(`🎉 Page Management simulation completed!`);
+    console.log(`✅ Success: ${successCount}, ❌ Failed: ${failCount}\n`);
 
     // Show assignment distribution
-    const allUsers = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.status, "active"),
-          ne(users.role, "admin")
-        )
-      );
-
-    console.log('\n📊 Assignment Distribution:');
-    for (const user of allUsers) {
-      const assignedPages = await db
+    try {
+      const allUsers = await db
         .select()
-        .from(pages)
-        .where(eq(pages.assignedToId, user.id));
+        .from(users)
+        .where(
+          and(
+            eq(users.status, "active"),
+            ne(users.role, "admin")
+          )
+        );
 
-      console.log(`👤 ${user.name}: ${assignedPages.length} pages`);
+      console.log('📊 Assignment Distribution:');
+      for (const user of allUsers) {
+        const assignedPages = await db
+          .select()
+          .from(pages)
+          .where(eq(pages.assignedToId, user.id));
+
+        console.log(`👤 ${user.name}: ${assignedPages.length} pages`);
+      }
+
+      // Show total pages in database
+      const allPages = await db.select().from(pages);
+      console.log(`\n📈 Total pages in database: ${allPages.length}`);
+      
+    } catch (error) {
+      console.error('❌ Error showing statistics:', error);
     }
 
   } catch (error) {
@@ -195,7 +215,7 @@ async function simulatePageManagementKafka() {
   }
 }
 
-// Run simulation
+// Run simulation with proper cleanup
 simulatePageManagementKafka()
   .then(() => {
     console.log('\n✨ Script completed successfully');
