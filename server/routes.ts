@@ -1503,9 +1503,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string;
       const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
       const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+      const classification = req.query.classification as string;
 
       console.log("Real users API called with params:", {
-        page, limit, offset, startDate, endDate, verificationStatus, search, activeTab, assignedToId
+        page, limit, offset, startDate, endDate, verificationStatus, search, activeTab, assignedToId, classification
       });
 
       // Build conditions
@@ -1532,6 +1533,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (assignedToId) {
         conditions.push(eq(realUsers.assignedToId, assignedToId));
       }
+
+      // Classification filter
+       if (classification) {
+         conditions.push(eq(realUsers.classification, classification));
+       }
 
       // Search filter
       if (search && search.trim()) {
