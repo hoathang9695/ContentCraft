@@ -176,7 +176,7 @@ export const pages = pgTable("pages", {
   pageName: jsonb("page_name").notNull(),
   pageType: varchar("page_type", { length: 100 }).notNull(),
   classification: varchar("classification", { length: 50 }).default("new"),
-  managerId: integer("manager_id").references(() => users.id),
+  managerId: integer("manager_id"), // Removed foreign key constraint
   adminData: jsonb("admin_data"), // Admin data in JSON format
   phoneNumber: varchar("phone_number", { length: 20 }),
   monetizationEnabled: boolean("monetization_enabled").default(false),

@@ -74,7 +74,7 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
       },
       pageType: pageData.pageType,
       classification: 'new',
-      managerId: pageData.managerId ? parseInt(pageData.managerId) : null,
+      managerId: null, // Remove managerId assignment since it's too large for integer
       adminData: pageData.managerId ? {
         id: pageData.managerId,
         page_name: `Admin ${pageData.managerId.slice(-4)}`
