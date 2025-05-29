@@ -1574,7 +1574,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             classification: pagesTable.classification,
             phoneNumber: pagesTable.phoneNumber,
             monetizationEnabled: pagesTable.monetizationEnabled,
-            managerId: pagesTable.managerId,
             adminData: pagesTable.adminData,
             createdAt: pagesTable.createdAt,
             updatedAt: pagesTable.updatedAt,
