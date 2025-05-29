@@ -177,6 +177,7 @@ export const pages = pgTable("pages", {
   pageType: varchar("page_type", { length: 100 }).notNull(),
   classification: varchar("classification", { length: 50 }).default("new"),
   managerId: integer("manager_id").references(() => users.id),
+  adminData: jsonb("admin_data"), // Admin data in JSON format
   phoneNumber: varchar("phone_number", { length: 20 }),
   monetizationEnabled: boolean("monetization_enabled").default(false),
   assignedToId: integer("assigned_to_id").references(() => users.id),
