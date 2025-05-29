@@ -161,6 +161,15 @@ async function simulatePageManagementKafka() {
         adminName: "Võ Lập Trình",
         phoneNumber: "0567890123",
         monetizationEnabled: false
+      },
+      {
+        pageId: "108277159419234202",
+        pageName: "EMSO - Mạng xã hội Vì người Việt",
+        pageType: "business",
+        managerId: "113725869733725553",
+        adminName: "Trần Văn Kinh",
+        phoneNumber: "0123456789",
+        monetizationEnabled: true
       }
     ];
 
