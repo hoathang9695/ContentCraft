@@ -1,0 +1,48 @@
+
+[
+  {
+    "pageId": "114501234567890123",
+    "pageName": "Nhóm Kinh Doanh Online",
+    "pageType": "business",
+    "managerId": "114550257830462973",
+    "adminName": "Trần Văn Kinh",
+    "phoneNumber": "0123456789",
+    "monetizationEnabled": true
+  },
+  {
+    "pageId": "114601234567890124",
+    "pageName": "Cộng Đồng Người Yêu Thể Thao",
+    "pageType": "community",
+    "managerId": "114550257830462974",
+    "adminName": "Nguyễn Thị Thể",
+    "phoneNumber": "0987654321",
+    "monetizationEnabled": false
+  },
+  {
+    "pageId": "114701234567890125",
+    "pageName": "Trang Cá Nhân Minh Hoàng",
+    "pageType": "personal",
+    "managerId": "114550257830462975",
+    "adminName": "Lê Minh Hoàng",
+    "phoneNumber": "0345678901",
+    "monetizationEnabled": false
+  },
+  {
+    "pageId": "114801234567890126",
+    "pageName": "Doanh Nghiệp Công Nghệ Số",
+    "pageType": "business",
+    "managerId": "114550257830462976",
+    "adminName": "Phạm Công Nghệ",
+    "phoneNumber": "0456789012",
+    "monetizationEnabled": true
+  },
+  {
+    "pageId": "114901234567890127",
+    "pageName": "Cộng Đồng Học Lập Trình",
+    "pageType": "community",
+    "managerId": "114550257830462977",
+    "adminName": "Võ Lập Trình",
+    "phoneNumber": "0567890123",
+    "monetizationEnabled": false
+  }
+]

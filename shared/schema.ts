@@ -163,22 +163,35 @@ export const realUsers = pgTable("real_users", {
   id: serial("id").primaryKey(),
   fullName: jsonb("full_name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  verified: varchar("verified", { length: 50 }).notNull().default("unverified"),
+  verified: varchar("verified", { length: 50 }).default("unverified"),
   classification: varchar("classification", { length: 50 }).default("new"),
   lastLogin: timestamp("last_login", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   assignedToId: integer("assigned_to_id").references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const insertRealUserSchema = createInsertSchema(realUsers).omit({ 
+export const pages = pgTable("pages", {
+  id: serial("id").primaryKey(),
+  pageName: jsonb("page_name").notNull(),
+  pageType: varchar("page_type", { length: 100 }).notNull(),
+  classification: varchar("classification", { length: 50 }).default("new"),
+  adminData: jsonb("admin_data"), // Admin data in JSON format
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  monetizationEnabled: boolean("monetization_enabled").default(false),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+export const insertPageSchema = createInsertSchema(pages).omit({ 
   id: true, 
   createdAt: true,
   updatedAt: true
 });
 
-export type InsertRealUser = z.infer<typeof insertRealUserSchema>;
-export type RealUser = typeof realUsers.$inferSelect;
+export type InsertPage = z.infer<typeof insertPageSchema>;
+export type Page = typeof pages.$inferSelect;
 
 export interface ContentMessage {
   externalId: string;        // ID nội dung, kiểu string

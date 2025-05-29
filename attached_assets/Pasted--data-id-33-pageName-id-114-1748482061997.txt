@@ -1,0 +1,125 @@
+{
+    "data": [
+        {
+            "id": 33,
+            "pageName": {
+                "id": "114901234567890127",
+                "page_name": "Cộng Đồng Học Lập Trình"
+            },
+            "pageType": "community",
+            "classification": "new",
+            "phoneNumber": "0567890123",
+            "monetizationEnabled": false,
+            "managerId": null,
+            "createdAt": "2025-05-29T01:07:02.581Z",
+            "updatedAt": "2025-05-29T01:07:02.581Z",
+            "assignedToId": 3,
+            "processorId": 3,
+            "processorName": "Nguyễn Hoàng Anh",
+            "processorUsername": "hoanganh",
+            "processor": {
+                "id": 3,
+                "name": "Nguyễn Hoàng Anh",
+                "username": "hoanganh"
+            }
+        },
+        {
+            "id": 32,
+            "pageName": {
+                "id": "114801234567890126",
+                "page_name": "Doanh Nghiệp Công Nghệ Số"
+            },
+            "pageType": "business",
+            "classification": "new",
+            "phoneNumber": "0456789012",
+            "monetizationEnabled": true,
+            "managerId": null,
+            "createdAt": "2025-05-29T01:07:01.596Z",
+            "updatedAt": "2025-05-29T01:07:01.596Z",
+            "assignedToId": 2,
+            "processorId": 2,
+            "processorName": "Nguyễn Thị Khuyên",
+            "processorUsername": "khuyenkhuyen",
+            "processor": {
+                "id": 2,
+                "name": "Nguyễn Thị Khuyên",
+                "username": "khuyenkhuyen"
+            }
+        },
+        {
+            "id": 31,
+            "pageName": {
+                "id": "114701234567890125",
+                "page_name": "Trang Cá Nhân Minh Hoàng"
+            },
+            "pageType": "personal",
+            "classification": "new",
+            "phoneNumber": "0345678901",
+            "monetizationEnabled": false,
+            "managerId": null,
+            "createdAt": "2025-05-29T01:07:00.611Z",
+            "updatedAt": "2025-05-29T01:07:00.611Z",
+            "assignedToId": 3,
+            "processorId": 3,
+            "processorName": "Nguyễn Hoàng Anh",
+            "processorUsername": "hoanganh",
+            "processor": {
+                "id": 3,
+                "name": "Nguyễn Hoàng Anh",
+                "username": "hoanganh"
+            }
+        },
+        {
+            "id": 30,
+            "pageName": {
+                "id": "114601234567890124",
+                "page_name": "Cộng Đồng Người Yêu Thể Thao"
+            },
+            "pageType": "community",
+            "classification": "new",
+            "phoneNumber": "0987654321",
+            "monetizationEnabled": false,
+            "managerId": null,
+            "createdAt": "2025-05-29T01:06:59.627Z",
+            "updatedAt": "2025-05-29T01:06:59.627Z",
+            "assignedToId": 2,
+            "processorId": 2,
+            "processorName": "Nguyễn Thị Khuyên",
+            "processorUsername": "khuyenkhuyen",
+            "processor": {
+                "id": 2,
+                "name": "Nguyễn Thị Khuyên",
+                "username": "khuyenkhuyen"
+            }
+        },
+        {
+            "id": 29,
+            "pageName": {
+                "id": "114501234567890123",
+                "page_name": "Nhóm Kinh Doanh Online"
+            },
+            "pageType": "business",
+            "classification": "new",
+            "phoneNumber": "0123456789",
+            "monetizationEnabled": true,
+            "managerId": null,
+            "createdAt": "2025-05-29T01:06:58.628Z",
+            "updatedAt": "2025-05-29T01:06:58.628Z",
+            "assignedToId": 3,
+            "processorId": 3,
+            "processorName": "Nguyễn Hoàng Anh",
+            "processorUsername": "hoanganh",
+            "processor": {
+                "id": 3,
+                "name": "Nguyễn Hoàng Anh",
+                "username": "hoanganh"
+            }
+        }
+    ],
+    "pagination": {
+        "total": 5,
+        "totalPages": 1,
+        "currentPage": 1,
+        "itemsPerPage": 10
+    }
+}

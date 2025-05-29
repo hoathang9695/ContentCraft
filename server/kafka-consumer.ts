@@ -1,7 +1,7 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
 import { users, supportRequests, contents, realUsers } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import { log } from "./vite";
 
 let consumer: Consumer;
@@ -15,7 +15,7 @@ const KAFKA_CONFIG = {
   CONNECTION_TIMEOUT: 120000,
   AUTH_TIMEOUT: 60000,
   HEALTH_CHECK_INTERVAL: 30000,
-  BATCH_SIZE: 1,
+  BATCH_SIZE: 5,
   RECONNECT_TIMEOUT: 5000,
   MONITOR_INTERVAL: 60000, // Monitor metrics mỗi phút
   MESSAGE_TIMEOUT: 30000 // Timeout xử lý message
@@ -44,6 +44,16 @@ interface RealUsersMessage {
   verified: string;
 }
 
+interface PageMessage {
+  pageId: string;
+  pageName: string;
+  pageType: 'business' | 'community' | 'personal';
+  managerId?: string;
+  adminName?: string;
+  phoneNumber?: string;
+  monetizationEnabled?: boolean;
+}
+
 export interface ContentMessage {
   externalId: string;
   source?: string;
@@ -68,7 +78,7 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
 
     // Resubscribe to topics after reconnect
     // Ensure all required topics are explicitly defined
-    const requiredTopics = ["content_management", "real_users", "contact-messages"];
+    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management"];
     const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
     const topics = [...new Set([...requiredTopics, ...configuredTopics])];
 
@@ -172,7 +182,7 @@ export async function setupKafkaConsumer() {
     await consumer.connect();
     log("Connected to Kafka", "kafka");
 
-    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages"];
+    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages", "page_management"];
     for (const topic of topics) {
       await consumer.subscribe({ topic, fromBeginning: true });
       log(`Subscribed to topic: ${topic}`, "kafka");
@@ -205,7 +215,7 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
@@ -299,6 +309,96 @@ export async function setupKafkaConsumer() {
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
+                      } else if ("pageId" in msg && "pageName" in msg && "pageType" in msg) {
+                        // Handle page message from Kafka
+                        const pageMsg = msg as PageMessage;
+                        const now = new Date();
+
+                        // Get active users for round-robin assignment (exclude admin)
+                        const activeUsers = await db
+                          .select()
+                          .from(users)
+                          .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                        if (!activeUsers || activeUsers.length === 0) {
+                          throw new Error("No active non-admin users found for assignment");
+                        }
+
+                        // Get last assigned page for round-robin
+                        const { pages } = await import("../shared/schema");
+                        const lastAssigned = await db.query.pages.findFirst({
+                          orderBy: (pages, { desc }) => [desc(pages.createdAt)]
+                        });
+
+                        // Calculate next assignee index
+                        let nextAssigneeIndex = 0;
+                        if (lastAssigned && lastAssigned.assignedToId) {
+                          const lastAssigneeIndex = activeUsers.findIndex(
+                            user => user.id === lastAssigned.assignedToId
+                          );
+                          if (lastAssigneeIndex !== -1) {
+                            nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                          }
+                        }
+
+                        const assignedToId = activeUsers[nextAssigneeIndex].id;
+
+                        try {
+                          // Validate required fields
+                          if (!pageMsg.pageId || !pageMsg.pageName || !pageMsg.pageType) {
+                            throw new Error(`Invalid page message format: ${JSON.stringify(pageMsg)}`);
+                          }
+
+                          // Check if page already exists to avoid duplicates
+                          const existingPage = await tx
+                            .select()
+                            .from(pages)
+                            .where(sql`${pages.pageName}->>'id' = ${pageMsg.pageId}`)
+                            .limit(1);
+
+                          if (existingPage.length > 0) {
+                            log(`Page with ID ${pageMsg.pageId} already exists, skipping...`, "kafka");
+                            return existingPage[0];
+                          }
+
+                          // Validate assigned user is still active
+                          const assignedUser = await tx
+                            .select()
+                            .from(users)
+                            .where(eq(users.id, assignedToId))
+                            .limit(1);
+
+                          if (!assignedUser.length || assignedUser[0].status !== 'active') {
+                            throw new Error(`Assigned user ${assignedToId} is not active`);
+                          }
+
+                          // Insert new page with proper format
+                          const result = await tx.insert(pages).values({
+                            pageName: {
+                              id: pageMsg.pageId,
+                              page_name: pageMsg.pageName
+                            },
+                            pageType: pageMsg.pageType,
+                            classification: 'new', // Default classification
+                            adminData: pageMsg.managerId && pageMsg.adminName ? {
+                              id: pageMsg.managerId,
+                              admin_name: pageMsg.adminName
+                            } : null,
+                            phoneNumber: pageMsg.phoneNumber || null,
+                            monetizationEnabled: pageMsg.monetizationEnabled || false,
+                            assignedToId: assignedToId,
+                            createdAt: now,
+                            updatedAt: now
+                          }).returning();
+
+                          log(`Successfully inserted page: ${JSON.stringify(result[0])}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+                        } catch (error) {
+                          log(`Error processing page: ${error}`, "kafka-error");
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
@@ -351,7 +451,7 @@ async function sendToDeadLetterQueue(message: any) {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | ContactMessage |  RealUsersMessage {
+): ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage {
   if (!messageValue) return null;
 
   try {
@@ -364,8 +464,10 @@ function parseMessage(
       return message as ContentMessage;
     // } else if ("name" in message && "message" in message) {
     //   return message as ContactMessage; 
-    }else if ("fullName" in message && "id" in message&& "email" in message&& "verified" in message) {
+    } else if ("fullName" in message && "id" in message&& "email" in message&& "verified" in message) {
       return message as RealUsersMessage; 
+    } else if ("pageId" in message && "pageName" in message && "pageType" in message) {
+      return message as PageMessage;
     }
 
     return null;
