@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PushPageLikesDialog } from "@/components/PushPageLikesDialog";
 
 export default function PageManagementPage() {
   const { user } = useAuth();
@@ -29,6 +30,8 @@ export default function PageManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
+  const [pushLikesOpen, setPushLikesOpen] = useState(false);
+  const [pushLikesPage, setPushLikesPage] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [startDate, setStartDate] = useState<Date>(
@@ -518,11 +521,23 @@ export default function PageManagementPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const pageId = row.pageName?.id;
+                          if (pageId) {
+                            window.open(`https://emso.vn/page/${pageId}`, '_blank');
+                          }
+                        }}
+                      >
                         Xem chi tiết
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        Chỉnh sửa
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setPushLikesPage(row);
+                          setPushLikesOpen(true);
+                        }}
+                      >
+                        Push Follow
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -531,6 +546,12 @@ export default function PageManagementPage() {
             ]}
           />
         </div>
+        <PushPageLikesDialog
+          open={pushLikesOpen}
+          onOpenChange={setPushLikesOpen}
+          targetPageId={pushLikesPage?.pageName?.id}
+          targetPageName={pushLikesPage?.pageName?.page_name || pushLikesPage?.pageName?.name}
+        />
       </div>
     </DashboardLayout>
   );
