@@ -77,7 +77,7 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
       managerId: null, // Remove managerId assignment since it's too large for integer
       adminData: pageData.managerId ? {
         id: pageData.managerId,
-        page_name: `Admin ${pageData.managerId.slice(-4)}`
+        admin_name: `Nguyễn Tuấn Tú ${pageData.managerId.slice(-4)}`
       } : null,
       phoneNumber: pageData.phoneNumber || null,
       monetizationEnabled: pageData.monetizationEnabled || false,

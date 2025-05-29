@@ -410,22 +410,22 @@ export default function PageManagementPage() {
                 ),
               },
               {
-                key: "managerId",
+                key: "adminData",
                 header: "Admin",
                 render: (row) => {
-                  // Parse managerId JSON data
-                  let managerData = null;
+                  // Parse adminData JSON data
+                  let adminData = null;
                   try {
-                    if (row.managerId && typeof row.managerId === 'object') {
-                      managerData = row.managerId;
-                    } else if (row.managerId && typeof row.managerId === 'string') {
-                      managerData = JSON.parse(row.managerId);
+                    if (row.adminData && typeof row.adminData === 'object') {
+                      adminData = row.adminData;
+                    } else if (row.adminData && typeof row.adminData === 'string') {
+                      adminData = JSON.parse(row.adminData);
                     }
                   } catch (error) {
-                    console.error('Error parsing managerId:', error);
+                    console.error('Error parsing adminData:', error);
                   }
 
-                  if (!managerData?.id || !managerData?.page_name) {
+                  if (!adminData?.id || !adminData?.admin_name) {
                     return <span className="text-xs text-gray-500">N/A</span>;
                   }
 
@@ -435,10 +435,10 @@ export default function PageManagementPage() {
                       variant="link"
                       className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
                       onClick={() => {
-                        window.open(`https://emso.vn/user/${managerData.id}`, '_blank');
+                        window.open(`https://emso.vn/user/${adminData.id}`, '_blank');
                       }}
                     >
-                      {managerData.page_name}
+                      {adminData.admin_name}
                     </Button>
                   );
                 },
