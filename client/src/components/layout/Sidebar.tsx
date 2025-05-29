@@ -108,6 +108,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               Người dùng thật
             </SidebarItem>
 
+            <SidebarItem
+              href="/page-management"
+              icon={Folder}
+              isActive={isActivePath('/page-management')}
+              onClick={handleItemClick}
+            >
+              Quản lý trang
+            </SidebarItem>
+
             <div>
               <div className="relative">
                 <SidebarItem

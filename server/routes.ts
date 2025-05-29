@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Kiểm tra ngày cập nhật nếu có
           if (content.updatedAt) {
             const updatedAt = new Date(content.updatedAt);
-            if (updatedAt >= start && updatedAt <= end) return true;
+            if (updatedAt >= start && createdAt <= end) return true;
           }
 
           return false; // Không thỏa mãn điều kiện nào
@@ -869,9 +869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if content is assigned to the current user or if user is admin
       if (content.assigned_to_id !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only complete content assigned to you" });
-      }
-
-      // Complete processing
+      }// Complete processing
       const completedContent = await storage.completeProcessing(contentId, result, user.id);
 
       res.json({ 
@@ -1490,6 +1488,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const supportRouter = (await import('./routes/support.router')).default;
   app.use("/api/support-requests", supportRouter);
 
+  // Pages API endpoints
+  // Get all pages 
+  app.get("/api/pages", isAuthenticated, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const pageType = req.query.pageType as string;
+      const search = req.query.search as string;
+      const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
+      const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+      const classification = req.query.classification as string;
+
+      console.log("Pages API called with params:", {
+        page, limit, offset, startDate, endDate, pageType, search, activeTab, assignedToId, classification
+      });
+
+      // Import pages from schema
+      const { pages } = await import("../shared/schema");
+      const pagesTable = pages;
+
+      // Build conditions
+      const conditions = [];
+
+      // Date range filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(pagesTable.createdAt, startDate),
+            lte(pagesTable.createdAt, endDate)
+          )
+        );
+      }
+
+      // Page type filter
+      if (pageType) {
+        conditions.push(eq(pagesTable.pageType, pageType));
+      }
+
+      // Assigned user filter
+      if (assignedToId) {
+        conditions.push(eq(pagesTable.assignedToId, assignedToId));
+      }
+
+      // Classification filter
+      if (classification) {
+        conditions.push(eq(pagesTable.classification, classification));
+      }
+
+      // Search filter
+      if (search && search.trim()) {
+        const searchPattern = `%${search.toLowerCase()}%`;
+        conditions.push(
+          or(
+            sql`LOWER(${pagesTable.pageName}::jsonb->>'page_name') LIKE ${searchPattern}`,
+            sql`LOWER(${pagesTable.pageName}::jsonb->>'name') LIKE ${searchPattern}`,
+            sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`
+          )
+        );
+      }
+
+      const whereConditions = conditions;
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(pagesTable)
+        .where(whereClause);
+
+      const total = Number(totalResult[0]?.count || 0);
+      // Update pages API to return manager data from managerId column
+      const { users } = await import("../shared/schema");
+      // Update pages API to return manager data from managerId column
+      // Update pages API to return manager data from managerId column
+      const pagesData = await db
+          .select({
+            id: pagesTable.id,
+            pageName: pagesTable.pageName,
+            pageType: pagesTable.pageType,
+            classification: pagesTable.classification,
+            phoneNumber: pagesTable.phoneNumber,
+            monetizationEnabled: pagesTable.monetizationEnabled,
+            adminData: pagesTable.adminData,
+            createdAt: pagesTable.createdAt,
+            updatedAt: pagesTable.updatedAt,
+            assignedToId: pagesTable.assignedToId,
+            processorId: users.id,
+            processorName: users.name,
+            processorUsername: users.username
+          })
+          .from(pagesTable)
+          .leftJoin(users, eq(pagesTable.assignedToId, users.id))
+          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+          .orderBy(desc(pagesTable.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+      // Transform the data to match expected format
+      const transformedPages = pagesData.map(page => ({
+        ...page,
+        classification: page.classification || 'new',
+        processor: page.processorId ? {
+          id: page.processorId,
+          name: page.processorName,
+          username: page.processorUsername
+        } : null
+      }));
+
+      console.log(`Found ${transformedPages.length} pages for page ${page}`);
+
+      res.json({
+        data: transformedPages,
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+          itemsPerPage: limit
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching pages:", error);
+      res.status(500).json({ 
+        message: "Error fetching pages",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Update page classification
+  app.put("/api/pages/:id/classification", isAuthenticated, async (req, res) => {
+    try {
+      const pageId = parseInt(req.params.id);
+      const { classification } = req.body;
+
+      // Validate classification value
+      const validClassifications = ['new', 'potential', 'non_potential'];
+      if (!validClassifications.includes(classification)) {
+        return res.status(400).json({ 
+          message: "Invalid classification value",
+          validValues: validClassifications
+        });
+      }
+
+      // Import pages from schema
+      const { pages } = await import("../shared/schema");
+
+      // Update the page classification
+      const updatedPage = await db
+        .update(pages)
+        .set({ 
+          classification,
+          updatedAt: new Date()
+        })
+        .where(eq(pages.id, pageId))
+        .returning();
+
+      if (!updatedPage.length) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Classification updated successfully",
+        data: updatedPage[0] 
+      });
+    } catch (error) {
+      console.error("Error updating page classification:", error);
+      res.status(500).json({ 
+        message: "Error updating page classification",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Get all real users 
   app.get("/api/real-users", isAuthenticated, async (req, res) => {
     try {
@@ -1621,3 +1797,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+// Include adminData in pages API response and query.

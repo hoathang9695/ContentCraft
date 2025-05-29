@@ -19,7 +19,8 @@ import UserFeedbackPage from './pages/user-feedback-page';
 import SupportPage from './pages/user-feedback/support-page';
 import VerificationPage from './pages/user-feedback/verification-page';
 import TickPage from './pages/user-feedback/tick-page';
-import RealUserPage from "./pages/real-user-page";
+import RealUserPage from "@/pages/real-user-page";
+import PageManagementPage from "@/pages/page-management-page";
 
 function Router() {
   return (
@@ -38,7 +39,8 @@ function Router() {
       <Route path="/user-feedback/support" component={SupportPage} />
       <Route path="/user-feedback/verification" component={VerificationPage} />
       <Route path="/user-feedback/tick" component={TickPage} />
-      <ProtectedRoute path="/real-user" component={RealUserPage} adminOnly={false} />
+      <Route path="/real-user" component={RealUserPage} />
+            <Route path="/page-management" component={PageManagementPage} />
       <Route component={NotFound} />
     </Switch>
   );
