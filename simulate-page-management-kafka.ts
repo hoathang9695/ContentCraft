@@ -74,7 +74,8 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
       },
       pageType: pageData.pageType,
       classification: 'new',
-      managerId: pageData.managerId ? {
+      managerId: pageData.managerId ? parseInt(pageData.managerId) : null,
+      adminData: pageData.managerId ? {
         id: pageData.managerId,
         page_name: `Admin ${pageData.managerId.slice(-4)}`
       } : null,
