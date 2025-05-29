@@ -52,11 +52,11 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
     const assignedToId = activeUsers[nextAssigneeIndex].id;
     const assignedUser = activeUsers[nextAssigneeIndex];
 
-    // Check if page already exists using SQL query
+    // Check if page already exists using JSON query
     const existingPage = await db
       .select()
       .from(pages)
-      .where(sql`${pages.pageName}->>'id' = ${pageData.pageId}`)
+      .where(sql`${pages.pageName}::jsonb ->> 'id' = ${pageData.pageId}`)
       .limit(1);
 
     if (existingPage.length > 0) {
