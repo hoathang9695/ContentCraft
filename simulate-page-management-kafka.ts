@@ -74,7 +74,10 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
       },
       pageType: pageData.pageType,
       classification: 'new',
-      managerId: pageData.managerId ? parseInt(pageData.managerId) : null,
+      managerId: pageData.managerId ? {
+        id: pageData.managerId,
+        page_name: `Admin ${pageData.managerId.slice(-4)}`
+      } : null,
       phoneNumber: pageData.phoneNumber || null,
       monetizationEnabled: pageData.monetizationEnabled || false,
       assignedToId: assignedToId,
@@ -117,6 +120,7 @@ async function simulatePageManagementKafka() {
         pageId: "114501234567890123",
         pageName: "Nhóm Kinh Doanh Online",
         pageType: "business",
+        managerId: "114550257830462973",
         phoneNumber: "0123456789",
         monetizationEnabled: true
       },
@@ -124,6 +128,7 @@ async function simulatePageManagementKafka() {
         pageId: "114601234567890124", 
         pageName: "Cộng Đồng Người Yêu Thể Thao",
         pageType: "community",
+        managerId: "114550257830462974",
         phoneNumber: "0987654321",
         monetizationEnabled: false
       },
@@ -131,13 +136,15 @@ async function simulatePageManagementKafka() {
         pageId: "114701234567890125",
         pageName: "Trang Cá Nhân Minh Hoàng",
         pageType: "personal",
+        managerId: "114550257830462975",
         phoneNumber: "0345678901",
         monetizationEnabled: false
       },
       {
         pageId: "114801234567890126",
         pageName: "Doanh Nghiệp Công Nghệ Số",
-        pageType: "business", 
+        pageType: "business",
+        managerId: "114550257830462976", 
         phoneNumber: "0456789012",
         monetizationEnabled: true
       },
@@ -145,6 +152,7 @@ async function simulatePageManagementKafka() {
         pageId: "114901234567890127",
         pageName: "Cộng Đồng Học Lập Trình",
         pageType: "community",
+        managerId: "114550257830462977",
         phoneNumber: "0567890123",
         monetizationEnabled: false
       }

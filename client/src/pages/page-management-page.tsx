@@ -131,6 +131,7 @@ export default function PageManagementPage() {
         classification: page.classification,
         phoneNumber: page.phoneNumber,
         monetizationEnabled: page.monetizationEnabled,
+        managerId: page.managerId,
         createdAt: page.createdAt,
         updatedAt: page.updatedAt,
         assignedToId: page.assignedToId,
@@ -407,6 +408,40 @@ export default function PageManagementPage() {
                     </Select>
                   </div>
                 ),
+              },
+              {
+                key: "managerId",
+                header: "Admin",
+                render: (row) => {
+                  // Parse managerId JSON data
+                  let managerData = null;
+                  try {
+                    if (row.managerId && typeof row.managerId === 'object') {
+                      managerData = row.managerId;
+                    } else if (row.managerId && typeof row.managerId === 'string') {
+                      managerData = JSON.parse(row.managerId);
+                    }
+                  } catch (error) {
+                    console.error('Error parsing managerId:', error);
+                  }
+
+                  if (!managerData?.id || !managerData?.page_name) {
+                    return <span className="text-xs text-gray-500">N/A</span>;
+                  }
+
+                  return (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto px-0 py-1 font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-xs"
+                      onClick={() => {
+                        window.open(`https://emso.vn/user/${managerData.id}`, '_blank');
+                      }}
+                    >
+                      {managerData.page_name}
+                    </Button>
+                  );
+                },
               },
               {
                 key: "processor",
