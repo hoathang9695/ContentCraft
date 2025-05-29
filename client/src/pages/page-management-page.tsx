@@ -124,24 +124,27 @@ export default function PageManagementPage() {
   });
 
   // Map data for display
-  const pages = data?.data.map((page: any) => ({
-        id: page.id,
-        pageName: page.pageName,
-        pageType: page.pageType,
-        classification: page.classification,
-        phoneNumber: page.phoneNumber,
-        monetizationEnabled: page.monetizationEnabled,
-        managerId: page.managerId,
-        adminData: page.adminData,
-        createdAt: page.createdAt,
-        updatedAt: page.updatedAt,
-        assignedToId: page.assignedToId,
-        processor: page.processor ? {
-          id: page.processor.id,
-          name: page.processor.name,
-          username: page.processor.username
-        } : null
-      })) || [];
+  const pages = data?.data.map((page: any) => {
+        console.log('Page adminData from API:', page.adminData);
+        return {
+          id: page.id,
+          pageName: page.pageName,
+          pageType: page.pageType,
+          classification: page.classification,
+          phoneNumber: page.phoneNumber,
+          monetizationEnabled: page.monetizationEnabled,
+          managerId: page.managerId,
+          adminData: page.adminData,
+          createdAt: page.createdAt,
+          updatedAt: page.updatedAt,
+          assignedToId: page.assignedToId,
+          processor: page.processor ? {
+            id: page.processor.id,
+            name: page.processor.name,
+            username: page.processor.username
+          } : null
+        };
+      }) || [];
 
   const displayPages = pages || [];
 
@@ -414,6 +417,8 @@ export default function PageManagementPage() {
                 key: "adminData",
                 header: "Admin",
                 render: (row) => {
+                  console.log('Row adminData in render:', row.adminData, typeof row.adminData);
+                  
                   // Parse adminData JSON data
                   let adminData = null;
                   try {
@@ -423,8 +428,10 @@ export default function PageManagementPage() {
                       adminData = JSON.parse(row.adminData);
                     }
                   } catch (error) {
-                    console.error('Error parsing adminData:', error);
+                    console.error('Error parsing adminData:', error, row.adminData);
                   }
+
+                  console.log('Parsed adminData:', adminData);
 
                   if (!adminData?.id || !adminData?.admin_name) {
                     return <span className="text-xs text-gray-500">N/A</span>;
