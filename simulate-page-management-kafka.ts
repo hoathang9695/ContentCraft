@@ -8,6 +8,7 @@ interface PageManagementMessage {
   pageName: string;
   pageType: "personal" | "business" | "community";
   managerId?: string;
+  adminName?: string;
   phoneNumber?: string;
   monetizationEnabled?: boolean;
 }
@@ -74,9 +75,9 @@ async function simulatePageMessage(pageData: PageManagementMessage) {
       },
       pageType: pageData.pageType,
       classification: 'new',
-      adminData: pageData.managerId ? {
+      adminData: pageData.managerId && pageData.adminName ? {
         id: pageData.managerId,
-        admin_name: `Nguyễn Tuấn Tú ${pageData.managerId.slice(-4)}`
+        admin_name: pageData.adminName
       } : null,
       phoneNumber: pageData.phoneNumber || null,
       monetizationEnabled: pageData.monetizationEnabled || false,
@@ -121,6 +122,7 @@ async function simulatePageManagementKafka() {
         pageName: "Nhóm Kinh Doanh Online",
         pageType: "business",
         managerId: "114550257830462973",
+        adminName: "Trần Văn Kinh",
         phoneNumber: "0123456789",
         monetizationEnabled: true
       },
@@ -129,6 +131,7 @@ async function simulatePageManagementKafka() {
         pageName: "Cộng Đồng Người Yêu Thể Thao",
         pageType: "community",
         managerId: "114550257830462974",
+        adminName: "Nguyễn Thị Thể",
         phoneNumber: "0987654321",
         monetizationEnabled: false
       },
@@ -137,6 +140,7 @@ async function simulatePageManagementKafka() {
         pageName: "Trang Cá Nhân Minh Hoàng",
         pageType: "personal",
         managerId: "114550257830462975",
+        adminName: "Lê Minh Hoàng",
         phoneNumber: "0345678901",
         monetizationEnabled: false
       },
@@ -144,7 +148,8 @@ async function simulatePageManagementKafka() {
         pageId: "114801234567890126",
         pageName: "Doanh Nghiệp Công Nghệ Số",
         pageType: "business",
-        managerId: "114550257830462976", 
+        managerId: "114550257830462976",
+        adminName: "Phạm Công Nghệ", 
         phoneNumber: "0456789012",
         monetizationEnabled: true
       },
@@ -153,6 +158,7 @@ async function simulatePageManagementKafka() {
         pageName: "Cộng Đồng Học Lập Trình",
         pageType: "community",
         managerId: "114550257830462977",
+        adminName: "Võ Lập Trình",
         phoneNumber: "0567890123",
         monetizationEnabled: false
       }

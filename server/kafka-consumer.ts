@@ -49,6 +49,7 @@ interface PageMessage {
   pageName: string;
   pageType: 'business' | 'community' | 'personal';
   managerId?: string;
+  adminName?: string;
   phoneNumber?: string;
   monetizationEnabled?: boolean;
 }
@@ -379,7 +380,10 @@ export async function setupKafkaConsumer() {
                             },
                             pageType: pageMsg.pageType,
                             classification: 'new', // Default classification
-                            managerId: pageMsg.managerId ? parseInt(pageMsg.managerId) : null,
+                            adminData: pageMsg.managerId && pageMsg.adminName ? {
+                              id: pageMsg.managerId,
+                              admin_name: pageMsg.adminName
+                            } : null,
                             phoneNumber: pageMsg.phoneNumber || null,
                             monetizationEnabled: pageMsg.monetizationEnabled || false,
                             assignedToId: assignedToId,
