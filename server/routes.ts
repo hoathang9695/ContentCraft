@@ -869,9 +869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if content is assigned to the current user or if user is admin
       if (content.assigned_to_id !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only complete content assigned to you" });
-      }
-
-      // Complete processing
+      }// Complete processing
       const completedContent = await storage.completeProcessing(contentId, result, user.id);
 
       res.json({ 
@@ -1512,6 +1510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import pages from schema
       const { pages } = await import("../shared/schema");
+      const pagesTable = pages;
 
       // Build conditions
       const conditions = [];
@@ -1520,25 +1519,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (startDate && endDate) {
         conditions.push(
           and(
-            gte(pages.createdAt, startDate),
-            lte(pages.createdAt, endDate)
+            gte(pagesTable.createdAt, startDate),
+            lte(pagesTable.createdAt, endDate)
           )
         );
       }
 
       // Page type filter
       if (pageType) {
-        conditions.push(eq(pages.pageType, pageType));
+        conditions.push(eq(pagesTable.pageType, pageType));
       }
 
       // Assigned user filter
       if (assignedToId) {
-        conditions.push(eq(pages.assignedToId, assignedToId));
+        conditions.push(eq(pagesTable.assignedToId, assignedToId));
       }
 
       // Classification filter
       if (classification) {
-        conditions.push(eq(pages.classification, classification));
+        conditions.push(eq(pagesTable.classification, classification));
       }
 
       // Search filter
@@ -1546,45 +1545,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const searchPattern = `%${search.toLowerCase()}%`;
         conditions.push(
           or(
-            sql`LOWER(${pages.pageName}::jsonb->>'page_name') LIKE ${searchPattern}`,
-            sql`LOWER(${pages.pageName}::jsonb->>'name') LIKE ${searchPattern}`,
-            sql`LOWER(${pages.phoneNumber}) LIKE ${searchPattern}`
+            sql`LOWER(${pagesTable.pageName}::jsonb->>'page_name') LIKE ${searchPattern}`,
+            sql`LOWER(${pagesTable.pageName}::jsonb->>'name') LIKE ${searchPattern}`,
+            sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`
           )
         );
       }
 
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const whereConditions = conditions;
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
       // Get total count
       const totalResult = await db
         .select({ count: sql<number>`count(*)` })
-        .from(pages)
+        .from(pagesTable)
         .where(whereClause);
 
       const total = Number(totalResult[0]?.count || 0);
-
-      // Get pages with pagination and join with assigned user info
+      // Update pages API to return manager data from managerId column
+      const { users } = await import("../shared/schema");
+      // Update pages API to return manager data from managerId column
+      // Update pages API to return manager data from managerId column
       const pagesData = await db
-        .select({
-          id: pages.id,
-          pageName: pages.pageName,
-          pageType: pages.pageType,
-          classification: pages.classification,
-          phoneNumber: pages.phoneNumber,
-          monetizationEnabled: pages.monetizationEnabled,
-          createdAt: pages.createdAt,
-          updatedAt: pages.updatedAt,
-          assignedToId: pages.assignedToId,
-          processorId: users.id,
-          processorName: users.name,
-          processorUsername: users.username
-        })
-        .from(pages)
-        .leftJoin(users, eq(pages.assignedToId, users.id))
-        .where(whereClause)
-        .orderBy(desc(pages.createdAt))
-        .limit(limit)
-        .offset(offset);
+          .select({
+            id: pagesTable.id,
+            pageName: pagesTable.pageName,
+            pageType: pagesTable.pageType,
+            classification: pagesTable.classification,
+            phoneNumber: pagesTable.phoneNumber,
+            monetizationEnabled: pagesTable.monetizationEnabled,
+            managerId: pagesTable.managerId,
+            createdAt: pagesTable.createdAt,
+            updatedAt: pagesTable.updatedAt,
+            assignedToId: pagesTable.assignedToId,
+            processorId: users.id,
+            processorName: users.name,
+            processorUsername: users.username
+          })
+          .from(pagesTable)
+          .leftJoin(users, eq(pagesTable.assignedToId, users.id))
+          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+          .orderBy(desc(pagesTable.createdAt))
+          .limit(limit)
+          .offset(offset);
 
       // Transform the data to match expected format
       const transformedPages = pagesData.map(page => ({
