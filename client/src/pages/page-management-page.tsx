@@ -132,6 +132,7 @@ export default function PageManagementPage() {
         phoneNumber: page.phoneNumber,
         monetizationEnabled: page.monetizationEnabled,
         managerId: page.managerId,
+        adminData: page.adminData,
         createdAt: page.createdAt,
         updatedAt: page.updatedAt,
         assignedToId: page.assignedToId,
