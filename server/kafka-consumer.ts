@@ -325,7 +325,6 @@ export async function setupKafkaConsumer() {
                         }
 
                         // Get last assigned page for round-robin
-                        const { pages } = await import("../shared/schema");
                         const lastAssigned = await db.query.pages.findFirst({
                           orderBy: (pages, { desc }) => [desc(pages.createdAt)]
                         });
