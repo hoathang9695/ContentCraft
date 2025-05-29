@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Kiểm tra ngày cập nhật nếu có
           if (content.updatedAt) {
             const updatedAt = new Date(content.updatedAt);
-            if (updatedAt >= start && updatedAt <= end) return true;
+            if (updatedAt >= start && createdAt <= end) return true;
           }
 
           return false; // Không thỏa mãn điều kiện nào
@@ -1575,6 +1575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             phoneNumber: pagesTable.phoneNumber,
             monetizationEnabled: pagesTable.monetizationEnabled,
             managerId: pagesTable.managerId,
+            adminData: pagesTable.adminData,
             createdAt: pagesTable.createdAt,
             updatedAt: pagesTable.updatedAt,
             assignedToId: pagesTable.assignedToId,
@@ -1797,3 +1798,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+// Include adminData in pages API response and query.
