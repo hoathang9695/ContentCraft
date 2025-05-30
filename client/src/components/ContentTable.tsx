@@ -86,6 +86,8 @@ export function ContentTable({
   >(undefined);
   const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
   const [authError, setAuthError] = useState(false);
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery || '');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery || '');
 
   // Toast hiển thị khi không tìm thấy dữ liệu nào
   const toastShownRef = useRef(false);
@@ -103,7 +105,7 @@ export function ContentTable({
     ...(assignedUserId && { assignedUserId: assignedUserId.toString() }),
     ...(startDate && { startDate: startDate.toISOString() }),
     ...(endDate && { endDate: endDate.toISOString() }),
-    ...(searchQuery?.trim() && { search: searchQuery.trim() })
+    ...(debouncedSearchQuery && { search: debouncedSearchQuery })
   });
 
   // Use paginated API instead of loading all data
@@ -174,6 +176,27 @@ export function ContentTable({
   const totalContents = paginatedResult?.total || 0;
   const totalPages = paginatedResult?.totalPages || 1;
   const paginatedContents = allContents;
+
+  // Debouncing effect for search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(localSearchQuery.trim());
+      setCurrentPage(1); // Reset to first page when search changes
+
+      // Dispatch custom event for parent component
+      if (onSearchChange) {
+        onSearchChange(localSearchQuery.trim());
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [localSearchQuery, onSearchChange]);
+
+  // Sync with parent search query changes
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery || '');
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   // Console log để debug
   console.log('Backend paginated result:', {
@@ -435,13 +458,9 @@ export function ContentTable({
           isLoading={isLoading}
           searchable={showActions}
           searchPlaceholder="Tìm kiếm theo ID, danh mục, nhãn, hoặc nguồn cấp..."
-          searchValue={searchQuery}
+          searchValue={localSearchQuery}
           onSearch={(value) => {
             console.log("Search value:", value);
-            if (onSearchChange && typeof value === 'string') {
-              onSearchChange(value);
-            }
-            setCurrentPage(1); // Reset to first page when searching
           }}
           columns={[
             {
@@ -769,6 +788,16 @@ export function ContentTable({
                 : "Hiện không có nội dung nào được phân công cho bạn."
               : undefined
           }
+        />
+        <Input
+          type="search"
+          placeholder="Tìm kiếm theo ID, danh mục, nhãn, hoặc nguồn cấp..."
+          value={localSearchQuery}
+          onChange={(e) => {
+            const value = e.target.value;
+            setLocalSearchQuery(value);
+            // Không cần setCurrentPage(1) ở đây vì đã có trong useEffect
+          }}
         />
       </div>
 
