@@ -63,13 +63,6 @@ export class ContentController {
     }
   }
 
-import { Request, Response } from "express";
-import { storage } from "../storage";
-import { insertContentSchema } from "@shared/schema";
-import { ZodError } from "zod";
-import { simulateKafkaMessage } from "../kafka-simulator";
-
-export class ContentController {
   // Get all contents
   async getAllContents(req: Request, res: Response) {
     try {
