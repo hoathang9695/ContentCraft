@@ -55,6 +55,18 @@ export default function ContentPage() {
     setSearchQuery(query);
   };
 
+  // Listen for search updates from DataTable
+  useEffect(() => {
+    const handleSearchUpdate = (event: CustomEvent) => {
+      setSearchQuery(event.detail);
+    };
+
+    window.addEventListener('searchUpdate', handleSearchUpdate as EventListener);
+    return () => {
+      window.removeEventListener('searchUpdate', handleSearchUpdate as EventListener);
+    };
+  }, []);
+
   const handleDateFilter = () => {
     console.log('Filtering by date range:', {
       startDate: startDate.toISOString(),
@@ -259,6 +271,7 @@ export default function ContentPage() {
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           assignedUserId={selectedUser}
           searchQuery={searchQuery}
+          onSearchChange={handleSearch}
         />
       )}
 
@@ -270,6 +283,7 @@ export default function ContentPage() {
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           searchQuery={searchQuery}
+          onSearchChange={handleSearch}
         />
       )}
 
@@ -281,6 +295,7 @@ export default function ContentPage() {
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           searchQuery={searchQuery}
+          onSearchChange={handleSearch}
         />
       )}
     </DashboardLayout>
