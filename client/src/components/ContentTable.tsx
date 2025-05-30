@@ -5,6 +5,7 @@ import { Content } from "@shared/schema";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Edit,
   Eye,
@@ -51,6 +52,8 @@ type ContentTableProps = {
   sourceVerification?: "verified" | "unverified";
   limit?: number;
   assignedUserId?: number | null;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 };
 
 export function ContentTable({
@@ -62,11 +65,12 @@ export function ContentTable({
   sourceVerification = "unverified",
   limit,
   assignedUserId,
+  searchQuery,
+  onSearchChange
 }: ContentTableProps) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
@@ -83,6 +87,7 @@ export function ContentTable({
   >(undefined);
   const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
   const [authError, setAuthError] = useState(false);
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
 
   // Toast hiển thị khi không tìm thấy dữ liệu nào
   const toastShownRef = useRef(false);
@@ -91,16 +96,41 @@ export function ContentTable({
   const apiEndpoint =
     user?.role === "admin" ? "/api/contents" : "/api/my-contents";
 
-  // Properly typed query for content data
+  // Build query parameters for pagination
+  const queryParams = new URLSearchParams({
+    page: currentPage.toString(),
+    limit: '10',
+    ...(statusFilter && { statusFilter }),
+    ...(sourceVerification && { sourceVerification }),
+    ...(assignedUserId && { assignedUserId: assignedUserId.toString() }),
+    ...(startDate && { startDate: startDate.toISOString() }),
+    ...(endDate && { endDate: endDate.toISOString() }),
+    ...(searchQuery && { search: searchQuery })
+  });
+
+  // Use paginated API instead of loading all data
   const {
-    data: allContents = [],
+    data: paginatedResult,
     isLoading,
     error,
-  } = useQuery<Content[], Error>({
-    queryKey: [apiEndpoint],
-    staleTime: 60000,
-    refetchOnWindowFocus: true,
+  } = useQuery<{
+    data: Content[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    itemsPerPage: number;
+  }, Error>({
+    queryKey: ['/api/contents/paginated', queryParams.toString()],
+    queryFn: async () => {
+      const response = await fetch(`/api/contents/paginated?${queryParams}`);
+      if (!response.ok) throw new Error('Failed to fetch paginated contents');
+      return response.json();
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
+
+  const allContents = paginatedResult?.data || [];
 
   // Xử lý lỗi từ query khi có cập nhật với cleanup
   useEffect(() => {
@@ -141,73 +171,47 @@ export function ContentTable({
     };
   }, [allContents, apiEndpoint]);
 
-  // Apply all filters first 
-  const filteredContents = allContents.filter((content) => {
-    // Apply date filter first using only createdAt
-    const createdDate = new Date(content.createdAt);
+  // Data is already filtered and paginated by backend
+  const filteredContents = allContents;
+  const totalContents = paginatedResult?.total || 0;
+  const totalPages = paginatedResult?.totalPages || 1;
+  const paginatedContents = allContents;
 
-    const dateMatch = (!startDate || createdDate >= startDate) && 
-                     (!endDate || createdDate <= new Date(endDate.getTime() + 24 * 60 * 60 * 1000));
-    if (!dateMatch) return false;
+  // Debouncing effect for search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (onSearchChange) {
+        onSearchChange(localSearchQuery.trim());
+      }
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 500);
 
-    // Then apply other filters  
-    const statusMatch = !statusFilter || content.status === statusFilter;
-    const verificationMatch = sourceVerification ? content.sourceVerification === sourceVerification : true;
-
-    const searchTerm = searchQuery?.toLowerCase() || "";
-    const searchMatch =
-      !searchQuery ||
-      content.externalId?.toLowerCase().includes(searchTerm) ||
-      content.source?.toLowerCase().includes(searchTerm) ||
-      content.categories?.toLowerCase().includes(searchTerm) ||
-      content.labels?.toLowerCase().includes(searchTerm);
-
-    const userMatch = assignedUserId ? content.assigned_to_id === assignedUserId : true;
-
-    return statusMatch && verificationMatch && searchMatch && userMatch;
-  });
+    return () => clearTimeout(timer);
+  }, [localSearchQuery, onSearchChange]);
 
   // Console log để debug
-  console.log('Filtered contents:', {
-    total: filteredContents.length,
-    dateRange: { startDate, endDate },
-    verification: sourceVerification,
-    firstItem: filteredContents[0]
-  });
-
-  // Then apply pagination
-  const itemsPerPage = 10;
-  const totalContents = filteredContents.length;
-  const totalPages = Math.ceil(totalContents / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedContents = filteredContents.slice(startIndex, startIndex + itemsPerPage);
-
-  // Console log để debug phân trang
-  console.log('Pagination info:', {
-    totalContents,
+  console.log('Backend paginated result:', {
+    total: totalContents,
     totalPages,
     currentPage,
-    itemsPerPage,
-    startIndex,
-    paginatedLength: paginatedContents.length
+    itemsPerPage: paginatedResult?.itemsPerPage || 10,
+    dataLength: allContents.length
   });
 
-  // Show toast for empty date filter results with optimization
+  // Show toast for empty results with optimization
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    const dateFilterApplied = startDate && endDate;
+    const hasFilters = startDate || endDate || statusFilter || searchQuery;
 
-    if (dateFilterApplied) {
-      if (
-        filteredContents.length === 0 &&
-        allContents.length > 0 &&
-        !toastShownRef.current
-      ) {
+    if (hasFilters && !isLoading) {
+      if (totalContents === 0 && !toastShownRef.current) {
         timeoutId = setTimeout(() => {
           if (!toastShownRef.current) {
             toast({
               title: "Không tìm thấy dữ liệu",
-              description: `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`,
+              description: startDate && endDate 
+                ? `Không có dữ liệu nào trong khoảng từ ${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()} đến ${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`
+                : "Không có dữ liệu phù hợp với bộ lọc hiện tại",
               variant: "destructive",
             });
             toastShownRef.current = true;
@@ -220,11 +224,11 @@ export function ContentTable({
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      if (startDate || endDate) {
+      if (!hasFilters) {
         toastShownRef.current = false;
       }
     };
-  }, [filteredContents.length, allContents.length, toast, startDate, endDate]);
+  }, [totalContents, isLoading, toast, startDate, endDate, statusFilter, searchQuery]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -282,6 +286,7 @@ export function ContentTable({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-contents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contents/paginated"] });
       toast({
         title: "Cập nhật thành công",
         description: "Đã thêm comment vào nội dung.",
@@ -305,6 +310,7 @@ export function ContentTable({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-contents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contents/paginated"] });
       toast({
         title: "Cập nhật thành công",
         description: "Đã thêm reaction vào nội dung.",
@@ -386,16 +392,9 @@ export function ContentTable({
     }
   };
 
-  //Memoizing derived states for performance
-  const memoizedPaginatedContents = useMemo(() => {
-    const itemsPerPage = 10;
-    const totalContents = filteredContents.length;
-    const totalPages = Math.ceil(totalContents / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredContents.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredContents, currentPage]);
-
-  const memoizedTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredContents.length / 10)), [filteredContents.length]);
+  // Data is already paginated by backend
+  const memoizedPaginatedContents = paginatedContents;
+  const memoizedTotalPages = Math.max(1, totalPages);
 
   return (
     <>
@@ -449,9 +448,9 @@ export function ContentTable({
           data={memoizedPaginatedContents}
           isLoading={isLoading}
           searchable={showActions}
-          searchPlaceholder="Tìm kiếm nội dung..."
-          searchValue={searchQuery}
-          onSearch={setSearchQuery}
+          searchPlaceholder="Tìm kiếm theo ID, danh mục, nhãn, hoặc nguồn cấp..."
+          searchValue={localSearchQuery}
+          onSearch={setLocalSearchQuery}
           columns={[
             {
               key: "externalId",
@@ -772,7 +771,7 @@ export function ContentTable({
               : undefined
           }
           caption={
-            filteredContents.length === 0 && !isLoading
+            totalContents === 0 && !isLoading
               ? user?.role === "admin"
                 ? "No content found. Click 'New Content' to create one."
                 : "Hiện không có nội dung nào được phân công cho bạn."
