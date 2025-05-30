@@ -41,7 +41,7 @@ export default function ContentPage() {
   const [sourceStatus, setSourceStatus] = useState('unverified');
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const debouncedSearchQuery = useDebounce(searchQuery, 800);
 
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
@@ -74,10 +74,7 @@ export default function ContentPage() {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString()
     });
-    setTimeout(() => {
-      setStartDate(new Date(startDate));
-      setEndDate(new Date(endDate));
-    }, 0);
+    // Remove unnecessary setTimeout that causes duplicate state updates
   };
 
   const toggleSourceStatus = () => {
@@ -93,39 +90,21 @@ export default function ContentPage() {
               <Button 
                 variant={activeTab === 'all' ? 'default' : 'ghost'} 
                 size="sm"
-                onClick={() => {
-                  setActiveTab('all');
-                  setTimeout(() => {
-                    const newStart = new Date(startDate);
-                    setStartDate(newStart);
-                  }, 0);
-                }}
+                onClick={() => setActiveTab('all')}
               >
                 Tất cả
               </Button>
               <Button 
                 variant={activeTab === 'processed' ? 'default' : 'ghost'} 
                 size="sm"
-                onClick={() => {
-                  setActiveTab('processed');
-                  setTimeout(() => {
-                    const newStart = new Date(startDate);
-                    setStartDate(newStart);
-                  }, 0);
-                }}
+                onClick={() => setActiveTab('processed')}
               >
                 Đã xử lý
               </Button>
               <Button 
                 variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
                 size="sm"
-                onClick={() => {
-                  setActiveTab('unprocessed');
-                  setTimeout(() => {
-                    const newStart = new Date(startDate);
-                    setStartDate(newStart);
-                  }, 0);
-                }}
+                onClick={() => setActiveTab('unprocessed')}
               >
                 Chưa xử lý
               </Button>
@@ -256,7 +235,7 @@ export default function ContentPage() {
                   title: "Đã đặt lại bộ lọc",
                   description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, 'dd/MM/yyyy')} đến ${format(today, 'dd/MM/yyyy')}`,
                 });
-                setTimeout(handleDateFilter, 100);
+                // Remove unnecessary timeout
               }}
             >
               Xóa bộ lọc
