@@ -629,10 +629,7 @@ export class DatabaseStorage implements IStorage {
           })
           .from(contents)
           .leftJoin(users, eq(contents.approver_id, users.id))
-          .where(and(
-            sql`${contents.id} = ANY(${contentIds})`,
-            whereClause
-          ))
+          .where(inArray(contents.id, contentIds))
       : [];
     
     // Create a map of content IDs to approver info
