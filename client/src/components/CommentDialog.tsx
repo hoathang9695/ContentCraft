@@ -169,120 +169,251 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
+    // Tạo unique session ID cho việc track
+    const sessionId = `comment_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const queueKey = `comment_queue_${externalId}`;
+    
+    // Lưu queue vào localStorage để persist
+    const commentQueue = {
+      sessionId,
+      externalId,
+      comments: uniqueComments,
+      totalComments: uniqueComments.length,
+      processedCount: 0,
+      successCount: 0,
+      failureCount: 0,
+      startTime: Date.now(),
+      status: 'processing' as 'processing' | 'completed' | 'failed'
+    };
+
+    try {
+      localStorage.setItem(queueKey, JSON.stringify(commentQueue));
+    } catch (error) {
+      console.warn('Không thể lưu queue vào localStorage:', error);
+    }
+
     // Hiển thị thông báo bắt đầu
     toast({
       title: 'Bắt đầu gửi comment',
       description: `Sẽ gửi ${uniqueComments.length} comment. Quá trình này có thể mất vài phút...`,
     });
 
-    // Tạo worker để gửi comment ngầm với error handling tốt hơn
+    // Tối ưu worker với batch processing và recovery
     const sendCommentsInBackground = async () => {
-      let successCount = 0;
-      let failureCount = 0;
-      const usedUserIds = new Set<number>();
-      const processedComments = new Set<string>();
+      let currentQueue = commentQueue;
+      const maxRetries = 3;
+      const baseDelay = 2; // 2 phút base delay
+      const maxDelay = 5; // 5 phút max delay
       
-      // Hàm delay với timeout protection
-      const delay = (ms: number) => new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => resolve(), ms);
-        // Cleanup timeout nếu cần
-        return timeout;
-      });
-
-      // Đảm bảo mỗi comment là duy nhất
-      const uniqueCommentsArray = Array.from(new Set(uniqueComments));
-      
-      console.log(`Bắt đầu gửi ${uniqueCommentsArray.length} comment...`);
-
-      for (let index = 0; index < uniqueCommentsArray.length; index++) {
-        const comment = uniqueCommentsArray[index];
-
+      // Recovery function để load từ localStorage
+      const loadQueueFromStorage = (): typeof commentQueue | null => {
         try {
-          // Thêm độ trễ 1-2 phút giữa các comment (trừ comment đầu tiên)
-          if (index > 0) {
-            const delayMinutes = Math.floor(Math.random() * 2) + 1; // 1-2 phút
-            const delayMs = delayMinutes * 60000;
-            console.log(`Chờ ${delayMinutes} phút trước khi gửi comment ${index + 1}/${uniqueCommentsArray.length}...`);
-            
-            toast({
-              title: 'Đang chờ...',
-              description: `Chờ ${delayMinutes} phút trước khi gửi comment tiếp theo (${index + 1}/${uniqueCommentsArray.length})`,
-            });
-            
-            await delay(delayMs);
-          }
+          const stored = localStorage.getItem(queueKey);
+          return stored ? JSON.parse(stored) : null;
+        } catch {
+          return null;
+        }
+      };
 
-          // Chọn user fake
-          const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-          if (availableUsers.length === 0) {
-            usedUserIds.clear(); // Reset nếu hết user
-          }
-
-          const finalAvailableUsers = availableUsers.length > 0 ? availableUsers : fakeUsers;
-          const randomUser = finalAvailableUsers[Math.floor(Math.random() * finalAvailableUsers.length)];
-
-          if (!processedComments.has(comment)) {
-            console.log(`[${index + 1}/${uniqueCommentsArray.length}] Đang gửi comment với user ${randomUser.name}...`);
-            
-            // Gửi comment với timeout
-            const sendPromise = sendExternalCommentMutation.mutateAsync({
-              externalId,
-              fakeUserId: randomUser.id,
-              comment
-            });
-
-            // Thêm timeout cho mỗi request (5 phút)
-            const timeoutPromise = new Promise<never>((_, reject) => {
-              setTimeout(() => reject(new Error('Request timeout')), 5 * 60 * 1000);
-            });
-
-            await Promise.race([sendPromise, timeoutPromise]);
-
-            // Đánh dấu thành công
-            processedComments.add(comment);
-            usedUserIds.add(randomUser.id);
-            successCount++;
-
-            console.log(`[${index + 1}/${uniqueCommentsArray.length}] Thành công với user ${randomUser.name}`);
-            
-            toast({
-              title: 'Thành công',
-              description: `Đã gửi comment ${index + 1}/${uniqueCommentsArray.length} với user ${randomUser.name}`,
-            });
-          }
-
+      // Update queue function
+      const updateQueue = (updates: Partial<typeof commentQueue>) => {
+        currentQueue = { ...currentQueue, ...updates };
+        try {
+          localStorage.setItem(queueKey, JSON.stringify(currentQueue));
         } catch (error) {
-          failureCount++;
-          console.error(`[${index + 1}/${uniqueCommentsArray.length}] Lỗi:`, error);
+          console.warn('Không thể cập nhật queue:', error);
+        }
+      };
+
+      // Adaptive delay function
+      const getAdaptiveDelay = (attemptNumber: number, isRetry: boolean = false): number => {
+        const baseMs = baseDelay * 60000; // Convert to milliseconds
+        const maxMs = maxDelay * 60000;
+        
+        if (isRetry) {
+          // Exponential backoff cho retry
+          return Math.min(baseMs * Math.pow(2, attemptNumber), maxMs);
+        }
+        
+        // Random delay giữa baseDelay và maxDelay
+        const randomFactor = 0.5 + Math.random(); // 0.5 - 1.5
+        return Math.min(baseMs * randomFactor, maxMs);
+      };
+
+      // Enhanced delay function với heartbeat
+      const enhancedDelay = async (ms: number, index: number) => {
+        const start = Date.now();
+        const heartbeatInterval = 30000; // 30 giây heartbeat
+        
+        return new Promise<void>((resolve) => {
+          const heartbeat = setInterval(() => {
+            const elapsed = Date.now() - start;
+            const remaining = Math.max(0, ms - elapsed);
+            
+            if (remaining <= 0) {
+              clearInterval(heartbeat);
+              resolve();
+            } else {
+              console.log(`[${index}] Còn ${Math.ceil(remaining / 60000)} phút nữa...`);
+            }
+          }, heartbeatInterval);
+          
+          setTimeout(() => {
+            clearInterval(heartbeat);
+            resolve();
+          }, ms);
+        });
+      };
+
+      console.log(`[${sessionId}] Bắt đầu gửi ${currentQueue.totalComments} comment...`);
+
+      // Process comments with enhanced error handling
+      for (let index = currentQueue.processedCount; index < currentQueue.comments.length; index++) {
+        const comment = currentQueue.comments[index];
+        let success = false;
+        let retryCount = 0;
+
+        // Recovery check
+        const recoveredQueue = loadQueueFromStorage();
+        if (recoveredQueue && recoveredQueue.sessionId === sessionId) {
+          currentQueue = recoveredQueue;
+          if (index < currentQueue.processedCount) {
+            console.log(`[${sessionId}] Skipping processed comment ${index + 1}`);
+            continue;
+          }
+        }
+
+        // Delay cho comment không phải đầu tiên
+        if (index > 0) {
+          const delayMs = getAdaptiveDelay(index);
+          const delayMinutes = Math.ceil(delayMs / 60000);
+          
+          console.log(`[${sessionId}] Chờ ${delayMinutes} phút trước comment ${index + 1}/${currentQueue.totalComments}...`);
           
           toast({
-            title: 'Lỗi gửi comment',
-            description: `Comment ${index + 1}/${uniqueCommentsArray.length} thất bại: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`,
-            variant: 'destructive'
+            title: 'Đang chờ...',
+            description: `Chờ ${delayMinutes} phút trước comment ${index + 1}/${currentQueue.totalComments}`,
           });
           
-          // Không dừng toàn bộ process, tiếp tục với comment tiếp theo
-          continue;
+          await enhancedDelay(delayMs, index + 1);
+        }
+
+        // Retry loop cho mỗi comment
+        while (!success && retryCount < maxRetries) {
+          try {
+            // Chọn random user (với rotation logic)
+            const userIndex = (index + retryCount) % fakeUsers.length;
+            const randomUser = fakeUsers[userIndex];
+
+            console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Gửi comment (thử lần ${retryCount + 1}) với user ${randomUser.name}...`);
+            
+            // Gửi comment với enhanced timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8 * 60 * 1000); // 8 phút timeout
+
+            try {
+              await sendExternalCommentMutation.mutateAsync({
+                externalId,
+                fakeUserId: randomUser.id,
+                comment
+              });
+
+              clearTimeout(timeoutId);
+              success = true;
+              
+              // Update success
+              updateQueue({
+                processedCount: index + 1,
+                successCount: currentQueue.successCount + 1
+              });
+
+              console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Thành công với user ${randomUser.name}`);
+              
+              toast({
+                title: 'Thành công',
+                description: `Comment ${index + 1}/${currentQueue.totalComments} đã gửi thành công`,
+              });
+
+            } catch (apiError) {
+              clearTimeout(timeoutId);
+              throw apiError;
+            }
+
+          } catch (error) {
+            retryCount++;
+            const isTimeout = error instanceof Error && error.message.includes('timeout');
+            const isAbort = error instanceof Error && error.name === 'AbortError';
+            
+            console.error(`[${sessionId}][${index + 1}] Lỗi lần thử ${retryCount}:`, error);
+            
+            if (retryCount < maxRetries) {
+              const retryDelayMs = getAdaptiveDelay(retryCount, true);
+              const retryDelayMinutes = Math.ceil(retryDelayMs / 60000);
+              
+              console.log(`[${sessionId}] Sẽ thử lại sau ${retryDelayMinutes} phút...`);
+              
+              toast({
+                title: 'Đang thử lại...',
+                description: `Comment ${index + 1} thất bại, thử lại sau ${retryDelayMinutes} phút (lần ${retryCount}/${maxRetries})`,
+                variant: 'destructive'
+              });
+              
+              await enhancedDelay(retryDelayMs, index + 1);
+            } else {
+              // Max retries reached
+              updateQueue({
+                processedCount: index + 1,
+                failureCount: currentQueue.failureCount + 1
+              });
+              
+              toast({
+                title: 'Comment thất bại',
+                description: `Comment ${index + 1}/${currentQueue.totalComments} thất bại sau ${maxRetries} lần thử`,
+                variant: 'destructive'
+              });
+            }
+          }
         }
       }
 
-      // Thông báo kết quả cuối cùng
-      const finalMessage = `Hoàn thành gửi comment: ${successCount} thành công, ${failureCount} thất bại trên tổng ${uniqueCommentsArray.length}`;
-      console.log(finalMessage);
+      // Final completion
+      updateQueue({
+        status: 'completed'
+      });
+
+      const finalMessage = `Hoàn thành: ${currentQueue.successCount} thành công, ${currentQueue.failureCount} thất bại trên tổng ${currentQueue.totalComments}`;
+      console.log(`[${sessionId}] ${finalMessage}`);
       
       toast({
-        title: successCount > 0 ? 'Hoàn thành' : 'Có lỗi xảy ra',
+        title: currentQueue.successCount > 0 ? 'Hoàn thành' : 'Có lỗi xảy ra',
         description: finalMessage,
-        variant: successCount > 0 ? 'default' : 'destructive'
+        variant: currentQueue.successCount > 0 ? 'default' : 'destructive'
       });
+
+      // Cleanup localStorage after completion
+      try {
+        localStorage.removeItem(queueKey);
+      } catch (error) {
+        console.warn('Không thể xóa queue khỏi localStorage:', error);
+      }
     };
 
-    // Khởi chạy worker ngầm với error handling
+    // Khởi chạy worker với global error handling
     sendCommentsInBackground().catch((error) => {
-      console.error('Error in background comment sender:', error);
+      console.error(`[${sessionId}] Critical error in background sender:`, error);
+      
+      // Update queue status
+      try {
+        const currentQueue = JSON.parse(localStorage.getItem(queueKey) || '{}');
+        currentQueue.status = 'failed';
+        localStorage.setItem(queueKey, JSON.stringify(currentQueue));
+      } catch (e) {
+        console.warn('Không thể cập nhật trạng thái lỗi:', e);
+      }
+      
       toast({
         title: 'Lỗi hệ thống',
-        description: 'Đã xảy ra lỗi trong quá trình gửi comment. Vui lòng thử lại.',
+        description: 'Đã xảy ra lỗi nghiêm trọng. Vui lòng kiểm tra console và thử lại.',
         variant: 'destructive'
       });
     });
