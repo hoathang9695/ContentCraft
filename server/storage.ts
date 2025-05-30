@@ -577,13 +577,20 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(lte(contents.createdAt, endDate));
     }
     
-    // Search query
+    // Search query - improved to handle source JSON and fuzzy matching
     if (searchQuery) {
+      const searchTerm = searchQuery.trim().toLowerCase();
       whereConditions.push(
         or(
           like(contents.externalId, `%${searchQuery}%`),
           like(contents.categories, `%${searchQuery}%`),
-          like(contents.labels, `%${searchQuery}%`)
+          like(contents.labels, `%${searchQuery}%`),
+          // Search in source JSON - extract name field
+          sql`LOWER(${contents.source}::text) LIKE ${`%${searchTerm}%`}`,
+          // Search in source name specifically (for JSON structure)
+          sql`LOWER(json_extract_path_text(${contents.source}, 'name')) LIKE ${`%${searchTerm}%`}`,
+          // Fuzzy search removing spaces
+          sql`REPLACE(LOWER(json_extract_path_text(${contents.source}, 'name')), ' ', '') LIKE ${`%${searchTerm.replace(/\s+/g, '')}%`}`
         )
       );
     }

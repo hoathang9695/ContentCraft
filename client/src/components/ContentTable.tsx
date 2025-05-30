@@ -431,7 +431,7 @@ export function ContentTable({
           data={memoizedPaginatedContents}
           isLoading={isLoading}
           searchable={showActions}
-          searchPlaceholder="Tìm kiếm nội dung..."
+          searchPlaceholder="Tìm kiếm theo ID, danh mục, nhãn, hoặc nguồn cấp..."
           searchValue={searchQuery}
           onSearch={setSearchQuery}
           columns={[
