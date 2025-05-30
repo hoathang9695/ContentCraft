@@ -231,7 +231,7 @@ export async function setupKafkaConsumer() {
                         const now = new Date();
 
                         // Get active users for round-robin assignment
-                        const activeUsers = await db
+                        const activeUsers = await tx
                           .select()
                           .from(users)
                           .where(eq(users.status, "active"));
@@ -240,16 +240,16 @@ export async function setupKafkaConsumer() {
                           throw new Error("No active users found for assignment");
                         }
 
-                        // Get last assigned request for round-robin
-                        const lastAssigned = await db.query.realUsers.findFirst({
+                        // Get last assigned REAL USER for round-robin (specific to realUsers table)
+                        const lastAssignedRealUser = await tx.query.realUsers.findFirst({
                           orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)]
                         });
 
-                        // Calculate next assignee index
+                        // Calculate next assignee index based on realUsers table
                         let nextAssigneeIndex = 0;
-                        if (lastAssigned && lastAssigned.assignedToId) {
+                        if (lastAssignedRealUser && lastAssignedRealUser.assignedToId) {
                           const lastAssigneeIndex = activeUsers.findIndex(
-                            user => user.id === lastAssigned.assignedToId
+                            user => user.id === lastAssignedRealUser.assignedToId
                           );
                           if (lastAssigneeIndex !== -1) {
                             nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
@@ -359,16 +359,16 @@ export async function setupKafkaConsumer() {
 
                           log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
 
-                          // Get last assigned page for round-robin
-                          const lastAssigned = await tx.query.pages.findFirst({
+                          // Get last assigned PAGE for round-robin (specific to pages table)
+                          const lastAssignedPage = await tx.query.pages.findFirst({
                             orderBy: (pages, { desc }) => [desc(pages.createdAt)]
                           });
 
-                          // Calculate next assignee index
+                          // Calculate next assignee index based on pages table
                           let nextAssigneeIndex = 0;
-                          if (lastAssigned && lastAssigned.assignedToId) {
+                          if (lastAssignedPage && lastAssignedPage.assignedToId) {
                             const lastAssigneeIndex = activeUsers.findIndex(
-                              user => user.id === lastAssigned.assignedToId
+                              user => user.id === lastAssignedPage.assignedToId
                             );
                             if (lastAssigneeIndex !== -1) {
                               nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
@@ -559,16 +559,15 @@ async function processContentMessage(contentMessage: ContentMessage, tx: any) {
       return;
     }
 
-    const lastAssignedRequest = await tx.query.supportRequests.findFirst({
-      orderBy: (supportRequests, { desc }) => [
-        desc(supportRequests.assigned_at),
-      ],
+    // Use round-robin based on CONTENT table specifically
+    const lastAssignedContent = await tx.query.contents.findFirst({
+      orderBy: (contents, { desc }) => [desc(contents.assignedAt)],
     });
 
     let nextAssigneeIndex = 0;
-    if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
+    if (lastAssignedContent && lastAssignedContent.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
-        (user) => user.id === lastAssignedRequest.assigned_to_id,
+        (user) => user.id === lastAssignedContent.assigned_to_id,
       );
       if (lastAssigneeIndex !== -1) {
         nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
@@ -636,22 +635,22 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
     }
     log(`Found ${activeUsers.length} active users for assignment`, "kafka");
 
-    // Find last assigned request
-    const lastAssignedRequest = await tx.query.supportRequests.findFirst({
+    // Find last assigned SUPPORT REQUEST for round-robin (specific to supportRequests table)
+    const lastAssignedSupportRequest = await tx.query.supportRequests.findFirst({
       orderBy: (supportRequests, { desc }) => [
         desc(supportRequests.assigned_at),
       ],
     });
     log(
-      `Last assigned request: ${JSON.stringify(lastAssignedRequest)}`,
+      `Last assigned support request: ${JSON.stringify(lastAssignedSupportRequest)}`,
       "kafka",
     );
 
-    // Calculate next assignee (round-robin)
+    // Calculate next assignee (round-robin) based on supportRequests table
     let nextAssigneeIndex = 0;
-    if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
+    if (lastAssignedSupportRequest && lastAssignedSupportRequest.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
-        (user) => user.id === lastAssignedRequest.assigned_to_id,
+        (user) => user.id === lastAssignedSupportRequest.assigned_to_id,
       );
       if (lastAssigneeIndex !== -1) {
         nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
@@ -727,18 +726,18 @@ async function processContactMessage(message: ContactMessage, tx: any) {
       return;
     }
 
-    // Find last assigned request for round-robin
-    const lastAssignedRequest = await tx.query.supportRequests.findFirst({
+    // Find last assigned CONTACT/SUPPORT REQUEST for round-robin (specific to supportRequests table)
+    const lastAssignedContactRequest = await tx.query.supportRequests.findFirst({
       orderBy: (supportRequests, { desc }) => [
         desc(supportRequests.assigned_at),
       ],
     });
 
-    // Calculate next assignee using round-robin
+    // Calculate next assignee using round-robin based on supportRequests table
     let nextAssigneeIndex = 0;
-    if (lastAssignedRequest && lastAssignedRequest.assigned_to_id) {
+    if (lastAssignedContactRequest && lastAssignedContactRequest.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
-        (user) => user.id === lastAssignedRequest.assigned_to_id,
+        (user) => user.id === lastAssignedContactRequest.assigned_to_id,
       );
       if (lastAssigneeIndex !== -1) {
         nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
