@@ -51,6 +51,7 @@ type ContentTableProps = {
   sourceVerification?: "verified" | "unverified";
   limit?: number;
   assignedUserId?: number | null;
+  searchQuery?: string;
 };
 
 export function ContentTable({
@@ -62,11 +63,11 @@ export function ContentTable({
   sourceVerification = "unverified",
   limit,
   assignedUserId,
+  searchQuery
 }: ContentTableProps) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
@@ -433,7 +434,11 @@ export function ContentTable({
           searchable={showActions}
           searchPlaceholder="Tìm kiếm theo ID, danh mục, nhãn, hoặc nguồn cấp..."
           searchValue={searchQuery}
-          onSearch={setSearchQuery}
+          onSearch={(value) => {
+            console.log("Search value:", value);
+            // Only update the searchQuery state, the query will automatically update
+            // due to the useEffect hook
+          }}
           columns={[
             {
               key: "externalId",
