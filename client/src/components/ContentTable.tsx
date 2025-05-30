@@ -5,6 +5,7 @@ import { Content } from "@shared/schema";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Edit,
   Eye,
@@ -788,16 +789,6 @@ export function ContentTable({
                 : "Hiện không có nội dung nào được phân công cho bạn."
               : undefined
           }
-        />
-        <Input
-          type="search"
-          placeholder="Tìm kiếm theo ID, danh mục, nhãn, hoặc nguồn cấp..."
-          value={localSearchQuery}
-          onChange={(e) => {
-            const value = e.target.value;
-            setLocalSearchQuery(value);
-            // Không cần setCurrentPage(1) ở đây vì đã có trong useEffect
-          }}
         />
       </div>
 
