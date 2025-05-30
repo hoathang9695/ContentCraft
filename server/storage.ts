@@ -585,12 +585,12 @@ export class DatabaseStorage implements IStorage {
           like(contents.externalId, `%${searchQuery}%`),
           like(contents.categories, `%${searchQuery}%`),
           like(contents.labels, `%${searchQuery}%`),
-          // Search in source JSON - extract name field
+          // Search in source JSON - extract name field using PostgreSQL JSON operators
           sql`LOWER(${contents.source}::text) LIKE ${`%${searchTerm}%`}`,
-          // Search in source name specifically (for JSON structure)
-          sql`LOWER(json_extract_path_text(${contents.source}, 'name')) LIKE ${`%${searchTerm}%`}`,
-          // Fuzzy search removing spaces
-          sql`REPLACE(LOWER(json_extract_path_text(${contents.source}, 'name')), ' ', '') LIKE ${`%${searchTerm.replace(/\s+/g, '')}%`}`
+          // Search in source name specifically (for JSON structure) using ->> operator
+          sql`LOWER(${contents.source}->>'name') LIKE ${`%${searchTerm}%`}`,
+          // Fuzzy search removing spaces using ->> operator
+          sql`REPLACE(LOWER(${contents.source}->>'name'), ' ', '') LIKE ${`%${searchTerm.replace(/\s+/g, '')}%`}`
         )
       );
     }
