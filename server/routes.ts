@@ -136,17 +136,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cache for stats API
+  let statsCache = new Map();
+  const CACHE_DURATION = 30000; // 30 seconds cache
+
   // Dashboard statistics
   app.get("/api/stats", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as Express.User;
+      const { startDate, endDate } = req.query;
+      
+      // Create cache key
+      const cacheKey = `stats-${user.id}-${user.role}-${startDate || 'all'}-${endDate || 'all'}`;
+      const cached = statsCache.get(cacheKey);
+      
+      // Return cached result if still valid
+      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+        console.log("Returning cached stats");
+        return res.json(cached.data);
+      }
+
       console.log("Getting stats with params:", req.query);
 
       const allContents = await storage.getAllContents();
       console.log("Total contents fetched:", allContents.length);
 
       const allUsers = await storage.getAllUsers();
-      const user = req.user as Express.User;
-      const { startDate, endDate } = req.query;
 
       // If user is admin, show stats for all content, otherwise filter by assigned to user
       let filteredContents = user.role === 'admin' 
@@ -181,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Kiểm tra ngày cập nhật nếu có
           if (content.updatedAt) {
             const updatedAt = new Date(content.updatedAt);
-            if (updatedAt >= start && createdAt <= end) return true;
+            if (updatedAt >= start && updatedAt <= end) return true;
           }
 
           return false; // Không thỏa mãn điều kiện nào
@@ -274,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         new: newRealUsers
       });
 
-      res.json({
+      const result = {
         totalContent: filteredContents.length,
         pending,
         completed,
@@ -299,7 +314,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           start: startDate,
           end: endDate
         } : null
+      };
+
+      // Cache the result
+      statsCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now()
       });
+
+      // Clean old cache entries
+      if (statsCache.size > 100) {
+        const oldestKey = statsCache.keys().next().value;
+        statsCache.delete(oldestKey);
+      }
+
+      res.json(result);
     } catch (error) {
       console.error("Error in /api/stats:", error);
       res.status(500).json({ 

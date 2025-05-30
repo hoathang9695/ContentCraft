@@ -44,14 +44,26 @@ pool.on("error", (err) => {
 });
 
 // Test connection immediately and retry if needed
-async function testConnection() {
+async function testConnection(retryCount = 0) {
   try {
     const res = await pool.query("SELECT NOW()");
     console.log("Database connection test successful:", res.rows[0]);
+    
+    // Reset retry count on success
+    if (retryCount > 0) {
+      console.log(`✅ Database reconnected after ${retryCount} retries`);
+    }
   } catch (err) {
-    console.error("Database connection test failed:", err);
-    // Wait 5 seconds and retry
-    setTimeout(testConnection, 5000);
+    console.error(`Database connection test failed (attempt ${retryCount + 1}):`, err);
+    
+    // Max retry limit to prevent infinite loops
+    if (retryCount < 10) {
+      const delay = Math.min(5000 * Math.pow(1.5, retryCount), 30000); // Exponential backoff
+      console.log(`⏳ Retrying database connection in ${delay}ms...`);
+      setTimeout(() => testConnection(retryCount + 1), delay);
+    } else {
+      console.error("❌ Max database connection retries reached. Manual intervention required.");
+    }
   }
 }
 

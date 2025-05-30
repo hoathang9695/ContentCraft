@@ -64,29 +64,10 @@ export default function DashboardPage() {
       endDate: endDate.toISOString()
     });
     
-    // Cập nhật state và buộc React Query refetch
-    const updatedStartDate = new Date(startDate);
-    const updatedEndDate = new Date(endDate);
-    
-    setStartDate(updatedStartDate);
-    setEndDate(updatedEndDate);
-    
-    // Kích hoạt re-render để áp dụng bộ lọc - cần invalidate queryCache để đảm bảo refresh
-    setTimeout(() => {
-      // Force refetch bằng cách invalidate query
-      const nextDateFilterKey = `${format(updatedStartDate, 'yyyy-MM-dd')}-${format(updatedEndDate, 'yyyy-MM-dd')}`;
-      console.log('New date filter key:', nextDateFilterKey);
-      
-      // Invalidate query cache để buộc refetch - thêm user.role để phân biệt cache
-      queryClient.invalidateQueries({
-        queryKey: ['/api/stats', user?.role]
-      });
-      
-      toast({
-        title: "Đã áp dụng bộ lọc",
-        description: `Hiển thị dữ liệu từ ${format(updatedStartDate, 'dd/MM/yyyy')} đến ${format(updatedEndDate, 'dd/MM/yyyy')}`,
-      });
-    }, 100);
+    toast({
+      title: "Đã áp dụng bộ lọc",
+      description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+    });
   };
   
   // Hàm xử lý khi nhấn nút xóa bộ lọc
@@ -97,17 +78,10 @@ export default function DashboardPage() {
     setStartDate(firstDayOfMonth);
     setEndDate(today);
     
-    // Force refetch bằng cách invalidate query sau khi cập nhật state
-    setTimeout(() => {
-      queryClient.invalidateQueries({
-        queryKey: ['/api/stats', user?.role]
-      });
-      
-      toast({
-        title: "Đã đặt lại bộ lọc",
-        description: "Hiển thị dữ liệu từ đầu tháng đến thời điểm hiện tại",
-      });
-    }, 100);
+    toast({
+      title: "Đã đặt lại bộ lọc",
+      description: "Hiển thị dữ liệu từ đầu tháng đến thời điểm hiện tại",
+    });
   };
 
   // Fetch dashboard stats với params khoảng thời gian
