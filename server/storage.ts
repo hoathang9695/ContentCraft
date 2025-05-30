@@ -9,7 +9,7 @@ import {
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db, pool } from "./db"; // Import pool from db.ts
-import { eq, and, or, desc, like, gte, lte, isNull, ne, count, sql } from "drizzle-orm";
+import { eq, and, or, desc, like, gte, lte, isNull, ne, count, sql, inArray } from "drizzle-orm";
 
 // Create a PostgreSQL session store with proper types for ESM
 const PgSession = connectPgSimple(expressSession);
@@ -39,6 +39,24 @@ export interface IStorage {
   getContent(id: number): Promise<Content | undefined>;
   getAllContents(): Promise<(Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[]>;
   getContentsByAssignee(assigneeId: number): Promise<(Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[]>;
+  getPaginatedContents(params: {
+    userId: number;
+    userRole: string;
+    page: number;
+    limit: number;
+    statusFilter?: string;
+    sourceVerification?: 'verified' | 'unverified';
+    assignedUserId?: number | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    searchQuery?: string;
+  }): Promise<{
+    data: (Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    itemsPerPage: number;
+  }>;
   assignContentToUser(id: number, userId: number): Promise<Content | undefined>;
   completeProcessing(id: number, result: string, approverId: number): Promise<Content | undefined>;
   updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined>;
@@ -508,6 +526,134 @@ export class DatabaseStorage implements IStorage {
       .returning({ id: contents.id });
 
     return result.length > 0;
+  }
+
+  // Paginated content implementation
+  async getPaginatedContents(params: {
+    userId: number;
+    userRole: string;
+    page: number;
+    limit: number;
+    statusFilter?: string;
+    sourceVerification?: 'verified' | 'unverified';
+    assignedUserId?: number | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    searchQuery?: string;
+  }): Promise<{
+    data: (Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    itemsPerPage: number;
+  }> {
+    const { userId, userRole, page, limit, statusFilter, sourceVerification, assignedUserId, startDate, endDate, searchQuery } = params;
+    
+    // Build where conditions
+    let whereConditions: any[] = [];
+    
+    // Role-based filtering
+    if (userRole !== 'admin') {
+      whereConditions.push(eq(contents.assigned_to_id, userId));
+    } else if (assignedUserId) {
+      whereConditions.push(eq(contents.assigned_to_id, assignedUserId));
+    }
+    
+    // Status filter
+    if (statusFilter) {
+      whereConditions.push(eq(contents.status, statusFilter));
+    }
+    
+    // Source verification filter
+    if (sourceVerification) {
+      whereConditions.push(eq(contents.sourceVerification, sourceVerification));
+    }
+    
+    // Date range filter
+    if (startDate) {
+      whereConditions.push(gte(contents.createdAt, startDate));
+    }
+    if (endDate) {
+      whereConditions.push(lte(contents.createdAt, endDate));
+    }
+    
+    // Search query
+    if (searchQuery) {
+      whereConditions.push(
+        or(
+          like(contents.externalId, `%${searchQuery}%`),
+          like(contents.categories, `%${searchQuery}%`),
+          like(contents.labels, `%${searchQuery}%`)
+        )
+      );
+    }
+    
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+    
+    // Get total count
+    const countResult = await db
+      .select({ count: count() })
+      .from(contents)
+      .where(whereClause);
+    
+    const total = countResult[0]?.count || 0;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    
+    // Get paginated data
+    const results = await db
+      .select({
+        content: contents,
+        processor: {
+          username: users.username,
+          name: users.name
+        }
+      })
+      .from(contents)
+      .leftJoin(users, eq(contents.assigned_to_id, users.id))
+      .where(whereClause)
+      .orderBy(desc(contents.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    // Get approver information
+    const contentIds = results.map(item => item.content.id);
+    const approverInfo = contentIds.length > 0 
+      ? await db
+          .select({
+            contentId: contents.id,
+            approver: {
+              username: users.username,
+              name: users.name
+            }
+          })
+          .from(contents)
+          .leftJoin(users, eq(contents.approver_id, users.id))
+          .where(and(
+            sql`${contents.id} = ANY(${contentIds})`,
+            whereClause
+          ))
+      : [];
+    
+    // Create a map of content IDs to approver info
+    const approverMap = new Map(
+      approverInfo.map(item => [item.contentId, item.approver])
+    );
+    
+    // Format results
+    const data = results.map(item => ({
+      ...item.content,
+      processor: item.processor || undefined,
+      approver: approverMap.get(item.content.id) || undefined
+    }));
+    
+    return {
+      data,
+      total,
+      totalPages,
+      currentPage: page,
+      itemsPerPage: limit
+    };
   }
 
   // User activity tracking implementations
