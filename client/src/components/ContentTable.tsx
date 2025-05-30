@@ -87,8 +87,7 @@ export function ContentTable({
   >(undefined);
   const [isReactionDialogOpen, setIsReactionDialogOpen] = useState(false);
   const [authError, setAuthError] = useState(false);
-  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery || '');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery || '');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
 
   // Toast hiển thị khi không tìm thấy dữ liệu nào
   const toastShownRef = useRef(false);
@@ -106,7 +105,7 @@ export function ContentTable({
     ...(assignedUserId && { assignedUserId: assignedUserId.toString() }),
     ...(startDate && { startDate: startDate.toISOString() }),
     ...(endDate && { endDate: endDate.toISOString() }),
-    ...(debouncedSearchQuery && { search: debouncedSearchQuery })
+    ...(searchQuery && { search: searchQuery })
   });
 
   // Use paginated API instead of loading all data
@@ -181,23 +180,14 @@ export function ContentTable({
   // Debouncing effect for search query
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchQuery(localSearchQuery.trim());
-      setCurrentPage(1); // Reset to first page when search changes
-
-      // Dispatch custom event for parent component
       if (onSearchChange) {
         onSearchChange(localSearchQuery.trim());
       }
+      setCurrentPage(1); // Reset to first page when search changes
     }, 500);
 
     return () => clearTimeout(timer);
   }, [localSearchQuery, onSearchChange]);
-
-  // Sync with parent search query changes
-  useEffect(() => {
-    setLocalSearchQuery(searchQuery || '');
-    setCurrentPage(1);
-  }, [searchQuery]);
 
   // Console log để debug
   console.log('Backend paginated result:', {
@@ -460,10 +450,7 @@ export function ContentTable({
           searchable={showActions}
           searchPlaceholder="Tìm kiếm theo ID, danh mục, nhãn, hoặc nguồn cấp..."
           searchValue={localSearchQuery}
-          onSearch={(value) => {
-            console.log("Search value:", value);
-            setLocalSearchQuery(value);
-          }}
+          onSearch={setLocalSearchQuery}
           columns={[
             {
               key: "externalId",
