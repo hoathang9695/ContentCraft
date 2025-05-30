@@ -39,6 +39,7 @@ export default function ContentPage() {
   const [endDate, setEndDate] = useState<Date>(today);
   const [sourceStatus, setSourceStatus] = useState('unverified');
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
@@ -51,6 +52,7 @@ export default function ContentPage() {
 
   const handleSearch = (query: string) => {
     console.log('Search query:', query);
+    setSearchQuery(query);
   };
 
   const handleDateFilter = () => {
@@ -256,6 +258,7 @@ export default function ContentPage() {
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           assignedUserId={selectedUser}
+          searchQuery={searchQuery}
         />
       )}
 
@@ -266,6 +269,7 @@ export default function ContentPage() {
           startDate={startDate}
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
+          searchQuery={searchQuery}
         />
       )}
 
@@ -276,6 +280,7 @@ export default function ContentPage() {
           startDate={startDate}
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
+          searchQuery={searchQuery}
         />
       )}
     </DashboardLayout>
