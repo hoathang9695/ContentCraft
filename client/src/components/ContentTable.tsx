@@ -462,6 +462,7 @@ export function ContentTable({
           searchValue={localSearchQuery}
           onSearch={(value) => {
             console.log("Search value:", value);
+            setLocalSearchQuery(value);
           }}
           columns={[
             {
