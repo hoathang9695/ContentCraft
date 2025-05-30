@@ -52,6 +52,7 @@ type ContentTableProps = {
   limit?: number;
   assignedUserId?: number | null;
   searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 };
 
 export function ContentTable({
@@ -63,7 +64,8 @@ export function ContentTable({
   sourceVerification = "unverified",
   limit,
   assignedUserId,
-  searchQuery
+  searchQuery,
+  onSearchChange
 }: ContentTableProps) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -436,7 +438,9 @@ export function ContentTable({
           searchValue={searchQuery}
           onSearch={(value) => {
             console.log("Search value:", value);
-            // This will trigger a re-render and new API call with the search query
+            if (onSearchChange && typeof value === 'string') {
+              onSearchChange(value);
+            }
             setCurrentPage(1); // Reset to first page when searching
           }}
           columns={[
