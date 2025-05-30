@@ -149,86 +149,8 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
-    // Đóng dialog ngay lập tức
-    onOpenChange(false);
-    setCommentText('');
-
-    // Tạo worker để gửi comment ngầm
-    const sendCommentsInBackground = async () => {
-      let successCount = 0;
-      const usedUserIds = new Set<number>();
-      const processedComments = new Set<string>();
-      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-      // Đảm bảo mỗi comment là duy nhất
-      const uniqueCommentsArray = Array.from(new Set(uniqueComments));
-
-      for (let index = 0; index < uniqueCommentsArray.length; index++) {
-        const comment = uniqueCommentsArray[index];
-
-        try {
-          // Thêm độ trễ ngẫu nhiên 1-5 phút trước khi gửi comment tiếp theo
-          if (index > 0) {
-            const randomMinutes = Math.floor(Math.random() * 4) + 1; // Random từ 1-5 phút
-            const delayMs = randomMinutes * 60000; // Chuyển đổi phút sang milliseconds
-            console.log(`Chờ ${randomMinutes} phút trước khi gửi comment tiếp theo...`);
-            await delay(delayMs);
-          }
-
-          // Chọn một user fake chưa được sử dụng
-          const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-          if (availableUsers.length === 0) {
-            // Reset danh sách đã sử dụng nếu hết user
-            usedUserIds.clear();
-          }
-
-          const randomUser = availableUsers.length > 0 
-            ? availableUsers[Math.floor(Math.random() * availableUsers.length)]
-            : fakeUsers[Math.floor(Math.random() * fakeUsers.length)];
-
-          if (externalId && !processedComments.has(comment)) {
-            console.log(`Đang gửi comment "${comment}" với user ${randomUser.name}...`);
-            await sendExternalCommentMutation.mutateAsync({
-              externalId,
-              fakeUserId: randomUser.id,
-              comment
-            });
-
-            // Đánh dấu comment và user đã được sử dụng
-            processedComments.add(comment);
-            usedUserIds.add(randomUser.id);
-            successCount++;
-
-            console.log(`Đã gửi thành công comment "${comment}" với user ${randomUser.name}`);
-
-            // Thông báo thành công và thời gian chờ
-            toast({
-              title: 'Thành công',
-              description: `Đã gửi comment với user ${randomUser.name}${index < uniqueCommentsArray.length - 1 ? '. Chờ 1 phút để gửi tiếp...' : ''}`
-            });
-          }
-        } catch (error) {
-          console.error(`Lỗi khi gửi comment thứ ${index + 1}:`, error);
-          toast({
-            title: 'Lỗi gửi comment',
-            description: `Comment thứ ${index + 1} thất bại`,
-            variant: 'destructive'
-          });
-        }
-      }
-    };
-
-    // Khởi chạy worker ngầm
-    sendCommentsInBackground().catch(console.error);
-
-    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
-    if (!externalId) {
-      commentMutation.mutate({ id: contentId, count: extractedComments.length }); // Use extractedComments.length
-      return;
-    }
-
-    // Kiểm tra nếu không có người dùng ảo nào
-    if (fakeUsers.length === 0) {
+    // Kiểm tra nếu không có người dùng ảo nào khi có externalId
+    if (externalId && fakeUsers.length === 0) {
       toast({
         title: 'Lỗi',
         description: 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.',
@@ -237,8 +159,133 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
-    // Chỉ gọi hàm sendCommentsInBackground để gửi comment
-    //sendCommentsInBackground().catch(console.error); // This line is removed as it's already called above.
+    // Đóng dialog ngay lập tức
+    onOpenChange(false);
+    setCommentText('');
+
+    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
+    if (!externalId) {
+      commentMutation.mutate({ id: contentId, count: uniqueComments.length });
+      return;
+    }
+
+    // Hiển thị thông báo bắt đầu
+    toast({
+      title: 'Bắt đầu gửi comment',
+      description: `Sẽ gửi ${uniqueComments.length} comment. Quá trình này có thể mất vài phút...`,
+    });
+
+    // Tạo worker để gửi comment ngầm với error handling tốt hơn
+    const sendCommentsInBackground = async () => {
+      let successCount = 0;
+      let failureCount = 0;
+      const usedUserIds = new Set<number>();
+      const processedComments = new Set<string>();
+      
+      // Hàm delay với timeout protection
+      const delay = (ms: number) => new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => resolve(), ms);
+        // Cleanup timeout nếu cần
+        return timeout;
+      });
+
+      // Đảm bảo mỗi comment là duy nhất
+      const uniqueCommentsArray = Array.from(new Set(uniqueComments));
+      
+      console.log(`Bắt đầu gửi ${uniqueCommentsArray.length} comment...`);
+
+      for (let index = 0; index < uniqueCommentsArray.length; index++) {
+        const comment = uniqueCommentsArray[index];
+
+        try {
+          // Thêm độ trễ 1-2 phút giữa các comment (trừ comment đầu tiên)
+          if (index > 0) {
+            const delayMinutes = Math.floor(Math.random() * 2) + 1; // 1-2 phút
+            const delayMs = delayMinutes * 60000;
+            console.log(`Chờ ${delayMinutes} phút trước khi gửi comment ${index + 1}/${uniqueCommentsArray.length}...`);
+            
+            toast({
+              title: 'Đang chờ...',
+              description: `Chờ ${delayMinutes} phút trước khi gửi comment tiếp theo (${index + 1}/${uniqueCommentsArray.length})`,
+            });
+            
+            await delay(delayMs);
+          }
+
+          // Chọn user fake
+          const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
+          if (availableUsers.length === 0) {
+            usedUserIds.clear(); // Reset nếu hết user
+          }
+
+          const finalAvailableUsers = availableUsers.length > 0 ? availableUsers : fakeUsers;
+          const randomUser = finalAvailableUsers[Math.floor(Math.random() * finalAvailableUsers.length)];
+
+          if (!processedComments.has(comment)) {
+            console.log(`[${index + 1}/${uniqueCommentsArray.length}] Đang gửi comment với user ${randomUser.name}...`);
+            
+            // Gửi comment với timeout
+            const sendPromise = sendExternalCommentMutation.mutateAsync({
+              externalId,
+              fakeUserId: randomUser.id,
+              comment
+            });
+
+            // Thêm timeout cho mỗi request (5 phút)
+            const timeoutPromise = new Promise<never>((_, reject) => {
+              setTimeout(() => reject(new Error('Request timeout')), 5 * 60 * 1000);
+            });
+
+            await Promise.race([sendPromise, timeoutPromise]);
+
+            // Đánh dấu thành công
+            processedComments.add(comment);
+            usedUserIds.add(randomUser.id);
+            successCount++;
+
+            console.log(`[${index + 1}/${uniqueCommentsArray.length}] Thành công với user ${randomUser.name}`);
+            
+            toast({
+              title: 'Thành công',
+              description: `Đã gửi comment ${index + 1}/${uniqueCommentsArray.length} với user ${randomUser.name}`,
+            });
+          }
+
+        } catch (error) {
+          failureCount++;
+          console.error(`[${index + 1}/${uniqueCommentsArray.length}] Lỗi:`, error);
+          
+          toast({
+            title: 'Lỗi gửi comment',
+            description: `Comment ${index + 1}/${uniqueCommentsArray.length} thất bại: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`,
+            variant: 'destructive'
+          });
+          
+          // Không dừng toàn bộ process, tiếp tục với comment tiếp theo
+          continue;
+        }
+      }
+
+      // Thông báo kết quả cuối cùng
+      const finalMessage = `Hoàn thành gửi comment: ${successCount} thành công, ${failureCount} thất bại trên tổng ${uniqueCommentsArray.length}`;
+      console.log(finalMessage);
+      
+      toast({
+        title: successCount > 0 ? 'Hoàn thành' : 'Có lỗi xảy ra',
+        description: finalMessage,
+        variant: successCount > 0 ? 'default' : 'destructive'
+      });
+    };
+
+    // Khởi chạy worker ngầm với error handling
+    sendCommentsInBackground().catch((error) => {
+      console.error('Error in background comment sender:', error);
+      toast({
+        title: 'Lỗi hệ thống',
+        description: 'Đã xảy ra lỗi trong quá trình gửi comment. Vui lòng thử lại.',
+        variant: 'destructive'
+      });
+    });
   };
 
   return (
