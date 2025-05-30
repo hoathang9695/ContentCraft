@@ -199,7 +199,7 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
             type="number"
             value={count}
             onChange={(e) => setCount(e.target.value)}
-            placeholder="Nhập số lượng reactions"
+            placeholder="Nhập số lượng reactions < 10"
             min="1"
             max="10"
           />
