@@ -371,11 +371,25 @@ export async function setupKafkaConsumer() {
                             throw new Error(`Assigned user ${assignedToId} is not active`);
                           }
 
+                          // Handle page_name - it's stored as VARCHAR, not JSON
+                          let parsedPageName;
+                          if (typeof pageMsg.pageName === 'string') {
+                            // Try to parse as JSON first (for backward compatibility)
+                            try {
+                              parsedPageName = JSON.parse(pageMsg.pageName);
+                            } catch (e) {
+                              // If not JSON, treat as simple string
+                              parsedPageName = pageMsg.pageName;
+                            }
+                          } else {
+                            parsedPageName = pageMsg.pageName;
+                          }
+
                           // Insert new page with proper format
                           const result = await tx.insert(pages).values({
                             pageName: {
                               id: pageMsg.pageId,
-                              page_name: pageMsg.pageName
+                              page_name: parsedPageName
                             },
                             pageType: pageMsg.pageType,
                             classification: 'new', // Default classification
