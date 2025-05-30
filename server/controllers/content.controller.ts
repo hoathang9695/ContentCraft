@@ -1,3 +1,68 @@
+
+import { Request, Response } from "express";
+import { storage } from "../storage";
+import { insertContentSchema } from "@shared/schema";
+import { ZodError } from "zod";
+import { simulateKafkaMessage } from "../kafka-simulator";
+
+export class ContentController {
+  // Get paginated contents with filters
+  async getPaginatedContents(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = req.user as Express.User;
+      
+      // Parse query parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const statusFilter = req.query.statusFilter as string;
+      const sourceVerification = req.query.sourceVerification as 'verified' | 'unverified' || 'unverified';
+      const assignedUserId = req.query.assignedUserId ? parseInt(req.query.assignedUserId as string) : null;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
+      const searchQuery = req.query.search as string;
+
+      console.log("Paginated contents request:", {
+        user: { id: user.id, role: user.role },
+        page,
+        limit,
+        statusFilter,
+        sourceVerification,
+        assignedUserId,
+        startDate,
+        endDate,
+        searchQuery
+      });
+
+      // Get paginated data from storage
+      const result = await storage.getPaginatedContents({
+        userId: user.id,
+        userRole: user.role,
+        page,
+        limit,
+        statusFilter,
+        sourceVerification,
+        assignedUserId,
+        startDate,
+        endDate,
+        searchQuery
+      });
+
+      console.log(`Returning paginated result: ${result.data.length} items of ${result.total} total`);
+
+      return res.json(result);
+    } catch (error) {
+      console.error("Error fetching paginated contents:", error);
+      return res.status(500).json({
+        message: "Error fetching paginated contents",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
 import { Request, Response } from "express";
 import { storage } from "../storage";
 import { insertContentSchema } from "@shared/schema";

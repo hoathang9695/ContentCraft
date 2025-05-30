@@ -8,6 +8,7 @@ const contentController = new ContentController();
 
 // Content routes
 router.get("/", isAuthenticated, contentController.getAllContents);
+router.get("/paginated", isAuthenticated, contentController.getPaginatedContents);
 router.get("/:id", isAuthenticated, contentController.getContentById);
 router.post("/", isAuthenticated, contentController.createContent);
 router.patch("/:id", isAuthenticated, contentController.updateContent);
