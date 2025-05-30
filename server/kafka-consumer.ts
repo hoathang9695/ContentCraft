@@ -220,6 +220,7 @@ export async function setupKafkaConsumer() {
                   try {
                     await db.transaction(async (tx) => {
                       if ("externalId" in msg) {
+                        log(`🔄 Processing content message: ${JSON.stringify(msg)}`, "kafka");
                         await processContentMessage(msg as ContentMessage, tx);
                       } else if ("full_name" in msg) {
                         await processSupportMessage(msg as SupportMessage, tx);
@@ -314,41 +315,25 @@ export async function setupKafkaConsumer() {
                         const pageMsg = msg as PageMessage;
                         const now = new Date();
 
-                        // Get active users for round-robin assignment (exclude admin)
-                        const activeUsers = await db
-                          .select()
-                          .from(users)
-                          .where(and(eq(users.status, "active"), ne(users.role, "admin")));
-
-                        if (!activeUsers || activeUsers.length === 0) {
-                          throw new Error("No active non-admin users found for assignment");
-                        }
-
-                        // Get last assigned page for round-robin
-                        const lastAssigned = await db.query.pages.findFirst({
-                          orderBy: (pages, { desc }) => [desc(pages.createdAt)]
-                        });
-
-                        // Calculate next assignee index
-                        let nextAssigneeIndex = 0;
-                        if (lastAssigned && lastAssigned.assignedToId) {
-                          const lastAssigneeIndex = activeUsers.findIndex(
-                            user => user.id === lastAssigned.assignedToId
-                          );
-                          if (lastAssigneeIndex !== -1) {
-                            nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
-                          }
-                        }
-
-                        const assignedToId = activeUsers[nextAssigneeIndex].id;
+                        log(`🔄 Processing page message: ${JSON.stringify(pageMsg)}`, "kafka");
 
                         try {
-                          // Validate required fields
+                          // Validate required fields first
                           if (!pageMsg.pageId || !pageMsg.pageName || !pageMsg.pageType) {
-                            throw new Error(`Invalid page message format: ${JSON.stringify(pageMsg)}`);
+                            const error = `❌ Invalid page message format - missing required fields: ${JSON.stringify(pageMsg)}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Validate pageType enum
+                          if (!['business', 'community', 'personal'].includes(pageMsg.pageType)) {
+                            const error = `❌ Invalid pageType: ${pageMsg.pageType}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
                           }
 
                           // Check if page already exists to avoid duplicates
+                          log(`🔍 Checking for existing page with ID: ${pageMsg.pageId}`, "kafka");
                           const existingPage = await tx
                             .select()
                             .from(pages)
@@ -356,32 +341,73 @@ export async function setupKafkaConsumer() {
                             .limit(1);
 
                           if (existingPage.length > 0) {
-                            log(`Page with ID ${pageMsg.pageId} already exists, skipping...`, "kafka");
+                            log(`⚠️ Page with ID ${pageMsg.pageId} already exists (DB ID: ${existingPage[0].id}), skipping...`, "kafka");
                             return existingPage[0];
                           }
 
-                          // Validate assigned user is still active
-                          const assignedUser = await tx
+                          // Get active users for round-robin assignment (exclude admin)
+                          const activeUsers = await tx
+                            .select()
+                            .from(users)
+                            .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                          if (!activeUsers || activeUsers.length === 0) {
+                            const error = "❌ No active non-admin users found for assignment";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
+
+                          // Get last assigned page for round-robin
+                          const lastAssigned = await tx.query.pages.findFirst({
+                            orderBy: (pages, { desc }) => [desc(pages.createdAt)]
+                          });
+
+                          // Calculate next assignee index
+                          let nextAssigneeIndex = 0;
+                          if (lastAssigned && lastAssigned.assignedToId) {
+                            const lastAssigneeIndex = activeUsers.findIndex(
+                              user => user.id === lastAssigned.assignedToId
+                            );
+                            if (lastAssigneeIndex !== -1) {
+                              nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                            }
+                          }
+
+                          const assignedToId = activeUsers[nextAssigneeIndex].id;
+                          const assignedUser = activeUsers[nextAssigneeIndex];
+
+                          log(`👤 Assigning to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
+
+                          // Double-check assigned user is still active
+                          const userCheck = await tx
                             .select()
                             .from(users)
                             .where(eq(users.id, assignedToId))
                             .limit(1);
 
-                          if (!assignedUser.length || assignedUser[0].status !== 'active') {
-                            throw new Error(`Assigned user ${assignedToId} is not active`);
+                          if (!userCheck.length || userCheck[0].status !== 'active') {
+                            const error = `❌ Assigned user ${assignedToId} is not active or not found`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
                           }
 
-                          // Validate and convert managerId to string if it's a number
-                          const managerIdStr = pageMsg.managerId ? String(pageMsg.managerId) : null;
+                          // Safely handle managerId conversion
+                          let managerIdStr = null;
+                          if (pageMsg.managerId !== null && pageMsg.managerId !== undefined) {
+                            managerIdStr = String(pageMsg.managerId);
+                            log(`🔧 Converted managerId to string: ${managerIdStr}`, "kafka");
+                          }
 
-                          // Insert new page with proper format
-                          const result = await tx.insert(pages).values({
+                          // Prepare insert data
+                          const insertData = {
                             pageName: {
                               id: pageMsg.pageId,
-                              page_name: pageMsg.pageName // Direct assignment, no parsing needed
+                              page_name: pageMsg.pageName
                             },
                             pageType: pageMsg.pageType,
-                            classification: 'new', // Default classification
+                            classification: 'new',
                             adminData: managerIdStr && pageMsg.adminName ? {
                               id: managerIdStr,
                               admin_name: pageMsg.adminName
@@ -391,13 +417,32 @@ export async function setupKafkaConsumer() {
                             assignedToId: assignedToId,
                             createdAt: now,
                             updatedAt: now
-                          }).returning();
+                          };
 
-                          log(`Successfully inserted page: ${JSON.stringify(result[0])}`, "kafka");
+                          log(`📝 Inserting page data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
+
+                          // Insert new page with proper error handling
+                          const result = await tx.insert(pages).values(insertData).returning();
+
+                          if (!result || result.length === 0) {
+                            const error = "❌ Failed to insert page - no result returned";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`✅ Successfully inserted page: ID ${result[0].id}, PageID: ${pageMsg.pageId}, AssignedTo: ${assignedUser.name}`, "kafka");
                           metrics.processedMessages++;
                           return result[0];
+
                         } catch (error) {
-                          log(`Error processing page: ${error}`, "kafka-error");
+                          const errorMsg = error instanceof Error ? error.message : String(error);
+                          const errorStack = error instanceof Error ? error.stack : '';
+                          log(`❌ Error processing page ${pageMsg.pageId}: ${errorMsg}`, "kafka-error");
+                          log(`📍 Error stack: ${errorStack}`, "kafka-error");
+                          
+                          // Log additional context for debugging
+                          log(`🔍 Page data that failed: ${JSON.stringify(pageMsg, null, 2)}`, "kafka-error");
+                          
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
