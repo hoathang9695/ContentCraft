@@ -28,6 +28,7 @@ import {
   TabsTrigger 
 } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/use-debounce';
 
 export default function ContentPage() {
   const { user } = useAuth();
@@ -40,6 +41,7 @@ export default function ContentPage() {
   const [sourceStatus, setSourceStatus] = useState('unverified');
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
@@ -270,7 +272,7 @@ export default function ContentPage() {
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           assignedUserId={selectedUser}
-          searchQuery={searchQuery}
+          searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
         />
       )}
@@ -282,7 +284,7 @@ export default function ContentPage() {
           startDate={startDate}
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
-          searchQuery={searchQuery}
+          searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
         />
       )}
@@ -294,7 +296,7 @@ export default function ContentPage() {
           startDate={startDate}
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
-          searchQuery={searchQuery}
+          searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
         />
       )}
