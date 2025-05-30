@@ -48,9 +48,9 @@ interface PageMessage {
   pageId: string;
   pageName: string;
   pageType: 'business' | 'community' | 'personal';
-  managerId?: string;
+  managerId?: string | number;
   adminName?: string;
-  phoneNumber?: string;
+  phoneNumber?: string | null;
   monetizationEnabled?: boolean;
 }
 
@@ -371,30 +371,19 @@ export async function setupKafkaConsumer() {
                             throw new Error(`Assigned user ${assignedToId} is not active`);
                           }
 
-                          // Handle page_name - it's stored as VARCHAR, not JSON
-                          let parsedPageName;
-                          if (typeof pageMsg.pageName === 'string') {
-                            // Try to parse as JSON first (for backward compatibility)
-                            try {
-                              parsedPageName = JSON.parse(pageMsg.pageName);
-                            } catch (e) {
-                              // If not JSON, treat as simple string
-                              parsedPageName = pageMsg.pageName;
-                            }
-                          } else {
-                            parsedPageName = pageMsg.pageName;
-                          }
+                          // Validate and convert managerId to string if it's a number
+                          const managerIdStr = pageMsg.managerId ? String(pageMsg.managerId) : null;
 
                           // Insert new page with proper format
                           const result = await tx.insert(pages).values({
                             pageName: {
                               id: pageMsg.pageId,
-                              page_name: parsedPageName
+                              page_name: pageMsg.pageName // Direct assignment, no parsing needed
                             },
                             pageType: pageMsg.pageType,
                             classification: 'new', // Default classification
-                            adminData: pageMsg.managerId && pageMsg.adminName ? {
-                              id: pageMsg.managerId,
+                            adminData: managerIdStr && pageMsg.adminName ? {
+                              id: managerIdStr,
                               admin_name: pageMsg.adminName
                             } : null,
                             phoneNumber: pageMsg.phoneNumber || null,
