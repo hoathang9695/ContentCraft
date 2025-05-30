@@ -352,7 +352,7 @@ export async function setupKafkaConsumer() {
                           const existingPage = await tx
                             .select()
                             .from(pages)
-                            .where(sql`${pages.pageName}->>'id' = ${pageMsg.pageId}`)
+                            .where(eq(sql`${pages.pageName}::jsonb->>'id'`, pageMsg.pageId))
                             .limit(1);
 
                           if (existingPage.length > 0) {
