@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -28,6 +28,7 @@ import {
   TabsTrigger 
 } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/use-debounce';
 
 export default function ContentPage() {
   const { user } = useAuth();
@@ -39,6 +40,8 @@ export default function ContentPage() {
   const [endDate, setEndDate] = useState<Date>(today);
   const [sourceStatus, setSourceStatus] = useState('unverified');
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
@@ -51,7 +54,20 @@ export default function ContentPage() {
 
   const handleSearch = (query: string) => {
     console.log('Search query:', query);
+    setSearchQuery(query);
   };
+
+  // Listen for search updates from DataTable
+  useEffect(() => {
+    const handleSearchUpdate = (event: CustomEvent) => {
+      setSearchQuery(event.detail);
+    };
+
+    window.addEventListener('searchUpdate', handleSearchUpdate as EventListener);
+    return () => {
+      window.removeEventListener('searchUpdate', handleSearchUpdate as EventListener);
+    };
+  }, []);
 
   const handleDateFilter = () => {
     console.log('Filtering by date range:', {
@@ -256,6 +272,8 @@ export default function ContentPage() {
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           assignedUserId={selectedUser}
+          searchQuery={debouncedSearchQuery}
+          onSearchChange={handleSearch}
         />
       )}
 
@@ -266,6 +284,8 @@ export default function ContentPage() {
           startDate={startDate}
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
+          searchQuery={debouncedSearchQuery}
+          onSearchChange={handleSearch}
         />
       )}
 
@@ -276,6 +296,8 @@ export default function ContentPage() {
           startDate={startDate}
           endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
+          searchQuery={debouncedSearchQuery}
+          onSearchChange={handleSearch}
         />
       )}
     </DashboardLayout>

@@ -191,11 +191,10 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         throw error;
       }
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-contents'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}`] });
-
+      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents/paginated'] });
       toast({
         title: 'Cập nhật thành công',
         description: 'Thông tin nội dung đã được cập nhật và đồng bộ với Gorse.',
