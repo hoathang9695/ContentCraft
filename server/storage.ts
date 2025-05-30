@@ -577,7 +577,7 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(lte(contents.createdAt, endDate));
     }
     
-    // Search query - improved to handle source JSON and fuzzy matching
+    // Search query - handle both text and JSON source columns
     if (searchQuery) {
       const searchTerm = searchQuery.trim().toLowerCase();
       whereConditions.push(
@@ -585,12 +585,24 @@ export class DatabaseStorage implements IStorage {
           like(contents.externalId, `%${searchQuery}%`),
           like(contents.categories, `%${searchQuery}%`),
           like(contents.labels, `%${searchQuery}%`),
-          // Search in source JSON - extract name field using PostgreSQL JSON operators
+          // Basic text search in source field (works for both text and JSON)
           sql`LOWER(${contents.source}::text) LIKE ${`%${searchTerm}%`}`,
-          // Search in source name specifically (for JSON structure) using ->> operator
-          sql`LOWER(${contents.source}->>'name') LIKE ${`%${searchTerm}%`}`,
-          // Fuzzy search removing spaces using ->> operator
-          sql`REPLACE(LOWER(${contents.source}->>'name'), ' ', '') LIKE ${`%${searchTerm.replace(/\s+/g, '')}%`}`
+          // Try to extract 'name' from JSON if source is valid JSON
+          sql`
+            CASE 
+              WHEN ${contents.source} ~ '^{.*}$' 
+              THEN LOWER((${contents.source}::jsonb)->>'name') 
+              ELSE LOWER(${contents.source}::text) 
+            END LIKE ${`%${searchTerm}%`}
+          `,
+          // Fuzzy search removing spaces
+          sql`
+            CASE 
+              WHEN ${contents.source} ~ '^{.*}$' 
+              THEN REPLACE(LOWER((${contents.source}::jsonb)->>'name'), ' ', '') 
+              ELSE REPLACE(LOWER(${contents.source}::text), ' ', '') 
+            END LIKE ${`%${searchTerm.replace(/\s+/g, '')}%`}
+          `
         )
       );
     }
