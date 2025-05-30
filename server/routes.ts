@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Kiểm tra ngày cập nhật nếu có
           if (content.updatedAt) {
             const updatedAt = new Date(content.updatedAt);
-            if (updatedAt >= start && createdAt <= end) return true;
+            if (updatedAt >= start && updatedAt <= end) return true;
           }
 
           return false; // Không thỏa mãn điều kiện nào
