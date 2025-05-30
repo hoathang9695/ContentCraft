@@ -9,7 +9,7 @@ import {
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db, pool } from "./db"; // Import pool from db.ts
-import { eq, and, or, desc, like, gte, lte, isNull, ne, count, sql, inArray } from "drizzle-orm";
+import { eq, and, or, desc, like, ilike, gte, lte, isNull, ne, count, sql, inArray } from "drizzle-orm";
 
 // Create a PostgreSQL session store with proper types for ESM
 const PgSession = connectPgSimple(expressSession);
@@ -548,27 +548,27 @@ export class DatabaseStorage implements IStorage {
     itemsPerPage: number;
   }> {
     const { userId, userRole, page, limit, statusFilter, sourceVerification, assignedUserId, startDate, endDate, searchQuery } = params;
-    
+
     // Build where conditions
     let whereConditions: any[] = [];
-    
+
     // Role-based filtering
     if (userRole !== 'admin') {
       whereConditions.push(eq(contents.assigned_to_id, userId));
     } else if (assignedUserId) {
       whereConditions.push(eq(contents.assigned_to_id, assignedUserId));
     }
-    
+
     // Status filter
     if (statusFilter) {
       whereConditions.push(eq(contents.status, statusFilter));
     }
-    
+
     // Source verification filter
     if (sourceVerification) {
       whereConditions.push(eq(contents.sourceVerification, sourceVerification));
     }
-    
+
     // Date range filter
     if (startDate) {
       whereConditions.push(gte(contents.createdAt, startDate));
@@ -576,7 +576,7 @@ export class DatabaseStorage implements IStorage {
     if (endDate) {
       whereConditions.push(lte(contents.createdAt, endDate));
     }
-    
+
     // Search query - handle both text and JSON source columns
     if (searchQuery) {
       const searchTerm = searchQuery.trim().toLowerCase();
@@ -606,19 +606,19 @@ export class DatabaseStorage implements IStorage {
         )
       );
     }
-    
+
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
-    
+
     // Get total count
     const countResult = await db
       .select({ count: count() })
       .from(contents)
       .where(whereClause);
-    
+
     const total = countResult[0]?.count || 0;
     const totalPages = Math.ceil(total / limit);
     const offset = (page - 1) * limit;
-    
+
     // Get paginated data
     const results = await db
       .select({
@@ -634,7 +634,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(contents.createdAt))
       .limit(limit)
       .offset(offset);
-    
+
     // Get approver information
     const contentIds = results.map(item => item.content.id);
     const approverInfo = contentIds.length > 0 
@@ -650,19 +650,19 @@ export class DatabaseStorage implements IStorage {
           .leftJoin(users, eq(contents.approver_id, users.id))
           .where(inArray(contents.id, contentIds))
       : [];
-    
+
     // Create a map of content IDs to approver info
     const approverMap = new Map(
       approverInfo.map(item => [item.contentId, item.approver])
     );
-    
+
     // Format results
     const data = results.map(item => ({
       ...item.content,
       processor: item.processor || undefined,
       approver: approverMap.get(item.content.id) || undefined
     }));
-    
+
     return {
       data,
       total,

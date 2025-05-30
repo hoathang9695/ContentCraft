@@ -101,7 +101,7 @@ export function ContentTable({
     ...(assignedUserId && { assignedUserId: assignedUserId.toString() }),
     ...(startDate && { startDate: startDate.toISOString() }),
     ...(endDate && { endDate: endDate.toISOString() }),
-    ...(searchQuery && { search: searchQuery })
+    ...(searchQuery?.trim() && { search: searchQuery.trim() })
   });
 
   // Use paginated API instead of loading all data
@@ -436,8 +436,8 @@ export function ContentTable({
           searchValue={searchQuery}
           onSearch={(value) => {
             console.log("Search value:", value);
-            // Only update the searchQuery state, the query will automatically update
-            // due to the useEffect hook
+            // This will trigger a re-render and new API call with the search query
+            setCurrentPage(1); // Reset to first page when searching
           }}
           columns={[
             {
