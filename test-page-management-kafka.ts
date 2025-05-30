@@ -1,7 +1,7 @@
 
 import { db } from './server/db';
 import { pages, users } from './shared/schema';
-import { eq, and, ne } from 'drizzle-orm';
+import { eq, and, ne, sql } from 'drizzle-orm';
 
 interface TestPageMessage {
   pageId: string;
@@ -65,7 +65,7 @@ async function testPageKafkaProcessing() {
     const existingPage = await db
       .select()
       .from(pages)
-      .where(eq(db.sql`${pages.pageName}::jsonb->>'id'`, testMessage.pageId))
+      .where(eq(sql`${pages.pageName}::jsonb->>'id'`, testMessage.pageId))
       .limit(1);
 
     if (existingPage.length > 0) {
