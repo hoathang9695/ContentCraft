@@ -9,7 +9,7 @@ import {
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db, pool } from "./db"; // Import pool from db.ts
-import { eq, desc, inArray, and, ne } from "drizzle-orm";
+import { eq, and, or, desc, like, gte, lte, isNull, ne, count, sql } from "drizzle-orm";
 
 // Create a PostgreSQL session store with proper types for ESM
 const PgSession = connectPgSimple(expressSession);
