@@ -567,7 +567,6 @@ export default function GroupsManagementPage() {
         targetGroupId={pushJoinGroup?.groupName?.id}
         targetGroupName={pushJoinGroup?.groupName?.name}
       />
-      </div>
     </DashboardLayout>
   );
 }
