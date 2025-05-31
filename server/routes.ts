@@ -293,18 +293,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { pages } = await import("../shared/schema");
       const allPages = await db.select().from(pages);
       const totalPages = allPages.length;
-      
+
       // Tính số trang mới trong 7 ngày gần đây
       const sevenDaysAgoPages = new Date();
       sevenDaysAgoPages.setDate(sevenDaysAgoPages.getDate() - 7);
-      
-      const newPages = allPages.filter(page => {
-        if (!page.createdAt) return false;
-        const created = new Date(page.createdAt);
+
+      const newPages = allPages.filter(p => {
+        if (!p.createdAt) return false;
+        const created = new Date(p.createdAt);
         return created >= sevenDaysAgoPages;
       }).length;
 
-      console.log('Pages stats:', { total: totalPages, new: newPages });
+      console.log("Pages stats:", {
+        total: totalPages,
+        new: newPages
+      });
+
+      // Groups statistics
+      const { groups } = await import("../shared/schema");
+      const allGroups = await db.select().from(groups);
+      const totalGroups = allGroups.length;
+
+      // Tính số nhóm mới trong 7 ngày gần đây
+      const sevenDaysAgoGroups = new Date();
+      sevenDaysAgoGroups.setDate(sevenDaysAgoGroups.getDate() - 7);
+
+      const newGroups = allGroups.filter(g => {
+        if (!g.createdAt) return false;
+        const created = new Date(g.createdAt);
+        return created >= sevenDaysAgoGroups;
+      }).length;
+
+      console.log("Groups stats:", {
+        total: totalGroups,
+        new: newGroups
+      });
 
       const result = {
         totalContent: filteredContents.length,
@@ -328,6 +351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newRealUsers,
          totalPages,
         newPages,
+        totalGroups,
+        newGroups,
         // Thông tin khoảng thời gian nếu có lọc
         period: startDate && endDate ? {
           start: startDate,
@@ -853,7 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get editor users for anyone (accessible to all authenticated users)
   app.get("/api/editors", isAuthenticated, async (req, res) => {
-    try {
+    try{
       const users = await storage.getAllUsers();
       // Filter for active editors only
       const editorUsers = users
@@ -1709,6 +1734,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating page classification:", error);
       res.status(500).json({ 
         message: "Error updating page classification",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Groups API endpoints
+  // Get all groups 
+  app.get("/api/groups", isAuthenticated, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const groupType = req.query.groupType as string;
+      const search = req.query.search as string;
+      const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
+      const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+      const classification = req.query.classification as string;
+
+      console.log("Groups API called with params:", {
+        page, limit, offset, startDate, endDate, groupType, search, activeTab, assignedToId, classification
+      });
+
+      // Import groups from schema
+      const { groups } = await import("../shared/schema");
+      const groupsTable = groups;
+
+      // Build conditions
+      const conditions = [];
+
+      // Date range filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(groupsTable.createdAt, startDate),
+            lte(groupsTable.createdAt, endDate)
+          )
+        );
+      }
+
+      // Group type filter
+      if (groupType) {
+        conditions.push(eq(groupsTable.groupType, groupType));
+      }
+
+      // Assigned user filter
+      if (assignedToId) {
+        conditions.push(eq(groupsTable.assignedToId, assignedToId));
+      }
+
+      // Classification filter
+      if (classification) {
+        conditions.push(eq(groupsTable.classification, classification));
+      }
+
+      // Search filter
+      // Add search condition - search in group name, phone number, and categories
+        if (search) {
+          conditions.push(
+            or(
+              sql`${groupsTable.groupName}->>'group_name' ILIKE ${`%${search}%`}`,
+              sql`${groupsTable.phoneNumber} ILIKE ${`%${search}%`}`,
+              sql`${groupsTable.categories} ILIKE ${`%${search}%`}`
+            )
+          );
+        }
+
+      const whereConditions = conditions;
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(groupsTable)
+        .where(whereClause);
+
+      const total = Number(totalResult[0]?.count || 0);
+
+      const groupsData = await db
+          .select({
+            id: groupsTable.id,
+            groupName: groupsTable.groupName,
+            groupType: groupsTable.groupType,
+            categories: groupsTable.categories,
+            classification: groupsTable.classification,
+phoneNumber: groupsTable.phoneNumber,
+            monetizationEnabled: groupsTable.monetizationEnabled,
+            adminData: groupsTable.adminData,
+            createdAt: groupsTable.createdAt,
+            updatedAt: groupsTable.updatedAt,
+            assignedToId: groupsTable.assignedToId,
+            processorId: users.id,
+            processorName: users.name,
+            processorUsername: users.username
+          })
+          .from(groupsTable)
+          .leftJoin(users, eq(groupsTable.assignedToId, users.id))
+          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+          .orderBy(desc(groupsTable.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+      // Transform the data to match expected format
+      const transformedGroups = groupsData.map(group => ({
+        ...group,
+        classification: group.classification || 'new',
+        processor: group.processorId ? {
+          id: group.processorId,
+          name: group.processorName,
+          username: group.processorUsername
+        } : null
+      }));
+
+      console.log(`Found ${transformedGroups.length} groups for page ${page}`);
+
+      res.json({
+        data: transformedGroups,
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+          itemsPerPage: limit
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+      res.status(500).json({ 
+        message: "Error fetching groups",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Update group classification
+  app.put("/api/groups/:id/classification", isAuthenticated, async (req, res) => {
+    try {
+      const groupId = parseInt(req.params.id);
+      const { classification } = req.body;
+
+      // Validate classification value
+      const validClassifications = ['new', 'potential', 'non_potential'];
+      if (!validClassifications.includes(classification)) {
+        return res.status(400).json({ 
+          message: "Invalid classification value",
+          validValues: validClassifications
+        });
+      }
+
+      // Import groups from schema
+      const { groups } = await import("../shared/schema");
+
+      // Update the group classification
+      const updatedGroup = await db
+        .update(groups)
+        .set({ 
+          classification,
+          updatedAt: new Date()
+        })
+        .where(eq(groups.id, groupId))
+        .returning();
+
+      if (!updatedGroup.length) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Classification updated successfully",
+        data: updatedGroup[0] 
+      });
+    } catch (error) {
+      console.error("Error updating group classification:", error);
+      res.status(500).json({ 
+        message: "Error updating group classification",
         error: error instanceof Error ? error.message : String(error)
       });
     }

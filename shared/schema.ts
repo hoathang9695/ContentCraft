@@ -193,6 +193,29 @@ export const insertPageSchema = createInsertSchema(pages).omit({
 export type InsertPage = z.infer<typeof insertPageSchema>;
 export type Page = typeof pages.$inferSelect;
 
+export const groups = pgTable("groups", {
+  id: serial("id").primaryKey(),
+  groupName: jsonb("group_name").notNull(),
+  groupType: varchar("group_type", { length: 100 }).notNull(), // 'public' or 'private'
+  categories: varchar("categories", { length: 100 }), // 'business', 'community', 'education', etc.
+  classification: varchar("classification", { length: 50 }).default("new"),
+  adminData: jsonb("admin_data"), // Admin data in JSON format
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  monetizationEnabled: boolean("monetization_enabled").default(false),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+export const insertGroupSchema = createInsertSchema(groups).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertGroup = z.infer<typeof insertGroupSchema>;
+export type Group = typeof groups.$inferSelect;
+
 export interface ContentMessage {
   externalId: string;        // ID nội dung, kiểu string
   source?: {                // Nguồn cấp dạng object
