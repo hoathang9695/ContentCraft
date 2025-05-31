@@ -293,9 +293,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { pages } = await import("../shared/schema");
       const allPages = await db.select().from(pages);
       const totalPages = allPages.length;
-      const newPages = allPages.filter(page => 
-        page.createdAt && page.createdAt >= startDate && page.createdAt <= endDate
-      ).length;
+      
+      // Tính số trang mới trong 7 ngày gần đây
+      const sevenDaysAgoPages = new Date();
+      sevenDaysAgoPages.setDate(sevenDaysAgoPages.getDate() - 7);
+      
+      const newPages = allPages.filter(page => {
+        if (!page.createdAt) return false;
+        const created = new Date(page.createdAt);
+        return created >= sevenDaysAgoPages;
+      }).length;
 
       console.log('Pages stats:', { total: totalPages, new: newPages });
 
