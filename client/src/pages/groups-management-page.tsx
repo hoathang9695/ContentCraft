@@ -34,7 +34,7 @@ export default function GroupsManagementPage() {
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
-  const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'closed' | 'all'>('all');
+  const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'all'>('all');
   const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
 
   useEffect(() => {
@@ -196,19 +196,17 @@ export default function GroupsManagementPage() {
               </Select>
             )}
 
-            <Select value={groupTypeFilter} onValueChange={(value: 'public' | 'private' | 'closed' | 'all') => setGroupTypeFilter(value)}>
+            <Select value={groupTypeFilter} onValueChange={(value: 'public' | 'private' | 'all') => setGroupTypeFilter(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue>
                   {groupTypeFilter === 'all' ? 'Tất cả loại' : 
-                   groupTypeFilter === 'public' ? 'Công khai' :
-                   groupTypeFilter === 'private' ? 'Riêng tư' : 'Đóng'}
+                   groupTypeFilter === 'public' ? 'Công khai' : 'Riêng tư'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả loại</SelectItem>
                 <SelectItem value="public">Công khai</SelectItem>
                 <SelectItem value="private">Riêng tư</SelectItem>
-                <SelectItem value="closed">Đóng</SelectItem>
               </SelectContent>
             </Select>
 
@@ -383,28 +381,11 @@ export default function GroupsManagementPage() {
               {
                 key: "groupType",
                 header: "Loại nhóm",
-                render: (row) => {
-                  const getGroupTypeLabel = (type: string) => {
-                    switch (type) {
-                      case 'business': return 'Kinh doanh';
-                      case 'community': return 'Cộng đồng';
-                      case 'education': return 'Giáo dục';
-                      case 'finance': return 'Tài chính';
-                      case 'family': return 'Gia đình';
-                      case 'gaming': return 'Game';
-                      case 'public': return 'Công khai';
-                      case 'private': return 'Riêng tư';
-                      case 'closed': return 'Đóng';
-                      default: return type;
-                    }
-                  };
-
-                  return (
-                    <Badge variant="outline">
-                      {getGroupTypeLabel(row.groupType)}
-                    </Badge>
-                  );
-                },
+                render: (row) => (
+                  <Badge variant="outline">
+                    {row.groupType === 'public' ? 'Công khai' : 'Riêng tư'}
+                  </Badge>
+                ),
               },
               {
                 key: "classification",
