@@ -34,7 +34,7 @@ export default function GroupsManagementPage() {
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
-  const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'all'>('all');
+  const [groupTypeFilter, setGroupTypeFilter] = useState<'business' | 'community' | 'education' | 'finance' | 'family' | 'gaming' | 'all'>('all');
   const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
 
   useEffect(() => {
@@ -196,17 +196,26 @@ export default function GroupsManagementPage() {
               </Select>
             )}
 
-            <Select value={groupTypeFilter} onValueChange={(value: 'public' | 'private' | 'all') => setGroupTypeFilter(value)}>
+            <Select value={groupTypeFilter} onValueChange={(value: 'business' | 'community' | 'education' | 'finance' | 'family' | 'gaming' | 'all') => setGroupTypeFilter(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue>
                   {groupTypeFilter === 'all' ? 'Tất cả loại' : 
-                   groupTypeFilter === 'public' ? 'Công khai' : 'Riêng tư'}
+                   groupTypeFilter === 'business' ? 'Kinh doanh' :
+                   groupTypeFilter === 'community' ? 'Cộng đồng' :
+                   groupTypeFilter === 'education' ? 'Giáo dục' :
+                   groupTypeFilter === 'finance' ? 'Tài chính' :
+                   groupTypeFilter === 'family' ? 'Gia đình' :
+                   groupTypeFilter === 'gaming' ? 'Game' : groupTypeFilter}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả loại</SelectItem>
-                <SelectItem value="public">Công khai</SelectItem>
-                <SelectItem value="private">Riêng tư</SelectItem>
+                <SelectItem value="business">Kinh doanh</SelectItem>
+                <SelectItem value="community">Cộng đồng</SelectItem>
+                <SelectItem value="education">Giáo dục</SelectItem>
+                <SelectItem value="finance">Tài chính</SelectItem>
+                <SelectItem value="family">Gia đình</SelectItem>
+                <SelectItem value="gaming">Game</SelectItem>
               </SelectContent>
             </Select>
 
@@ -383,7 +392,12 @@ export default function GroupsManagementPage() {
                 header: "Loại nhóm",
                 render: (row) => (
                   <Badge variant="outline">
-                    {row.groupType === 'public' ? 'Công khai' : 'Riêng tư'}
+                    {row.groupType === 'business' ? 'Kinh doanh' :
+                     row.groupType === 'community' ? 'Cộng đồng' :
+                     row.groupType === 'education' ? 'Giáo dục' :
+                     row.groupType === 'finance' ? 'Tài chính' :
+                     row.groupType === 'family' ? 'Gia đình' :
+                     row.groupType === 'gaming' ? 'Game' : row.groupType}
                   </Badge>
                 ),
               },
