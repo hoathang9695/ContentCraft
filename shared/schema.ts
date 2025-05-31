@@ -196,7 +196,8 @@ export type Page = typeof pages.$inferSelect;
 export const groups = pgTable("groups", {
   id: serial("id").primaryKey(),
   groupName: jsonb("group_name").notNull(),
-  groupType: varchar("group_type", { length: 100 }).notNull(),
+  groupType: varchar("group_type", { length: 100 }).notNull(), // 'public' or 'private'
+  categories: varchar("categories", { length: 100 }), // 'business', 'community', 'education', etc.
   classification: varchar("classification", { length: 50 }).default("new"),
   adminData: jsonb("admin_data"), // Admin data in JSON format
   phoneNumber: varchar("phone_number", { length: 20 }),
