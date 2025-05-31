@@ -56,6 +56,8 @@ export function PushGroupJoinDialog({
           const fakeUser = selectedUsers[i];
           
           try {
+            console.log(`Sending join request for user ${fakeUser.name} to group ${targetGroupId}`);
+            
             // Call group join API
             const response = await fetch(
               `https://prod-sn.emso.vn/api/v1/groups/${targetGroupId}/accounts`,
@@ -63,13 +65,25 @@ export function PushGroupJoinDialog({
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${fakeUser.token}`,
-                  'Content-Type': 'application/json'
-                }
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  'Origin': window.location.origin,
+                  'Referer': window.location.href
+                },
+                mode: 'cors',
+                credentials: 'omit'
               }
             );
 
+            console.log(`Response status for ${fakeUser.name}:`, response.status);
+            console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
+
+            // Log response body for debugging
+            const responseText = await response.text();
+            console.log(`Response body for ${fakeUser.name}:`, responseText);
+
             if (!response.ok) {
-              throw new Error(`Failed to send join request with user ${fakeUser.name}`);
+              throw new Error(`HTTP ${response.status}: ${responseText || 'Failed to send join request'}`);
             }
 
             successCount++;
@@ -80,14 +94,15 @@ export function PushGroupJoinDialog({
 
             // Wait 1 minute before next request if not the last one
             if (i < selectedUsers.length - 1) {
+              console.log(`Waiting 60 seconds before next request...`);
               await new Promise(resolve => setTimeout(resolve, 60000));
             }
 
           } catch (error) {
-            console.error('Error sending join request:', error);
+            console.error(`Error sending join request for ${fakeUser.name}:`, error);
             toast({
               title: 'Error',
-              description: `Không thể gửi yêu cầu tham gia với user ${fakeUser.name}`,
+              description: `Không thể gửi yêu cầu tham gia với user ${fakeUser.name}: ${error.message}`,
               variant: 'destructive'
             });
           }
