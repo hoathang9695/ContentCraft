@@ -1811,8 +1811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processor: user.processorId ? {
           id: user.processorId,
           name: user.processorName,
-          username:```text
-user.processorUsername
+          username: user.processorUsername
         } : null
       }));
 
