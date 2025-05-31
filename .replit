@@ -125,10 +125,10 @@ task = "shell.exec"
 args = "npx tsx simulate-page-management-kafka.ts"
 
 [[workflows.workflow]]
-name = "Test Group Management Kafka"
+name = "Cleanup Duplicates"
 author = 41108408
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npx tsx simulate-group-management-kafka.ts"
+args = "npx tsx cleanup-duplicate-support-requests.ts"
