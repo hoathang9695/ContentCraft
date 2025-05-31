@@ -34,7 +34,8 @@ export default function GroupsManagementPage() {
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
-  const [groupTypeFilter, setGroupTypeFilter] = useState<'business' | 'community' | 'education' | 'finance' | 'family' | 'gaming' | 'all'>('all');
+  const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'all'>('all');
+  const [categoriesFilter, setCategoriesFilter] = useState<'business' | 'community' | 'education' | 'finance' | 'family' | 'gaming' | 'all'>('all');
   const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export default function GroupsManagementPage() {
   useEffect(() => {
     setDebouncedSearchQuery('');
     setPage(1);
-  }, [startDate, endDate, groupTypeFilter, activeTab, selectedUserId, classificationFilter]);
+  }, [startDate, endDate, groupTypeFilter, categoriesFilter, activeTab, selectedUserId, classificationFilter]);
 
   const handleUpdateClassification = async (groupId: number, classification: string) => {
     try {
@@ -101,7 +102,7 @@ export default function GroupsManagementPage() {
 
   // Fetch groups with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/groups", page, limit, startDate, endDate, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
+    queryKey: ["/api/groups", page, limit, startDate, endDate, groupTypeFilter, categoriesFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -109,6 +110,7 @@ export default function GroupsManagementPage() {
         ...(startDate && { startDate: startDate.toISOString() }),
         ...(endDate && { endDate: endDate.toISOString() }),
         ...(groupTypeFilter !== 'all' && { groupType: groupTypeFilter }),
+        ...(categoriesFilter !== 'all' && { categories: categoriesFilter }),
         ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
         ...(activeTab !== 'all' && { activeTab }),
         ...(selectedUserId && { assignedToId: selectedUserId.toString() }),
@@ -129,6 +131,7 @@ export default function GroupsManagementPage() {
           id: group.id,
           groupName: group.groupName,
           groupType: group.groupType,
+          categories: group.categories,
           classification: group.classification,
           phoneNumber: group.phoneNumber,
           monetizationEnabled: group.monetizationEnabled,
@@ -196,20 +199,34 @@ export default function GroupsManagementPage() {
               </Select>
             )}
 
-            <Select value={groupTypeFilter} onValueChange={(value: 'business' | 'community' | 'education' | 'finance' | 'family' | 'gaming' | 'all') => setGroupTypeFilter(value)}>
+            <Select value={groupTypeFilter} onValueChange={(value: 'public' | 'private' | 'all') => setGroupTypeFilter(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue>
                   {groupTypeFilter === 'all' ? 'Tất cả loại' : 
-                   groupTypeFilter === 'business' ? 'Kinh doanh' :
-                   groupTypeFilter === 'community' ? 'Cộng đồng' :
-                   groupTypeFilter === 'education' ? 'Giáo dục' :
-                   groupTypeFilter === 'finance' ? 'Tài chính' :
-                   groupTypeFilter === 'family' ? 'Gia đình' :
-                   groupTypeFilter === 'gaming' ? 'Game' : groupTypeFilter}
+                   groupTypeFilter === 'public' ? 'Công khai' : 'Riêng tư'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả loại</SelectItem>
+                <SelectItem value="public">Công khai</SelectItem>
+                <SelectItem value="private">Riêng tư</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={categoriesFilter} onValueChange={(value: 'business' | 'community' | 'education' | 'finance' | 'family' | 'gaming' | 'all') => setCategoriesFilter(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue>
+                  {categoriesFilter === 'all' ? 'Tất cả danh mục' : 
+                   categoriesFilter === 'business' ? 'Kinh doanh' :
+                   categoriesFilter === 'community' ? 'Cộng đồng' :
+                   categoriesFilter === 'education' ? 'Giáo dục' :
+                   categoriesFilter === 'finance' ? 'Tài chính' :
+                   categoriesFilter === 'family' ? 'Gia đình' :
+                   categoriesFilter === 'gaming' ? 'Game' : categoriesFilter}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả danh mục</SelectItem>
                 <SelectItem value="business">Kinh doanh</SelectItem>
                 <SelectItem value="community">Cộng đồng</SelectItem>
                 <SelectItem value="education">Giáo dục</SelectItem>
@@ -326,6 +343,7 @@ export default function GroupsManagementPage() {
                     setEndDate(today);
                     setSelectedUserId(null);
                     setGroupTypeFilter('all');
+                    setCategoriesFilter('all');
                     setClassificationFilter('new');
                     setActiveTab('all');
                     setSearchQuery('');
@@ -392,12 +410,21 @@ export default function GroupsManagementPage() {
                 header: "Loại nhóm",
                 render: (row) => (
                   <Badge variant="outline">
-                    {row.groupType === 'business' ? 'Kinh doanh' :
-                     row.groupType === 'community' ? 'Cộng đồng' :
-                     row.groupType === 'education' ? 'Giáo dục' :
-                     row.groupType === 'finance' ? 'Tài chính' :
-                     row.groupType === 'family' ? 'Gia đình' :
-                     row.groupType === 'gaming' ? 'Game' : row.groupType}
+                    {row.groupType === 'public' ? 'Công khai' : 'Riêng tư'}
+                  </Badge>
+                ),
+              },
+              {
+                key: "categories",
+                header: "Danh mục",
+                render: (row) => (
+                  <Badge variant="secondary">
+                    {row.categories === 'business' ? 'Kinh doanh' :
+                     row.categories === 'community' ? 'Cộng đồng' :
+                     row.categories === 'education' ? 'Giáo dục' :
+                     row.categories === 'finance' ? 'Tài chính' :
+                     row.categories === 'family' ? 'Gia đình' :
+                     row.categories === 'gaming' ? 'Game' : row.categories || 'N/A'}
                   </Badge>
                 ),
               },
