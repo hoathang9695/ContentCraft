@@ -35,7 +35,6 @@ export default function GroupsManagementPage() {
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'all'>('all');
-  const [categoriesFilter, setCategoriesFilter] = useState<'business' | 'cộng đồng' | 'giáo dục' | 'tài chính' | 'gia đình' | 'giải trí' | 'du lịch' | 'all'>('all');
   const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
 
   useEffect(() => {
@@ -52,7 +51,7 @@ export default function GroupsManagementPage() {
   useEffect(() => {
     setDebouncedSearchQuery('');
     setPage(1);
-  }, [startDate, endDate, groupTypeFilter, categoriesFilter, activeTab, selectedUserId, classificationFilter]);
+  }, [startDate, endDate, groupTypeFilter, activeTab, selectedUserId, classificationFilter]);
 
   const handleUpdateClassification = async (groupId: number, classification: string) => {
     try {
@@ -102,15 +101,14 @@ export default function GroupsManagementPage() {
 
   // Fetch groups with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/groups", page, limit, startDate, endDate, groupTypeFilter, categoriesFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
+    queryKey: ["/api/groups", page, limit, startDate, endDate, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
         ...(startDate && { startDate: startDate.toISOString() }),
-        ...(endDate && { endDate: endDate.toISOString() }),
+        ...(endDate && { endDate: toISOString() }),
         ...(groupTypeFilter !== 'all' && { groupType: groupTypeFilter }),
-        ...(categoriesFilter !== 'all' && { categories: categoriesFilter }),
         ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
         ...(activeTab !== 'all' && { activeTab }),
         ...(selectedUserId && { assignedToId: selectedUserId.toString() }),
@@ -213,29 +211,7 @@ export default function GroupsManagementPage() {
               </SelectContent>
             </Select>
 
-            <Select value={categoriesFilter} onValueChange={(value: 'business' | 'cộng đồng' | 'giáo dục' | 'tài chính' | 'gia đình' | 'giải trí' | 'du lịch' | 'all') => setCategoriesFilter(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue>
-                  {categoriesFilter === 'all' ? 'Tất cả danh mục' : 
-                   categoriesFilter === 'business' ? 'Kinh doanh' :
-                   categoriesFilter === 'cộng đồng' ? 'Cộng đồng' :
-                   categoriesFilter === 'giáo dục' ? 'Giáo dục' :
-                   categoriesFilter === 'tài chính' ? 'Tài chính' :
-                   categoriesFilter === 'gia đình' ? 'Gia đình' :
-                   categoriesFilter === 'giải trí' ? 'Giải trí' : 'Du lịch'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả danh mục</SelectItem>
-                <SelectItem value="business">Kinh doanh</SelectItem>
-                <SelectItem value="cộng đồng">Cộng đồng</SelectItem>
-                <SelectItem value="giáo dục">Giáo dục</SelectItem>
-                <SelectItem value="tài chính">Tài chính</SelectItem>
-                <SelectItem value="gia đình">Gia đình</SelectItem>
-                <SelectItem value="giải trí">Giải trí</SelectItem>
-                <SelectItem value="du lịch">Du lịch</SelectItem>
-              </SelectContent>
-            </Select>
+            
 
             <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
               <SelectTrigger className="w-[180px]">
@@ -344,7 +320,6 @@ export default function GroupsManagementPage() {
                     setEndDate(today);
                     setSelectedUserId(null);
                     setGroupTypeFilter('all');
-                    setCategoriesFilter('all');
                     setClassificationFilter('new');
                     setActiveTab('all');
                     setSearchQuery('');
@@ -367,7 +342,7 @@ export default function GroupsManagementPage() {
             data={displayGroups}
             isLoading={isLoading}
             searchable={true}
-            searchPlaceholder="Tìm kiếm theo tên nhóm hoặc số điện thoại..."
+            searchPlaceholder="Tìm kiếm theo tên nhóm, số điện thoại hoặc danh mục..."
             searchValue={searchQuery} 
             onSearch={setSearchQuery}
             pagination={{
