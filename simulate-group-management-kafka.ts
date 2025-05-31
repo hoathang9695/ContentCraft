@@ -1,7 +1,7 @@
 
 import { db } from './server/db';
 import { users, groups } from './shared/schema';
-import { and, ne, eq } from 'drizzle-orm';
+import { and, ne, eq, sql } from 'drizzle-orm';
 
 interface TestGroupMessage {
   groupId: string;
