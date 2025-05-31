@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -359,7 +358,7 @@ export default function GroupsManagementPage() {
                   const groupData = row.groupName;
                   const groupId = groupData?.id;
                   const groupName = groupData?.group_name || groupData?.name || "Không có tên";
-                  
+
                   return (
                     <div className="font-medium">
                       {groupId ? (
@@ -418,7 +417,7 @@ export default function GroupsManagementPage() {
                 header: "Admin",
                 render: (row) => {
                   console.log('Row adminData in render:', row.adminData, typeof row.adminData);
-                  
+
                   // Parse adminData JSON data
                   let adminData = null;
                   try {
