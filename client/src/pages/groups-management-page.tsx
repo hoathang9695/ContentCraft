@@ -35,7 +35,7 @@ export default function GroupsManagementPage() {
   );
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'all'>('all');
-  const [categoriesFilter, setCategoriesFilter] = useState<'business' | 'community' | 'education' | 'finance' | 'family' | 'gaming' | 'all'>('all');
+  const [categoriesFilter, setCategoriesFilter] = useState<'business' | 'cộng đồng' | 'giáo dục' | 'tài chính' | 'gia đình' | 'giải trí' | 'du lịch' | 'all'>('all');
   const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
 
   useEffect(() => {
@@ -213,26 +213,27 @@ export default function GroupsManagementPage() {
               </SelectContent>
             </Select>
 
-            <Select value={categoriesFilter} onValueChange={(value: 'business' | 'community' | 'education' | 'finance' | 'family' | 'gaming' | 'all') => setCategoriesFilter(value)}>
+            <Select value={categoriesFilter} onValueChange={(value: 'business' | 'cộng đồng' | 'giáo dục' | 'tài chính' | 'gia đình' | 'giải trí' | 'du lịch' | 'all') => setCategoriesFilter(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue>
                   {categoriesFilter === 'all' ? 'Tất cả danh mục' : 
                    categoriesFilter === 'business' ? 'Kinh doanh' :
-                   categoriesFilter === 'community' ? 'Cộng đồng' :
-                   categoriesFilter === 'education' ? 'Giáo dục' :
-                   categoriesFilter === 'finance' ? 'Tài chính' :
-                   categoriesFilter === 'family' ? 'Gia đình' :
-                   categoriesFilter === 'gaming' ? 'Game' : categoriesFilter}
+                   categoriesFilter === 'cộng đồng' ? 'Cộng đồng' :
+                   categoriesFilter === 'giáo dục' ? 'Giáo dục' :
+                   categoriesFilter === 'tài chính' ? 'Tài chính' :
+                   categoriesFilter === 'gia đình' ? 'Gia đình' :
+                   categoriesFilter === 'giải trí' ? 'Giải trí' : 'Du lịch'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả danh mục</SelectItem>
                 <SelectItem value="business">Kinh doanh</SelectItem>
-                <SelectItem value="community">Cộng đồng</SelectItem>
-                <SelectItem value="education">Giáo dục</SelectItem>
-                <SelectItem value="finance">Tài chính</SelectItem>
-                <SelectItem value="family">Gia đình</SelectItem>
-                <SelectItem value="gaming">Game</SelectItem>
+                <SelectItem value="cộng đồng">Cộng đồng</SelectItem>
+                <SelectItem value="giáo dục">Giáo dục</SelectItem>
+                <SelectItem value="tài chính">Tài chính</SelectItem>
+                <SelectItem value="gia đình">Gia đình</SelectItem>
+                <SelectItem value="giải trí">Giải trí</SelectItem>
+                <SelectItem value="du lịch">Du lịch</SelectItem>
               </SelectContent>
             </Select>
 
@@ -420,11 +421,11 @@ export default function GroupsManagementPage() {
                 render: (row) => (
                   <Badge variant="secondary">
                     {row.categories === 'business' ? 'Kinh doanh' :
-                     row.categories === 'community' ? 'Cộng đồng' :
-                     row.categories === 'education' ? 'Giáo dục' :
-                     row.categories === 'finance' ? 'Tài chính' :
-                     row.categories === 'family' ? 'Gia đình' :
-                     row.categories === 'gaming' ? 'Game' : row.categories || 'N/A'}
+                     row.categories === 'cộng đồng' ? 'Cộng đồng' :
+                     row.categories === 'giáo dục' ? 'Giáo dục' :
+                     row.categories === 'tài chính' ? 'Tài chính' :
+                     row.categories === 'gia đình' ? 'Gia đình' :
+                     row.categories === 'giải trí' ? 'Giải trí' : 'Du lịch' || 'N/A'}
                   </Badge>
                 ),
               },
