@@ -1714,6 +1714,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Groups API endpoints
+  // Get all groups 
+  app.get("/api/groups", isAuthenticated, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const groupType = req.query.groupType as string;
+      const search = req.query.search as string;
+      const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
+      const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+      const classification = req.query.classification as string;
+
+      console.log("Groups API called with params:", {
+        page, limit, offset, startDate, endDate, groupType, search, activeTab, assignedToId, classification
+      });
+
+      // Import groups from schema
+      const { groups } = await import("../shared/schema");
+      const groupsTable = groups;
+
+      // Build conditions
+      const conditions = [];
+
+      // Date range filter
+      if (startDate && endDate) {
+        conditions.push(
+          and(
+            gte(groupsTable.createdAt, startDate),
+            lte(groupsTable.createdAt, endDate)
+          )
+        );
+      }
+
+      // Group type filter
+      if (groupType) {
+        conditions.push(eq(groupsTable.groupType, groupType));
+      }
+
+      // Assigned user filter
+      if (assignedToId) {
+        conditions.push(eq(groupsTable.assignedToId, assignedToId));
+      }
+
+      // Classification filter
+      if (classification) {
+        conditions.push(eq(groupsTable.classification, classification));
+      }
+
+      // Search filter
+      if (search && search.trim()) {
+        const searchPattern = `%${search.toLowerCase()}%`;
+        conditions.push(
+          or(
+            sql`LOWER(${groupsTable.groupName}::jsonb->>'group_name') LIKE ${searchPattern}`,
+            sql`LOWER(${groupsTable.groupName}::jsonb->>'name') LIKE ${searchPattern}`,
+            sql`LOWER(${groupsTable.phoneNumber}) LIKE ${searchPattern}`
+          )
+        );
+      }
+
+      const whereConditions = conditions;
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(groupsTable)
+        .where(whereClause);
+
+      const total = Number(totalResult[0]?.count || 0);
+
+      const groupsData = await db
+          .select({
+            id: groupsTable.id,
+            groupName: groupsTable.groupName,
+            groupType: groupsTable.groupType,
+            classification: groupsTable.classification,
+            phoneNumber: groupsTable.phoneNumber,
+            monetizationEnabled: groupsTable.monetizationEnabled,
+            adminData: groupsTable.adminData,
+            createdAt: groupsTable.createdAt,
+            updatedAt: groupsTable.updatedAt,
+            assignedToId: groupsTable.assignedToId,
+            processorId: users.id,
+            processorName: users.name,
+            processorUsername: users.username
+          })
+          .from(groupsTable)
+          .leftJoin(users, eq(groupsTable.assignedToId, users.id))
+          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+          .orderBy(desc(groupsTable.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+      // Transform the data to match expected format
+      const transformedGroups = groupsData.map(group => ({
+        ...group,
+        classification: group.classification || 'new',
+        processor: group.processorId ? {
+          id: group.processorId,
+          name: group.processorName,
+          username: group.processorUsername
+        } : null
+      }));
+
+      console.log(`Found ${transformedGroups.length} groups for page ${page}`);
+
+      res.json({
+        data: transformedGroups,
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+          itemsPerPage: limit
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+      res.status(500).json({ 
+        message: "Error fetching groups",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Update group classification
+  app.put("/api/groups/:id/classification", isAuthenticated, async (req, res) => {
+    try {
+      const groupId = parseInt(req.params.id);
+      const { classification } = req.body;
+
+      // Validate classification value
+      const validClassifications = ['new', 'potential', 'non_potential'];
+      if (!validClassifications.includes(classification)) {
+        return res.status(400).json({ 
+          message: "Invalid classification value",
+          validValues: validClassifications
+        });
+      }
+
+      // Import groups from schema
+      const { groups } = await import("../shared/schema");
+
+      // Update the group classification
+      const updatedGroup = await db
+        .update(groups)
+        .set({ 
+          classification,
+          updatedAt: new Date()
+        })
+        .where(eq(groups.id, groupId))
+        .returning();
+
+      if (!updatedGroup.length) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Classification updated successfully",
+        data: updatedGroup[0] 
+      });
+    } catch (error) {
+      console.error("Error updating group classification:", error);
+      res.status(500).json({ 
+        message: "Error updating group classification",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Get all real users 
   app.get("/api/real-users", isAuthenticated, async (req, res) => {
     try {
