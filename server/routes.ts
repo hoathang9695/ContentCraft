@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const unverified = filteredContents.filter(c => c.sourceVerification === 'unverified').length;
 
       // Đếm số lượng theo safe (an toàn)
-      const safe = filteredContents.filter(c => c.safe === true).length;
+      const safe = filteredContents.filter(c => c => c.safe === true).length;
       const unsafe = filteredContents.filter(c => c.safe === false).length;
       const unchecked = filteredContents.filter(c => c.safe === null).length;
 
@@ -293,11 +293,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { pages } = await import("../shared/schema");
       const allPages = await db.select().from(pages);
       const totalPages = allPages.length;
-      
+
       // Tính số trang mới trong 7 ngày gần đây
       const sevenDaysAgoPages = new Date();
       sevenDaysAgoPages.setDate(sevenDaysAgoPages.getDate() - 7);
-      
+
       const newPages = allPages.filter(page => {
         if (!page.createdAt) return false;
         const created = new Date(page.createdAt);
@@ -873,7 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.body;
 
       if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
+                return res.status(400).json({ message: "User ID is required" });
       }
 
       const content = await storage.assignContentToUser(contentId, Number(userId));
@@ -1779,54 +1779,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const whereConditions = conditions;
-      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+      let whereConditionsString = '';
+      if (whereConditions.length > 0) {
+          whereConditionsString = 'AND ' + whereConditions.join(' AND ');
+      }
+      const paramIndex = 1; // Starting parameter index
+      const queryParams: any[] = [];
 
       // Get total count
-      const totalResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(groupsTable)
-        .where(whereClause);
+      const totalResult = await pool.query(`
+        SELECT COUNT(*) FROM groups WHERE 1=1 ${whereConditionsString}
+      `, queryParams);
 
-      const total = Number(totalResult[0]?.count || 0);
+      const total = Number(totalResult.rows[0].count || 0);
+        
+      const result = await pool.query(`
+          SELECT 
+            g.id, 
+            g.group_name, 
+            g.group_type, 
+            g.categories,
+            g.classification,
+            g.phone_number, 
+            g.monetization_enabled, 
+            g.manager_id, 
+            g.admin_data,
+            g.created_at, 
+            g.updated_at,
+            g.assigned_to_id,
+            u.id as processor_id,
+            u.name as processor_name,
+            u.username as processor_username
+          FROM groups g
+          LEFT JOIN users u ON g.assigned_to_id = u.id
+          WHERE 1=1 ${whereConditionsString}
+          ORDER BY g.created_at DESC
+          LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `, queryParams.concat([limit, offset]));
 
-      const groupsData = await db
-          .select({
-            id: groupsTable.id,
-            groupName: groupsTable.groupName,
-            groupType: groupsTable.groupType,
-            classification: groupsTable.classification,
-            phoneNumber: groupsTable.phoneNumber,
-            monetizationEnabled: groupsTable.monetizationEnabled,
-            adminData: groupsTable.adminData,
-            createdAt: groupsTable.createdAt,
-            updatedAt: groupsTable.updatedAt,
-            assignedToId: groupsTable.assignedToId,
-            processorId: users.id,
-            processorName: users.name,
-            processorUsername: users.username
-          })
-          .from(groupsTable)
-          .leftJoin(users, eq(groupsTable.assignedToId, users.id))
-          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-          .orderBy(desc(groupsTable.createdAt))
-          .limit(limit)
-          .offset(offset);
+      const groups = result.rows.map(row => ({
+          id: row.id,
+          groupName: row.group_name,
+          groupType: row.group_type,
+          categories: row.categories,
+          classification: row.classification,
+          phoneNumber: row.phone_number,
+          monetizationEnabled: row.monetization_enabled,
+          managerId: row.manager_id,
+          adminData: row.admin_data,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          assignedToId: row.assigned_to_id,
+          processor: row.assigned_to_id ? {
+            id: row.processor_id,
+            name: row.processor_name, 
+            username: row.processor_username
+          } : null
+        }));
 
-      // Transform the data to match expected format
-      const transformedGroups = groupsData.map(group => ({
-        ...group,
-        classification: group.classification || 'new',
-        processor: group.processorId ? {
-          id: group.processorId,
-          name: group.processorName,
-          username: group.processorUsername
-        } : null
-      }));
-
-      console.log(`Found ${transformedGroups.length} groups for page ${page}`);
+      console.log(`Found ${groups.length} groups for page ${page}`);
 
       res.json({
-        data: transformedGroups,
+        data: groups,
         pagination: {
           total,
           totalPages: Math.ceil(total / limit),
