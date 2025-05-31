@@ -1767,16 +1767,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Search filter
-      if (search && search.trim()) {
-        const searchPattern = `%${search.toLowerCase()}%`;
-        conditions.push(
-          or(
-            sql`LOWER(${groupsTable.groupName}::jsonb->>'group_name') LIKE ${searchPattern}`,
-            sql`LOWER(${groupsTable.groupName}::jsonb->>'name') LIKE ${searchPattern}`,
-            sql`LOWER(${groupsTable.phoneNumber}) LIKE ${searchPattern}`
-          )
-        );
-      }
+      // Add search condition - search in group name, phone number, and categories
+        if (search) {
+          conditions.push(
+            or(
+              sql`${groupsTable.groupName}->>'group_name' ILIKE ${`%${search}%`}`,
+              sql`${groupsTable.phoneNumber} ILIKE ${`%${search}%`}`,
+              sql`${groupsTable.categories} ILIKE ${`%${search}%`}`
+            )
+          );
+        }
 
       const whereConditions = conditions;
       const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
