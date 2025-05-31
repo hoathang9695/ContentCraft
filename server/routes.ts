@@ -1474,6 +1474,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk upload fake users from Excel (admin only)
+  app.post("/api/fake-users/bulk-upload", isAdmin, async (req, res) => {
+    try {
+      const { users } = req.body;
+      
+      if (!Array.isArray(users) || users.length === 0) {
+        return res.status(400).json({ 
+          message: "Dữ liệu không hợp lệ",
+          error: "Cần cung cấp danh sách người dùng ảo" 
+        });
+      }
+
+      let successCount = 0;
+      let failedCount = 0;
+      const errors: string[] = [];
+
+      for (const userData of users) {
+        try {
+          // Validate data
+          const validatedData = insertFakeUserSchema.parse({
+            name: userData.name,
+            token: userData.token,
+            status: 'active'
+          });
+
+          // Kiểm tra token đã tồn tại chưa
+          const existingFakeUser = await storage.getFakeUserByToken(validatedData.token);
+          if (existingFakeUser) {
+            errors.push(`Token "${validatedData.token}" đã tồn tại`);
+            failedCount++;
+            continue;
+          }
+
+          // Tạo người dùng ảo mới
+          await storage.createFakeUser(validatedData);
+          successCount++;
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          errors.push(`Lỗi với "${userData.name}": ${errorMsg}`);
+          failedCount++;
+        }
+      }
+
+      res.json({
+        success: successCount,
+        failed: failedCount,
+        errors: errors
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        message: "Error bulk uploading fake users",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Update fake user (admin only)
   app.put("/api/fake-users/:id", isAdmin, async (req, res) => {
     try {
