@@ -45,12 +45,17 @@ export default function SettingsPage() {
   }
 
   // Fetch real users data for export
-  const { data: realUsersData, isLoading } = useQuery<{ data: RealUser[]; total: number }>({
+  const { data: realUsersData, isLoading } = useQuery<{ data: RealUser[]; pagination: { total: number } }>({
     queryKey: ["/api/real-users", "export", selectedClassification],
     queryFn: async () => {
       let url = "/api/real-users?limit=10000"; // Get all users for export
       if (selectedClassification !== "all") {
-        url += `&classification=${selectedClassification}`;
+        // Map UI classification to database field values
+        if (selectedClassification === "verified") {
+          url += `&verificationStatus=verified`;
+        } else {
+          url += `&classification=${selectedClassification}`;
+        }
       }
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch real users");
@@ -79,8 +84,9 @@ export default function SettingsPage() {
         "Email": user.email,
         "Trạng thái xác minh": user.verified === "verified" ? "Đã xác minh" : "Chưa xác minh",
         "Phân loại": user.classification === "new" ? "Mới" : 
-                    user.classification === "processed" ? "Đã xử lý" :
-                    user.classification === "verified" ? "Đã xác minh" : user.classification,
+                    user.classification === "potential" ? "Tiềm năng" :
+                    user.classification === "non_potential" ? "Không tiềm năng" : 
+                    user.verified === "verified" ? "Đã xác minh" : user.classification,
         "Người xử lý": user.processor?.name || "Chưa phân công",
         "Đăng nhập cuối": user.lastLogin ? format(new Date(user.lastLogin), 'dd/MM/yyyy HH:mm:ss') : "Chưa đăng nhập",
         "Ngày tạo": format(new Date(user.createdAt), 'dd/MM/yyyy HH:mm:ss'),
@@ -110,7 +116,8 @@ export default function SettingsPage() {
       const sheetName = selectedClassification === "all" ? 
         "Tất cả người dùng" : 
         `Người dùng ${selectedClassification === "new" ? "mới" : 
-                     selectedClassification === "processed" ? "đã xử lý" :
+                     selectedClassification === "potential" ? "tiềm năng" :
+                     selectedClassification === "non_potential" ? "không tiềm năng" :
                      selectedClassification === "verified" ? "đã xác minh" : selectedClassification}`;
       
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -171,7 +178,8 @@ export default function SettingsPage() {
                   <SelectContent>
                     <SelectItem value="all">Tất cả</SelectItem>
                     <SelectItem value="new">Mới</SelectItem>
-                    <SelectItem value="processed">Đã xử lý</SelectItem>
+                    <SelectItem value="potential">Tiềm năng</SelectItem>
+                    <SelectItem value="non_potential">Không tiềm năng</SelectItem>
                     <SelectItem value="verified">Đã xác minh</SelectItem>
                   </SelectContent>
                 </Select>
@@ -182,7 +190,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <Badge variant="secondary">
-                    {isLoading ? "Đang tải..." : `${realUsersData?.total || 0} người dùng`}
+                    {isLoading ? "Đang tải..." : `${realUsersData?.pagination?.total || 0} người dùng`}
                   </Badge>
                 </div>
               </div>
