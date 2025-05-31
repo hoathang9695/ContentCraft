@@ -107,7 +107,7 @@ export default function GroupsManagementPage() {
         page: page.toString(),
         limit: limit.toString(),
         ...(startDate && { startDate: startDate.toISOString() }),
-        ...(endDate && { endDate: toISOString() }),
+        ...(endDate && { endDate: endDate.toISOString() }),
         ...(groupTypeFilter !== 'all' && { groupType: groupTypeFilter }),
         ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
         ...(activeTab !== 'all' && { activeTab }),
