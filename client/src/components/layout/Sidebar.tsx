@@ -207,6 +207,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   Hoạt động người dùng
                 </SidebarItem>
+                
+                <SidebarItem
+                  href="/settings"
+                  icon={UserCog}
+                  isActive={isActivePath('/settings')}
+                  onClick={handleItemClick}
+                >
+                  Quản lý
+                </SidebarItem>
               </>
             )}
           </div>
