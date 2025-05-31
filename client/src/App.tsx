@@ -21,6 +21,7 @@ import VerificationPage from './pages/user-feedback/verification-page';
 import TickPage from './pages/user-feedback/tick-page';
 import RealUserPage from "@/pages/real-user-page";
 import PageManagementPage from "@/pages/page-management-page";
+import SettingsPage from "@/pages/settings-page";
 
 function Router() {
   return (
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/user-feedback/tick" component={TickPage} />
       <Route path="/real-user" component={RealUserPage} />
             <Route path="/page-management" component={PageManagementPage} />
+      <ProtectedRoute path="/settings" component={SettingsPage} adminOnly={true} />
       <Route component={NotFound} />
     </Switch>
   );
