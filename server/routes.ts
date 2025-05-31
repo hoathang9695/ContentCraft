@@ -293,11 +293,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { pages } = await import("../shared/schema");
       const allPages = await db.select().from(pages);
       const totalPages = allPages.length;
-      
+
       // Tính số trang mới trong 7 ngày gần đây
       const sevenDaysAgoPages = new Date();
       sevenDaysAgoPages.setDate(sevenDaysAgoPages.getDate() - 7);
-      
+
       const newPages = allPages.filter(page => {
         if (!page.createdAt) return false;
         const created = new Date(page.createdAt);
@@ -1794,6 +1794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: groupsTable.id,
             groupName: groupsTable.groupName,
             groupType: groupsTable.groupType,
+            categories: groupsTable.categories,
             classification: groupsTable.classification,
             phoneNumber: groupsTable.phoneNumber,
             monetizationEnabled: groupsTable.monetizationEnabled,
