@@ -298,13 +298,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sevenDaysAgoPages = new Date();
       sevenDaysAgoPages.setDate(sevenDaysAgoPages.getDate() - 7);
 
-      const newPages = allPages.filter(page => {
-        if (!page.createdAt) return false;
-        const created = new Date(page.createdAt);
+      const newPages = allPages.filter(p => {
+        if (!p.createdAt) return false;
+        const created = new Date(p.createdAt);
         return created >= sevenDaysAgoPages;
       }).length;
 
-      console.log('Pages stats:', { total: totalPages, new: newPages });
+      console.log("Pages stats:", {
+        total: totalPages,
+        new: newPages
+      });
+
+      // Groups statistics
+      const { groups } = await import("../shared/schema");
+      const allGroups = await db.select().from(groups);
+      const totalGroups = allGroups.length;
+
+      // Tính số nhóm mới trong 7 ngày gần đây
+      const sevenDaysAgoGroups = new Date();
+      sevenDaysAgoGroups.setDate(sevenDaysAgoGroups.getDate() - 7);
+
+      const newGroups = allGroups.filter(g => {
+        if (!g.createdAt) return false;
+        const created = new Date(g.createdAt);
+        return created >= sevenDaysAgoGroups;
+      }).length;
+
+      console.log("Groups stats:", {
+        total: totalGroups,
+        new: newGroups
+      });
 
       const result = {
         totalContent: filteredContents.length,
@@ -328,6 +351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newRealUsers,
          totalPages,
         newPages,
+        totalGroups,
+        newGroups,
         // Thông tin khoảng thời gian nếu có lọc
         period: startDate && endDate ? {
           start: startDate,
@@ -853,7 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get editor users for anyone (accessible to all authenticated users)
   app.get("/api/editors", isAuthenticated, async (req, res) => {
-    try {
+    try{
       const users = await storage.getAllUsers();
       // Filter for active editors only
       const editorUsers = users
@@ -1796,6 +1821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             groupType: groupsTable.groupType,
             categories: groupsTable.categories,
             classification: groupsTable.classification,
+```text
             phoneNumber: groupsTable.phoneNumber,
             monetizationEnabled: groupsTable.monetizationEnabled,
             adminData: groupsTable.adminData,

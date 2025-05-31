@@ -104,6 +104,8 @@ export default function DashboardPage() {
     }>;
     totalPages: number;
     newPages: number;
+    totalGroups: number;
+    newGroups: number;
     totalRealUsers: number;
     newRealUsers: number;
     period: { start: string; end: string } | null;
@@ -269,6 +271,28 @@ export default function DashboardPage() {
             icon={FilePenLine}
             iconBgColor="bg-teal-500"
             onViewAll={() => navigate('/page-management')}
+          />
+        </div>
+      </div>
+
+      {/* Groups Reports Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Báo cáo Nhóm</h2>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <StatCard
+            title="Tổng số Nhóm"
+            value={isLoadingStats ? '...' : stats?.totalGroups || 0}
+            icon={Users}
+            iconBgColor="bg-violet-500"
+            onViewAll={() => navigate('/groups-management')}
+          />
+          
+          <StatCard
+            title="Nhóm mới tạo (7 ngày)"
+            value={isLoadingStats ? '...' : stats?.newGroups || 0}
+            icon={UserPlus}
+            iconBgColor="bg-emerald-500"
+            onViewAll={() => navigate('/groups-management')}
           />
         </div>
       </div>
