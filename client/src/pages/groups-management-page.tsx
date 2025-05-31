@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PushGroupJoinDialog } from "@/components/PushGroupJoinDialog";
 
 export default function GroupsManagementPage() {
   const { user } = useAuth();
@@ -36,6 +37,8 @@ export default function GroupsManagementPage() {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'all'>('all');
   const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
+  const [pushJoinOpen, setPushJoinOpen] = useState(false);
+  const [pushJoinGroup, setPushJoinGroup] = useState<any>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -211,7 +214,7 @@ export default function GroupsManagementPage() {
               </SelectContent>
             </Select>
 
-            
+
 
             <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
               <SelectTrigger className="w-[180px]">
@@ -542,13 +545,11 @@ export default function GroupsManagementPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
-                          toast({
-                            title: "Tính năng đang phát triển",
-                            description: "Tính năng này sẽ được bổ sung trong phiên bản tiếp theo",
-                          });
+                          setPushJoinOpen(true);
+                          setPushJoinGroup(row);
                         }}
                       >
-                        Push Follow
+                        Push Tham gia
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -558,6 +559,14 @@ export default function GroupsManagementPage() {
           />
         </div>
       </div>
-    </DashboardLayout>
+
+      {/* Push Group Join Dialog */}
+      <PushGroupJoinDialog
+        open={pushJoinOpen}
+        onOpenChange={setPushJoinOpen}
+        targetGroupId={pushJoinGroup?.groupName?.id}
+        targetGroupName={pushJoinGroup?.groupName?.name}
+      />
+    </div>
   );
 }
