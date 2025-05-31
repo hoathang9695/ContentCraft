@@ -102,6 +102,10 @@ export default function DashboardPage() {
       name: string;
       count: number;
     }>;
+    totalPages: number;
+    newPages: number;
+    totalRealUsers: number;
+    newRealUsers: number;
     period: { start: string; end: string } | null;
   }>({
     queryKey: ['/api/stats', dateFilterKey, user?.role], // Thêm user.role để phân biệt cache
@@ -243,6 +247,28 @@ export default function DashboardPage() {
             icon={UserPlus}
             iconBgColor="bg-cyan-500"
             onViewAll={() => navigate('/real-user')}
+          />
+        </div>
+      </div>
+
+      {/* Page Reports Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Báo cáo Trang</h2>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <StatCard
+            title="Tổng số Trang"
+            value={isLoadingStats ? '...' : stats?.totalPages || 0}
+            icon={LayoutDashboard}
+            iconBgColor="bg-indigo-500"
+            onViewAll={() => navigate('/page-management')}
+          />
+          
+          <StatCard
+            title="Trang mới tạo (7 ngày)"
+            value={isLoadingStats ? '...' : stats?.newPages || 0}
+            icon={FilePenLine}
+            iconBgColor="bg-teal-500"
+            onViewAll={() => navigate('/page-management')}
           />
         </div>
       </div>
