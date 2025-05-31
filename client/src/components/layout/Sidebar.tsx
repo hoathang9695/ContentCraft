@@ -119,7 +119,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             <SidebarItem
               href="/groups-management"
-              icon={Folder}
+              icon={Users}
               isActive={isActivePath('/groups-management')}
               onClick={handleItemClick}
             >
