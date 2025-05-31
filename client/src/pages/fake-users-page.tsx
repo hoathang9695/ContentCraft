@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -51,7 +51,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Pencil, Trash } from "lucide-react";
+import { AlertTriangle, Pencil, Trash, Upload } from "lucide-react";
+import * as XLSX from 'xlsx';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +90,8 @@ export default function FakeUsersPage() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<FakeUser | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -189,6 +192,30 @@ export default function FakeUsersPage() {
     },
   });
 
+  // Mutation để upload nhiều người dùng ảo từ Excel
+  const bulkUploadFakeUsers = useMutation({
+    mutationFn: async (users: Array<{ name: string; token: string }>) => {
+      return await apiRequest<{ success: number; failed: number; errors: string[] }>("POST", "/api/fake-users/bulk-upload", { users });
+    },
+    onSuccess: (response) => {
+      toast({
+        title: "Upload thành công",
+        description: `Đã thêm ${response.success} người dùng ảo. ${response.failed > 0 ? `Có ${response.failed} lỗi.` : ''}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/fake-users"] });
+      setIsUploading(false);
+    },
+    onError: (error) => {
+      console.error("Error uploading fake users:", error);
+      toast({
+        title: "Lỗi upload",
+        description: "Không thể upload file Excel. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+      setIsUploading(false);
+    },
+  });
+
   // Form cho việc tạo/cập nhật người dùng ảo
   const form = useForm<z.infer<typeof fakeUserSchema>>({
     resolver: zodResolver(fakeUserSchema),
@@ -235,6 +262,72 @@ export default function FakeUsersPage() {
     }
   };
 
+  // Xử lý upload file Excel
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Kiểm tra file Excel
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast({
+        title: "Lỗi file",
+        description: "Vui lòng chọn file Excel (.xlsx hoặc .xls)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // Bỏ qua dòng header và xử lý dữ liệu
+        const users = (jsonData as any[][])
+          .slice(1) // Bỏ dòng đầu (header)
+          .filter(row => row[0] && row[1]) // Chỉ lấy dòng có đủ 2 cột
+          .map(row => ({
+            name: String(row[0]).trim(),
+            token: String(row[1]).trim(),
+          }));
+
+        if (users.length === 0) {
+          toast({
+            title: "File trống",
+            description: "Không tìm thấy dữ liệu hợp lệ trong file Excel",
+            variant: "destructive",
+          });
+          setIsUploading(false);
+          return;
+        }
+
+        // Gửi dữ liệu lên server
+        bulkUploadFakeUsers.mutate(users);
+      } catch (error) {
+        console.error("Error reading Excel file:", error);
+        toast({
+          title: "Lỗi đọc file",
+          description: "Không thể đọc file Excel. Vui lòng kiểm tra định dạng file.",
+          variant: "destructive",
+        });
+        setIsUploading(false);
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   // Nếu không phải admin thì hiển thị thông báo không có quyền
   if (!isAdmin) {
     return (
@@ -262,9 +355,22 @@ export default function FakeUsersPage() {
               Quản lý danh sách người dùng ảo để sử dụng cho việc gửi bình luận đến hệ thống bên ngoài
             </CardDescription>
           </div>
-          <Button variant="default" onClick={() => handleOpenDialog()}>
-            Thêm người dùng ảo
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+              <Upload className="h-4 w-4 mr-2" />
+              {isUploading ? "Đang upload..." : "Upload Excel"}
+            </Button>
+            <Button variant="default" onClick={() => handleOpenDialog()}>
+              Thêm người dùng ảo
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
