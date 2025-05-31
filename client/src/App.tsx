@@ -15,12 +15,13 @@ import FakeUsersPage from "@/pages/fake-users-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
-import UserFeedbackPage from './pages/user-feedback-page';
-import SupportPage from './pages/user-feedback/support-page';
-import VerificationPage from './pages/user-feedback/verification-page';
-import TickPage from './pages/user-feedback/tick-page';
-import RealUserPage from "@/pages/real-user-page";
 import PageManagementPage from "@/pages/page-management-page";
+import GroupsManagementPage from "@/pages/groups-management-page";
+import UserFeedbackPage from "@/pages/user-feedback-page";
+import SupportPage from "@/pages/user-feedback/support-page";
+import VerificationPage from "@/pages/user-feedback/verification-page";
+import TickPage from "@/pages/user-feedback/tick-page";
+import RealUserPage from "@/pages/real-user-page";
 import SettingsPage from "@/pages/settings-page";
 
 function Router() {
@@ -36,12 +37,13 @@ function Router() {
       <ProtectedRoute path="/categories" component={CategoriesPage} adminOnly={true} />
       <ProtectedRoute path="/fake-users" component={FakeUsersPage} adminOnly={true} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/page-management" component={PageManagementPage} />
+      <Route path="/groups-management" component={GroupsManagementPage} />
       <Route path="/user-feedback" component={UserFeedbackPage} />
       <Route path="/user-feedback/support" component={SupportPage} />
       <Route path="/user-feedback/verification" component={VerificationPage} />
       <Route path="/user-feedback/tick" component={TickPage} />
       <Route path="/real-user" component={RealUserPage} />
-            <Route path="/page-management" component={PageManagementPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} adminOnly={true} />
       <Route component={NotFound} />
     </Switch>

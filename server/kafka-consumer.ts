@@ -1,6 +1,6 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
-import { users, supportRequests, contents, realUsers, pages } from "../shared/schema";
+import { users, supportRequests, contents, realUsers, pages, groups } from "../shared/schema";
 import { eq, ne, and, sql } from "drizzle-orm";
 import { log } from "./vite";
 
@@ -69,6 +69,17 @@ export interface SupportMessage {
   content: string;
 }
 
+export interface GroupMessage {
+  groupId: string;
+  groupName: string;
+  groupType: "public" | "private";
+  categories?: string;
+  adminId?: string;
+  adminName?: string;
+  phoneNumber?: string | null;
+  monetizationEnabled?: boolean;
+}
+
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
@@ -78,7 +89,7 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
 
     // Resubscribe to topics after reconnect
     // Ensure all required topics are explicitly defined
-    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management"];
+    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management"];
     const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
     const topics = [...new Set([...requiredTopics, ...configuredTopics])];
 
@@ -182,7 +193,7 @@ export async function setupKafkaConsumer() {
     await consumer.connect();
     log("Connected to Kafka", "kafka");
 
-    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages", "page_management"];
+    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages", "page_management", "groups_management"];
     for (const topic of topics) {
       await consumer.subscribe({ topic, fromBeginning: true });
       log(`Subscribed to topic: ${topic}`, "kafka");
@@ -215,7 +226,7 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
@@ -446,6 +457,136 @@ export async function setupKafkaConsumer() {
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
+                      } else if ("groupId" in msg && "groupName" in msg && "groupType" in msg) {
+                        // Handle group message from Kafka
+                        const groupMsg = msg as GroupMessage;
+                        const now = new Date();
+
+                        log(`🔄 Processing group message: ${JSON.stringify(groupMsg)}`, "kafka");
+
+                        try {
+                          // Validate required fields first
+                          if (!groupMsg.groupId || !groupMsg.groupName || !groupMsg.groupType) {
+                            const error = `❌ Invalid group message format - missing required fields: ${JSON.stringify(groupMsg)}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Validate groupType enum
+                          if (!['public', 'private'].includes(groupMsg.groupType)) {
+                            const error = `❌ Invalid groupType: ${groupMsg.groupType}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Check if group already exists to avoid duplicates
+                          log(`🔍 Checking for existing group with ID: ${groupMsg.groupId}`, "kafka");
+                          const existingGroup = await tx
+                            .select()
+                            .from(groups)
+                            .where(eq(sql`${groups.groupName}::jsonb->>'id'`, groupMsg.groupId))
+                            .limit(1);
+
+                          if (existingGroup.length > 0) {
+                            log(`⚠️ Group with ID ${groupMsg.groupId} already exists (DB ID: ${existingGroup[0].id}), skipping...`, "kafka");
+                            return existingGroup[0];
+                          }
+
+                          // Get active users for round-robin assignment (exclude admin)
+                          const activeUsers = await tx
+                            .select()
+                            .from(users)
+                            .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                          if (!activeUsers || activeUsers.length === 0) {
+                            const error = "❌ No active non-admin users found for assignment";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
+
+                          // Get last assigned GROUP for round-robin (specific to groups table)
+                          const lastAssignedGroup = await tx.query.groups.findFirst({
+                            orderBy: (groups, { desc }) => [desc(groups.createdAt)]
+                          });
+
+                          // Calculate next assignee index based on groups table
+                          let nextAssigneeIndex = 0;
+                          if (lastAssignedGroup && lastAssignedGroup.assignedToId) {
+                            const lastAssigneeIndex = activeUsers.findIndex(
+                              user => user.id === lastAssignedGroup.assignedToId
+                            );
+                            if (lastAssigneeIndex !== -1) {
+                              nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                            }
+                          }
+
+                          const assignedToId = activeUsers[nextAssigneeIndex].id;
+                          const assignedUser = activeUsers[nextAssigneeIndex];
+
+                          log(`👤 Assigning to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
+
+                          // Double-check assigned user is still active
+                          const userCheck = await tx
+                            .select()
+                            .from(users)
+                            .where(eq(users.id, assignedToId))
+                            .limit(1);
+
+                          if (!userCheck.length || userCheck[0].status !== 'active') {
+                            const error = `❌ Assigned user ${assignedToId} is not active or not found`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Prepare insert data
+                          const insertData = {
+                            groupName: {
+                              id: groupMsg.groupId,
+                              group_name: groupMsg.groupName
+                            },
+                            groupType: groupMsg.groupType,
+                            categories: groupMsg.categories || null,
+                            classification: 'new',
+                            adminData: groupMsg.adminId && groupMsg.adminName ? {
+                              id: groupMsg.adminId,
+                              admin_name: groupMsg.adminName
+                            } : null,
+                            phoneNumber: groupMsg.phoneNumber || null,
+                            monetizationEnabled: groupMsg.monetizationEnabled || false,
+                            assignedToId: assignedToId,
+                            createdAt: now,
+                            updatedAt: now
+                          };
+
+                          log(`📝 Inserting group data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
+
+                          // Insert new group with proper error handling
+                          const result = await tx.insert(groups).values(insertData).returning();
+
+                          if (!result || result.length === 0) {
+                            const error = "❌ Failed to insert group - no result returned";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`✅ Successfully inserted group: ID ${result[0].id}, GroupID: ${groupMsg.groupId}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+
+                        } catch (error) {
+                          const errorMsg = error instanceof Error ? error.message : String(error);
+                          const errorStack = error instanceof Error ? error.stack : '';
+                          log(`❌ Error processing group ${groupMsg.groupId}: ${errorMsg}`, "kafka-error");
+                          log(`📍 Error stack: ${errorStack}`, "kafka-error");
+                          
+                          // Log additional context for debugging
+                          log(`🔍 Group data that failed: ${JSON.stringify(groupMsg, null, 2)}`, "kafka-error");
+                          
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
@@ -498,7 +639,7 @@ async function sendToDeadLetterQueue(message: any) {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage {
+): ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage {
   if (!messageValue) return null;
 
   try {
@@ -515,6 +656,8 @@ function parseMessage(
       return message as RealUsersMessage; 
     } else if ("pageId" in message && "pageName" in message && "pageType" in message) {
       return message as PageMessage;
+    } else if ("groupId" in message && "groupName" in message && "groupType" in message) {
+      return message as GroupMessage;
     }
 
     return null;

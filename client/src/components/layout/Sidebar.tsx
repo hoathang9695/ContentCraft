@@ -117,6 +117,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               Quản lý trang
             </SidebarItem>
 
+            <SidebarItem
+              href="/groups-management"
+              icon={Folder}
+              isActive={isActivePath('/groups-management')}
+              onClick={handleItemClick}
+            >
+              Quản lý nhóm
+            </SidebarItem>
+
             <div>
               <div className="relative">
                 <SidebarItem
