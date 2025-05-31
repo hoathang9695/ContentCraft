@@ -247,6 +247,22 @@ async function createSampleGroups() {
       },
       {
         groupName: {
+          id: "113751247015017788",
+          group_name: "Gia đình EMSO"
+        },
+        groupType: "public",
+        categories: "gia đình",
+        classification: "new",
+        adminData: {
+          id: "114550257830462999",
+          admin_name: "Admin EMSO"
+        },
+        phoneNumber: "0999888777",
+        monetizationEnabled: false,
+        assignedToId: activeUsers[0].id
+      },
+      {
+        groupName: {
           id: "114501234567890015",
           group_name: "Nhóm Học Piano"
         },
