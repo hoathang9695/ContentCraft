@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useDebounce } from "@/hooks/use-debounce";
 
 import {
   Card,
@@ -91,15 +92,35 @@ export default function FakeUsersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<FakeUser | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+
+  // Debounce search query để tránh tìm kiếm quá nhiều
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Truy vấn danh sách người dùng ảo
   const { data: fakeUsers, isLoading, error } = useQuery<FakeUser[]>({
     queryKey: ["/api/fake-users"],
     enabled: isAdmin, // Chỉ kích hoạt truy vấn nếu là admin
   });
+
+  // Lọc danh sách người dùng ảo theo từ khóa tìm kiếm
+  const filteredFakeUsers = useMemo(() => {
+    if (!fakeUsers) return [];
+    
+    if (!debouncedSearchQuery.trim()) {
+      return fakeUsers;
+    }
+
+    const searchTerm = debouncedSearchQuery.toLowerCase().trim();
+    return fakeUsers.filter(user => 
+      user.name.toLowerCase().includes(searchTerm) ||
+      user.token.toLowerCase().includes(searchTerm) ||
+      (user.description && user.description.toLowerCase().includes(searchTerm))
+    );
+  }, [fakeUsers, debouncedSearchQuery]);
   
   // Debug - In thông tin về user và API URL
   console.log("User info:", user);
@@ -373,6 +394,30 @@ export default function FakeUsersPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Search Input */}
+          <div className="mb-6">
+            <div className="relative max-w-sm">
+              <Input
+                placeholder="Tìm kiếm theo tên, token hoặc mô tả..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-4"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {debouncedSearchQuery && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Hiển thị {filteredFakeUsers.length} kết quả cho "{debouncedSearchQuery}"
+              </p>
+            )}
+          </div>
           {isLoading ? (
             // Loading state
             <div className="space-y-4">
@@ -403,8 +448,8 @@ export default function FakeUsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {fakeUsers && fakeUsers.length > 0 ? (
-                    fakeUsers.map((user: FakeUser) => (
+                  {filteredFakeUsers && filteredFakeUsers.length > 0 ? (
+                    filteredFakeUsers.map((user: FakeUser) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell className="font-mono text-sm">
@@ -451,7 +496,10 @@ export default function FakeUsersPage() {
                       <TableCell colSpan={3} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center text-sm text-muted-foreground">
                           <AlertTriangle className="mb-2 h-6 w-6" />
-                          Không có người dùng ảo nào. Hãy thêm mới để bắt đầu.
+                          {debouncedSearchQuery ? 
+                            `Không tìm thấy người dùng ảo nào với từ khóa "${debouncedSearchQuery}"` :
+                            "Không có người dùng ảo nào. Hãy thêm mới để bắt đầu."
+                          }
                         </div>
                       </TableCell>
                     </TableRow>
