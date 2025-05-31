@@ -41,7 +41,7 @@ export function PushGroupJoinDialog({
     // Show initial toast
     toast({
       title: 'Push Tham gia',
-      description: `Bắt đầu gửi ${joinCount} yêu cầu tham gia cho nhóm ${targetGroupName}`,
+      description: `Bắt đầu gửi ${joinCount} yêu cầu tham gia cho nhóm ${targetGroupName || 'Unknown'}`,
     });
 
     // Process join requests in background
@@ -89,7 +89,7 @@ export function PushGroupJoinDialog({
             successCount++;
             toast({
               title: 'Join request sent',
-              description: `${fakeUser.name} đã gửi yêu cầu tham gia nhóm ${targetGroupName} (${successCount}/${joinCount})`,
+              description: `${fakeUser.name} đã gửi yêu cầu tham gia nhóm ${targetGroupName || 'Unknown'} (${successCount}/${joinCount})`,
             });
 
             // Wait 1 minute before next request if not the last one
@@ -111,7 +111,7 @@ export function PushGroupJoinDialog({
         // Final success toast
         toast({
           title: 'Completed',
-          description: `Đã hoàn thành gửi ${successCount}/${joinCount} yêu cầu tham gia cho nhóm ${targetGroupName}`,
+          description: `Đã hoàn thành gửi ${successCount}/${joinCount} yêu cầu tham gia cho nhóm ${targetGroupName || 'Unknown'}`,
         });
 
       } catch (error) {

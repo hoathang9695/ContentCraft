@@ -545,6 +545,8 @@ export default function GroupsManagementPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
+                          console.log('Setting pushJoinGroup:', row);
+                          console.log('Group name:', row.groupName?.group_name);
                           setPushJoinOpen(true);
                           setPushJoinGroup(row);
                         }}
@@ -565,7 +567,7 @@ export default function GroupsManagementPage() {
         open={pushJoinOpen}
         onOpenChange={setPushJoinOpen}
         targetGroupId={pushJoinGroup?.groupName?.id}
-        targetGroupName={pushJoinGroup?.groupName?.name}
+        targetGroupName={pushJoinGroup?.groupName?.group_name}
       />
     </DashboardLayout>
   );
