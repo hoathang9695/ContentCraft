@@ -1821,8 +1821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             groupType: groupsTable.groupType,
             categories: groupsTable.categories,
             classification: groupsTable.classification,
-```text
-            phoneNumber: groupsTable.phoneNumber,
+phoneNumber: groupsTable.phoneNumber,
             monetizationEnabled: groupsTable.monetizationEnabled,
             adminData: groupsTable.adminData,
             createdAt: groupsTable.createdAt,
