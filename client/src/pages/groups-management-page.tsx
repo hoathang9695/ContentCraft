@@ -383,13 +383,28 @@ export default function GroupsManagementPage() {
               {
                 key: "groupType",
                 header: "Loại nhóm",
-                render: (row) => (
-                  <Badge variant="outline">
-                    {row.groupType === 'public' ? 'Công khai' :
-                     row.groupType === 'private' ? 'Riêng tư' : 
-                     row.groupType === 'closed' ? 'Đóng' : row.groupType}
-                  </Badge>
-                ),
+                render: (row) => {
+                  const getGroupTypeLabel = (type: string) => {
+                    switch (type) {
+                      case 'business': return 'Kinh doanh';
+                      case 'community': return 'Cộng đồng';
+                      case 'education': return 'Giáo dục';
+                      case 'finance': return 'Tài chính';
+                      case 'family': return 'Gia đình';
+                      case 'gaming': return 'Game';
+                      case 'public': return 'Công khai';
+                      case 'private': return 'Riêng tư';
+                      case 'closed': return 'Đóng';
+                      default: return type;
+                    }
+                  };
+
+                  return (
+                    <Badge variant="outline">
+                      {getGroupTypeLabel(row.groupType)}
+                    </Badge>
+                  );
+                },
               },
               {
                 key: "classification",
