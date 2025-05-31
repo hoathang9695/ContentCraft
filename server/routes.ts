@@ -145,11 +145,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.user as Express.User;
       const { startDate, endDate } = req.query;
-      
+
       // Create cache key
       const cacheKey = `stats-${user.id}-${user.role}-${startDate || 'all'}-${endDate || 'all'}`;
       const cached = statsCache.get(cacheKey);
-      
+
       // Return cached result if still valid
       if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
         console.log("Returning cached stats");
@@ -289,6 +289,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         new: newRealUsers
       });
 
+      // Pages statistics
+      const { pages } = await import("../shared/schema");
+      const allPages = await db.select().from(pages);
+      const totalPages = allPages.length;
+      const newPages = allPages.filter(page => 
+        page.createdAt && page.createdAt >= startDate && page.createdAt <= endDate
+      ).length;
+
+      console.log('Pages stats:', { total: totalPages, new: newPages });
+
       const result = {
         totalContent: filteredContents.length,
         pending,
@@ -309,6 +319,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Thống kê người dùng thật
         totalRealUsers,
         newRealUsers,
+         totalPages,
+        newPages,
         // Thông tin khoảng thời gian nếu có lọc
         period: startDate && endDate ? {
           start: startDate,
@@ -1799,7 +1811,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processor: user.processorId ? {
           id: user.processorId,
           name: user.processorName,
-          username: user.processorUsername
+          username:```text
+user.processorUsername
         } : null
       }));
 
