@@ -3211,7 +3211,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Content processing completed successfully",
         data: completedContent
       });
-    } catch (error) {res.status(500).json({ 
+    } catch (error) {
+      res.status(500).json({ 
         success: false,
         message: "Error completing content processing",
         error: error instanceof Error ? error.message : String(error)
