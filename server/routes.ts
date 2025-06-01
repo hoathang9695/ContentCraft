@@ -999,7 +999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint không cần xác thực để tạo nhiều nội dung (chỉ cho môi tr �ờng phát triển)
+  // Endpoint không cần xác thực để tạo nhiều nội dung (chỉ cho môi tr ờng phát triển)
   app.post("/api/kafka/dev-simulate", async (req, res) => {
     try {
       const { count = 5 } = req.body;
@@ -1987,8 +1987,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "./controllers/support.controller"
   );
   const supportController = new SupportController();
+  const feedbackRouter = (await import("./routes/feedback.router")).default;
 
   app.use("/api/support-requests", supportRouter);
+  app.use('/api', supportRouter);
+  app.use('/api', feedbackRouter);
 
   // Support requests routes
   app.get(
