@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { simulateKafkaMessage, simulateMultipleMessages, simulateMassMessages } from "./kafka-simulator";
 import { log } from "./vite";
+import { EmailService, SMTPConfig } from "./email";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -879,6 +880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get editor users for anyone (accessible to all authenticated users)
   app.get("/api/editors", isAuthenticated, async (req, res) => {
     try{
+      ```text
       const users = await storage.getAllUsers();
       // Filter for active editors only
       const editorUsers = users
@@ -1375,7 +1377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fake-users", isAuthenticated, async (req, res) => {
     try {
       console.log("Fake users API called with query:", req.query);
-      
+
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = parseInt(req.query.pageSize as string) || 10;
       const search = req.query.search as string || '';
@@ -1397,12 +1399,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         page: result.page,
         totalPages: result.totalPages 
       });
-      
+
       // Set cache control headers to prevent caching issues
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(result);
     } catch (error) {
       console.error("Error in fake users API:", error);
@@ -1507,7 +1509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/fake-users/bulk-upload", isAdmin, async (req, res) => {
     try {
       const { users } = req.body;
-      
+
       if (!Array.isArray(users) || users.length === 0) {
         return res.status(400).json({ 
           message: "Dữ liệu không hợp lệ",
@@ -2129,6 +2131,118 @@ phoneNumber: groupsTable.phoneNumber,
   });
 
   const httpServer = createServer(app);
+
+  // Initialize EmailService
+  const emailService = new EmailService({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
+    user: process.env.SMTP_USER || "",
+    password: process.env.SMTP_PASSWORD || "",
+    fromName: process.env.SMTP_FROM_NAME || "EMSO System",
+    fromEmail: process.env.SMTP_FROM_EMAIL || ""
+  });
+
+  // Check if user is authenticated middleware
+  const requireAuth = (req: Request, res: Response, next: Function) => {
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    res.status(401).json({ message: "Unauthorized" });
+  };
+  
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // SMTP Configuration endpoints
+  app.get("/api/smtp-config", requireAuth, async (req, res) => {
+    try {
+      // Only admin can access SMTP config
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get SMTP config from emailService or default values
+      const smtpConfig: SMTPConfig = emailService.getConfig();
+
+      res.json(smtpConfig);
+    } catch (error) {
+      console.error("Error fetching SMTP config:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/smtp-config", requireAuth, async (req, res) => {
+    try {
+      // Only admin can update SMTP config
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { host, port, secure, user, password, fromName, fromEmail } = req.body;
+
+      // Validate required fields
+      if (!host || !port || !user || !password || !fromName || !fromEmail) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      const smtpConfig: SMTPConfig = {
+        host,
+        port: parseInt(port),
+        secure: secure || false,
+        user,
+        password,
+        fromName,
+        fromEmail
+      };
+
+      // Update email service configuration
+      emailService.updateConfig(smtpConfig);
+
+      res.json({ 
+        message: "SMTP configuration updated successfully",
+        config: smtpConfig 
+      });
+    } catch (error) {
+      console.error("Error updating SMTP config:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/smtp-config/test", requireAuth, async (req, res) => {
+    try {
+      // Only admin can test SMTP config
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { testEmail } = req.body;
+      const targetEmail = testEmail || `${(req.user as Express.User).username}@test.com`;
+
+      // Test SMTP connection first
+      const connectionOk = await emailService.testConnection();
+      if (!connectionOk) {
+        return res.status(400).json({ message: "SMTP connection failed. Please check configuration." });
+      }
+
+      // Send test email
+      const emailSent = await emailService.sendTestEmail(targetEmail);
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send test email" });
+      }
+
+      res.json({ 
+        message: "SMTP test completed successfully",
+        testEmail: targetEmail
+      });
+    } catch (error) {
+      console.error("Error testing SMTP:", error);
+      res.status(500).json({ message: "SMTP test failed" });
+    }
+  });
+
   return httpServer;
 }
 
