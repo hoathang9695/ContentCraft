@@ -8,6 +8,7 @@ interface BadgeCounts {
   groups?: number;
   supportRequests?: number;
   feedbackRequests?: number;
+  totalRequests?: number;
 }
 
 export function useWebSocket() {
