@@ -69,6 +69,7 @@ export default function SupportPage() {
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const { data: supportRequestsResponse, isLoading, error } = useQuery({
     queryKey: ['/api/support-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm],
@@ -94,8 +95,6 @@ export default function SupportPage() {
   const supportRequests = supportRequestsResponse?.data || [];
   const totalPages = supportRequestsResponse?.totalPages || 1;
   const total = supportRequestsResponse?.total || 0;
-
-  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const handleDateFilter = () => {
     setCurrentPage(1);
