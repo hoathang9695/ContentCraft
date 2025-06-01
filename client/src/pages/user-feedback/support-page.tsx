@@ -33,6 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { EmailReplyDialog } from "@/components/EmailReplyDialog";
+import { SupportDetailDialog } from "@/components/SupportDetailDialog";
 
 
 interface SupportRequest {
@@ -52,35 +54,7 @@ interface SupportRequest {
   updated_at: string;
 }
 
-function SupportDetailDialog({ isOpen, onClose, request }: { isOpen: boolean; onClose: () => void; request: SupportRequest | null }) {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-4">
-        <DialogHeader>
-          <DialogTitle>Chi tiết yêu cầu hỗ trợ</DialogTitle>
-          <DialogDescription>Xem thông tin chi tiết của yêu cầu hỗ trợ</DialogDescription>
-        </DialogHeader>
-        {request && (
-          <div>
-            <p><strong>Họ và tên:</strong> {request.full_name}</p>
-            <p><strong>Email:</strong> {request.email}</p>
-            <p><strong>Chủ đề:</strong> {request.subject}</p>
-            <p><strong>Nội dung:</strong> {request.content}</p>
-            {request.response_content && (
-              <>
-                <p><strong>Phản hồi:</strong> {request.response_content}</p>
-                <p><strong>Thời gian phản hồi:</strong> {request.response_time}</p>
-              </>
-            )}
-          </div>
-        )}
-      </DialogContent>
-      <DialogFooter>
-        <Button onClick={onClose}>Đóng</Button>
-      </DialogFooter>
-    </Dialog>
-  );
-}
+
 
 
 export default function SupportPage() {
@@ -94,6 +68,8 @@ export default function SupportPage() {
   const [userFilter, setUserFilter] = useState<number | null>(null);
   const [searchResults, setSearchResults] = useState<SupportRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null); // Added selectedRequest state
+  const [replyRequest, setReplyRequest] = useState<SupportRequest | null>(null);
+  const [pageSize, setPageSize] = useState<number>(20);
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
@@ -170,8 +146,8 @@ export default function SupportPage() {
     <DashboardLayout>
       <div className="container mx-auto p-4">
         <div className="mb-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 mr-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <div className="bg-background border rounded-md p-1">
                 <div className="flex space-x-1">
                   <Button 
@@ -197,6 +173,23 @@ export default function SupportPage() {
                   </Button>
                 </div>
               </div>
+
+              <Select 
+                value={userFilter?.toString() || "all"} 
+                onValueChange={(value) => setUserFilter(value === "all" ? null : parseInt(value))}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tất cả" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center gap-2">
@@ -296,37 +289,44 @@ export default function SupportPage() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-start mb-4">
           <Input 
             placeholder="Tìm kiếm yêu cầu..." 
             className="max-w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Select 
-            value={userFilter?.toString() || "all"} 
-            onValueChange={(value) => setUserFilter(value === "all" ? null : parseInt(value))}
-          >
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Chọn người dùng" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              {users.map(user => (
-                <SelectItem key={user.id} value={user.id.toString()}>
-                  {user.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="bg-card rounded-lg shadow">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Tổng số: <span className="font-medium">{filteredRequests.length}</span> yêu cầu
+                {statusFilter !== 'all' && (
+                  <span className="ml-2">
+                    (Lọc: {statusFilter === 'completed' ? 'Đã xử lý' : 'Chưa xử lý'})
+                  </span>
+                )}
+              </div>
+              <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(parseInt(value))}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 / trang</SelectItem>
+                  <SelectItem value="20">20 / trang</SelectItem>
+                  <SelectItem value="50">50 / trang</SelectItem>
+                  <SelectItem value="100">100 / trang</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <DataTable
             data={filteredRequests}
             isLoading={isLoading}
             pagination
-            pageSize={10}
+            pageSize={pageSize}
             columns={[
               {
                 key: 'id',
@@ -436,7 +436,7 @@ export default function SupportPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setReplyRequest(row)}>
                           <Mail className="mr-2 h-4 w-4" />
                           <span>Gửi phản hồi</span>
                         </DropdownMenuItem>
@@ -488,6 +488,15 @@ export default function SupportPage() {
           isOpen={!!selectedRequest}
           onClose={() => setSelectedRequest(null)}
           request={selectedRequest}
+        />
+        <EmailReplyDialog
+          isOpen={!!replyRequest}
+          onClose={() => setReplyRequest(null)}
+          request={replyRequest}
+          onSuccess={() => {
+            // Refresh the support requests data
+            queryClient.invalidateQueries(['/api/support-requests']);
+          }}
         />
       </div>
     </DashboardLayout>

@@ -217,6 +217,31 @@ export const insertGroupSchema = createInsertSchema(groups).omit({
 export type InsertGroup = z.infer<typeof insertGroupSchema>;
 export type Group = typeof groups.$inferSelect;
 
+// SMTP Configuration table
+export const smtpConfig = pgTable("smtp_config", {
+  id: serial("id").primaryKey(),
+  host: varchar("host", { length: 255 }).notNull().default("smtp.gmail.com"),
+  port: integer("port").notNull().default(587),
+  secure: boolean("secure").notNull().default(false),
+  user: varchar("user", { length: 255 }).notNull(),
+  password: text("password").notNull(),
+  fromName: varchar("from_name", { length: 255 }).notNull().default("EMSO System"),
+  fromEmail: varchar("from_email", { length: 255 }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// Schema để insert SMTP Config
+export const insertSMTPConfigSchema = createInsertSchema(smtpConfig).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertSMTPConfig = z.infer<typeof insertSMTPConfigSchema>;
+export type SMTPConfig = typeof smtpConfig.$inferSelect;
+
 export interface ContentMessage {
   externalId: string;        // ID nội dung, kiểu string
   source?: {                // Nguồn cấp dạng object
