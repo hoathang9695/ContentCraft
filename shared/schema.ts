@@ -148,6 +148,11 @@ export const supportRequests = pgTable("support_requests", {
   response_time: timestamp("response_time"),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
+  type: text("type").default("support"), // 'support' or 'feedback'
+  feedback_type: text("feedback_type"), // 'bug_report', 'feature_request', 'complaint', 'suggestion', 'other'
+  feature_type: text("feature_type"), // Loại tính năng đóng góp/báo lỗi
+  detailed_description: text("detailed_description"), // Mô tả chi tiết
+  attachment_url: text("attachment_url"), // File đính kèm khiếu nại
 });
 
 export const insertSupportRequestSchema = createInsertSchema(supportRequests).omit({ 
