@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +31,8 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     subject: "",
     content: ""
   });
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto fill form when request changes
   React.useEffect(() => {
@@ -87,7 +88,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
             description: "Email đã gửi nhưng không thể cập nhật trạng thái yêu cầu",
           });
         }
-        
+
         onSuccess?.();
         onClose();
         setFormData({ to: "", subject: "", content: "" });
@@ -103,6 +104,32 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const formatText = (startTag: string, endTag: string) => {
+    if (!textareaRef.current) return;
+
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+    const newText = text.substring(0, start) + startTag + selectedText + endTag + text.substring(end);
+
+    setFormData({ ...formData, content: newText });
+    textarea.focus();
+    textarea.setSelectionRange(start + startTag.length, end + startTag.length);
+  };
+
+  const insertLink = () => {
+    const url = prompt("Enter the URL:");
+    if (url) {
+      formatText(`<a href="${url}">`, "</a>");
+    }
+  };
+
+  const insertAttachment = () => {
+    alert("Attachment functionality not implemented yet.");
   };
 
   if (!request) return null;
@@ -137,7 +164,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 required
               />
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Label className="w-16 text-sm text-gray-600">Chủ đề:</Label>
               <Input
@@ -160,20 +187,55 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           {/* Toolbar */}
           <div className="px-4 py-2 border-b bg-gray-50">
             <div className="flex items-center space-x-1">
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={() => formatText('**', '**')}
+                title="Bold"
+              >
                 <Bold className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={() => formatText('*', '*')}
+                title="Italic"
+              >
                 <Italic className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={() => formatText('<u>', '</u>')}
+                title="Underline"
+              >
                 <Underline className="h-4 w-4" />
               </Button>
               <div className="w-px h-4 bg-gray-300 mx-2" />
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={() => insertLink()}
+                title="Insert Link"
+              >
                 <Link className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={() => insertAttachment()}
+                title="Attach File"
+              >
                 <Paperclip className="h-4 w-4" />
               </Button>
             </div>
@@ -182,6 +244,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           {/* Content Editor */}
           <div className="flex-1 p-4">
             <Textarea
+              ref={textareaRef}
               placeholder="Nhập nội dung phản hồi..."
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
