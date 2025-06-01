@@ -2160,7 +2160,7 @@ phoneNumber: groupsTable.phoneNumber,
   app.get("/api/smtp-config", requireAuth, async (req, res) => {
     try {
       // Only admin can access SMTP config
-      if (req.user.role !== "admin") {
+      if ((req.user as Express.User).role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -2177,7 +2177,7 @@ phoneNumber: groupsTable.phoneNumber,
   app.post("/api/smtp-config", requireAuth, async (req, res) => {
     try {
       // Only admin can update SMTP config
-      if (req.user.role !== "admin") {
+      if ((req.user as Express.User).role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -2214,7 +2214,7 @@ phoneNumber: groupsTable.phoneNumber,
   app.post("/api/smtp-config/test", requireAuth, async (req, res) => {
     try {
       // Only admin can test SMTP config
-      if (req.user.role !== "admin") {
+      if ((req.user as Express.User).role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
 
