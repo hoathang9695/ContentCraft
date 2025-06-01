@@ -75,9 +75,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isAdmin = user?.role === 'admin';
 
   // Use WebSocket for real-time badge updates
-  const { badgeCounts: wsbadge, isConnected } = useWebSocket();
+  const { badgeCounts: wsBadgeCounts, isConnected, hasInitialData } = useWebSocket();
   
-  // Fallback to polling if WebSocket is not connected
+  // Fallback to polling if WebSocket is not connected or no initial data
   const { data: pollingBadgeCounts } = useQuery<BadgeCounts>({
     queryKey: ['/api/badge-counts'],
     queryFn: async () => {
@@ -85,15 +85,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (!response.ok) throw new Error('Failed to fetch badge counts');
       return response.json();
     },
-    enabled: !isConnected, // Chỉ polling khi WebSocket không kết nối
-    refetchInterval: 300000, // 5 minutes fallback
+    enabled: !isConnected || !hasInitialData, // Chỉ polling khi WebSocket không hoạt động hoặc chưa có data
+    refetchInterval: isConnected ? false : 300000, // Tắt polling nếu WebSocket hoạt động
     staleTime: 240000,
     refetchOnWindowFocus: false,
     refetchOnMount: true
   });
 
-  // Sử dụng WebSocket data hoặc fallback to polling
-  const badgeCounts = isConnected ? wsbadge : pollingBadgeCounts;
+  // Ưu tiên WebSocket data nếu có, fallback to polling
+  const badgeCounts = (isConnected && hasInitialData) ? wsBadgeCounts : pollingBadgeCounts;
 
   const isActivePath = (path: string) => {
     if (path === '/') {

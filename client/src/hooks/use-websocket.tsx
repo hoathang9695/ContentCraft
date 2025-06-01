@@ -12,31 +12,40 @@ export function useWebSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({});
   const [isConnected, setIsConnected] = useState(false);
+  const [hasInitialData, setHasInitialData] = useState(false);
 
   useEffect(() => {
     // Kết nối đến WebSocket server
     const newSocket = io(window.location.origin, {
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      timeout: 5000,
+      forceNew: true
     });
 
     newSocket.on('connect', () => {
       console.log('WebSocket connected:', newSocket.id);
       setIsConnected(true);
+      
+      // Request initial badge counts khi kết nối
+      newSocket.emit('request-badge-counts');
     });
 
     newSocket.on('disconnect', () => {
       console.log('WebSocket disconnected');
       setIsConnected(false);
+      setHasInitialData(false);
     });
 
     // Lắng nghe badge updates
     newSocket.on('badge-update', (data: BadgeCounts) => {
-      console.log('Received badge update:', data);
+      console.log('Received badge update via WebSocket:', data);
       setBadgeCounts(data);
+      setHasInitialData(true);
     });
 
     newSocket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error);
+      setIsConnected(false);
     });
 
     setSocket(newSocket);
@@ -50,6 +59,7 @@ export function useWebSocket() {
   return {
     socket,
     badgeCounts,
-    isConnected
+    isConnected,
+    hasInitialData
   };
 }
