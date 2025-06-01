@@ -287,7 +287,10 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`${isExpanded ? 'max-w-[100vw] max-h-[100vh] w-[100vw] h-[100vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}>
+      <DialogContent 
+        className={`${isExpanded ? 'max-w-[100vw] max-h-[100vh] w-[100vw] h-[100vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}
+        hideCloseButton={true}
+      >
         {/* Header */}
         <DialogHeader className="p-4 pb-0 flex-shrink-0">
           <div className="flex justify-between items-center">
@@ -499,6 +502,10 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 [contenteditable] a {
                   color: #3B82F6;
                   text-decoration: underline;
+                }
+                /* Hide default dialog close button */
+                [data-radix-dialog-content] > button[data-radix-dialog-close] {
+                  display: none !important;
                 }
               `}</style>
             </div>
