@@ -31,12 +31,10 @@ export default function GroupsManagementPage() {
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
-  const [startDate, setStartDate] = useState<Date>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  );
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'all'>('all');
-  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
+  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('all');
   const [pushJoinOpen, setPushJoinOpen] = useState(false);
   const [pushJoinGroup, setPushJoinGroup] = useState<any>(null);
 
@@ -54,7 +52,7 @@ export default function GroupsManagementPage() {
   useEffect(() => {
     setDebouncedSearchQuery('');
     setPage(1);
-  }, [startDate, endDate, groupTypeFilter, activeTab, selectedUserId, classificationFilter]);
+  }, [groupTypeFilter, activeTab, selectedUserId, classificationFilter]);
 
   const handleUpdateClassification = async (groupId: number, classification: string) => {
     try {
@@ -76,7 +74,7 @@ export default function GroupsManagementPage() {
       });
 
       queryClient.invalidateQueries({
-        queryKey: ["/api/groups", page, limit, startDate, endDate, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter]
+        queryKey: ["/api/groups", page, limit, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter]
       });
     } catch (error) {
       console.error("Error updating classification:", error);
@@ -104,18 +102,18 @@ export default function GroupsManagementPage() {
 
   // Fetch groups with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/groups", page, limit, startDate, endDate, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
+    queryKey: ["/api/groups", page, limit, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        ...(startDate && { startDate: startDate.toISOString() }),
-        ...(endDate && { endDate: endDate.toISOString() }),
         ...(groupTypeFilter !== 'all' && { groupType: groupTypeFilter }),
         ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
         ...(activeTab !== 'all' && { activeTab }),
         ...(selectedUserId && { assignedToId: selectedUserId.toString() }),
-        ...(classificationFilter !== 'all' && { classification: classificationFilter })
+        ...(classificationFilter !== 'all' && { classification: classificationFilter }),
+        ...(startDate && { startDate: startDate.toISOString() }),
+        ...(endDate && { endDate: endDate.toISOString() })
       });
 
       const response = await fetch(`/api/groups?${params}`);
@@ -245,7 +243,7 @@ export default function GroupsManagementPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "dd/MM/yyyy") : "Chọn ngày"}
+                      {startDate ? format(startDate, "dd/MM/yyyy") : "Tất cả"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -278,7 +276,7 @@ export default function GroupsManagementPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "dd/MM/yyyy") : "Chọn ngày"}
+                      {endDate ? format(endDate, "dd/MM/yyyy") : "Tất cả"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -304,10 +302,18 @@ export default function GroupsManagementPage() {
                   variant="default" 
                   className="bg-green-600 hover:bg-green-700 text-white"
                   onClick={() => {
-                    toast({
-                      title: "Đã áp dụng bộ lọc",
-                      description: `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`,
-                    });
+                    if (startDate && endDate) {
+                      toast({
+                        title: "Đã áp dụng bộ lọc",
+                        description: `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`,
+                      });
+                    } else {
+                      toast({
+                        title: "Vui lòng chọn ngày",
+                        description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                 >
                   Áp dụng
@@ -317,18 +323,16 @@ export default function GroupsManagementPage() {
                   variant="outline" 
                   className="bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800"
                   onClick={() => {
-                    const today = new Date();
-                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                    setStartDate(firstDayOfMonth);
-                    setEndDate(today);
+                    setStartDate(undefined);
+                    setEndDate(undefined);
                     setSelectedUserId(null);
                     setGroupTypeFilter('all');
-                    setClassificationFilter('new');
+                    setClassificationFilter('all');
                     setActiveTab('all');
                     setSearchQuery('');
                     toast({
                       title: "Đã đặt lại bộ lọc",
-                      description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, "dd/MM/yyyy")} đến ${format(today, "dd/MM/yyyy")}`,
+                      description: "Hiển thị tất cả dữ liệu",
                     });
                   }}
                 >
