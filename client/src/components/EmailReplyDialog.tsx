@@ -288,7 +288,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className={`dialog-content ${isExpanded ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}
+        className={`email-reply-dialog dialog-content ${isExpanded ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}
       >
         {/* Header */}
         <DialogHeader className="p-4 pb-0 flex-shrink-0">
@@ -502,11 +502,11 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                   color: #3B82F6;
                   text-decoration: underline;
                 }
-                /* Hide default dialog close button with stronger selector */
-                .dialog-content > button[data-radix-dialog-close],
-                [data-radix-dialog-content] > button[data-radix-dialog-close],
-                button[data-radix-dialog-close],
-                [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"] {
+                /* Hide default dialog close button only for EmailReplyDialog */
+                .email-reply-dialog .dialog-content > button[data-radix-dialog-close],
+                .email-reply-dialog [data-radix-dialog-content] > button[data-radix-dialog-close],
+                .email-reply-dialog button[data-radix-dialog-close],
+                .email-reply-dialog [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"] {
                   display: none !important;
                   visibility: hidden !important;
                   opacity: 0 !important;
