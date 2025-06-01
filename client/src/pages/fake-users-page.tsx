@@ -215,11 +215,16 @@ export default function FakeUsersPage() {
     },
   });
 
+  // State để theo dõi user nào đang được cập nhật
+  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
+
   // Mutation để cập nhật giới tính người dùng ảo
   const updateGenderMutation = useMutation({
     mutationFn: async ({ id, gender }: { id: number; gender: "male" | "female" | "other" }) => {
       const user = fakeUsers?.find(u => u.id === id);
       if (!user) throw new Error("User not found");
+      
+      setUpdatingUserId(id);
       
       return await apiRequest<FakeUser>("PUT", `/api/fake-users/${id}`, {
         ...user,
@@ -232,6 +237,7 @@ export default function FakeUsersPage() {
         description: "Đã cập nhật giới tính",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/fake-users"] });
+      setUpdatingUserId(null);
     },
     onError: (error) => {
       console.error("Error updating gender:", error);
@@ -240,6 +246,7 @@ export default function FakeUsersPage() {
         description: "Không thể cập nhật giới tính. Vui lòng thử lại.",
         variant: "destructive",
       });
+      setUpdatingUserId(null);
     },
   });
 
@@ -495,7 +502,7 @@ export default function FakeUsersPage() {
                             onValueChange={(value: "male" | "female" | "other") => {
                               updateGenderMutation.mutate({ id: user.id, gender: value });
                             }}
-                            disabled={updateGenderMutation.isPending}
+                            disabled={updatingUserId === user.id}
                           >
                             <SelectTrigger className="w-24 h-8">
                               <SelectValue />
