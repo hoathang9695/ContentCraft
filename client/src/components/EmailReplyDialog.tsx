@@ -176,9 +176,9 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[800px] h-[600px] p-0 gap-0">
+      <DialogContent className="max-w-[800px] max-h-[90vh] p-0 gap-0 flex flex-col">
         {/* Header */}
-        <DialogHeader className="p-4 pb-0">
+        <DialogHeader className="p-4 pb-0 flex-shrink-0">
           <div className="flex justify-between items-center">
             <DialogTitle className="text-lg font-medium">Phản hồi khách hàng</DialogTitle>
             <Button
@@ -192,9 +192,9 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           {/* Email Fields */}
-          <div className="p-4 space-y-3 border-b">
+          <div className="p-4 space-y-3 border-b flex-shrink-0">
             <div className="flex items-center space-x-2">
               <Label className="w-16 text-sm text-gray-600">Đến:</Label>
               <Input
@@ -217,7 +217,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           </div>
 
           {/* Original Request */}
-          <div className="px-4 py-3 bg-gray-50 border-b">
+          <div className="px-4 py-3 bg-gray-50 border-b flex-shrink-0">
             <div className="text-sm text-gray-600 mb-2">Yêu cầu gốc từ {request.full_name}:</div>
             <div className="bg-white p-3 rounded border text-sm max-h-20 overflow-y-auto">
               {request.content}
@@ -225,7 +225,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           </div>
 
           {/* Toolbar */}
-          <div className="px-4 py-2 border-b bg-gray-50">
+          <div className="px-4 py-2 border-b bg-gray-50 flex-shrink-0">
             <div className="flex items-center space-x-1">
               <Button 
                 type="button" 
@@ -293,21 +293,21 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
           {/* Attached Files Display */}
           {attachedFiles.length > 0 && (
-            <div className="px-4 py-2 border-b bg-gray-50">
+            <div className="px-4 py-2 border-b bg-gray-50 flex-shrink-0">
               <div className="text-sm text-gray-600 mb-2">File đính kèm ({attachedFiles.length}):</div>
-              <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto">
+              <div className="flex flex-wrap gap-2 max-h-16 overflow-y-auto">
                 {attachedFiles.map((file, index) => {
-                  const truncatedName = file.name.length > 30 
-                    ? `${file.name.substring(0, 15)}...${file.name.substring(file.name.lastIndexOf('.'))}`
+                  const truncatedName = file.name.length > 25
+                    ? `${file.name.substring(0, 12)}...${file.name.substring(file.name.lastIndexOf('.'))}`
                     : file.name;
                   
                   return (
                     <div 
                       key={index} 
-                      className="flex items-center bg-white px-2 py-1 rounded border text-xs max-w-[200px]"
-                      title={file.name} // Tooltip hiển thị tên file đầy đủ
+                      className="flex items-center bg-white px-2 py-1 rounded border text-xs max-w-[180px]"
+                      title={file.name}
                     >
-                      <span className="mr-2 truncate flex-1 min-w-0">
+                      <span className="mr-1 truncate flex-1 min-w-0">
                         {truncatedName}
                       </span>
                       <Button
@@ -327,45 +327,47 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
             </div>
           )}
 
-          {/* Content Editor */}
-          <div className="flex-1 p-4">
-            <div
-              ref={editorRef}
-              contentEditable
-              className="w-full h-full outline-none text-sm border-0 focus:ring-0 min-h-[200px] p-2 border rounded"
-              style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
-              onInput={handleEditorChange}
-              onBlur={handleEditorChange}
-              suppressContentEditableWarning={true}
-              data-placeholder="Nhập nội dung phản hồi..."
-            />
-            <style>{`
-              [contenteditable]:empty:before {
-                content: attr(data-placeholder);
-                color: #9CA3AF;
-                pointer-events: none;
-              }
-              [contenteditable] {
-                line-height: 1.5;
-              }
-              [contenteditable] b, [contenteditable] strong {
-                font-weight: bold;
-              }
-              [contenteditable] i, [contenteditable] em {
-                font-style: italic;
-              }
-              [contenteditable] u {
-                text-decoration: underline;
-              }
-              [contenteditable] a {
-                color: #3B82F6;
-                text-decoration: underline;
-              }
-            `}</style>
+          {/* Content Editor - Scrollable area */}
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <div className="flex-1 p-4 overflow-y-auto">
+              <div
+                ref={editorRef}
+                contentEditable
+                className="w-full min-h-[150px] outline-none text-sm border-0 focus:ring-0 p-2 border rounded"
+                style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                onInput={handleEditorChange}
+                onBlur={handleEditorChange}
+                suppressContentEditableWarning={true}
+                data-placeholder="Nhập nội dung phản hồi..."
+              />
+              <style>{`
+                [contenteditable]:empty:before {
+                  content: attr(data-placeholder);
+                  color: #9CA3AF;
+                  pointer-events: none;
+                }
+                [contenteditable] {
+                  line-height: 1.5;
+                }
+                [contenteditable] b, [contenteditable] strong {
+                  font-weight: bold;
+                }
+                [contenteditable] i, [contenteditable] em {
+                  font-style: italic;
+                }
+                [contenteditable] u {
+                  text-decoration: underline;
+                }
+                [contenteditable] a {
+                  color: #3B82F6;
+                  text-decoration: underline;
+                }
+              `}</style>
+            </div>
           </div>
 
-          {/* Footer */}
-          <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
+          {/* Footer - Always at bottom */}
+          <div className="p-4 border-t bg-gray-50 flex justify-between items-center flex-shrink-0">
             <div className="text-xs text-gray-500">
               Phản hồi sẽ được gửi từ hệ thống SMTP đã cấu hình
             </div>
