@@ -221,6 +221,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   icon={HelpCircle}
                   isActive={isActivePath('/user-feedback/feedback')}
                   onClick={handleItemClick}
+                  badge={badgeCounts?.feedbackRequests}
                 >
                   Đóng góp ý kiến & báo lỗi
                 </SidebarItem>
