@@ -6,10 +6,21 @@ import { supportRequests, users } from '../../shared/schema.js';
 
 const router = Router();
 
-// Get all feedback requests
+// Get all feedback requests with server-side pagination
 router.get('/feedback-requests', async (req, res) => {
   try {
-    const { userId, startDate, endDate, page = 1, limit = 20 } = req.query;
+    const { 
+      userId, 
+      startDate, 
+      endDate, 
+      page = 1, 
+      limit = 20,
+      search = ''
+    } = req.query;
+    
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const offset = (pageNum - 1) * limitNum;
     
     // Apply filters
     const conditions = [eq(supportRequests.type, 'feedback')];
@@ -26,8 +37,32 @@ router.get('/feedback-requests', async (req, res) => {
       conditions.push(lte(supportRequests.created_at, new Date(endDate as string)));
     }
 
+    // Add search conditions
+    if (search) {
+      const searchTerm = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(supportRequests.full_name, searchTerm),
+          ilike(supportRequests.email, searchTerm),
+          ilike(supportRequests.subject, searchTerm),
+          ilike(supportRequests.content, searchTerm)
+        )
+      );
+    }
+
     const whereCondition = conditions.length > 1 ? and(...conditions) : conditions[0];
 
+    // Get total count
+    const totalResult = await db.select({ 
+      count: sql<number>`count(*)` 
+    })
+    .from(supportRequests)
+    .where(whereCondition);
+    
+    const total = totalResult[0]?.count || 0;
+    const totalPages = Math.ceil(total / limitNum);
+
+    // Get paginated data
     const result = await db.select({
       id: supportRequests.id,
       full_name: supportRequests.full_name,
@@ -51,9 +86,16 @@ router.get('/feedback-requests', async (req, res) => {
     .from(supportRequests)
     .leftJoin(users, eq(supportRequests.assigned_to_id, users.id))
     .where(whereCondition)
-    .orderBy(desc(supportRequests.created_at));
+    .orderBy(desc(supportRequests.created_at))
+    .limit(limitNum)
+    .offset(offset);
     
-    res.json(result);
+    res.json({
+      data: result,
+      total,
+      totalPages,
+      currentPage: pageNum
+    });
   } catch (error) {
     console.error('Error fetching feedback requests:', error);
     res.status(500).json({ error: 'Failed to fetch feedback requests' });
