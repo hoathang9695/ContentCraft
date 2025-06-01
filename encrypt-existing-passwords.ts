@@ -1,9 +1,11 @@
 
 import { db } from './server/db';
 import { smtpConfig } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 import { createCipheriv, randomBytes } from 'crypto';
 
-const encryptionKey = process.env.SMTP_ENCRYPTION_KEY || 'emso-smtp-key-32-characters-long!';
+// Ensure key is exactly 32 bytes for AES-256
+const encryptionKey = (process.env.SMTP_ENCRYPTION_KEY || 'emso-smtp-key-32-characters-long!').substring(0, 32).padEnd(32, '0');
 const algorithm = 'aes-256-cbc';
 
 function encryptPassword(password: string): string {
@@ -23,6 +25,7 @@ function encryptPassword(password: string): string {
 async function encryptExistingPasswords() {
   try {
     console.log('Starting to encrypt existing SMTP passwords...');
+    console.log('Using encryption key length:', encryptionKey.length);
     
     // Get all SMTP configs
     const configs = await db.select().from(smtpConfig);
@@ -40,7 +43,7 @@ async function encryptExistingPasswords() {
             password: encryptedPassword,
             updatedAt: new Date()
           })
-          .where(db.eq(smtpConfig.id, config.id));
+          .where(eq(smtpConfig.id, config.id));
         
         console.log(`✅ Password encrypted for config ID: ${config.id}`);
       } else {
