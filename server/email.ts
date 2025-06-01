@@ -3,6 +3,7 @@ import * as nodemailer from 'nodemailer';
 import { db } from './db';
 import { smtpConfig } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
 interface SMTPConfig {
   host: string;
@@ -17,10 +18,47 @@ interface SMTPConfig {
 export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private config: SMTPConfig;
+  private readonly encryptionKey = process.env.SMTP_ENCRYPTION_KEY || 'emso-smtp-key-32-characters-long!';
+  private readonly algorithm = 'aes-256-cbc';
 
   constructor(config?: SMTPConfig) {
     this.config = config || this.getDefaultSMTPConfig();
     this.initializeFromDB();
+  }
+
+  private encryptPassword(password: string): string {
+    if (!password) return '';
+    try {
+      const iv = randomBytes(16);
+      const cipher = createCipheriv(this.algorithm, Buffer.from(this.encryptionKey), iv);
+      let encrypted = cipher.update(password);
+      encrypted = Buffer.concat([encrypted, cipher.final()]);
+      return iv.toString('hex') + ':' + encrypted.toString('hex');
+    } catch (error) {
+      console.error('Error encrypting password:', error);
+      return password; // Fallback to plain text if encryption fails
+    }
+  }
+
+  private decryptPassword(encryptedPassword: string): string {
+    if (!encryptedPassword) return '';
+    try {
+      const textParts = encryptedPassword.split(':');
+      if (textParts.length !== 2) {
+        // Assume it's plain text password (for backward compatibility)
+        return encryptedPassword;
+      }
+      const iv = Buffer.from(textParts.shift()!, 'hex');
+      const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+      const decipher = createDecipheriv(this.algorithm, Buffer.from(this.encryptionKey), iv);
+      let decrypted = decipher.update(encryptedText);
+      decrypted = Buffer.concat([decrypted, decipher.final()]);
+      return decrypted.toString();
+    } catch (error) {
+      console.error('Error decrypting password:', error);
+      // If decryption fails, assume it's a plain text password (backward compatibility)
+      return encryptedPassword;
+    }
   }
 
   private async initializeFromDB() {
@@ -45,11 +83,11 @@ export class EmailService {
           port: dbConfig.port,
           secure: dbConfig.secure,
           user: dbConfig.user,
-          password: dbConfig.password,
+          password: this.decryptPassword(dbConfig.password),
           fromName: dbConfig.fromName,
           fromEmail: dbConfig.fromEmail
         };
-        console.log("SMTP config loaded from database");
+        console.log("SMTP config loaded from database with encrypted password");
       } else {
         console.log("No active SMTP config found in database, using defaults");
       }
@@ -111,7 +149,7 @@ export class EmailService {
         port: config.port,
         secure: config.secure,
         user: config.user,
-        password: config.password,
+        password: this.encryptPassword(config.password),
         fromName: config.fromName,
         fromEmail: config.fromEmail,
         isActive: true
