@@ -72,6 +72,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const fakeUserSchema = z.object({
   name: z.string().min(1, "Tên người dùng là bắt buộc"),
   token: z.string().min(1, "Token là bắt buộc"),
+  gender: z.enum(["male", "female", "other"]).default("male"),
   status: z.enum(["active", "inactive"]).default("active"),
   description: z.string().optional(),
 });
@@ -80,6 +81,7 @@ type FakeUser = {
   id: number;
   name: string;
   token: string;
+  gender: "male" | "female" | "other";
   status: "active" | "inactive";
   description?: string;
   createdAt: string;
@@ -243,6 +245,7 @@ export default function FakeUsersPage() {
     defaultValues: {
       name: "",
       token: "",
+      gender: "male",
       status: "active",
       description: "",
     },
@@ -255,6 +258,7 @@ export default function FakeUsersPage() {
       form.reset({
         name: user.name,
         token: user.token,
+        gender: user.gender as "male" | "female" | "other",
         status: user.status as "active" | "inactive",
         description: user.description || "",
       });
@@ -264,6 +268,7 @@ export default function FakeUsersPage() {
       form.reset({
         name: "",
         token: "",
+        gender: "male",
         status: "active",
         description: "",
       });
@@ -444,6 +449,7 @@ export default function FakeUsersPage() {
                   <TableRow>
                     <TableHead>Tên</TableHead>
                     <TableHead>Token</TableHead>
+                    <TableHead>Giới tính</TableHead>
                     <TableHead>Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -454,6 +460,11 @@ export default function FakeUsersPage() {
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell className="font-mono text-sm">
                           {user.token}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.gender === 'male' ? 'default' : user.gender === 'female' ? 'secondary' : 'outline'}>
+                            {user.gender === 'male' ? 'Nam' : user.gender === 'female' ? 'Nữ' : 'Khác'}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
@@ -493,7 +504,7 @@ export default function FakeUsersPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center">
+                      <TableCell colSpan={4} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center text-sm text-muted-foreground">
                           <AlertTriangle className="mb-2 h-6 w-6" />
                           {debouncedSearchQuery ? 
@@ -553,6 +564,35 @@ export default function FakeUsersPage() {
                     </FormControl>
                     <FormDescription>
                       Token này được sử dụng để xác thực với hệ thống bên ngoài.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Giới tính</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn giới tính" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Nam</SelectItem>
+                        <SelectItem value="female">Nữ</SelectItem>
+                        <SelectItem value="other">Khác</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Giới tính của người dùng ảo.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
