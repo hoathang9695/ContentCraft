@@ -321,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newGroups = allGroups.filter(g => {
         if (!g.createdAt) return false;
-        const created = new Date(p.createdAt);
+        const created = new Date(g.createdAt);
         return created >= sevenDaysAgoGroups;
       }).length;
 
