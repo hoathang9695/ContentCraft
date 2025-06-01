@@ -30,6 +30,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     subject: "",
     content: ""
   });
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]); // State to manage attached files
 
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -106,6 +107,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         onSuccess?.();
         onClose();
         setFormData({ to: "", subject: "", content: "" });
+        setAttachedFiles([]);
         if (editorRef.current) {
           editorRef.current.innerHTML = "";
         }

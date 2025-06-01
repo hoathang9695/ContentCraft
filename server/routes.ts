@@ -321,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newGroups = allGroups.filter(g => {
         if (!g.createdAt) return false;
-        const created = new Date(g.createdAt);
+        const created = new Date(p.createdAt);
         return created >= sevenDaysAgoGroups;
       }).length;
 
@@ -1653,11 +1653,12 @@ const users = awaitstorage.getAllUsers();
   app.get('/api/support-requests', isAuthenticated, supportController.getAllSupportRequests);
   app.put('/api/support-requests/:id', isAuthenticated, supportController.updateSupportRequest);
   app.put('/api/support-requests/:id/assign', isAuthenticated, supportController.assignSupportRequest);
-  app.post('/api/support-requests/:id/reply', isAuthenticated, async (req, res) => {
+app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attachments', 10), async (req, res) => {
     try {
       const { id } = req.params;
       const { to, subject, content, response_content } = req.body;
       const user = req.user as Express.User;
+      const attachments = req.files as Express.Multer.File[] || [];
 
       // Get support request
       const supportRequest = await db.query.supportRequests.findFirst({
@@ -1672,11 +1673,19 @@ const users = awaitstorage.getAllUsers();
         return res.status(403).json({ message: 'Not authorized to reply to this request' });
       }
 
-      // Send email
-      const emailSent = await emailService.sendReplyEmail({
+      // Process attachments for email
+      const emailAttachments = attachments.map(file => ({
+        filename: file.originalname,
+        path: file.path,
+        contentType: file.mimetype
+      }));
+
+      // Send email with attachments
+      const emailSent = await emailService.sendReplyEmailWithAttachments({
         to,
         subject,
         content,
+        attachments: emailAttachments,
         originalRequest: {
           id: supportRequest.id,
           full_name: supportRequest.full_name,
@@ -1691,6 +1700,15 @@ const users = awaitstorage.getAllUsers();
           details: 'Email configuration or authentication failed'
         });
       }
+
+      // Clean up uploaded files after sending email
+      attachments.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (error) {
+          console.warn(`Failed to delete temporary file: ${file.path}`, error);
+        }
+      });
 
       // Update support request status
       const result = await db.update(supportRequests)
@@ -2307,67 +2325,6 @@ phoneNumber: groupsTable.phoneNumber,
   app.get('/api/support-requests', isAuthenticated, supportController.getAllSupportRequests);
   app.put('/api/support-requests/:id', isAuthenticated, supportController.updateSupportRequest);
   app.put('/api/support-requests/:id/assign', isAuthenticated, supportController.assignSupportRequest);
-  app.post('/api/support-requests/:id/reply', isAuthenticated, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { to, subject, content, response_content } = req.body;
-      const user = req.user as Express.User;
-
-      // Get support request
-      const supportRequest = await db.query.supportRequests.findFirst({
-        where: eq(supportRequests.id, parseInt(id))
-      });
-
-      if (!supportRequest) {
-        return res.status(404).json({ message: 'Support request not found' });
-      }
-
-      if (user.role !== 'admin' && supportRequest.assigned_to_id !== user.id) {
-        return res.status(403).json({ message: 'Not authorized to reply to this request' });
-      }
-
-      // Send email
-      const emailSent = await emailService.sendReplyEmail({
-        to,
-        subject,
-        content,
-        originalRequest: {
-          id: supportRequest.id,
-          full_name: supportRequest.full_name,
-          subject: supportRequest.subject,
-          content: supportRequest.content
-        }
-      });
-
-      if (!emailSent) {
-        return res.status(500).json({ 
-          message: 'Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.',
-          details: 'Email configuration or authentication failed'
-        });
-      }
-
-      // Update support request status
-      const result = await db.update(supportRequests)
-        .set({
-          status: 'completed' as any,
-          response_content,
-          responder_id: user.id,
-          response_time: new Date(),
-          updated_at: new Date()
-        })
-        .where(eq(supportRequests.id, parseInt(id)))
-        .returning();
-
-      return res.json({ message: 'Reply sent successfully', supportRequest: result[0] });
-    } catch (error) {
-      console.error('Error sending reply:', error);
-      return res.status(500).json({ 
-        message: 'Error sending reply',
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
   return httpServer;
 }
 
