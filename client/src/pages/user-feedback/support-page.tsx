@@ -64,18 +64,23 @@ export default function SupportPage() {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [userFilter, setUserFilter] = useState<number | null>(null);
-  const [searchResults, setSearchResults] = useState<SupportRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null); // Added selectedRequest state
+  const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [replyRequest, setReplyRequest] = useState<SupportRequest | null>(null);
-  const [pageSize, setPageSize] = useState<number>(20);
 
-  const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
-    queryKey: ['/api/support-requests', userFilter, startDate?.toISOString(), endDate?.toISOString()],
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  const { data: supportRequestsResponse, isLoading, error } = useQuery({
+    queryKey: ['/api/support-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (userFilter) params.append('userId', userFilter.toString());
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
+      params.append('page', currentPage.toString());
+      params.append('limit', pageSize.toString());
+      if (searchTerm) params.append('search', searchTerm);
+      
       const response = await fetch(`/api/support-requests?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch support requests');
       return response.json();
@@ -86,35 +91,14 @@ export default function SupportPage() {
     staleTime: Infinity
   });
 
+  const supportRequests = supportRequestsResponse?.data || [];
+  const totalPages = supportRequestsResponse?.totalPages || 1;
+  const total = supportRequestsResponse?.total || 0;
+
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const filteredRequests = useMemo(() => {
-    if (!supportRequests) return [];
-
-    return supportRequests.filter(request => {
-      if (statusFilter !== 'all' && request.status !== statusFilter) {
-        return false;
-      }
-
-      if (userFilter !== null && request.assigned_to_id !== userFilter) {
-        return false;
-      }
-
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          request.full_name.toLowerCase().includes(searchLower) ||
-          request.email.toLowerCase().includes(searchLower) ||
-          request.subject.toLowerCase().includes(searchLower) ||
-          request.content.toLowerCase().includes(searchLower)
-        );
-      }
-
-      return true;
-    });
-  }, [supportRequests, statusFilter, userFilter, searchTerm]);
-
   const handleDateFilter = () => {
+    setCurrentPage(1);
     toast({
       title: "Đã áp dụng bộ lọc",
       description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
@@ -142,21 +126,30 @@ export default function SupportPage() {
                   <Button 
                     variant={statusFilter === 'all' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => setStatusFilter('all')}
+                    onClick={() => {
+                      setStatusFilter('all');
+                      setCurrentPage(1);
+                    }}
                   >
                     Tất cả
                   </Button>
                   <Button 
                     variant={statusFilter === 'completed' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => setStatusFilter('completed')}
+                    onClick={() => {
+                      setStatusFilter('completed');
+                      setCurrentPage(1);
+                    }}
                   >
                     Đã xử lý
                   </Button>
                   <Button 
                     variant={statusFilter === 'pending' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => setStatusFilter('pending')}
+                    onClick={() => {
+                      setStatusFilter('pending');
+                      setCurrentPage(1);
+                    }}
                   >
                     Chưa xử lý
                   </Button>
@@ -165,7 +158,10 @@ export default function SupportPage() {
 
               <Select 
                 value={userFilter?.toString() || "all"} 
-                onValueChange={(value) => setUserFilter(value === "all" ? null : parseInt(value))}
+                onValueChange={(value) => {
+                  setUserFilter(value === "all" ? null : parseInt(value));
+                  setCurrentPage(1);
+                }}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Tất cả" />
@@ -263,6 +259,7 @@ export default function SupportPage() {
                   onClick={() => {
                     setStartDate(undefined);
                     setEndDate(undefined);
+                    setCurrentPage(1);
                     toast({
                       title: "Đã đặt lại bộ lọc",
                       description: "Hiển thị tất cả dữ liệu",
@@ -281,16 +278,23 @@ export default function SupportPage() {
             placeholder="Tìm kiếm yêu cầu..." 
             className="max-w-[300px]"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
 
         <div className="bg-card rounded-lg shadow">
           <DataTable
-            data={filteredRequests}
+            data={supportRequests}
             isLoading={isLoading}
             pagination
             pageSize={pageSize}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            total={total}
             columns={[
               {
                 key: 'id',
