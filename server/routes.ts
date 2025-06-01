@@ -141,6 +141,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+        
+        // Tổng số pending requests (support + feedback) cho menu cha "Xử lý phản hồi"
+        const totalPendingRequests = pendingSupport + pendingFeedback;
 
         const badgeCounts = {
           realUsers: realUsersNewCount[0]?.count || 0,
@@ -148,6 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           groups: groupsNewCount[0]?.count || 0,
           supportRequests: pendingSupport,
           feedbackRequests: pendingFeedback,
+          totalRequests: totalPendingRequests, // Tổng cho menu cha
         };
 
         const filteredBadgeCounts = {
@@ -162,6 +166,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           feedbackRequests:
             badgeCounts.feedbackRequests > 0
               ? badgeCounts.feedbackRequests
+              : undefined,
+          totalRequests:
+            badgeCounts.totalRequests > 0
+              ? badgeCounts.totalRequests
               : undefined,
         };
 

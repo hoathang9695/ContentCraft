@@ -40,6 +40,8 @@ interface BadgeCounts {
   pages?: number;
   groups?: number;
   supportRequests?: number;
+  feedbackRequests?: number;
+  totalRequests?: number;
 }
 
 function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: SidebarItemProps) {
@@ -72,12 +74,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   const isAdmin = user?.role === 'admin';
 
   // Use WebSocket for real-time badge updates
   const { badgeCounts: wsBadgeCounts, isConnected, hasInitialData } = useWebSocket();
-  
+
   // Fallback to polling if WebSocket is not connected or no initial data
   const { data: pollingBadgeCounts } = useQuery<BadgeCounts>({
     queryKey: ['/api/badge-counts'],
@@ -127,7 +129,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             >
               Dashboard
             </SidebarItem>
-            
+
             <SidebarItem
               href="/contents"
               icon={FileText}
@@ -177,7 +179,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     e.preventDefault();
                     setIsExpanded(!isExpanded);
                   }}
-                  badge={badgeCounts?.supportRequests}
+                  badge={badgeCounts?.totalRequests}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span>Xử lý phản hồi</span>
@@ -185,7 +187,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </div>
                 </SidebarItem>
               </div>
-              
+
               <div className={cn("pl-6 ml-2 border-l border-border overflow-hidden transition-all", 
                 isExpanded ? "max-h-48" : "max-h-0")}>
                 <SidebarItem
@@ -197,7 +199,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   Yêu cầu hỗ trợ
                 </SidebarItem>
-                
+
                 <SidebarItem
                   href="/user-feedback/verification"
                   icon={ShieldCheck}
@@ -206,7 +208,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   Yêu cầu xác minh danh tính
                 </SidebarItem>
-                
+
                 <SidebarItem
                   href="/user-feedback/tick"
                   icon={BadgeCheck}
@@ -215,7 +217,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   Yêu cầu tick Tím
                 </SidebarItem>
-                
+
                 <SidebarItem
                   href="/user-feedback/feedback"
                   icon={HelpCircle}
@@ -227,13 +229,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </SidebarItem>
               </div>
             </div>
-            
+
             {isAdmin && (
               <>
                 <div className="mt-4 mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Admin Functions
                 </div>
-                
+
                 <SidebarItem
                   href="/fake-users"
                   icon={UserCog}
@@ -242,7 +244,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   Quản lý người dùng ảo
                 </SidebarItem>
-                
+
                 <SidebarItem
                   href="/categories"
                   icon={Folder}
@@ -251,7 +253,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   Quản lý Categories
                 </SidebarItem>
-                
+
                 <SidebarItem
                   href="/users"
                   icon={Users}
@@ -260,7 +262,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   User
                 </SidebarItem>
-                
+
                 <SidebarItem
                   href="/user-activities"
                   icon={History}
@@ -269,7 +271,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   Hoạt động người dùng
                 </SidebarItem>
-                
+
                 <SidebarItem
                   href="/settings"
                   icon={UserCog}
@@ -282,7 +284,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
           </div>
         </div>
-        
+
         {/* Theme toggle footer */}
         <div className="p-4 border-t border-border">
           <div className="flex items-center justify-between">
@@ -304,3 +306,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     </div>
   );
 }
+```
+
+```
+</replit_final_file>
