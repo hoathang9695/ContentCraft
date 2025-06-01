@@ -54,7 +54,7 @@ export default function GroupsManagementPage() {
   useEffect(() => {
     setDebouncedSearchQuery('');
     setPage(1);
-  }, [startDate, endDate, groupTypeFilter, activeTab, selectedUserId, classificationFilter]);
+  }, [groupTypeFilter, activeTab, selectedUserId, classificationFilter]);
 
   const handleUpdateClassification = async (groupId: number, classification: string) => {
     try {
@@ -76,7 +76,7 @@ export default function GroupsManagementPage() {
       });
 
       queryClient.invalidateQueries({
-        queryKey: ["/api/groups", page, limit, startDate, endDate, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter]
+        queryKey: ["/api/groups", page, limit, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter]
       });
     } catch (error) {
       console.error("Error updating classification:", error);
@@ -104,13 +104,11 @@ export default function GroupsManagementPage() {
 
   // Fetch groups with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/groups", page, limit, startDate, endDate, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
+    queryKey: ["/api/groups", page, limit, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        ...(startDate && { startDate: startDate.toISOString() }),
-        ...(endDate && { endDate: endDate.toISOString() }),
         ...(groupTypeFilter !== 'all' && { groupType: groupTypeFilter }),
         ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
         ...(activeTab !== 'all' && { activeTab }),

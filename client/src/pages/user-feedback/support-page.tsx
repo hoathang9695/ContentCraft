@@ -72,11 +72,9 @@ export default function SupportPage() {
   const [pageSize, setPageSize] = useState<number>(20);
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
-    queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
+    queryKey: ['/api/support-requests', userFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate.toISOString());
-      if (endDate) params.append('endDate', endDate.toISOString());
       if (userFilter) params.append('userId', userFilter.toString());
       const response = await fetch(`/api/support-requests?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch support requests');
@@ -94,15 +92,6 @@ export default function SupportPage() {
     if (!supportRequests) return [];
 
     return supportRequests.filter(request => {
-      if (startDate && endDate) {
-        const requestDate = new Date(request.created_at);
-        const start = startOfDay(startDate);
-        const end = endOfDay(endDate);
-        if (!(requestDate >= start && requestDate <= end)) {
-          return false;
-        }
-      }
-
       if (statusFilter !== 'all' && request.status !== statusFilter) {
         return false;
       }
@@ -123,7 +112,7 @@ export default function SupportPage() {
 
       return true;
     });
-  }, [supportRequests, startDate, endDate, statusFilter, userFilter, searchTerm]);
+  }, [supportRequests, statusFilter, userFilter, searchTerm]);
 
   const handleDateFilter = () => {
     toast({
