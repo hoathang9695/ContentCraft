@@ -69,10 +69,11 @@ export default function ContentPage() {
 
   const handleDateFilter = () => {
     console.log('Filtering by date range:', {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      startDate: startDate?.toISOString(),
+      endDate: endDate?.toISOString()
     });
-    // Remove unnecessary setTimeout that causes duplicate state updates
+    // Force refetch with new date range
+    queryClient.invalidateQueries(['/api/contents']);
   };
 
   const toggleSourceStatus = () => {
@@ -246,6 +247,8 @@ export default function ContentPage() {
           assignedUserId={selectedUser}
           searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
+          startDate={startDate}
+          endDate={endDate}
         />
       )}
 
@@ -256,6 +259,8 @@ export default function ContentPage() {
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
+          startDate={startDate}
+          endDate={endDate}
         />
       )}
 
@@ -266,6 +271,8 @@ export default function ContentPage() {
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
+          startDate={startDate}
+          endDate={endDate}
         />
       )}
     </DashboardLayout>
