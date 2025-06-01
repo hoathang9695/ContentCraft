@@ -66,6 +66,7 @@ export default function FeedbackPage() {
   const [replyRequest, setReplyRequest] = useState<FeedbackRequest | null>(null);
   const [pageSize, setPageSize] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const { data: feedbackData, isLoading, error } = useQuery<{
     data: FeedbackRequest[];
@@ -93,8 +94,6 @@ export default function FeedbackPage() {
   });
 
   const feedbackRequests = feedbackData?.data || [];
-
-  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Reset to page 1 when filters change
   const resetToFirstPage = () => {
