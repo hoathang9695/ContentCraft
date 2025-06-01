@@ -71,6 +71,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
+    // Handle initial badge counts request
+    socket.on('request-badge-counts', async () => {
+      try {
+        const { pages, groups, realUsers } = await import("../shared/schema");
+
+        const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
+          db.select({
+            count: sql<number>`count(*)`
+          }).from(realUsers)
+          .where(eq(realUsers.classification, 'new')),
+
+          db.select({
+            count: sql<number>`count(*)`
+          }).from(pages)
+          .where(eq(pages.classification, 'new')),
+
+          db.select({
+            count: sql<number>`count(*)`
+          }).from(groups)
+          .where(eq(groups.classification, 'new'))
+        ]);
+
+        const badgeCounts = {
+          realUsers: realUsersNewCount[0]?.count || 0,
+          pages: pagesNewCount[0]?.count || 0,
+          groups: groupsNewCount[0]?.count || 0
+        };
+
+        const filteredBadgeCounts = {
+          realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
+          pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
+          groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined
+        };
+
+        // Send initial data to requesting client
+        socket.emit('badge-update', filteredBadgeCounts);
+        console.log('Sent initial badge counts to client:', socket.id, filteredBadgeCounts);
+      } catch (error) {
+        console.error('Error sending initial badge counts:', error);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
     });
