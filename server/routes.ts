@@ -258,13 +258,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Pages aggregation
         db.select({
           total: sql<number>`count(*)`,
-          new: sql<number>`count(*) filter (where "createdAt" >= ${sevenDaysAgo})`
+          new: sql<number>`count(*) filter (where "created_at" >= ${sevenDaysAgo})`
         }).from(pages),
         
         // Groups aggregation
         db.select({
           total: sql<number>`count(*)`,
-          new: sql<number>`count(*) filter (where "createdAt" >= ${sevenDaysAgo})`
+          new: sql<number>`count(*) filter (where "created_at" >= ${sevenDaysAgo})`
         }).from(groups)
       ]);
 
