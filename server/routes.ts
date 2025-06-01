@@ -884,7 +884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const count = await storage.updateAllContentStatuses();
       res.json({
         success: true,
-        message: `Updated status for ${count} contents based on Categories.`,
+        message: "Updated content statuses successfully",
         updatedCount: count
       });
     } catch (error) {
