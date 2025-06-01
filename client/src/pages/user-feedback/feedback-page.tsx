@@ -64,7 +64,7 @@ export default function FeedbackPage() {
   const [searchResults, setSearchResults] = useState<FeedbackRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<FeedbackRequest | null>(null);
   const [replyRequest, setReplyRequest] = useState<FeedbackRequest | null>(null);
-  const [pageSize, setPageSize] = useState<number>(20);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
