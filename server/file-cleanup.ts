@@ -14,19 +14,32 @@ export class FileCleanupService {
     return FileCleanupService.instance;
   }
 
-  // Start automatic cleanup every hour
+  // Start automatic cleanup daily at midnight
   startAutoCleanup() {
     if (this.cleanupInterval) return;
 
-    console.log('Starting automatic file cleanup service...');
+    console.log('Starting automatic file cleanup service (daily at midnight)...');
     
     // Run cleanup immediately
     this.cleanupOldFiles();
     
-    // Then run every hour
-    this.cleanupInterval = setInterval(() => {
+    // Calculate time until next midnight
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const timeUntilMidnight = tomorrow.getTime() - now.getTime();
+    
+    // Set timeout for first midnight, then interval for daily
+    setTimeout(() => {
       this.cleanupOldFiles();
-    }, 60 * 60 * 1000); // 1 hour
+      
+      // Then run every 24 hours
+      this.cleanupInterval = setInterval(() => {
+        this.cleanupOldFiles();
+      }, 24 * 60 * 60 * 1000); // 24 hours
+    }, timeUntilMidnight);
   }
 
   stopAutoCleanup() {
