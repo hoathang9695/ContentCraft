@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +58,8 @@ export default function SettingsPage() {
     fromName: "",
     fromEmail: ""
   });
+
+  const [testEmail, setTestEmail] = useState("");
 
   // Redirect if not admin
   if (user && user.role !== "admin") {
@@ -129,7 +130,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/smtp-config/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ testEmail: user?.username + "@test.com" }),
+        body: JSON.stringify({ testEmail: testEmail || user?.username + "@test.com" }),
       });
       if (!res.ok) throw new Error("Failed to test SMTP");
       return res.json();
@@ -205,7 +206,7 @@ export default function SettingsPage() {
                      selectedClassification === "potential" ? "tiềm năng" :
                      selectedClassification === "non_potential" ? "không tiềm năng" :
                      selectedClassification === "verified" ? "đã xác minh" : selectedClassification}`;
-      
+
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
       // Generate filename with timestamp
@@ -331,7 +332,7 @@ export default function SettingsPage() {
                   placeholder="smtp.gmail.com"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="smtp-port">Port</Label>
                 <Input
@@ -395,7 +396,18 @@ export default function SettingsPage() {
                 <Settings className="h-4 w-4 mr-2" />
                 {updateSMTPMutation.isPending ? "Đang lưu..." : "Lưu cấu hình"}
               </Button>
-              
+
+              <div className="space-y-2">
+                <Label htmlFor="test-email">Email test (để trống sẽ dùng email mặc định)</Label>
+                <Input
+                  id="test-email"
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder={`${user?.username}@test.com`}
+                />
+              </div>
+
               <Button 
                 variant="outline"
                 onClick={handleTestSMTP}
@@ -404,6 +416,10 @@ export default function SettingsPage() {
                 <Mail className="h-4 w-4 mr-2" />
                 {testSMTPMutation.isPending ? "Đang test..." : "Test gửi email"}
               </Button>
+
+              <div className="text-sm text-muted-foreground">
+                Email test sẽ được gửi đến: <strong>{testEmail || `${user?.username}@test.com`}</strong>
+              </div>
             </div>
 
             <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-md">
