@@ -215,6 +215,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   Yêu cầu tick Tím
                 </SidebarItem>
+                
+                <SidebarItem
+                  href="/user-feedback/feedback"
+                  icon={HelpCircle}
+                  isActive={isActivePath('/user-feedback/feedback')}
+                  onClick={handleItemClick}
+                >
+                  Đóng góp ý kiến & báo lỗi
+                </SidebarItem>
               </div>
             </div>
             
