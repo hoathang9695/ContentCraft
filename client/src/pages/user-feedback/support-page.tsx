@@ -69,6 +69,7 @@ export default function SupportPage() {
   const [searchResults, setSearchResults] = useState<SupportRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null); // Added selectedRequest state
   const [replyRequest, setReplyRequest] = useState<SupportRequest | null>(null);
+  const [pageSize, setPageSize] = useState<number>(20);
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
@@ -297,11 +298,34 @@ export default function SupportPage() {
         </div>
 
         <div className="bg-card rounded-lg shadow">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Tổng số: <span className="font-medium">{filteredRequests.length}</span> yêu cầu
+                {statusFilter !== 'all' && (
+                  <span className="ml-2">
+                    (Lọc: {statusFilter === 'completed' ? 'Đã xử lý' : 'Chưa xử lý'})
+                  </span>
+                )}
+              </div>
+              <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(parseInt(value))}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 / trang</SelectItem>
+                  <SelectItem value="20">20 / trang</SelectItem>
+                  <SelectItem value="50">50 / trang</SelectItem>
+                  <SelectItem value="100">100 / trang</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <DataTable
             data={filteredRequests}
             isLoading={isLoading}
             pagination
-            pageSize={10}
+            pageSize={pageSize}
             columns={[
               {
                 key: 'id',
