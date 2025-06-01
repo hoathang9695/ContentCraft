@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Real users stats với aggregation
       const { pages, groups } = await import("../shared/schema");
       
-      const [realUsersStats, pagesStats, groupsStats] = await Promise.all([
+      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats] = await Promise.all([
         // Real users aggregation
         db.select({
           total: sql<number>`count(distinct ${realUsers.id})`,
@@ -265,7 +265,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         db.select({
           total: sql<number>`count(*)`,
           new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`
-        }).from(groups)
+        }).from(groups),
+        
+        // Support requests aggregation
+        db.select({
+          total: sql<number>`count(*)`,
+          pending: sql<number>`count(*) filter (where status = 'pending')`,
+          processing: sql<number>`count(*) filter (where status = 'processing')`,
+          completed: sql<number>`count(*) filter (where status = 'completed')`
+        }).from(supportRequests)
       ]);
 
       const totalRealUsers = Number(realUsersStats[0]?.total || 0);
@@ -274,11 +282,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newPages = Number(pagesStats[0]?.new || 0);
       const totalGroups = Number(groupsStats[0]?.total || 0);
       const newGroups = Number(groupsStats[0]?.new || 0);
+      const totalSupportRequests = Number(supportRequestsStats[0]?.total || 0);
+      const pendingSupportRequests = Number(supportRequestsStats[0]?.pending || 0);
+      const processingSupportRequests = Number(supportRequestsStats[0]?.processing || 0);
+      const completedSupportRequests = Number(supportRequestsStats[0]?.completed || 0);
 
       console.log("Optimized stats:", {
         realUsers: { total: totalRealUsers, new: newRealUsers },
         pages: { total: totalPages, new: newPages },
-        groups: { total: totalGroups, new: newGroups }
+        groups: { total: totalGroups, new: newGroups },
+        supportRequests: { 
+          total: totalSupportRequests, 
+          pending: pendingSupportRequests,
+          processing: processingSupportRequests, 
+          completed: completedSupportRequests 
+        }
       });
 
       const result = {
@@ -305,6 +323,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newPages,
         totalGroups,
         newGroups,
+        // Thống kê yêu cầu hỗ trợ
+        totalSupportRequests,
+        pendingSupportRequests,
+        processingSupportRequests,
+        completedSupportRequests,
         // Thông tin khoảng thời gian nếu có lọc
         period: startDate && endDate ? {
           start: startDate,
