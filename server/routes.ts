@@ -139,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Cache for stats API
   let statsCache = new Map();
-  const CACHE_DURATION = 30000; // 30 seconds cache
+  const CACHE_DURATION = 300000; // 5 minutes cache (increased from 30 seconds)
 
   // Dashboard statistics
   app.get("/api/stats", isAuthenticated, async (req, res) => {
@@ -159,198 +159,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Getting stats with params:", req.query);
 
-      const allContents = await storage.getAllContents();
-      console.log("Total contents fetched:", allContents.length);
-
-      const allUsers = await storage.getAllUsers();
-
-      // If user is admin, show stats for all content, otherwise filter by assigned to user
-      let filteredContents = user.role === 'admin' 
-        ? allContents 
-        : allContents.filter(c => c.assigned_to_id === user.id);
-
-      console.log("Filtered contents for user:", {
-        userId: user.id,
-        role: user.role,
-        contentCount: filteredContents.length
-      });
-
-      // Lọc theo ngày nếu có
+      // Sử dụng aggregation query thay vì fetch toàn bộ dữ liệu
+      const { contents } = await import("../shared/schema");
+      
+      // Build date conditions
+      const dateConditions = [];
       if (startDate && endDate) {
         const start = new Date(startDate as string);
         start.setHours(0, 0, 0, 0);
-
         const end = new Date(endDate as string);
         end.setHours(23, 59, 59, 999);
 
-        filteredContents = filteredContents.filter(content => {
-          // Kiểm tra theo cả ngày tạo và ngày cập nhật
-          // Nếu nội dung được tạo HOẶC cập nhật trong khoảng thời gian, sẽ được hiển thị
-          if (!content.createdAt && !content.updatedAt) return false;
-
-          // Kiểm tra ngày tạo nếu có
-          if (content.createdAt) {
-            const createdAt = new Date(content.createdAt);
-            if (createdAt >= start && createdAt <= end) return true;
-          }
-
-          // Kiểm tra ngày cập nhật nếu có
-          if (content.updatedAt) {
-            const updatedAt = new Date(content.updatedAt);
-            if (updatedAt >= start && updatedAt <= end) return true;
-          }
-
-          return false; // Không thỏa mãn điều kiện nào
-        });
-      }
-
-      // Count contents by status
-      const pending = filteredContents.filter(c => c.status === 'pending').length;
-      // Không có trạng thái 'processing' trong database, chỉ có 'pending' và 'completed'
-      const completed = filteredContents.filter(c => c.status === 'completed').length;
-
-      // Count by source verification
-      const verified = filteredContents.filter(c => c.sourceVerification === 'verified').length;
-      const unverified = filteredContents.filter(c => c.sourceVerification === 'unverified').length;
-
-      // Đếm số lượng theo safe (an toàn)
-      const safe = filteredContents.filter(c => c.safe === true).length;
-      const unsafe = filteredContents.filter(c => c.safe === false).length;
-      const unchecked = filteredContents.filter(c => c.safe === null).length;
-
-      // Tính số lượng nội dung trên mỗi người dùng
-      const assignedPerUser = [];
-
-      if (user.role === 'admin') {
-        // Lọc chỉ người dùng active và có role là editor
-        const activeEditors = allUsers.filter(u => u.status === 'active' && u.role === 'editor');
-
-        for (const editor of activeEditors) {
-          const contentsCount = filteredContents.filter(c => c.assigned_to_id === editor.id).length;
-          if (contentsCount > 0) {
-            assignedPerUser.push({
-              userId: editor.id,
-              username: editor.username,
-              name: editor.name,
-              count: contentsCount
-            });
-          }
-        }
-
-        // Sắp xếp theo số lượng nội dung giảm dần
-        assignedPerUser.sort((a, b) => b.count - a.count);
-      }
-
-      // Lấy thống kê người dùng thật
-      const start = startDate ? new Date(startDate as string) : undefined;
-      const end = endDate ? new Date(endDate as string) : undefined;
-
-      // Sửa lại phần truy vấn để lấy đúng dữ liệu và lọc theo ngày
-      // Lấy tất cả real users trong khoảng thời gian
-      const realUsersStats = await db
-        .select({
-          id: realUsers.id,
-          fullName: realUsers.fullName,
-          email: realUsers.email,
-          verified: realUsers.verified,
-          createdAt: realUsers.createdAt,
-          updatedAt: realUsers.updatedAt,
-          lastLogin: realUsers.lastLogin,
-          assignedToId: realUsers.assignedToId
-        })
-        .from(realUsers)
-        .where(
-          and(
-            start ? gte(realUsers.createdAt, start) : undefined,
-            end ? lte(realUsers.createdAt, end) : undefined
+        dateConditions.push(
+          or(
+            and(
+              gte(contents.createdAt, start),
+              lte(contents.createdAt, end)
+            ),
+            and(
+              gte(contents.updatedAt, start),
+              lte(contents.updatedAt, end)
+            )
           )
         );
+      }
 
-      console.log("Real users stats results:", realUsersStats);
+      // User filter condition
+      const userConditions = user.role === 'admin' 
+        ? [] 
+        : [eq(contents.assigned_to_id, user.id)];
 
-      // Lấy tất cả real users từ DB
-      const allRealUsers = await db.select().from(realUsers);
+      const whereClause = [...dateConditions, ...userConditions];
+      const finalWhere = whereClause.length > 0 ? and(...whereClause) : undefined;
 
-      // Tính tổng số người dùng thật (không tính trùng lặp theo ID)
-      const uniqueIds = new Set(allRealUsers.map(u => u.fullName?.id));
-      const totalRealUsers = uniqueIds.size;
+      // Sử dụng một query duy nhất để lấy tất cả stats
+      const statsQuery = await db
+        .select({
+          totalContent: sql<number>`count(*)`,
+          pending: sql<number>`count(*) filter (where status = 'pending')`,
+          completed: sql<number>`count(*) filter (where status = 'completed')`,
+          verified: sql<number>`count(*) filter (where "sourceVerification" = 'verified')`,
+          unverified: sql<number>`count(*) filter (where "sourceVerification" = 'unverified')`,
+          safe: sql<number>`count(*) filter (where safe = true)`,
+          unsafe: sql<number>`count(*) filter (where safe = false)`,
+          unchecked: sql<number>`count(*) filter (where safe is null)`,
+          assigned: sql<number>`count(*) filter (where assigned_to_id is not null)`,
+          unassigned: sql<number>`count(*) filter (where assigned_to_id is null)`
+        })
+        .from(contents)
+        .where(finalWhere);
 
-      // Tính số người dùng mới trong 7 ngày
+      const contentStats = statsQuery[0];
+
+      // Lấy assignment per user chỉ khi cần thiết (admin)
+      let assignedPerUser = [];
+      if (user.role === 'admin') {
+        const assignmentQuery = await db
+          .select({
+            userId: contents.assigned_to_id,
+            username: users.username,
+            name: users.name,
+            count: sql<number>`count(*)`
+          })
+          .from(contents)
+          .innerJoin(users, eq(contents.assigned_to_id, users.id))
+          .where(
+            and(
+              eq(users.status, 'active'),
+              eq(users.role, 'editor'),
+              finalWhere
+            )
+          )
+          .groupBy(contents.assigned_to_id, users.username, users.name)
+          .orderBy(desc(sql`count(*)`));
+
+        assignedPerUser = assignmentQuery.map(row => ({
+          userId: row.userId,
+          username: row.username,
+          name: row.name,
+          count: Number(row.count)
+        }));
+      }
+
+      // Tối ưu queries cho real users, pages và groups
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const newRealUsers = allRealUsers.filter(u => {
-        if (!u.createdAt) return false;
-        const created = new Date(u.createdAt);
-        return created >= sevenDaysAgo;
-      }).length;
+      // Real users stats với aggregation
+      const { pages, groups } = await import("../shared/schema");
+      
+      const [realUsersStats, pagesStats, groupsStats] = await Promise.all([
+        // Real users aggregation
+        db.select({
+          total: sql<number>`count(distinct ("fullName"->>'id'))`,
+          new: sql<number>`count(distinct ("fullName"->>'id')) filter (where "createdAt" >= ${sevenDaysAgo})`
+        }).from(realUsers),
+        
+        // Pages aggregation
+        db.select({
+          total: sql<number>`count(*)`,
+          new: sql<number>`count(*) filter (where "createdAt" >= ${sevenDaysAgo})`
+        }).from(pages),
+        
+        // Groups aggregation
+        db.select({
+          total: sql<number>`count(*)`,
+          new: sql<number>`count(*) filter (where "createdAt" >= ${sevenDaysAgo})`
+        }).from(groups)
+      ]);
 
-      console.log("Real users stats:", {
-        total: totalRealUsers,
-        new: newRealUsers
-      });
+      const totalRealUsers = Number(realUsersStats[0]?.total || 0);
+      const newRealUsers = Number(realUsersStats[0]?.new || 0);
+      const totalPages = Number(pagesStats[0]?.total || 0);
+      const newPages = Number(pagesStats[0]?.new || 0);
+      const totalGroups = Number(groupsStats[0]?.total || 0);
+      const newGroups = Number(groupsStats[0]?.new || 0);
 
-      // Pages statistics
-      const { pages } = await import("../shared/schema");
-      const allPages = await db.select().from(pages);
-      const totalPages = allPages.length;
-
-      // Tính số trang mới trong 7 ngày gần đây
-      const sevenDaysAgoPages = new Date();
-      sevenDaysAgoPages.setDate(sevenDaysAgoPages.getDate() - 7);
-
-      const newPages = allPages.filter(p => {
-        if (!p.createdAt) return false;
-        const created = new Date(p.createdAt);
-        return created >= sevenDaysAgoPages;
-      }).length;
-
-      console.log("Pages stats:", {
-        total: totalPages,
-        new: newPages
-      });
-
-      // Groups statistics
-      const { groups } = await import("../shared/schema");
-      const allGroups = await db.select().from(groups);
-      const totalGroups = allGroups.length;
-
-      // Tính số nhóm mới trong 7 ngày gần đây
-      const sevenDaysAgoGroups = new Date();
-      sevenDaysAgoGroups.setDate(sevenDaysAgoGroups.getDate() - 7);
-
-      const newGroups = allGroups.filter(g => {
-        if (!g.createdAt) return false;
-        const created = new Date(g.createdAt);
-        return created >= sevenDaysAgoGroups;
-      }).length;
-
-      console.log("Groups stats:", {
-        total: totalGroups,
-        new: newGroups
+      console.log("Optimized stats:", {
+        realUsers: { total: totalRealUsers, new: newRealUsers },
+        pages: { total: totalPages, new: newPages },
+        groups: { total: totalGroups, new: newGroups }
       });
 
       const result = {
-        totalContent: filteredContents.length,
-        pending,
-        completed,
+        totalContent: Number(contentStats.totalContent),
+        pending: Number(contentStats.pending),
+        completed: Number(contentStats.completed),
         // Thông tin trạng thái xác minh nguồn
-        verified,
-        unverified, 
+        verified: Number(contentStats.verified),
+        unverified: Number(contentStats.unverified), 
         // Thông tin trạng thái an toàn  
-        safe,
-        unsafe,
-        unchecked,
+        safe: Number(contentStats.safe),
+        unsafe: Number(contentStats.unsafe),
+        unchecked: Number(contentStats.unchecked),
         // Số lượng bài viết đã được phân công
-        assigned: filteredContents.filter(c => c.assigned_to_id !== null).length,
+        assigned: Number(contentStats.assigned),
         // Số lượng bài viết chưa được phân công
-        unassigned: filteredContents.filter(c => c.assigned_to_id === null).length,
+        unassigned: Number(contentStats.unassigned),
         // Thêm thông tin số lượng nội dung trên mỗi người dùng (chỉ admin mới thấy)
-        assignedPerUser: user.role === 'admin' ? assignedPerUser : [],
+        assignedPerUser,
         // Thống kê người dùng thật
         totalRealUsers,
         newRealUsers,
-         totalPages,
+        totalPages,
         newPages,
         totalGroups,
         newGroups,

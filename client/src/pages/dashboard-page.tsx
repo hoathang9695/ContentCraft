@@ -36,7 +36,7 @@ export default function DashboardPage() {
   // Sử dụng useQueryClient để lấy queryClient instance
   const queryClient = useQueryClient();
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats với staleTime để giảm số lần fetch
   const { data: stats, isLoading: isLoadingStats } = useQuery<{
     totalContent: number;
     pending: number;
@@ -62,14 +62,17 @@ export default function DashboardPage() {
     newRealUsers: number;
     period: { start: string; end: string } | null;
   }>({
-    queryKey: ['/api/stats', user?.role], // Thêm user.role để phân biệt cache
+    queryKey: ['/api/stats', user?.role],
     queryFn: async () => {
       const response = await fetch(`/api/stats`);
       if (!response.ok) {
         throw new Error('Failed to fetch stats');
       }
       return response.json();
-    }
+    },
+    staleTime: 300000, // 5 minutes
+    cacheTime: 600000, // 10 minutes
+    refetchOnWindowFocus: false
   });
 
   // Hàm xử lý khi người dùng muốn xem tất cả nội dung
