@@ -26,17 +26,17 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           <div className="space-y-4">
             <div className="grid grid-cols-[100px,1fr] items-center">
               <span className="text-muted-foreground">Họ và tên:</span>
-              <span className="text-purple-600 font-medium">{request.full_name}</span>
+              <span className="font-medium" style={{ color: '#7367e0' }}>{request.full_name}</span>
             </div>
 
             <div className="grid grid-cols-[100px,1fr] items-center">
               <span className="text-muted-foreground">Email:</span>
-              <span className="text-purple-600 font-medium">{request.email}</span>
+              <span className="font-medium" style={{ color: '#7367e0' }}>{request.email}</span>
             </div>
 
             <div className="grid grid-cols-[100px,1fr] items-center">
               <span className="text-muted-foreground">Chủ đề:</span>
-              <span className="text-purple-600 font-medium">{request.subject}</span>
+              <span className="font-medium" style={{ color: '#7367e0' }}>{request.subject}</span>
             </div>
 
             <div>
@@ -51,7 +51,13 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
         <div className="flex justify-end bg-gray-50 p-4 mt-6">
           <Button 
             onClick={onClose}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6"
+            className="text-white px-6"
+            style={{ 
+              backgroundColor: '#7367e0',
+              '&:hover': { backgroundColor: '#5a52cc' }
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5a52cc'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#7367e0'}
           >
             Đã xem
           </Button>
