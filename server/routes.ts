@@ -251,8 +251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [realUsersStats, pagesStats, groupsStats] = await Promise.all([
         // Real users aggregation
         db.select({
-          total: sql<number>`count(distinct ("fullName"->>'id'))`,
-          new: sql<number>`count(distinct ("fullName"->>'id')) filter (where "createdAt" >= ${sevenDaysAgo})`
+          total: sql<number>`count(distinct ("full_name"->>'id'))`,
+          new: sql<number>`count(distinct ("full_name"->>'id')) filter (where "created_at" >= ${sevenDaysAgo})`
         }).from(realUsers),
         
         // Pages aggregation
