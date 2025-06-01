@@ -18,6 +18,8 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useQuery } from '@tanstack/react-query';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -30,22 +32,37 @@ interface SidebarItemProps {
   children: React.ReactNode;
   isActive: boolean;
   onClick?: () => void;
+  badge?: number;
 }
 
-function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarItemProps) {
+interface BadgeCounts {
+  realUsers?: number;
+  pages?: number;
+  groups?: number;
+  supportRequests?: number;
+}
+
+function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: SidebarItemProps) {
   return (
     <Link href={href}>
       <div
         className={cn(
-          "group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
+          "group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md cursor-pointer relative",
           isActive
             ? "bg-primary text-primary-foreground"
             : "text-foreground hover:bg-muted hover:text-foreground"
         )}
         onClick={onClick}
       >
-        <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-        {children}
+        <div className="flex items-center">
+          <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+          {children}
+        </div>
+        {badge && badge > 0 && (
+          <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
       </div>
     </Link>
   );
@@ -57,6 +74,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const isAdmin = user?.role === 'admin';
+
+  // Use WebSocket for real-time badge updates
+  const { badgeCounts: wsBadgeCounts, isConnected, hasInitialData } = useWebSocket();
+  
+  // Fallback to polling if WebSocket is not connected or no initial data
+  const { data: pollingBadgeCounts } = useQuery<BadgeCounts>({
+    queryKey: ['/api/badge-counts'],
+    queryFn: async () => {
+      const response = await fetch('/api/badge-counts');
+      if (!response.ok) throw new Error('Failed to fetch badge counts');
+      return response.json();
+    },
+    enabled: !isConnected || !hasInitialData, // Chỉ polling khi WebSocket không hoạt động hoặc chưa có data
+    refetchInterval: isConnected ? false : 300000, // Tắt polling nếu WebSocket hoạt động
+    staleTime: 240000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true
+  });
+
+  // Ưu tiên WebSocket data nếu có, fallback to polling
+  const badgeCounts = (isConnected && hasInitialData) ? wsBadgeCounts : pollingBadgeCounts;
 
   const isActivePath = (path: string) => {
     if (path === '/') {
@@ -104,6 +142,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Users}
               isActive={isActivePath('/real-user')}
               onClick={handleItemClick}
+              badge={badgeCounts?.realUsers}
             >
               Người dùng thật
             </SidebarItem>
@@ -113,6 +152,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Folder}
               isActive={isActivePath('/page-management')}
               onClick={handleItemClick}
+              badge={badgeCounts?.pages}
             >
               Quản lý trang
             </SidebarItem>
@@ -122,6 +162,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Users}
               isActive={isActivePath('/groups-management')}
               onClick={handleItemClick}
+              badge={badgeCounts?.groups}
             >
               Quản lý nhóm
             </SidebarItem>
@@ -136,6 +177,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     e.preventDefault();
                     setIsExpanded(!isExpanded);
                   }}
+                  badge={badgeCounts?.supportRequests}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span>Xử lý phản hồi</span>
@@ -151,6 +193,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   icon={HelpCircle}
                   isActive={isActivePath('/user-feedback/support')}
                   onClick={handleItemClick}
+                  badge={badgeCounts?.supportRequests}
                 >
                   Yêu cầu hỗ trợ
                 </SidebarItem>
@@ -235,6 +278,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Theme</span>
             <ThemeToggle />
+          </div>
+          {/* WebSocket connection status */}
+          <div className="flex items-center justify-center mt-2">
+            <div className={cn(
+              "h-2 w-2 rounded-full mr-2",
+              isConnected ? "bg-green-500" : "bg-red-500"
+            )} />
+            <span className="text-xs text-muted-foreground">
+              {isConnected ? "Real-time" : "Offline"}
+            </span>
           </div>
         </div>
       </div>

@@ -61,6 +61,10 @@ export default function DashboardPage() {
     totalRealUsers: number;
     newRealUsers: number;
     period: { start: string; end: string } | null;
+    totalSupportRequests: number;
+    pendingSupportRequests: number;
+    processingSupportRequests: number;
+    completedSupportRequests: number;
   }>({
     queryKey: ['/api/stats', user?.role],
     queryFn: async () => {
@@ -149,6 +153,114 @@ export default function DashboardPage() {
             iconBgColor="bg-emerald-500"
             onViewAll={() => navigate('/groups-management')}
           />
+        </div>
+      </div>
+
+      {/* Support Requests Reports Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Báo cáo Yêu cầu hỗ trợ</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-sm font-medium">Tổng số Yêu cầu</h3>
+              <div className="h-4 w-4 text-muted-foreground">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="m22 2-5 10-5-10Z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold">{stats?.totalSupportRequests?.toLocaleString() || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Tổng số yêu cầu hỗ trợ
+            </p>
+          </div>
+
+          <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-sm font-medium">Yêu cầu Đang chờ</h3>
+              <div className="h-4 w-4 text-muted-foreground">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12,6 12,12 16,14" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-orange-600">{stats?.pendingSupportRequests?.toLocaleString() || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Yêu cầu chưa được xử lý
+            </p>
+          </div>
+
+          <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-sm font-medium">Yêu cầu Đang xử lý</h3>
+              <div className="h-4 w-4 text-muted-foreground">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4"
+                >
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M8 16H3v5" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-blue-600">{stats?.processingSupportRequests?.toLocaleString() || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Yêu cầu đang được xử lý
+            </p>
+          </div>
+
+          <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-sm font-medium">Yêu cầu Đã xử lý</h3>
+              <div className="h-4 w-4 text-muted-foreground">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4"
+                >
+                  <polyline points="20,6 9,17 4,12" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-green-600">{stats?.completedSupportRequests?.toLocaleString() || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Yêu cầu đã hoàn thành
+            </p>
+          </div>
         </div>
       </div>
 

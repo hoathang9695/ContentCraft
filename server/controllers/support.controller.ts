@@ -78,6 +78,11 @@ export class SupportController {
         .where(eq(supportRequests.id, parseInt(id)))
         .returning();
 
+      // Broadcast badge update after status change
+      if ((global as any).broadcastBadgeUpdate) {
+        await (global as any).broadcastBadgeUpdate();
+      }
+
       return res.json(result[0]);
     } catch (err) {
       console.error('Error updating support request:', err);
@@ -107,6 +112,11 @@ export class SupportController {
         })
         .where(eq(supportRequests.id, parseInt(id)))
         .returning();
+
+      // Broadcast badge update after assignment
+      if ((global as any).broadcastBadgeUpdate) {
+        await (global as any).broadcastBadgeUpdate();
+      }
 
       return res.json(result[0]);
     } catch (err) {
