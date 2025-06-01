@@ -87,6 +87,13 @@ export interface IStorage {
   getAllFakeUsers(): Promise<FakeUser[]>;
   getFakeUser(id: number): Promise<FakeUser | undefined>;
   getFakeUserByToken(token: string): Promise<FakeUser | undefined>; // Get fake user by token
+  getFakeUsersWithPagination(page: number, pageSize: number, search?: string): Promise<{
+    users: FakeUser[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }>;
   createFakeUser(fakeUser: InsertFakeUser): Promise<FakeUser>;
   updateFakeUser(id: number, fakeUser: Partial<InsertFakeUser>): Promise<FakeUser | undefined>;
   deleteFakeUser(id: number): Promise<boolean>;
@@ -845,36 +852,56 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
-```async getAllFakeUsers(params: { page: number; limit: number }): Promise<{ data: FakeUser[]; total: number; totalPages: number; currentPage: number; itemsPerPage: number }> {
-    const { page, limit } = params;
+```async getFakeUsersWithPagination(page: number, pageSize: number, search: string = ''): Promise<{
+    users: FakeUser[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    const offset = (page - 1) * pageSize;
 
-    // Calculate offset
-    const offset = (page - 1) * limit;
+    // Build search conditions
+    const searchConditions = [];
+    if (search && search.trim()) {
+      const searchPattern = `%${search.toLowerCase()}%`;
+      searchConditions.push(
+        or(
+          ilike(fakeUsers.name, searchPattern),
+          ilike(fakeUsers.token, searchPattern),
+          ilike(fakeUsers.description, searchPattern)
+        )
+      );
+    }
+
+    const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
 
     // Get total count
     const countResult = await db
       .select({ count: count() })
-      .from(fakeUsers);
+      .from(fakeUsers)
+      .where(whereClause);
 
     const total = countResult[0]?.count || 0;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / pageSize);
 
     // Get paginated data
     const results = await db
       .select()
       .from(fakeUsers)
+      .where(whereClause)
       .orderBy(fakeUsers.name)
-      .limit(limit)
+      .limit(pageSize)
       .offset(offset);
 
     return {
-      data: results,
+      users: results,
       total,
-      totalPages,
-      currentPage: page,
-      itemsPerPage: limit
+      page,
+      pageSize,
+      totalPages
     };
   }
 }
 
-export const storage = new DatabaseStorage();Analyzing the user message and provided code, it seems the intention is to implement pagination for the fake users list. I'll add the `getAllFakeUsers` method with pagination parameters to the `IStorage` interface and implement this method in the `DatabaseStorage` class.
+export const storage = new DatabaseStorage();
