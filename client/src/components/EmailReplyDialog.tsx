@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,10 +28,21 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    to: request?.email || "",
-    subject: request ? `Re: ${request.subject}` : "",
+    to: "",
+    subject: "",
     content: ""
   });
+
+  // Auto fill form when request changes
+  React.useEffect(() => {
+    if (request) {
+      setFormData({
+        to: request.email,
+        subject: `Re: ${request.subject}`,
+        content: ""
+      });
+    }
+  }, [request]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,10 +64,30 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
       });
 
       if (response.ok) {
-        toast({
-          title: "Thành công",
-          description: "Email phản hồi đã được gửi thành công",
+        // Update support request status to completed
+        const updateResponse = await fetch(`/api/support-requests/${request.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: 'completed',
+            response_content: formData.content
+          })
         });
+
+        if (updateResponse.ok) {
+          toast({
+            title: "Thành công",
+            description: "Email phản hồi đã được gửi và yêu cầu đã được đánh dấu hoàn thành",
+          });
+        } else {
+          toast({
+            title: "Thành công",
+            description: "Email đã gửi nhưng không thể cập nhật trạng thái yêu cầu",
+          });
+        }
+        
         onSuccess?.();
         onClose();
         setFormData({ to: "", subject: "", content: "" });
