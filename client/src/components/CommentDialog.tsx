@@ -47,23 +47,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     ? allFakeUsers 
     : allFakeUsers.filter(user => user.gender === selectedGender);
 
-  // Hàm lấy ngẫu nhiên một người dùng ảo từ danh sách
-  // Đảm bảo không lấy trùng lặp người dùng (trừ khi không còn lựa chọn)
-  const getRandomFakeUser = (usedIds: number[] = []): FakeUser | null => {
+  // Hàm lấy ngẫu nhiên một người dùng ảo từ danh sách theo giới tính đã chọn
+  const getRandomFakeUser = (): FakeUser | null => {
     if (fakeUsers.length === 0) return null;
 
-    // Nếu đã sử dụng tất cả người dùng ảo, bắt đầu lại từ đầu
-    if (usedIds.length >= fakeUsers.length) {
-      const randomIndex = Math.floor(Math.random() * fakeUsers.length);
-      return fakeUsers[randomIndex];
-    }
-
-    // Lọc ra những người dùng chưa sử dụng
-    const availableUsers = fakeUsers.filter(user => !usedIds.includes(user.id));
-
-    // Chọn ngẫu nhiên một người dùng từ danh sách còn lại
-    const randomIndex = Math.floor(Math.random() * availableUsers.length);
-    return availableUsers[randomIndex];
+    // Chọn ngẫu nhiên một người dùng từ danh sách đã được lọc theo giới tính
+    const randomIndex = Math.floor(Math.random() * fakeUsers.length);
+    return fakeUsers[randomIndex];
   };
 
   // Extract comments inside {} brackets
@@ -315,9 +305,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         // Retry loop cho mỗi comment
         while (!success && retryCount < maxRetries) {
           try {
-            // Chọn random user (với rotation logic)
-            const userIndex = (index + retryCount) % fakeUsers.length;
-            const randomUser = fakeUsers[userIndex];
+            // Chọn ngẫu nhiên một người dùng ảo khác nhau cho mỗi comment
+            const randomUser = getRandomFakeUser();
+            
+            if (!randomUser) {
+              throw new Error('Không có người dùng ảo nào khả dụng');
+            }
 
             console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Gửi comment (thử lần ${retryCount + 1}) với user ${randomUser.name}...`);
             
