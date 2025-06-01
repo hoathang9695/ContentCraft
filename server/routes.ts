@@ -2297,10 +2297,6 @@ phoneNumber: groupsTable.phoneNumber,
   });
 
   // Support routes
-  const supportRouter = (await import('./routes/support.router')).default;
-  const { SupportController } = await import('./controllers/support.controller');
-  const supportController = new SupportController();
-
   app.use("/api/support-requests", supportRouter);
 
   // Support requests routes
