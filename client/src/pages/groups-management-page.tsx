@@ -102,7 +102,7 @@ export default function GroupsManagementPage() {
 
   // Fetch groups with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/groups", page, limit, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
+    queryKey: ["/api/groups", page, limit, groupTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -111,7 +111,9 @@ export default function GroupsManagementPage() {
         ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
         ...(activeTab !== 'all' && { activeTab }),
         ...(selectedUserId && { assignedToId: selectedUserId.toString() }),
-        ...(classificationFilter !== 'all' && { classification: classificationFilter })
+        ...(classificationFilter !== 'all' && { classification: classificationFilter }),
+        ...(startDate && { startDate: startDate.toISOString() }),
+        ...(endDate && { endDate: endDate.toISOString() })
       });
 
       const response = await fetch(`/api/groups?${params}`);

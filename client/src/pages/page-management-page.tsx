@@ -103,7 +103,7 @@ export default function PageManagementPage() {
 
   // Fetch pages with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/pages", page, limit, pageTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
+    queryKey: ["/api/pages", page, limit, pageTypeFilter, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -112,7 +112,9 @@ export default function PageManagementPage() {
         ...(debouncedSearchQuery !== '' && { search: debouncedSearchQuery }),
         ...(activeTab !== 'all' && { activeTab }),
         ...(selectedUserId && { assignedToId: selectedUserId.toString() }),
-        ...(classificationFilter !== 'all' && { classification: classificationFilter })
+        ...(classificationFilter !== 'all' && { classification: classificationFilter }),
+        ...(startDate && { startDate: startDate.toISOString() }),
+        ...(endDate && { endDate: endDate.toISOString() })
       });
 
       const response = await fetch(`/api/pages?${params}`);

@@ -70,10 +70,12 @@ export default function SupportPage() {
   const [pageSize, setPageSize] = useState<number>(20);
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
-    queryKey: ['/api/support-requests', userFilter],
+    queryKey: ['/api/support-requests', userFilter, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (userFilter) params.append('userId', userFilter.toString());
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
       const response = await fetch(`/api/support-requests?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch support requests');
       return response.json();
