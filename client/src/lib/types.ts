@@ -34,6 +34,10 @@ export interface FeedbackRequest {
   response_time: string | null;
   created_at: string;
   updated_at: string;
+  feedback_type?: 'bug_report' | 'feature_request' | 'complaint' | 'suggestion' | 'other';
+  feature_type?: string;
+  detailed_description?: string;
+  attachment_url?: string;
 }
 
 export interface BadgeCounts {

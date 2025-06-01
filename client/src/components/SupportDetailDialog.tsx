@@ -80,12 +80,55 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
               <span className="font-medium" style={{ color: '#7367e0' }}>{request.subject}</span>
             </div>
 
+            {(request as any).feedback_type && (
+              <div className="grid grid-cols-[100px,1fr] items-center">
+                <span className="text-muted-foreground">Loại:</span>
+                <span className="font-medium" style={{ color: '#7367e0' }}>
+                  {(request as any).feedback_type === 'bug_report' && 'Báo lỗi'}
+                  {(request as any).feedback_type === 'feature_request' && 'Yêu cầu tính năng'}
+                  {(request as any).feedback_type === 'complaint' && 'Khiếu nại'}
+                  {(request as any).feedback_type === 'suggestion' && 'Đề xuất'}
+                  {(request as any).feedback_type === 'other' && 'Khác'}
+                </span>
+              </div>
+            )}
+
+            {(request as any).feature_type && (
+              <div className="grid grid-cols-[100px,1fr] items-center">
+                <span className="text-muted-foreground">Loại tính năng:</span>
+                <span className="font-medium" style={{ color: '#7367e0' }}>{(request as any).feature_type}</span>
+              </div>
+            )}
+
             <div>
               <span className="text-muted-foreground block mb-2">Nội dung:</span>
               <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap text-gray-900">
                 {request.content}
               </div>
             </div>
+
+            {(request as any).detailed_description && (request as any).detailed_description !== request.content && (
+              <div>
+                <span className="text-muted-foreground block mb-2">Mô tả chi tiết:</span>
+                <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap text-gray-900">
+                  {(request as any).detailed_description}
+                </div>
+              </div>
+            )}
+
+            {(request as any).attachment_url && (
+              <div className="grid grid-cols-[100px,1fr] items-center">
+                <span className="text-muted-foreground">File đính kèm:</span>
+                <a 
+                  href={(request as any).attachment_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline font-medium"
+                >
+                  Tải về file đính kèm
+                </a>
+              </div>
+            )}
           </div>
         </div>
 
