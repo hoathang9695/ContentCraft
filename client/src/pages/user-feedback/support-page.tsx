@@ -60,10 +60,8 @@ interface SupportRequest {
 export default function SupportPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
-  const [endDate, setEndDate] = useState<Date>(today);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [userFilter, setUserFilter] = useState<number | null>(null);
   const [searchResults, setSearchResults] = useState<SupportRequest[]>([]);
@@ -194,7 +192,7 @@ export default function SupportPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                      {startDate ? format(startDate, 'dd/MM/yyyy') : "Tất cả"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -227,7 +225,7 @@ export default function SupportPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                      {endDate ? format(endDate, 'dd/MM/yyyy') : "Tất cả"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -261,13 +259,11 @@ export default function SupportPage() {
                   variant="outline" 
                   className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
                   onClick={() => {
-                    const today = new Date();
-                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                    setStartDate(firstDayOfMonth);
-                    setEndDate(today);
+                    setStartDate(undefined);
+                    setEndDate(undefined);
                     toast({
                       title: "Đã đặt lại bộ lọc",
-                      description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, 'dd/MM/yyyy')} đến ${format(today, 'dd/MM/yyyy')}`,
+                      description: "Hiển thị tất cả dữ liệu",
                     });
                   }}
                 >
