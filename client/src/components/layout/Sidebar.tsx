@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useQuery } from '@tanstack/react-query';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -73,19 +74,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   
   const isAdmin = user?.role === 'admin';
 
-  // Fetch badge counts
-  const { data: badgeCounts } = useQuery<BadgeCounts>({
+  // Use WebSocket for real-time badge updates
+  const { badgeCounts: wsbadge, isConnected } = useWebSocket();
+  
+  // Fallback to polling if WebSocket is not connected
+  const { data: pollingBadgeCounts } = useQuery<BadgeCounts>({
     queryKey: ['/api/badge-counts'],
     queryFn: async () => {
       const response = await fetch('/api/badge-counts');
       if (!response.ok) throw new Error('Failed to fetch badge counts');
       return response.json();
     },
-    refetchInterval: 300000, // Refetch every 5 minutes (giảm từ 1 phút)
-    staleTime: 240000, // Consider data stale after 4 minutes
-    refetchOnWindowFocus: false, // Không refresh khi focus window
-    refetchOnMount: true // Chỉ refresh khi mount component
+    enabled: !isConnected, // Chỉ polling khi WebSocket không kết nối
+    refetchInterval: 300000, // 5 minutes fallback
+    staleTime: 240000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true
   });
+
+  // Sử dụng WebSocket data hoặc fallback to polling
+  const badgeCounts = isConnected ? wsbadge : pollingBadgeCounts;
 
   const isActivePath = (path: string) => {
     if (path === '/') {
@@ -267,6 +275,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Theme</span>
             <ThemeToggle />
+          </div>
+          {/* WebSocket connection status */}
+          <div className="flex items-center justify-center mt-2">
+            <div className={cn(
+              "h-2 w-2 rounded-full mr-2",
+              isConnected ? "bg-green-500" : "bg-red-500"
+            )} />
+            <span className="text-xs text-muted-foreground">
+              {isConnected ? "Real-time" : "Offline"}
+            </span>
           </div>
         </div>
       </div>

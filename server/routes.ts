@@ -1,5 +1,6 @@
 import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { Server as SocketIOServer } from 'socket.io';
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
@@ -55,6 +56,70 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from public directory
   app.use('/images', express.static(path.join(process.cwd(), 'public/images')));
+
+  const httpServer = createServer(app);
+  
+  // Setup Socket.IO
+  const io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+
+  // Socket.IO connection handling
+  io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('disconnect', () => {
+      console.log('Client disconnected:', socket.id);
+    });
+  });
+
+  // Function to broadcast badge updates
+  const broadcastBadgeUpdate = async () => {
+    try {
+      const { pages, groups, realUsers } = await import("../shared/schema");
+
+      const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
+        db.select({
+          count: sql<number>`count(*)`
+        }).from(realUsers)
+        .where(eq(realUsers.classification, 'new')),
+
+        db.select({
+          count: sql<number>`count(*)`
+        }).from(pages)
+        .where(eq(pages.classification, 'new')),
+
+        db.select({
+          count: sql<number>`count(*)`
+        }).from(groups)
+        .where(eq(groups.classification, 'new'))
+      ]);
+
+      const badgeCounts = {
+        realUsers: realUsersNewCount[0]?.count || 0,
+        pages: pagesNewCount[0]?.count || 0,
+        groups: groupsNewCount[0]?.count || 0
+      };
+
+      const filteredBadgeCounts = {
+        realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
+        pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
+        groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined
+      };
+
+      // Broadcast to all connected clients
+      io.emit('badge-update', filteredBadgeCounts);
+      console.log('Broadcasted badge update:', filteredBadgeCounts);
+    } catch (error) {
+      console.error('Error broadcasting badge update:', error);
+    }
+  };
+
+  // Make broadcastBadgeUpdate available globally
+  (global as any).broadcastBadgeUpdate = broadcastBadgeUpdate;
 
   // Set up authentication routes
   setupAuth(app);
@@ -1435,6 +1500,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Classification updated successfully",
         user: updatedUser[0]
       });
+
+      // Broadcast badge update to all clients
+      if ((global as any).broadcastBadgeUpdate) {
+        (global as any).broadcastBadgeUpdate();
+      }
     } catch (error) {
       console.error("Error updating classification:", error);
       res.status(500).json({ 
@@ -1886,6 +1956,11 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
         message: "Classification updated successfully",
         data: updatedPage[0] 
       });
+
+      // Broadcast badge update to all clients
+      if ((global as any).broadcastBadgeUpdate) {
+        (global as any).broadcastBadgeUpdate();
+      }
     } catch (error) {
       console.error("Error updating page classification:", error);
       res.status(500).json({ 
@@ -2062,6 +2137,11 @@ phoneNumber: groupsTable.phoneNumber,
         message: "Classification updated successfully",
         data: updatedGroup[0] 
       });
+
+      // Broadcast badge update to all clients
+      if ((global as any).broadcastBadgeUpdate) {
+        (global as any).broadcastBadgeUpdate();
+      }
     } catch (error) {
       console.error("Error updating group classification:", error);
       res.status(500).json({ 
@@ -2198,8 +2278,6 @@ phoneNumber: groupsTable.phoneNumber,
       });
     }
   });
-
-  const httpServer = createServer(app);
 
   // EmailService is already initialized as singleton in email.ts
 
