@@ -146,8 +146,8 @@ export default function SupportPage() {
     <DashboardLayout>
       <div className="container mx-auto p-4">
         <div className="mb-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 mr-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <div className="bg-background border rounded-md p-1">
                 <div className="flex space-x-1">
                   <Button 
@@ -173,6 +173,23 @@ export default function SupportPage() {
                   </Button>
                 </div>
               </div>
+
+              <Select 
+                value={userFilter?.toString() || "all"} 
+                onValueChange={(value) => setUserFilter(value === "all" ? null : parseInt(value))}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tất cả" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center gap-2">
@@ -272,29 +289,13 @@ export default function SupportPage() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-start mb-4">
           <Input 
             placeholder="Tìm kiếm yêu cầu..." 
             className="max-w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Select 
-            value={userFilter?.toString() || "all"} 
-            onValueChange={(value) => setUserFilter(value === "all" ? null : parseInt(value))}
-          >
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Chọn người dùng" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              {users.map(user => (
-                <SelectItem key={user.id} value={user.id.toString()}>
-                  {user.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="bg-card rounded-lg shadow">
