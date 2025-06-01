@@ -81,8 +81,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (!response.ok) throw new Error('Failed to fetch badge counts');
       return response.json();
     },
-    refetchInterval: 60000, // Refetch every minute
-    staleTime: 30000 // Consider data stale after 30 seconds
+    refetchInterval: 300000, // Refetch every 5 minutes (giảm từ 1 phút)
+    staleTime: 240000, // Consider data stale after 4 minutes
+    refetchOnWindowFocus: false, // Không refresh khi focus window
+    refetchOnMount: true // Chỉ refresh khi mount component
   });
 
   const isActivePath = (path: string) => {
