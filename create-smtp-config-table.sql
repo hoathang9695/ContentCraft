@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS smtp_config (
     host VARCHAR(255) NOT NULL DEFAULT 'smtp.gmail.com',
     port INTEGER NOT NULL DEFAULT 587,
     secure BOOLEAN NOT NULL DEFAULT false,
-    user VARCHAR(255) NOT NULL,
+    "user" VARCHAR(255) NOT NULL,
     password TEXT NOT NULL,
     from_name VARCHAR(255) NOT NULL DEFAULT 'EMSO System',
     from_email VARCHAR(255) NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS smtp_config (
 );
 
 -- Insert default configuration if not exists
-INSERT INTO smtp_config (host, port, secure, user, password, from_name, from_email, is_active)
+INSERT INTO smtp_config (host, port, secure, "user", password, from_name, from_email, is_active)
 SELECT 'smtp.gmail.com', 587, false, '', '', 'EMSO System', '', true
 WHERE NOT EXISTS (SELECT 1 FROM smtp_config WHERE is_active = true);
 
