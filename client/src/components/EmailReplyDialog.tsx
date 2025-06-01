@@ -1,8 +1,8 @@
-import React, { useState, useRef } from "react";
+
+import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { X, Send, Bold, Italic, Underline, Link, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +32,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     content: ""
   });
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   // Auto fill form when request changes
   React.useEffect(() => {
@@ -42,12 +42,25 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         subject: `Re: ${request.subject}`,
         content: ""
       });
+      if (editorRef.current) {
+        editorRef.current.innerHTML = "";
+      }
     }
   }, [request]);
+
+  // Update content when editor changes
+  const handleEditorChange = () => {
+    if (editorRef.current) {
+      setFormData({ ...formData, content: editorRef.current.innerHTML });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!request) return;
+
+    // Get plain text content for email sending
+    const plainTextContent = editorRef.current?.innerText || "";
 
     setIsLoading(true);
     try {
@@ -59,8 +72,8 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         body: JSON.stringify({
           to: formData.to,
           subject: formData.subject,
-          content: formData.content,
-          response_content: formData.content
+          content: plainTextContent,
+          response_content: plainTextContent
         })
       });
 
@@ -73,7 +86,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           },
           body: JSON.stringify({
             status: 'completed',
-            response_content: formData.content
+            response_content: plainTextContent
           })
         });
 
@@ -92,6 +105,9 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         onSuccess?.();
         onClose();
         setFormData({ to: "", subject: "", content: "" });
+        if (editorRef.current) {
+          editorRef.current.innerHTML = "";
+        }
       } else {
         throw new Error('Failed to send reply');
       }
@@ -106,30 +122,26 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     }
   };
 
-  const formatText = (startTag: string, endTag: string) => {
-    if (!textareaRef.current) return;
-
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selectedText = text.substring(start, end);
-    const newText = text.substring(0, start) + startTag + selectedText + endTag + text.substring(end);
-
-    setFormData({ ...formData, content: newText });
-    textarea.focus();
-    textarea.setSelectionRange(start + startTag.length, end + startTag.length);
+  const execCommand = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
+    handleEditorChange();
   };
 
   const insertLink = () => {
-    const url = prompt("Enter the URL:");
+    const url = prompt("Nhập URL:");
     if (url) {
-      formatText(`<a href="${url}">`, "</a>");
+      execCommand('createLink', url);
     }
   };
 
   const insertAttachment = () => {
-    alert("Attachment functionality not implemented yet.");
+    alert("Chức năng đính kèm file chưa được triển khai.");
+  };
+
+  // Check if current selection has formatting
+  const isFormatActive = (command: string) => {
+    return document.queryCommandState(command);
   };
 
   if (!request) return null;
@@ -189,30 +201,30 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
             <div className="flex items-center space-x-1">
               <Button 
                 type="button" 
-                variant="ghost" 
+                variant={isFormatActive('bold') ? 'default' : 'ghost'}
                 size="sm" 
                 className="h-8 w-8 p-0"
-                onClick={() => formatText('**', '**')}
+                onClick={() => execCommand('bold')}
                 title="Bold"
               >
                 <Bold className="h-4 w-4" />
               </Button>
               <Button 
                 type="button" 
-                variant="ghost" 
+                variant={isFormatActive('italic') ? 'default' : 'ghost'}
                 size="sm" 
                 className="h-8 w-8 p-0"
-                onClick={() => formatText('*', '*')}
+                onClick={() => execCommand('italic')}
                 title="Italic"
               >
                 <Italic className="h-4 w-4" />
               </Button>
               <Button 
                 type="button" 
-                variant="ghost" 
+                variant={isFormatActive('underline') ? 'default' : 'ghost'}
                 size="sm" 
                 className="h-8 w-8 p-0"
-                onClick={() => formatText('<u>', '</u>')}
+                onClick={() => execCommand('underline')}
                 title="Underline"
               >
                 <Underline className="h-4 w-4" />
@@ -223,7 +235,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 variant="ghost" 
                 size="sm" 
                 className="h-8 w-8 p-0"
-                onClick={() => insertLink()}
+                onClick={insertLink}
                 title="Insert Link"
               >
                 <Link className="h-4 w-4" />
@@ -233,7 +245,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 variant="ghost" 
                 size="sm" 
                 className="h-8 w-8 p-0"
-                onClick={() => insertAttachment()}
+                onClick={insertAttachment}
                 title="Attach File"
               >
                 <Paperclip className="h-4 w-4" />
@@ -243,14 +255,39 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
           {/* Content Editor */}
           <div className="flex-1 p-4">
-            <Textarea
-              ref={textareaRef}
-              placeholder="Nhập nội dung phản hồi..."
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full h-full resize-none border-0 focus:ring-0 text-sm"
-              required
+            <div
+              ref={editorRef}
+              contentEditable
+              className="w-full h-full outline-none text-sm border-0 focus:ring-0 min-h-[200px] p-2 border rounded"
+              style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+              onInput={handleEditorChange}
+              onBlur={handleEditorChange}
+              suppressContentEditableWarning={true}
+              data-placeholder="Nhập nội dung phản hồi..."
             />
+            <style>{`
+              [contenteditable]:empty:before {
+                content: attr(data-placeholder);
+                color: #9CA3AF;
+                pointer-events: none;
+              }
+              [contenteditable] {
+                line-height: 1.5;
+              }
+              [contenteditable] b, [contenteditable] strong {
+                font-weight: bold;
+              }
+              [contenteditable] i, [contenteditable] em {
+                font-style: italic;
+              }
+              [contenteditable] u {
+                text-decoration: underline;
+              }
+              [contenteditable] a {
+                color: #3B82F6;
+                text-decoration: underline;
+              }
+            `}</style>
           </div>
 
           {/* Footer */}
