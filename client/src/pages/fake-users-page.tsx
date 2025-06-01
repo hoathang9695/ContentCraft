@@ -215,6 +215,34 @@ export default function FakeUsersPage() {
     },
   });
 
+  // Mutation để cập nhật giới tính người dùng ảo
+  const updateGenderMutation = useMutation({
+    mutationFn: async ({ id, gender }: { id: number; gender: "male" | "female" | "other" }) => {
+      const user = fakeUsers?.find(u => u.id === id);
+      if (!user) throw new Error("User not found");
+      
+      return await apiRequest<FakeUser>("PUT", `/api/fake-users/${id}`, {
+        ...user,
+        gender
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật giới tính",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/fake-users"] });
+    },
+    onError: (error) => {
+      console.error("Error updating gender:", error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật giới tính. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutation để upload nhiều người dùng ảo từ Excel
   const bulkUploadFakeUsers = useMutation({
     mutationFn: async (users: Array<{ name: string; token: string }>) => {
@@ -462,9 +490,22 @@ export default function FakeUsersPage() {
                           {user.token}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={user.gender === 'male' ? 'default' : user.gender === 'female' ? 'secondary' : 'outline'}>
-                            {user.gender === 'male' ? 'Nam' : user.gender === 'female' ? 'Nữ' : 'Khác'}
-                          </Badge>
+                          <Select
+                            value={user.gender}
+                            onValueChange={(value: "male" | "female" | "other") => {
+                              updateGenderMutation.mutate({ id: user.id, gender: value });
+                            }}
+                            disabled={updateGenderMutation.isPending}
+                          >
+                            <SelectTrigger className="w-24 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="male">Nam</SelectItem>
+                              <SelectItem value="female">Nữ</SelectItem>
+                              <SelectItem value="other">Khác</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
