@@ -1987,7 +1987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "./controllers/support.controller"
   );
   const supportController = new SupportController();
-  const feedbackRouter = (await import("./routes/feedback.router")).default;
+  const { feedbackRouter } = await import("./routes/feedback.router");
 
   app.use("/api/support-requests", supportRouter);
   app.use('/api', supportRouter);
