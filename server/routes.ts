@@ -130,10 +130,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
 
         const badgeCounts = {
-          realUsers: realUsersNewCount[0]?.count || 0,
-          pages: pagesNewCount[0]?.count || 0,
-          groups: groupsNewCount[0]?.count || 0,
-          supportRequests: pendingSupport,
+          realUsers: Number(realUsersNewCount[0]?.count) || 0,
+          pages: Number(pagesNewCount[0]?.count) || 0,
+          groups: Number(groupsNewCount[0]?.count) || 0,
+          supportRequests: Number(pendingSupport) || 0,
         };
 
         const filteredBadgeCounts = {
@@ -241,10 +241,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
 
       const badgeCounts = {
-        realUsers: realUsersNewCount[0]?.count || 0,
-        pages: pagesNewCount[0]?.count || 0,
-        groups: groupsNewCount[0]?.count || 0,
-        supportRequests: pendingSupport,
+        realUsers: Number(realUsersNewCount[0]?.count) || 0,
+        pages: Number(pagesNewCount[0]?.count) || 0,
+        groups: Number(groupsNewCount[0]?.count) || 0,
+        supportRequests: Number(pendingSupport) || 0,
       };
 
       const filteredBadgeCounts = {
@@ -1941,6 +1941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete fake user (admin only)
   app.delete("/api/fake-users/:id", isAdmin, async (req, res) => {
     try {
+```text
       const fakeUserId = Number(req.params.id);
       const existingFakeUser = await storage.getFakeUser(fakeUserId);
 
@@ -2974,7 +2975,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "../shared/schema"
       );
       const { users } = await import("../shared/schema");
-      const { realUsers } = await import("../shared/schema");
+      const { realUsers } = awaittext
+ import("../shared/schema");
 
       const [realUsersNewCount, pagesNewCount, groupsNewCount] =
         await Promise.all([
@@ -3012,10 +3014,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
 
       const badgeCounts = {
-        realUsers: realUsersNewCount[0]?.count || 0,
-        pages: pagesNewCount[0]?.count || 0,
-        groups: groupsNewCount[0]?.count || 0,
-        supportRequests: pendingSupport,
+        realUsers: Number(realUsersNewCount[0]?.count) || 0,
+        pages: Number(pagesNewCount[0]?.count) || 0,
+        groups: Number(groupsNewCount[0]?.count) || 0,
+        supportRequests: Number(pendingSupport) || 0,
       };
 
       // Chỉ trả về các badge có giá trị > 0
