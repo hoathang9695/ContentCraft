@@ -47,13 +47,28 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     ? allFakeUsers 
     : allFakeUsers.filter(user => user.gender === selectedGender);
 
-  // Hàm lấy ngẫu nhiên một người dùng ảo từ danh sách theo giới tính đã chọn
-  const getRandomFakeUser = (): FakeUser | null => {
+  // Hàm lấy ngẫu nhiên một người dùng ảo không trùng lặp trong cùng session
+  const getRandomFakeUser = (usedUserIds: Set<number>): FakeUser | null => {
     if (fakeUsers.length === 0) return null;
 
-    // Chọn ngẫu nhiên một người dùng từ danh sách đã được lọc theo giới tính
-    const randomIndex = Math.floor(Math.random() * fakeUsers.length);
-    return fakeUsers[randomIndex];
+    // Lọc ra những người dùng chưa được sử dụng trong session này
+    const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
+    
+    // Nếu đã sử dụng hết tất cả user, reset và bắt đầu lại
+    if (availableUsers.length === 0) {
+      console.log('Đã sử dụng hết tất cả user, bắt đầu chu kỳ mới...');
+      usedUserIds.clear();
+      const randomIndex = Math.floor(Math.random() * fakeUsers.length);
+      const selectedUser = fakeUsers[randomIndex];
+      usedUserIds.add(selectedUser.id);
+      return selectedUser;
+    }
+
+    // Chọn ngẫu nhiên một người dùng từ danh sách chưa sử dụng
+    const randomIndex = Math.floor(Math.random() * availableUsers.length);
+    const selectedUser = availableUsers[randomIndex];
+    usedUserIds.add(selectedUser.id);
+    return selectedUser;
   };
 
   // Extract comments inside {} brackets
@@ -209,6 +224,9 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const baseDelay = 2; // 2 phút base delay
       const maxDelay = 5; // 5 phút max delay
       
+      // Track used users for this session to prevent duplicates
+      const usedUserIds = new Set<number>();
+      
       // Recovery function để load từ localStorage
       const loadQueueFromStorage = (): typeof commentQueue | null => {
         try {
@@ -305,14 +323,14 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         // Retry loop cho mỗi comment
         while (!success && retryCount < maxRetries) {
           try {
-            // Chọn ngẫu nhiên một người dùng ảo khác nhau cho mỗi comment
-            const randomUser = getRandomFakeUser();
+            // Chọn một người dùng ảo không trùng lặp trong session này
+            const randomUser = getRandomFakeUser(usedUserIds);
             
             if (!randomUser) {
               throw new Error('Không có người dùng ảo nào khả dụng');
             }
 
-            console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Gửi comment (thử lần ${retryCount + 1}) với user ${randomUser.name}...`);
+            console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Gửi comment (thử lần ${retryCount + 1}) với user ${randomUser.name} (ID: ${randomUser.id})...`);
             
             // Gửi comment với enhanced timeout
             const controller = new AbortController();
@@ -334,11 +352,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
                 successCount: currentQueue.successCount + 1
               });
 
-              console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Thành công với user ${randomUser.name}`);
+              console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Thành công với user ${randomUser.name} (ID: ${randomUser.id}). Đã sử dụng ${usedUserIds.size}/${fakeUsers.length} user.`);
               
               toast({
                 title: 'Thành công',
-                description: `Comment ${index + 1}/${currentQueue.totalComments} đã gửi thành công`,
+                description: `Comment ${index + 1}/${currentQueue.totalComments} đã gửi thành công bởi ${randomUser.name}`,
               });
 
             } catch (apiError) {
@@ -367,7 +385,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               
               await enhancedDelay(retryDelayMs, index + 1);
             } else {
-              // Max retries reached
+              // Max retries reached - remove user from used set since comment failed
+              if (randomUser) {
+                usedUserIds.delete(randomUser.id);
+                console.log(`[${sessionId}] Đã xóa user ${randomUser.name} (ID: ${randomUser.id}) khỏi danh sách đã sử dụng do comment thất bại`);
+              }
+              
               updateQueue({
                 processedCount: index + 1,
                 failureCount: currentQueue.failureCount + 1
@@ -388,12 +411,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         status: 'completed'
       });
 
-      const finalMessage = `Hoàn thành: ${currentQueue.successCount} thành công, ${currentQueue.failureCount} thất bại trên tổng ${currentQueue.totalComments}`;
+      const finalMessage = `Hoàn thành: ${currentQueue.successCount} thành công, ${currentQueue.failureCount} thất bại trên tổng ${currentQueue.totalComments}. Đã sử dụng ${usedUserIds.size}/${fakeUsers.length} user khác nhau.`;
       console.log(`[${sessionId}] ${finalMessage}`);
       
       toast({
         title: currentQueue.successCount > 0 ? 'Hoàn thành' : 'Có lỗi xảy ra',
-        description: finalMessage,
+        description: `${currentQueue.successCount} thành công, ${currentQueue.failureCount} thất bại. Sử dụng ${usedUserIds.size} user khác nhau.`,
         variant: currentQueue.successCount > 0 ? 'default' : 'destructive'
       });
 
