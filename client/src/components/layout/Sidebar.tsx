@@ -306,7 +306,3 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     </div>
   );
 }
-```
-
-```
-</replit_final_file>
