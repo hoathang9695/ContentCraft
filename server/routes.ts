@@ -2975,7 +2975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalContents: contentStats[0]?.total || 0,
         pendingContents: contentStats[0]?.pending || 0,
         completedContents: contentStats[0]?.completed || 0,
-      };```text
+      };
 
       console.log("Dashboard stats calculated:", stats);
 
