@@ -849,10 +849,7 @@ export class DatabaseStorage implements IStorage {
     const randomIndex = Math.floor(Math.random() * activeFakeUsers.length);
     return activeFakeUsers[randomIndex];
   }
-}
-
-export const storage = new DatabaseStorage();
-```async getFakeUsersWithPagination(page: number, pageSize: number, search: string = ''): Promise<{
+async getFakeUsersWithPagination(page: number, pageSize: number, search: string = ''): Promise<{
     users: FakeUser[];
     total: number;
     page: number;
