@@ -247,8 +247,6 @@ export default function ContentPage() {
       {activeTab === 'all' && (
         <ContentTable 
           title="Tất cả nội dung" 
-          startDate={startDate}
-          endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           assignedUserId={selectedUser}
           searchQuery={debouncedSearchQuery}
@@ -260,8 +258,6 @@ export default function ContentPage() {
         <ContentTable 
           title="Nội dung đã xử lý" 
           statusFilter="completed" 
-          startDate={startDate}
-          endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
@@ -272,8 +268,6 @@ export default function ContentPage() {
         <ContentTable 
           title="Nội dung chưa xử lý" 
           statusFilter="pending" 
-          startDate={startDate}
-          endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
