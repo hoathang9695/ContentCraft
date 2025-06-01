@@ -1,6 +1,7 @@
 
 import { db } from "./server/db.js";
 import { supportRequests } from "./shared/schema.js";
+import { eq } from "drizzle-orm";
 
 async function createFeedbackTestData() {
   console.log("Creating test feedback data...");
@@ -411,7 +412,7 @@ async function createFeedbackTestData() {
 
   try {
     // Delete existing feedback data to avoid duplicates
-    await db.delete(supportRequests).where(supportRequests.type.eq('feedback'));
+    await db.delete(supportRequests).where(eq(supportRequests.type, 'feedback'));
     console.log("🗑️ Cleared existing feedback data");
 
     for (const feedback of feedbackData) {
