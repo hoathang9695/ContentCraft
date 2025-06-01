@@ -878,8 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get editor users for anyone (accessible to all authenticated users)
-  app.get("/api/editors", isAuthenticated, async (req, res) => {
-    try{
+  app.get("/api/editors", isAuthenticated, async (req, res) => {    try{
       const users = await storage.getAllUsers();
       // Filter for active editors only
       const editorUsers = users
@@ -1808,6 +1807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .from(pagesTable)
           .leftJoin(users, eq(pagesTable.assignedToId, users.id))          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+          ```text
           .orderBy(desc(pagesTable.createdAt))
           .limit(limit)
           .offset(offset);
