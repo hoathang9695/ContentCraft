@@ -132,19 +132,22 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ testEmail: testEmail || user?.username + "@test.com" }),
       });
-      if (!res.ok) throw new Error("Failed to test SMTP");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to test SMTP");
+      }
       return res.json();
     },
     onSuccess: () => {
       toast({
         title: "Test thành công",
-        description: "Email test đã được gửi thành công",
+        description: `Email test đã được gửi thành công đến: ${testEmail || user?.username + "@test.com"}`,
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Test thất bại",
-        description: "Không thể gửi email test. Vui lòng kiểm tra cấu hình.",
+        description: error.message || "Không thể gửi email test. Vui lòng kiểm tra cấu hình.",
         variant: "destructive",
       });
     },
@@ -425,11 +428,13 @@ export default function SettingsPage() {
             <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-md">
               <p className="font-medium mb-2">Hướng dẫn cấu hình Gmail:</p>
               <ol className="list-decimal list-inside space-y-1">
-                <li>Bật xác thực 2 bước cho tài khoản Gmail</li>
-                <li>Tạo App Password tại: Google Account → Security → App passwords</li>
-                <li>Sử dụng App Password thay vì mật khẩu Gmail thông thường</li>
-                <li>Đảm bảo "Less secure app access" được bật (nếu cần)</li>
+                <li><strong>Bật xác thực 2 bước</strong>: Google Account → Security → 2-Step Verification</li>
+                <li><strong>Tạo App Password</strong>: Google Account → Security → App passwords → Select app: Mail → Generate</li>
+                <li><strong>Sao chép App Password</strong> (16 ký tự) và dán vào ô "App Password" ở trên</li>
+                <li><strong>Sử dụng email Gmail</strong> của bạn trong ô "Gmail Email"</li>
+                <li><strong>Port 587</strong> với TLS (không phải SSL)</li>
               </ol>
+              <p className="mt-2 text-amber-600"><strong>Lưu ý:</strong> App Password khác với mật khẩu Gmail thường!</p>
             </div>
           </CardContent>
         </Card>
