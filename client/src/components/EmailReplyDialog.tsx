@@ -33,6 +33,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]); // State to manage attached files
 
   const editorRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto fill form when request changes
   React.useEffect(() => {
@@ -111,6 +112,9 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         if (editorRef.current) {
           editorRef.current.innerHTML = "";
         }
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       } else {
         const errorData = await response.json();
         toast({
@@ -145,7 +149,22 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
   };
 
   const insertAttachment = () => {
-    alert("Chức năng đính kèm file chưa được triển khai.");
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setAttachedFiles(prev => [...prev, ...files]);
+      toast({
+        title: "File đính kèm",
+        description: `Đã thêm ${files.length} file`,
+      });
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Check if current selection has formatting
@@ -261,6 +280,39 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
               </Button>
             </div>
           </div>
+
+          {/* File Input (Hidden) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.txt,.zip,.rar"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          {/* Attached Files Display */}
+          {attachedFiles.length > 0 && (
+            <div className="px-4 py-2 border-b bg-gray-50">
+              <div className="text-sm text-gray-600 mb-2">File đính kèm:</div>
+              <div className="flex flex-wrap gap-2">
+                {attachedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center bg-white px-2 py-1 rounded border text-xs">
+                    <span className="mr-2">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 hover:bg-red-100"
+                      onClick={() => removeAttachment(index)}
+                    >
+                      <X className="h-3 w-3 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Content Editor */}
           <div className="flex-1 p-4">
