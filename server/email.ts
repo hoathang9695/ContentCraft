@@ -74,7 +74,11 @@ export class EmailService {
 
   private async loadConfigFromDB(): Promise<void> {
     try {
-      const result = await db.select().from(smtpConfig).where(eq(smtpConfig.isActive, true)).limit(1);
+      // Get the most recent active config (sorted by createdAt DESC)
+      const result = await db.select().from(smtpConfig)
+        .where(eq(smtpConfig.isActive, true))
+        .orderBy(smtpConfig.createdAt)
+        .limit(1);
       
       if (result.length > 0) {
         const dbConfig = result[0];
@@ -87,7 +91,7 @@ export class EmailService {
           fromName: dbConfig.fromName,
           fromEmail: dbConfig.fromEmail
         };
-        console.log("SMTP config loaded from database with encrypted password");
+        console.log(`SMTP config loaded from database (ID: ${dbConfig.id}) with encrypted password`);
       } else {
         console.log("No active SMTP config found in database, using defaults");
       }
