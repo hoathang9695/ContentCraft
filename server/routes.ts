@@ -884,13 +884,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const count = await storage.updateAllContentStatuses();
       res.json({
         success: true,
-        message: `Đã cập nhật trạng thái cho ${count} nội dung dựa trên Categories.`,
+        message: `Da cap nhat trang thai cho ${count} noi dung dua tren Categories.`,
         updatedCount: count
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        message: "Lỗi khi cập nhật trạng thái nội dung",
+        message: "Loi khi cap nhat trang thai noi dung",
         error: error instanceof Error ? error.message : String(error)
       });
     }
