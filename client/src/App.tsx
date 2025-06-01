@@ -23,6 +23,7 @@ import VerificationPage from "@/pages/user-feedback/verification-page";
 import TickPage from "@/pages/user-feedback/tick-page";
 import RealUserPage from "@/pages/real-user-page";
 import SettingsPage from "@/pages/settings-page";
+import { lazy } from "react";
 
 function Router() {
   return (
@@ -40,9 +41,10 @@ function Router() {
       <Route path="/page-management" component={PageManagementPage} />
       <Route path="/groups-management" component={GroupsManagementPage} />
       <Route path="/user-feedback" component={UserFeedbackPage} />
-      <Route path="/user-feedback/support" component={SupportPage} />
-      <Route path="/user-feedback/verification" component={VerificationPage} />
-      <Route path="/user-feedback/tick" component={TickPage} />
+      <Route path="/user-feedback/support" component={lazy(() => import('./pages/user-feedback/support-page'))} />
+      <Route path="/user-feedback/verification" component={lazy(() => import('./pages/user-feedback/verification-page'))} />
+      <Route path="/user-feedback/tick" component={lazy(() => import('./pages/user-feedback/tick-page'))} />
+      <Route path="/user-feedback/feedback" component={lazy(() => import('./pages/user-feedback/feedback-page'))} />
       <Route path="/real-user" component={RealUserPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} adminOnly={true} />
       <Route component={NotFound} />
@@ -64,3 +66,4 @@ function App() {
 }
 
 export default App;
+```
