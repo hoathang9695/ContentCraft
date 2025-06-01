@@ -2,6 +2,8 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SupportRequest } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   isOpen: boolean;
@@ -10,7 +12,45 @@ interface Props {
 }
 
 export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   if (!request) return null;
+
+  const handleMarkAsViewed = async () => {
+    try {
+      // Chỉ cập nhật status nếu đang ở trạng thái pending
+      if (request.status === 'pending') {
+        const response = await fetch(`/api/support-requests/${request.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: 'processing'
+          })
+        });
+        
+        if (response.ok) {
+          toast({
+            title: "Thành công",
+            description: "Đã cập nhật trạng thái yêu cầu sang 'Đang xử lý'",
+          });
+          // Refresh support requests list
+          queryClient.invalidateQueries(['/api/support-requests']);
+        } else {
+          throw new Error('Failed to update status');
+        }
+      }
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật trạng thái yêu cầu",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -50,7 +90,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
 
         <div className="flex justify-end bg-gray-50 p-4 mt-6">
           <Button 
-            onClick={onClose}
+            onClick={handleMarkAsViewed}
             className="text-white px-6"
             style={{ 
               backgroundColor: '#7367e0',
