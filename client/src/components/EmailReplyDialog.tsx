@@ -58,7 +58,9 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     e.preventDefault();
     if (!request) return;
 
-    // Get plain text content for email sending
+    // Get HTML content to preserve formatting
+    const htmlContent = editorRef.current?.innerHTML || "";
+    // Get plain text as fallback
     const plainTextContent = editorRef.current?.innerText || "";
 
     setIsLoading(true);
@@ -71,8 +73,8 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         body: JSON.stringify({
           to: formData.to,
           subject: formData.subject,
-          content: plainTextContent,
-          response_content: plainTextContent
+          content: htmlContent, // Send HTML content
+          response_content: plainTextContent // Store plain text in DB
         })
       });
 
