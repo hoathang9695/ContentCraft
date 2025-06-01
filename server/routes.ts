@@ -197,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Kiểm tra ngày cập nhật nếu có
           if (content.updatedAt) {
             const updatedAt = new Date(content.updatedAt);
-            if (updatedAt >= start && updatedAt <= end) return true;
+            if (updatedAt >= start && createdAt <= end) return true;
           }
 
           return false; // Không thỏa mãn điều kiện nào
@@ -1694,21 +1694,32 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
         }
       });
 
-      if (!emailSent) {
-        return res.status(500).json({ 
-          message: 'Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.',
-          details: 'Email configuration or authentication failed'
+      // Clean up temporary files after sending email
+      if (emailSent) {
+        // Delete uploaded files after successful email send
+        attachments.forEach(file => {
+          try {
+            fs.unlinkSync(file.path);
+            console.log(`Deleted temporary file: ${file.path}`);
+          } catch (error) {
+            console.error(`Failed to delete file ${file.path}:`, error);
+          }
         });
       }
 
-      // Clean up uploaded files after sending email
-      attachments.forEach(file => {
-        try {
-          fs.unlinkSync(file.path);
-        } catch (error) {
-          console.warn(`Failed to delete temporary file: ${file.path}`, error);
-        }
-      });
+      if (!emailSent) {
+        // Also clean up files even if email failed to prevent accumulation
+        attachments.forEach(file => {
+          try {
+            fs.unlinkSync(file.path);
+            console.log(`Deleted temporary file after email failure: ${file.path}`);
+          } catch (error) {
+            console.error(`Failed to delete file ${file.path}:`, error);
+          }
+        });
+        return res.status(500).json({ message: 'Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.',
+          details: 'Email configuration or authentication failed' });
+      }
 
       // Update support request status
       const result = await db.update(supportRequests)
