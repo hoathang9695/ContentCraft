@@ -294,22 +294,35 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           {/* Attached Files Display */}
           {attachedFiles.length > 0 && (
             <div className="px-4 py-2 border-b bg-gray-50">
-              <div className="text-sm text-gray-600 mb-2">File đính kèm:</div>
-              <div className="flex flex-wrap gap-2">
-                {attachedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center bg-white px-2 py-1 rounded border text-xs">
-                    <span className="mr-2">{file.name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 hover:bg-red-100"
-                      onClick={() => removeAttachment(index)}
+              <div className="text-sm text-gray-600 mb-2">File đính kèm ({attachedFiles.length}):</div>
+              <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto">
+                {attachedFiles.map((file, index) => {
+                  const truncatedName = file.name.length > 30 
+                    ? `${file.name.substring(0, 15)}...${file.name.substring(file.name.lastIndexOf('.'))}`
+                    : file.name;
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className="flex items-center bg-white px-2 py-1 rounded border text-xs max-w-[200px]"
+                      title={file.name} // Tooltip hiển thị tên file đầy đủ
                     >
-                      <X className="h-3 w-3 text-red-500" />
-                    </Button>
-                  </div>
-                ))}
+                      <span className="mr-2 truncate flex-1 min-w-0">
+                        {truncatedName}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-red-100 flex-shrink-0"
+                        onClick={() => removeAttachment(index)}
+                        title="Xóa file"
+                      >
+                        <X className="h-3 w-3 text-red-500" />
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
