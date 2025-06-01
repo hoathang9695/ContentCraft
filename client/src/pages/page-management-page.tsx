@@ -302,10 +302,18 @@ export default function PageManagementPage() {
                   variant="default" 
                   className="bg-green-600 hover:bg-green-700 text-white"
                   onClick={() => {
-                    toast({
-                      title: "Đã áp dụng bộ lọc",
-                      description: `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`,
-                    });
+                    if (startDate && endDate) {
+                      toast({
+                        title: "Đã áp dụng bộ lọc",
+                        description: `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`,
+                      });
+                    } else {
+                      toast({
+                        title: "Vui lòng chọn ngày",
+                        description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                 >
                   Áp dụng

@@ -327,13 +327,18 @@ export default function RealUserPage() {
                   variant="default" 
                   className="bg-green-600 hover:bg-green-700 text-white"
                   onClick={() => {
-                    const description = startDate && endDate 
-                      ? `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`
-                      : "Hiển thị tất cả dữ liệu";
-                    toast({
-                      title: "Đã áp dụng bộ lọc",
-                      description,
-                    });
+                    if (startDate && endDate) {
+                      toast({
+                        title: "Đã áp dụng bộ lọc",
+                        description: `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`,
+                      });
+                    } else {
+                      toast({
+                        title: "Vui lòng chọn ngày",
+                        description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                 >
                   Áp dụng
