@@ -11,7 +11,7 @@ import path from "path";
 import fs from "fs";
 import { simulateKafkaMessage, simulateMultipleMessages, simulateMassMessages } from "./kafka-simulator";
 import { log } from "./vite";
-import { EmailService, SMTPConfig } from "./email";
+import { emailService, SMTPConfig } from "./email";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -2131,16 +2131,7 @@ phoneNumber: groupsTable.phoneNumber,
 
   const httpServer = createServer(app);
 
-  // Initialize EmailService
-  const emailService = new EmailService({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_SECURE === "true",
-    user: process.env.SMTP_USER || "",
-    password: process.env.SMTP_PASSWORD || "",
-    fromName: process.env.SMTP_FROM_NAME || "EMSO System",
-    fromEmail: process.env.SMTP_FROM_EMAIL || ""
-  });
+  // EmailService is already initialized as singleton in email.ts
 
   // Check if user is authenticated middleware
   const requireAuth = (req: Request, res: Response, next: Function) => {

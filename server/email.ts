@@ -13,33 +13,33 @@ interface SMTPConfig {
 
 export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
+  private config: SMTPConfig;
 
-  constructor() {
+  constructor(config?: SMTPConfig) {
+    this.config = config || this.getSMTPConfig();
     this.initializeTransporter();
   }
 
   private initializeTransporter() {
-    const smtpConfig = this.getSMTPConfig();
-    
-    if (!smtpConfig.user || !smtpConfig.password) {
+    if (!this.config.user || !this.config.password) {
       console.log("SMTP not configured - email functionality disabled");
       return;
     }
 
-    this.transporter = nodemailer.createTransporter({
-      host: smtpConfig.host,
-      port: smtpConfig.port,
-      secure: smtpConfig.secure,
+    this.transporter = nodemailer.createTransport({
+      host: this.config.host,
+      port: this.config.port,
+      secure: this.config.secure,
       auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.password,
+        user: this.config.user,
+        pass: this.config.password,
       },
     });
 
     console.log("SMTP transporter initialized:", {
-      host: smtpConfig.host,
-      port: smtpConfig.port,
-      user: smtpConfig.user,
+      host: this.config.host,
+      port: this.config.port,
+      user: this.config.user,
     });
   }
 
@@ -55,9 +55,15 @@ export class EmailService {
     };
   }
 
+  public getConfig(): SMTPConfig {
+    return { ...this.config };
+  }
+
   public updateConfig(config: SMTPConfig) {
-    // In a production environment, you might want to store this in database
-    // For now, we'll update environment variables
+    // Update internal config
+    this.config = { ...config };
+    
+    // Update environment variables
     process.env.SMTP_HOST = config.host;
     process.env.SMTP_PORT = config.port.toString();
     process.env.SMTP_SECURE = config.secure.toString();
@@ -76,11 +82,9 @@ export class EmailService {
       return false;
     }
 
-    const smtpConfig = this.getSMTPConfig();
-
     try {
       const info = await this.transporter.sendMail({
-        from: `"${smtpConfig.fromName}" <${smtpConfig.fromEmail}>`,
+        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
         to,
         subject,
         text,
@@ -126,3 +130,6 @@ export class EmailService {
 
 // Export singleton instance
 export const emailService = new EmailService();
+
+// Export interface for use in other files
+export type { SMTPConfig };
