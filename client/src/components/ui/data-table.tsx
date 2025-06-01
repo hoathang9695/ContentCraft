@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -27,11 +26,17 @@ interface DataTableProps<T> {
   searchPlaceholder?: string;
   onSearch?: (value: string) => void;
   searchValue?: string;
-  pagination?: {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-  };
+  pagination?:
+    | boolean
+    | {
+        currentPage: number;
+        totalPages: number;
+        total: number;
+        pageSize: number;
+        onPageChange: (page: number) => void;
+        onPageSizeChange: (size: number) => void;
+      };
+  pageSize?: number;
 }
 
 export function DataTable<T>({
@@ -43,8 +48,48 @@ export function DataTable<T>({
   searchPlaceholder = 'Tìm kiếm...',
   onSearch,
   searchValue,
-  pagination,
+  pagination = false,
+  pageSize = 10,
 }: DataTableProps<T>) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(pageSize);
+
+  // Check if server-side pagination is being used
+  const isServerPagination = typeof pagination === 'object';
+
+  const totalPages = isServerPagination
+    ? pagination.totalPages
+    : Math.ceil(data.length / currentPageSize);
+
+  const currentPageNum = isServerPagination ? pagination.currentPage : currentPage;
+
+  const total = isServerPagination ? pagination.total : data.length;
+
+  const paginatedData = isServerPagination
+    ? data
+    : pagination
+    ? data.slice((currentPage - 1) * currentPageSize, currentPage * currentPageSize)
+    : data;
+
+  const handlePageChange = (page: number) => {
+    if (isServerPagination) {
+      pagination.onPageChange(page);
+    } else {
+      setCurrentPage(page);
+    }
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    if (isServerPagination) {
+      pagination.onPageSizeChange(size);
+    } else {
+      setCurrentPageSize(size);
+      setCurrentPage(1);
+    }
+  };
+
+  const startIndex = (currentPage - 1) * currentPageSize;
+
   return (
     <div className="w-full">
       {searchable && (
@@ -89,7 +134,7 @@ export function DataTable<T>({
                   </TableCell>
                 </TableRow>
               ) : (
-                data.map((row, rowIndex) => (
+                paginatedData.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="hover:bg-muted/50">
                     {columns.map((column) => (
                       <TableCell key={`${rowIndex}-${column.key}`} className={column.className}>
@@ -110,33 +155,49 @@ export function DataTable<T>({
 
       {pagination && (
         <div className="flex items-center justify-between px-4 py-3 border-t">
-          <div className="flex-1 text-sm text-muted-foreground">
-            Trang {pagination.currentPage} / {pagination.totalPages || 1}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              Hiển thị{' '}
+              {isServerPagination ? (currentPageNum - 1) * pagination.pageSize + 1 : startIndex + 1} -{' '}
+              {isServerPagination
+                ? Math.min(currentPageNum * pagination.pageSize, total)
+                : Math.min(startIndex + currentPageSize, data.length)}{' '}
+              của {total} kết quả
+            </span>
           </div>
-          <div className="flex items-center space-x-6 lg:space-x-8">
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-                disabled={pagination.currentPage === 1}
-              >
-                <span className="sr-only">Trang trước</span>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                Trang {pagination.currentPage} / {pagination.totalPages || 1}
-              </div>
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-                disabled={pagination.currentPage === pagination.totalPages}
-              >
-                <span className="sr-only">Trang sau</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Số dòng mỗi trang:</span>
+            <select
+              value={isServerPagination ? pagination.pageSize : currentPageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              className="border border-gray-300 rounded px-2 py-1 text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+
+            <button
+              onClick={() => handlePageChange(currentPageNum - 1)}
+              disabled={currentPageNum === 1}
+              className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Trước
+            </button>
+
+            <span className="text-sm text-gray-600">
+              Trang {currentPageNum} / {totalPages}
+            </span>
+
+            <button
+              onClick={() => handlePageChange(currentPageNum + 1)}
+              disabled={currentPageNum === totalPages}
+              className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Sau
+            </button>
           </div>
         </div>
       )}

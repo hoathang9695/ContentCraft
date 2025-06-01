@@ -65,14 +65,23 @@ export default function FeedbackPage() {
   const [selectedRequest, setSelectedRequest] = useState<FeedbackRequest | null>(null);
   const [replyRequest, setReplyRequest] = useState<FeedbackRequest | null>(null);
   const [pageSize, setPageSize] = useState<number>(20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  const { data: feedbackRequests = [], isLoading, error } = useQuery<FeedbackRequest[]>({
-    queryKey: ['/api/feedback-requests', userFilter, startDate?.toISOString(), endDate?.toISOString()],
+  const { data: feedbackData, isLoading, error } = useQuery<{
+    data: FeedbackRequest[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+  }>({
+    queryKey: ['/api/feedback-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (userFilter) params.append('userId', userFilter.toString());
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
+      params.append('page', currentPage.toString());
+      params.append('limit', pageSize.toString());
+      if (searchTerm) params.append('search', searchTerm);
       const response = await fetch(`/api/feedback-requests?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch feedback requests');
       return response.json();
@@ -83,33 +92,30 @@ export default function FeedbackPage() {
     staleTime: Infinity
   });
 
+  const feedbackRequests = feedbackData?.data || [];
+
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const filteredRequests = useMemo(() => {
-    if (!feedbackRequests) return [];
+  // Reset to page 1 when filters change
+  const resetToFirstPage = () => {
+    setCurrentPage(1);
+  };
 
-    return feedbackRequests.filter(request => {
-      if (statusFilter !== 'all' && request.status !== statusFilter) {
-        return false;
-      }
+  // Update query when filters change
+  const handleStatusFilterChange = (status: 'all' | 'completed' | 'pending') => {
+    setStatusFilter(status);
+    resetToFirstPage();
+  };
 
-      if (userFilter !== null && request.assigned_to_id !== userFilter) {
-        return false;
-      }
+  const handleUserFilterChange = (userId: number | null) => {
+    setUserFilter(userId);
+    resetToFirstPage();
+  };
 
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          request.full_name.toLowerCase().includes(searchLower) ||
-          request.email.toLowerCase().includes(searchLower) ||
-          request.subject.toLowerCase().includes(searchLower) ||
-          request.content.toLowerCase().includes(searchLower)
-        );
-      }
-
-      return true;
-    });
-  }, [feedbackRequests, statusFilter, userFilter, searchTerm]);
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search);
+    resetToFirstPage();
+  };
 
   const handleDateFilter = () => {
     toast({
@@ -139,21 +145,21 @@ export default function FeedbackPage() {
                   <Button 
                     variant={statusFilter === 'all' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => setStatusFilter('all')}
+                    onClick={() => handleStatusFilterChange('all')}
                   >
                     Tất cả
                   </Button>
                   <Button 
                     variant={statusFilter === 'completed' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => setStatusFilter('completed')}
+                    onClick={() => handleStatusFilterChange('completed')}
                   >
                     Đã xử lý
                   </Button>
                   <Button 
                     variant={statusFilter === 'pending' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => setStatusFilter('pending')}
+                    onClick={() => handleStatusFilterChange('pending')}
                   >
                     Chưa xử lý
                   </Button>
@@ -162,7 +168,7 @@ export default function FeedbackPage() {
 
               <Select 
                 value={userFilter?.toString() || "all"} 
-                onValueChange={(value) => setUserFilter(value === "all" ? null : parseInt(value))}
+                onValueChange={(value) => handleUserFilterChange(value === "all" ? null : parseInt(value))}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Tất cả" />
@@ -278,16 +284,25 @@ export default function FeedbackPage() {
             placeholder="Tìm kiếm đóng góp ý kiến..." 
             className="max-w-[300px]"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
 
         <div className="bg-card rounded-lg shadow">
           <DataTable
-            data={filteredRequests}
+            data={feedbackRequests}
             isLoading={isLoading}
-            pagination
-            pageSize={pageSize}
+            pagination={{
+              currentPage: feedbackData?.currentPage || 1,
+              totalPages: feedbackData?.totalPages || 1,
+              total: feedbackData?.total || 0,
+              pageSize: pageSize,
+              onPageChange: setCurrentPage,
+              onPageSizeChange: (newSize) => {
+                setPageSize(newSize);
+                resetToFirstPage();
+              }
+            }}
             columns={[
               {
                 key: 'id',
