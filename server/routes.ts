@@ -2480,8 +2480,8 @@ phoneNumber: groupsTable.phoneNumber,
         groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined
       };
 
-// Cache for 1 minute
-      cache.set('badge-counts', filteredBadgeCounts, 60);
+// Cache for 5 minutes để giảm tải database
+      cache.set('badge-counts', filteredBadgeCounts, 300);
 
       res.json(filteredBadgeCounts);
     } catch (error) {
