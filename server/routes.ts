@@ -35,7 +35,7 @@ const storage_config = multer.diskStorage({
 });
 
 // Configure file filter
-const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (req: Express.Request, file: multer.File, cb: multer.FileFilterCallback) => {
   // Accept images only
   if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
     return cb(new Error('Only image files are allowed!'));
@@ -1796,7 +1796,7 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
       const { users } = await import("../shared/schema");
       // Update pages API to return manager data from managerId column
       // Update pages API to return manager data from managerId column
-      const pagesData = await db
+      constpagesData = await db
           .select({
             id: pagesTable.id,
             pageName: pagesTable.pageName,
@@ -2468,16 +2468,23 @@ phoneNumber: groupsTable.phoneNumber,
         .where(eq(groups.classification, 'new'))
       ]);
 
-      const counts = {
-        realUsers: Number(realUsersNewCount[0]?.count || 0),
-        pages: Number(pagesNewCount[0]?.count || 0),
-        groups: Number(groupsNewCount[0]?.count || 0)
+      const badgeCounts = {
+        realUsers: realUsersNewCount[0]?.count || 0,
+        pages: pagesNewCount[0]?.count || 0,
+        groups: groupsNewCount[0]?.count || 0
       };
 
-      // Cache for 2 minutes
-      cache.set('badge-counts', counts, 120);
+      // Chỉ trả về badge count > 0 để tránh hiển thị số 0
+      const filteredBadgeCounts = {
+        realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
+        pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
+        groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined
+      };
 
-      res.json(counts);
+// Cache for 1 minute
+      cache.set('badge-counts', filteredBadgeCounts, 60);
+
+      res.json(filteredBadgeCounts);
     } catch (error) {
       console.error("Error fetching badge counts:", error);
       res.status(500).json({ error: "Failed to fetch badge counts" });

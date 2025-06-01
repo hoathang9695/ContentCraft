@@ -35,9 +35,9 @@ interface SidebarItemProps {
 }
 
 interface BadgeCounts {
-  realUsers: number;
-  pages: number;
-  groups: number;
+  realUsers?: number;
+  pages?: number;
+  groups?: number;
 }
 
 function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: SidebarItemProps) {
@@ -57,7 +57,7 @@ function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: S
           {children}
         </div>
         {badge && badge > 0 && (
-          <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] px-1">
+          <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
