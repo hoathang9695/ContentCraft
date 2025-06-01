@@ -845,3 +845,36 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+```async getAllFakeUsers(params: { page: number; limit: number }): Promise<{ data: FakeUser[]; total: number; totalPages: number; currentPage: number; itemsPerPage: number }> {
+    const { page, limit } = params;
+
+    // Calculate offset
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const countResult = await db
+      .select({ count: count() })
+      .from(fakeUsers);
+
+    const total = countResult[0]?.count || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    // Get paginated data
+    const results = await db
+      .select()
+      .from(fakeUsers)
+      .orderBy(fakeUsers.name)
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data: results,
+      total,
+      totalPages,
+      currentPage: page,
+      itemsPerPage: limit
+    };
+  }
+}
+
+export const storage = new DatabaseStorage();Analyzing the user message and provided code, it seems the intention is to implement pagination for the fake users list. I'll add the `getAllFakeUsers` method with pagination parameters to the `IStorage` interface and implement this method in the `DatabaseStorage` class.

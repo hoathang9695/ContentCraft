@@ -1371,11 +1371,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Fake Users API
-  // Get all fake users (available for all authenticated users for comment functionality)
+  // Get all fake users with pagination (available for all authenticated users for comment functionality)
   app.get("/api/fake-users", isAuthenticated, async (req, res) => {
     try {
-      const fakeUsers = await storage.getAllFakeUsers();
-      res.json(fakeUsers);
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 10;
+      const search = req.query.search as string || '';
+
+      // Nếu không có phân trang (để compatibility với comment functionality)
+      if (!req.query.page) {
+        const fakeUsers = await storage.getAllFakeUsers();
+        return res.json(fakeUsers);
+      }
+
+      const result = await storage.getFakeUsersWithPagination(page, pageSize, search);
+      res.json(result);
     } catch (error) {
       res.status(500).json({ 
         message: "Error fetching fake users",
