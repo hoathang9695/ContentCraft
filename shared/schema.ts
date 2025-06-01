@@ -117,6 +117,7 @@ export const fakeUsers = pgTable("fake_users", {
   token: text("token").notNull().unique(), // Token/ID đại diện cho người dùng
   description: text("description"), // Mô tả về người dùng ảo
   avatarUrl: text("avatar_url"), // URL avatar (tùy chọn)
+  gender: text("gender").notNull().default("male"), // male, female, other
   status: text("status").notNull().default("active"), // active, inactive
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
