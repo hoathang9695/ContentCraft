@@ -222,12 +222,54 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      setAttachedFiles(prev => [...prev, ...files]);
+    if (files.length === 0) return;
+
+    // Check if adding these files would exceed the limit of 3 files
+    const newTotalFiles = attachedFiles.length + files.length;
+    if (newTotalFiles > 3) {
       toast({
-        title: "File đính kèm",
-        description: `Đã thêm ${files.length} file`,
+        title: "Giới hạn file đính kèm",
+        description: `Tối đa 3 file đính kèm. Hiện tại có ${attachedFiles.length} file, chỉ có thể thêm ${3 - attachedFiles.length} file nữa.`,
+        variant: "destructive",
       });
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    // Calculate total size including existing files
+    const existingSize = attachedFiles.reduce((total, file) => total + file.size, 0);
+    const newFilesSize = files.reduce((total, file) => total + file.size, 0);
+    const totalSize = existingSize + newFilesSize;
+
+    // Check if total size exceeds 25MB (25 * 1024 * 1024 bytes)
+    const maxSize = 25 * 1024 * 1024;
+    if (totalSize > maxSize) {
+      const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+      toast({
+        title: "Giới hạn dung lượng",
+        description: `Tổng dung lượng file đính kèm không được vượt quá 25MB. Dung lượng hiện tại sẽ là ${totalSizeMB}MB.`,
+        variant: "destructive",
+      });
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    // If validation passes, add files
+    setAttachedFiles(prev => [...prev, ...files]);
+    toast({
+      title: "File đính kèm",
+      description: `Đã thêm ${files.length} file`,
+    });
+
+    // Reset file input for next selection
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -342,7 +384,8 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 size="sm" 
                 className="h-8 w-8 p-0"
                 onClick={insertAttachment}
-                title="Attach File"
+                disabled={attachedFiles.length >= 3}
+                title={attachedFiles.length >= 3 ? "Đã đạt giới hạn 3 file đính kèm" : "Attach File"}
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
@@ -362,27 +405,40 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           {/* Attached Files Display */}
           {attachedFiles.length > 0 && (
             <div className="px-4 py-2 border-b bg-gray-50 flex-shrink-0">
-              <div className="text-sm text-gray-600 mb-2">File đính kèm ({attachedFiles.length}):</div>
+              <div className="text-sm text-gray-600 mb-2">
+                File đính kèm ({attachedFiles.length}/3) - 
+                Tổng dung lượng: {((attachedFiles.reduce((total, file) => total + file.size, 0)) / (1024 * 1024)).toFixed(2)}MB/25MB
+              </div>
               <div className="flex flex-wrap gap-2 max-h-16 overflow-y-auto">
                 {attachedFiles.map((file, index) => {
                   const truncatedName = file.name.length > 25
                     ? `${file.name.substring(0, 12)}...${file.name.substring(file.name.lastIndexOf('.'))}`
                     : file.name;
                   
+                  const fileSizeKB = (file.size / 1024).toFixed(1);
+                  const fileSizeDisplay = file.size > 1024 * 1024 
+                    ? `${(file.size / (1024 * 1024)).toFixed(1)}MB`
+                    : `${fileSizeKB}KB`;
+                  
                   return (
                     <div 
                       key={index} 
-                      className="flex items-center bg-white px-2 py-1 rounded border text-xs max-w-[180px]"
-                      title={file.name}
+                      className="flex items-center bg-white px-2 py-1 rounded border text-xs max-w-[200px]"
+                      title={`${file.name} (${fileSizeDisplay})`}
                     >
-                      <span className="mr-1 truncate flex-1 min-w-0">
-                        {truncatedName}
-                      </span>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="truncate">
+                          {truncatedName}
+                        </span>
+                        <span className="text-gray-500 text-xs">
+                          {fileSizeDisplay}
+                        </span>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-4 w-4 p-0 hover:bg-red-100 flex-shrink-0"
+                        className="h-4 w-4 p-0 hover:bg-red-100 flex-shrink-0 ml-1"
                         onClick={() => removeAttachment(index)}
                         title="Xóa file"
                       >
