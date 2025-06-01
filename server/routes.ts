@@ -1,4 +1,4 @@
-import express, { type Express, Request, Response } from "express";
+import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
@@ -4081,7 +4081,6 @@ app.post('/api/send-email', isAuthenticated, async (req, res) => {
 
       // Update the page classification
       const updatedPage = await db
-        ```python
         .update(pages)
         .set({ 
           classification,
