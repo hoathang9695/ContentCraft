@@ -450,10 +450,10 @@ export async function setupKafkaConsumer() {
                           const errorStack = error instanceof Error ? error.stack : '';
                           log(`❌ Error processing page ${pageMsg.pageId}: ${errorMsg}`, "kafka-error");
                           log(`📍 Error stack: ${errorStack}`, "kafka-error");
-                          
+
                           // Log additional context for debugging
                           log(`🔍 Page data that failed: ${JSON.stringify(pageMsg, null, 2)}`, "kafka-error");
-                          
+
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
@@ -580,10 +580,10 @@ export async function setupKafkaConsumer() {
                           const errorStack = error instanceof Error ? error.stack : '';
                           log(`❌ Error processing group ${groupMsg.groupId}: ${errorMsg}`, "kafka-error");
                           log(`📍 Error stack: ${errorStack}`, "kafka-error");
-                          
+
                           // Log additional context for debugging
                           log(`🔍 Group data that failed: ${JSON.stringify(groupMsg, null, 2)}`, "kafka-error");
-                          
+
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
@@ -822,8 +822,9 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
         .insert(supportRequests)
         .values(insertData)
         .returning();
-      log(`Support request created with ID ${newRequest[0].id}`, "kafka");
-      log(`Support request assigned to user ID ${assigned_to_id}`, "kafka");
+      log(`✅ Support request created with ID ${newRequest[0].id}`, "kafka");
+      log(`👤 Support request assigned to user ID ${assigned_to_id} (${activeUsers.find(u => u.id === assigned_to_id)?.name})`, "kafka");
+      log(`📧 Email: ${message.email}, Subject: ${message.subject}`, "kafka");
       return newRequest[0];
     } catch (dbError) {
       log(
@@ -878,7 +879,7 @@ async function processContactMessage(message: ContactMessage, tx: any) {
 
     // Calculate next assignee using round-robin based on supportRequests table
     let nextAssigneeIndex = 0;
-    if (lastAssignedContactRequest && lastAssignedContactRequest.assigned_to_id) {
+    if (lastAssignedContactRequest&& lastAssignedContactRequest.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
         (user) => user.id === lastAssignedContactRequest.assigned_to_id,
       );

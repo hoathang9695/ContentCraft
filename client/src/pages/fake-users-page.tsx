@@ -52,7 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Pencil, Trash, Upload } from "lucide-react";
+import { AlertTriangle, Pencil, Trash, Upload, ChevronLeft, ChevronRight } from "lucide-react";
 import * as XLSX from 'xlsx';
 import {
   AlertDialog,
@@ -72,6 +72,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const fakeUserSchema = z.object({
   name: z.string().min(1, "Tên người dùng là bắt buộc"),
   token: z.string().min(1, "Token là bắt buộc"),
+  gender: z.enum(["male", "female", "other"]).default("male"),
   status: z.enum(["active", "inactive"]).default("active"),
   description: z.string().optional(),
 });
@@ -80,6 +81,7 @@ type FakeUser = {
   id: number;
   name: string;
   token: string;
+  gender: "male" | "female" | "other";
   status: "active" | "inactive";
   description?: string;
   createdAt: string;
@@ -93,6 +95,8 @@ export default function FakeUsersPage() {
   const [selectedUser, setSelectedUser] = useState<FakeUser | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -100,27 +104,66 @@ export default function FakeUsersPage() {
   // Debounce search query để tránh tìm kiếm quá nhiều
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Truy vấn danh sách người dùng ảo
-  const { data: fakeUsers, isLoading, error } = useQuery<FakeUser[]>({
-    queryKey: ["/api/fake-users"],
+  // Reset về trang 1 khi search query thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
+
+  // Truy vấn danh sách người dùng ảo với phân trang
+  const { data: fakeUsersResponse, isLoading, error } = useQuery<{
+    users: FakeUser[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }>({
+    queryKey: ["/api/fake-users", currentPage, pageSize, debouncedSearchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        pageSize: pageSize.toString(),
+        ...(debouncedSearchQuery && { search: debouncedSearchQuery })
+      });
+      
+      console.log("Fetching fake users with params:", params.toString());
+      
+      const response = await fetch(`/api/fake-users?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Fake users API response:", data);
+      
+      return data;
+    },
     enabled: isAdmin, // Chỉ kích hoạt truy vấn nếu là admin
+    staleTime: 0, // Disable caching
+    gcTime: 0, // Disable cache time
   });
 
-  // Lọc danh sách người dùng ảo theo từ khóa tìm kiếm
-  const filteredFakeUsers = useMemo(() => {
-    if (!fakeUsers) return [];
-    
-    if (!debouncedSearchQuery.trim()) {
-      return fakeUsers;
-    }
+  const fakeUsers = fakeUsersResponse?.users || [];
+  const totalUsers = fakeUsersResponse?.total || 0;
+  const totalPages = fakeUsersResponse?.totalPages || 1;
 
-    const searchTerm = debouncedSearchQuery.toLowerCase().trim();
-    return fakeUsers.filter(user => 
-      user.name.toLowerCase().includes(searchTerm) ||
-      user.token.toLowerCase().includes(searchTerm) ||
-      (user.description && user.description.toLowerCase().includes(searchTerm))
-    );
-  }, [fakeUsers, debouncedSearchQuery]);
+  // Hàm điều hướng phân trang
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
   
   // Debug - In thông tin về user và API URL
   console.log("User info:", user);
@@ -213,6 +256,41 @@ export default function FakeUsersPage() {
     },
   });
 
+  // State để theo dõi user nào đang được cập nhật
+  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
+
+  // Mutation để cập nhật giới tính người dùng ảo
+  const updateGenderMutation = useMutation({
+    mutationFn: async ({ id, gender }: { id: number; gender: "male" | "female" | "other" }) => {
+      const user = fakeUsers?.find(u => u.id === id);
+      if (!user) throw new Error("User not found");
+      
+      setUpdatingUserId(id);
+      
+      return await apiRequest<FakeUser>("PUT", `/api/fake-users/${id}`, {
+        ...user,
+        gender
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật giới tính",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/fake-users"] });
+      setUpdatingUserId(null);
+    },
+    onError: (error) => {
+      console.error("Error updating gender:", error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật giới tính. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+      setUpdatingUserId(null);
+    },
+  });
+
   // Mutation để upload nhiều người dùng ảo từ Excel
   const bulkUploadFakeUsers = useMutation({
     mutationFn: async (users: Array<{ name: string; token: string }>) => {
@@ -243,6 +321,7 @@ export default function FakeUsersPage() {
     defaultValues: {
       name: "",
       token: "",
+      gender: "male",
       status: "active",
       description: "",
     },
@@ -255,6 +334,7 @@ export default function FakeUsersPage() {
       form.reset({
         name: user.name,
         token: user.token,
+        gender: user.gender as "male" | "female" | "other",
         status: user.status as "active" | "inactive",
         description: user.description || "",
       });
@@ -264,6 +344,7 @@ export default function FakeUsersPage() {
       form.reset({
         name: "",
         token: "",
+        gender: "male",
         status: "active",
         description: "",
       });
@@ -414,7 +495,7 @@ export default function FakeUsersPage() {
             </div>
             {debouncedSearchQuery && (
               <p className="text-sm text-muted-foreground mt-2">
-                Hiển thị {filteredFakeUsers.length} kết quả cho "{debouncedSearchQuery}"
+                Hiển thị {fakeUsers.length} / {totalUsers} kết quả cho "{debouncedSearchQuery}"
               </p>
             )}
           </div>
@@ -444,16 +525,35 @@ export default function FakeUsersPage() {
                   <TableRow>
                     <TableHead>Tên</TableHead>
                     <TableHead>Token</TableHead>
+                    <TableHead>Giới tính</TableHead>
                     <TableHead>Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredFakeUsers && filteredFakeUsers.length > 0 ? (
-                    filteredFakeUsers.map((user: FakeUser) => (
+                  {fakeUsers && fakeUsers.length > 0 ? (
+                    fakeUsers.map((user: FakeUser) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell className="font-mono text-sm">
                           {user.token}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={user.gender}
+                            onValueChange={(value: "male" | "female" | "other") => {
+                              updateGenderMutation.mutate({ id: user.id, gender: value });
+                            }}
+                            disabled={updatingUserId === user.id}
+                          >
+                            <SelectTrigger className="w-24 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="male">Nam</SelectItem>
+                              <SelectItem value="female">Nữ</SelectItem>
+                              <SelectItem value="other">Khác</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
@@ -493,7 +593,7 @@ export default function FakeUsersPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center">
+                      <TableCell colSpan={4} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center text-sm text-muted-foreground">
                           <AlertTriangle className="mb-2 h-6 w-6" />
                           {debouncedSearchQuery ? 
@@ -506,6 +606,63 @@ export default function FakeUsersPage() {
                   )}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {!isLoading && totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-muted-foreground">
+                Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalUsers)} của {totalUsers} người dùng ảo
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Trước
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (totalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNumber = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + i;
+                    } else {
+                      pageNumber = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNumber}
+                        variant={currentPage === pageNumber ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(pageNumber)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Sau
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
@@ -553,6 +710,35 @@ export default function FakeUsersPage() {
                     </FormControl>
                     <FormDescription>
                       Token này được sử dụng để xác thực với hệ thống bên ngoài.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Giới tính</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn giới tính" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Nam</SelectItem>
+                        <SelectItem value="female">Nữ</SelectItem>
+                        <SelectItem value="other">Khác</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Giới tính của người dùng ảo.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

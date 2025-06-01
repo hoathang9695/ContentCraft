@@ -87,6 +87,13 @@ export interface IStorage {
   getAllFakeUsers(): Promise<FakeUser[]>;
   getFakeUser(id: number): Promise<FakeUser | undefined>;
   getFakeUserByToken(token: string): Promise<FakeUser | undefined>; // Get fake user by token
+  getFakeUsersWithPagination(page: number, pageSize: number, search?: string): Promise<{
+    users: FakeUser[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }>;
   createFakeUser(fakeUser: InsertFakeUser): Promise<FakeUser>;
   updateFakeUser(id: number, fakeUser: Partial<InsertFakeUser>): Promise<FakeUser | undefined>;
   deleteFakeUser(id: number): Promise<boolean>;
@@ -841,6 +848,67 @@ export class DatabaseStorage implements IStorage {
     // Chọn ngẫu nhiên một người dùng ảo
     const randomIndex = Math.floor(Math.random() * activeFakeUsers.length);
     return activeFakeUsers[randomIndex];
+  }
+async getFakeUsersWithPagination(page: number, pageSize: number, search: string = ''): Promise<{
+    users: FakeUser[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    console.log("Storage: getFakeUsersWithPagination called with:", { page, pageSize, search });
+    
+    const offset = (page - 1) * pageSize;
+
+    // Build search conditions
+    const searchConditions = [];
+    if (search && search.trim()) {
+      const searchPattern = `%${search.toLowerCase()}%`;
+      searchConditions.push(
+        or(
+          ilike(fakeUsers.name, searchPattern),
+          ilike(fakeUsers.token, searchPattern),
+          ilike(fakeUsers.description, searchPattern)
+        )
+      );
+    }
+
+    const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
+
+    try {
+      // Get total count
+      const countResult = await db
+        .select({ count: count() })
+        .from(fakeUsers)
+        .where(whereClause);
+
+      const total = Number(countResult[0]?.count || 0);
+      const totalPages = Math.ceil(total / pageSize);
+
+      console.log("Storage: Total fake users found:", total);
+
+      // Get paginated data
+      const results = await db
+        .select()
+        .from(fakeUsers)
+        .where(whereClause)
+        .orderBy(fakeUsers.name)
+        .limit(pageSize)
+        .offset(offset);
+
+      console.log("Storage: Returning", results.length, "fake users for page", page);
+
+      return {
+        users: results,
+        total,
+        page,
+        pageSize,
+        totalPages
+      };
+    } catch (error) {
+      console.error("Storage: Error in getFakeUsersWithPagination:", error);
+      throw error;
+    }
   }
 }
 
