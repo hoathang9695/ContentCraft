@@ -213,11 +213,19 @@ export default function ContentPage() {
               variant="default" 
               className="h-10 bg-green-600 hover:bg-green-700 text-white" 
               onClick={() => {
-                handleDateFilter();
-                toast({
-                  title: "Đã áp dụng bộ lọc",
-                  description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
-                });
+                if (startDate && endDate) {
+                  handleDateFilter();
+                  toast({
+                    title: "Đã áp dụng bộ lọc",
+                    description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+                  });
+                } else {
+                  toast({
+                    title: "Vui lòng chọn ngày",
+                    description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                    variant: "destructive",
+                  });
+                }
               }}
             >
               Áp dụng
