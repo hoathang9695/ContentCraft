@@ -29,7 +29,13 @@ export class EmailService {
     if (!password) return '';
     try {
       const iv = randomBytes(16);
-      const cipher = createCipheriv(this.algorithm, Buffer.from(this.encryptionKey), iv);
+      
+      // Ensure key is exactly 32 bytes for aes-256-cbc
+      const keyBuffer = Buffer.alloc(32);
+      const sourceKey = Buffer.from(this.encryptionKey);
+      sourceKey.copy(keyBuffer, 0, 0, Math.min(sourceKey.length, 32));
+      
+      const cipher = createCipheriv(this.algorithm, keyBuffer, iv);
       let encrypted = cipher.update(password);
       encrypted = Buffer.concat([encrypted, cipher.final()]);
       return iv.toString('hex') + ':' + encrypted.toString('hex');
@@ -49,7 +55,13 @@ export class EmailService {
       }
       const iv = Buffer.from(textParts.shift()!, 'hex');
       const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-      const decipher = createDecipheriv(this.algorithm, Buffer.from(this.encryptionKey), iv);
+      
+      // Ensure key is exactly 32 bytes for aes-256-cbc
+      const keyBuffer = Buffer.alloc(32);
+      const sourceKey = Buffer.from(this.encryptionKey);
+      sourceKey.copy(keyBuffer, 0, 0, Math.min(sourceKey.length, 32));
+      
+      const decipher = createDecipheriv(this.algorithm, keyBuffer, iv);
       let decrypted = decipher.update(encryptedText);
       decrypted = Buffer.concat([decrypted, decipher.final()]);
       return decrypted.toString();

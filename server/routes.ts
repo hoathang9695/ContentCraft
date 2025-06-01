@@ -879,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get editor users for anyone (accessible to all authenticated users)
   app.get("/api/editors", isAuthenticated, async (req, res) => {    try{
-const users = await storage.getAllUsers();
+const users = awaitstorage.getAllUsers();
       // Filter for active editors only
       const editorUsers = users
         .filter(user => user.role === 'editor' && user.status === 'active')
@@ -1686,7 +1686,10 @@ const users = await storage.getAllUsers();
       });
 
       if (!emailSent) {
-        return res.status(500).json({ message: 'Failed to send email' });
+        return res.status(500).json({ 
+          message: 'Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.',
+          details: 'Email configuration or authentication failed'
+        });
       }
 
       // Update support request status
@@ -2337,7 +2340,10 @@ phoneNumber: groupsTable.phoneNumber,
       });
 
       if (!emailSent) {
-        return res.status(500).json({ message: 'Failed to send email' });
+        return res.status(500).json({ 
+          message: 'Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.',
+          details: 'Email configuration or authentication failed'
+        });
       }
 
       // Update support request status

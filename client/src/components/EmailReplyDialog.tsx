@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -109,7 +108,13 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           editorRef.current.innerHTML = "";
         }
       } else {
-        throw new Error('Failed to send reply');
+        const errorData = await response.json();
+        toast({
+          title: "Lỗi",
+          description: errorData.message || "Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.",
+          variant: "destructive"
+        });
+        console.error('Email send error:', errorData);
       }
     } catch (error) {
       toast({
