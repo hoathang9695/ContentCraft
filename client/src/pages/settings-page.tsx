@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
-import { Download, Users, FileSpreadsheet } from "lucide-react";
+import { Download, Users, FileSpreadsheet, Mail, Settings } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
@@ -33,11 +33,33 @@ interface RealUser {
   };
 }
 
+interface SMTPConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password: string;
+  fromName: string;
+  fromEmail: string;
+}
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedClassification, setSelectedClassification] = useState<string>("all");
   const [isExporting, setIsExporting] = useState(false);
+  const [smtpConfig, setSMTPConfig] = useState<SMTPConfig>({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    user: "",
+    password: "",
+    fromName: "",
+    fromEmail: ""
+  });
+
+  const [testEmail, setTestEmail] = useState("");
 
   // Redirect if not admin
   if (user && user.role !== "admin") {
@@ -60,6 +82,74 @@ export default function SettingsPage() {
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch real users");
       return res.json();
+    },
+  });
+
+  // Fetch SMTP configuration
+  const { data: smtpData, isLoading: isLoadingSMTP } = useQuery<SMTPConfig>({
+    queryKey: ["/api/smtp-config"],
+    queryFn: async () => {
+      const res = await fetch("/api/smtp-config");
+      if (!res.ok) throw new Error("Failed to fetch SMTP config");
+      const data = await res.json();
+      setSMTPConfig(data);
+      return data;
+    },
+  });
+
+  // Update SMTP configuration mutation
+  const updateSMTPMutation = useMutation({
+    mutationFn: async (config: SMTPConfig) => {
+      const res = await fetch("/api/smtp-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+      if (!res.ok) throw new Error("Failed to update SMTP config");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Cấu hình SMTP đã được cập nhật",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/smtp-config"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật cấu hình SMTP",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Test SMTP configuration mutation
+  const testSMTPMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/smtp-config/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testEmail: testEmail || user?.username + "@test.com" }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to test SMTP");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test thành công",
+        description: `Email test đã được gửi thành công đến: ${testEmail || user?.username + "@test.com"}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Test thất bại",
+        description: error.message || "Không thể gửi email test. Vui lòng kiểm tra cấu hình.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -119,7 +209,7 @@ export default function SettingsPage() {
                      selectedClassification === "potential" ? "tiềm năng" :
                      selectedClassification === "non_potential" ? "không tiềm năng" :
                      selectedClassification === "verified" ? "đã xác minh" : selectedClassification}`;
-      
+
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
       // Generate filename with timestamp
@@ -144,6 +234,21 @@ export default function SettingsPage() {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleSMTPConfigChange = (field: keyof SMTPConfig, value: string | number | boolean) => {
+    setSMTPConfig(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveSMTPConfig = () => {
+    updateSMTPMutation.mutate(smtpConfig);
+  };
+
+  const handleTestSMTP = () => {
+    testSMTPMutation.mutate();
   };
 
   return (
@@ -207,6 +312,136 @@ export default function SettingsPage() {
 
             <div className="text-sm text-muted-foreground">
               <p>File Excel sẽ bao gồm các thông tin: STT, ID, Tên đầy đủ, Email, Trạng thái xác minh, Phân loại, Người xử lý, Đăng nhập cuối, Ngày tạo, Facebook ID</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* SMTP Configuration Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Cấu hình SMTP Email (Gmail)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="smtp-host">SMTP Host</Label>
+                <Input
+                  id="smtp-host"
+                  value={smtpConfig.host}
+                  onChange={(e) => handleSMTPConfigChange('host', e.target.value)}
+                  placeholder="smtp.gmail.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="smtp-port">Port</Label>
+                <Input
+                  id="smtp-port"
+                  type="number"
+                  value={smtpConfig.port}
+                  onChange={(e) => handleSMTPConfigChange('port', parseInt(e.target.value))}
+                  placeholder="587"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="smtp-user">Gmail Email</Label>
+                <Input
+                  id="smtp-user"
+                  type="email"
+                  value={smtpConfig.user}
+                  onChange={(e) => handleSMTPConfigChange('user', e.target.value)}
+                  placeholder="your-email@gmail.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="smtp-password">App Password</Label>
+                <Input
+                  id="smtp-password"
+                  type="password"
+                  value={smtpConfig.password}
+                  onChange={(e) => handleSMTPConfigChange('password', e.target.value)}
+                  placeholder="Gmail App Password"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="from-name">Tên người gửi</Label>
+                <Input
+                  id="from-name"
+                  value={smtpConfig.fromName}
+                  onChange={(e) => handleSMTPConfigChange('fromName', e.target.value)}
+                  placeholder="EMSO System"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="from-email">Email người gửi</Label>
+                <Input
+                  id="from-email"
+                  type="email"
+                  value={smtpConfig.fromEmail}
+                  onChange={(e) => handleSMTPConfigChange('fromEmail', e.target.value)}
+                  placeholder="noreply@emso.vn"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleSaveSMTPConfig}
+                  disabled={updateSMTPMutation.isPending}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  {updateSMTPMutation.isPending ? "Đang lưu..." : "Lưu cấu hình"}
+                </Button>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium mb-3">Email test (để trống sẽ dùng email mặc định)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="space-y-2">
+                    <Input
+                      id="test-email"
+                      type="email"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      placeholder={`tubn@emso.vn`}
+                    />
+                  </div>
+
+                  <Button 
+                    variant="outline"
+                    onClick={handleTestSMTP}
+                    disabled={testSMTPMutation.isPending || !smtpConfig.user || !smtpConfig.password}
+                    className="w-full md:w-auto"
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    {testSMTPMutation.isPending ? "Đang test..." : "Test gửi email"}
+                  </Button>
+
+                  <div className="text-sm text-muted-foreground">
+                    Email test sẽ được gửi đến: <strong>{testEmail || `tubn@emso.vn`}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-md">
+              <p className="font-medium mb-2">Hướng dẫn cấu hình Gmail:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li><strong>Bật xác thực 2 bước</strong>: Google Account → Security → 2-Step Verification</li>
+                <li><strong>Tạo App Password</strong>: Google Account → Security → App passwords → Select app: Mail → Generate</li>
+                <li><strong>Sao chép App Password</strong> (16 ký tự) và dán vào ô "App Password" ở trên</li>
+                <li><strong>Sử dụng email Gmail</strong> của bạn trong ô "Gmail Email"</li>
+                <li><strong>Port 587</strong> với TLS (không phải SSL)</li>
+              </ol>
+              <p className="mt-2 text-amber-600"><strong>Lưu ý:</strong> App Password khác với mật khẩu Gmail thường!</p>
             </div>
           </CardContent>
         </Card>

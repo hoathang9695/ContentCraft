@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { simulateKafkaMessage, simulateMultipleMessages, simulateMassMessages } from "./kafka-simulator";
 import { log } from "./vite";
+import { emailService, SMTPConfig } from "./email";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -196,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Kiểm tra ngày cập nhật nếu có
           if (content.updatedAt) {
             const updatedAt = new Date(content.updatedAt);
-            if (updatedAt >= start && updatedAt <= end) return true;
+            if (updatedAt >= start && createdAt <= end) return true;
           }
 
           return false; // Không thỏa mãn điều kiện nào
@@ -320,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newGroups = allGroups.filter(g => {
         if (!g.createdAt) return false;
-        const created = new Date(g.createdAt);
+        const created = new Date(p.createdAt);
         return created >= sevenDaysAgoGroups;
       }).length;
 
@@ -878,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get editor users for anyone (accessible to all authenticated users)
   app.get("/api/editors", isAuthenticated, async (req, res) => {
-    try{
+    try {
       const users = await storage.getAllUsers();
       // Filter for active editors only
       const editorUsers = users
@@ -1375,7 +1376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fake-users", isAuthenticated, async (req, res) => {
     try {
       console.log("Fake users API called with query:", req.query);
-      
+
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = parseInt(req.query.pageSize as string) || 10;
       const search = req.query.search as string || '';
@@ -1397,12 +1398,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         page: result.page,
         totalPages: result.totalPages 
       });
-      
+
       // Set cache control headers to prevent caching issues
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(result);
     } catch (error) {
       console.error("Error in fake users API:", error);
@@ -1422,7 +1423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fakeUser) {
         return res.status(404).json({ message: "Fake user not found" });
       }
-  // Get all real users 
+
       res.json(fakeUser);
 
     } catch (error) {
@@ -1507,7 +1508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/fake-users/bulk-upload", isAdmin, async (req, res) => {
     try {
       const { users } = req.body;
-      
+
       if (!Array.isArray(users) || users.length === 0) {
         return res.status(400).json({ 
           message: "Dữ liệu không hợp lệ",
@@ -1644,7 +1645,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Support routes
   const supportRouter = (await import('./routes/support.router')).default;
+  const { SupportController } = await import('./controllers/support.controller');
+  const supportController = new SupportController();
+
   app.use("/api/support-requests", supportRouter);
+
+  // Support requests routes
+  app.get('/api/support-requests', isAuthenticated, supportController.getAllSupportRequests);
+  app.put('/api/support-requests/:id', isAuthenticated, supportController.updateSupportRequest);
+  app.put('/api/support-requests/:id/assign', isAuthenticated, supportController.assignSupportRequest);
+app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attachments', 10), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { to, subject, content, response_content } = req.body;
+      const user = req.user as Express.User;
+      const attachments = req.files as Express.Multer.File[] || [];
+
+      // Get support request
+      const supportRequest = await db.query.supportRequests.findFirst({
+        where: eq(supportRequests.id, parseInt(id))
+      });
+
+      if (!supportRequest) {
+        return res.status(404).json({ message: 'Support request not found' });
+      }
+
+      if (user.role !== 'admin' && supportRequest.assigned_to_id !== user.id) {
+        return res.status(403).json({ message: 'Not authorized to reply to this request' });
+      }
+
+      // Process attachments for email
+      const emailAttachments = attachments.map(file => ({
+        filename: file.originalname,
+        path: file.path,
+        contentType: file.mimetype
+      }));
+
+      // Send email with attachments
+      const emailSent = await emailService.sendReplyEmailWithAttachments({
+        to,
+        subject,
+        content,
+        attachments: emailAttachments,
+        originalRequest: {
+          id: supportRequest.id,
+          full_name: supportRequest.full_name,
+          subject: supportRequest.subject,
+          content: supportRequest.content
+        }
+      });
+
+      // Clean up temporary files after sending email
+      if (emailSent) {
+        // Delete uploaded files after successful email send
+        attachments.forEach(file => {
+          try {
+            fs.unlinkSync(file.path);
+            console.log(`Deleted temporary file: ${file.path}`);
+          } catch (error) {
+            console.error(`Failed to delete file ${file.path}:`, error);
+          }
+        });
+      }
+
+      if (!emailSent) {
+        // Also clean up files even if email failed to prevent accumulation
+        attachments.forEach(file => {
+          try {
+            fs.unlinkSync(file.path);
+            console.log(`Deleted temporary file after email failure: ${file.path}`);
+          } catch (error) {
+            console.error(`Failed to delete file ${file.path}:`, error);
+          }
+        });
+        return res.status(500).json({ message: 'Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.',
+          details: 'Email configuration or authentication failed' });
+      }
+
+      // Update support request status
+      const result = await db.update(supportRequests)
+        .set({
+          status: 'completed' as any,
+          response_content,
+          responder_id: user.id,
+          response_time: new Date(),
+          updated_at: new Date()
+        })
+        .where(eq(supportRequests.id, parseInt(id)))
+        .returning();
+
+      return res.json({ message: 'Reply sent successfully', supportRequest: result[0] });
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      return res.status(500).json({ 
+        message: 'Error sending reply',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   // Pages API endpoints
   // Get all pages 
@@ -2129,6 +2227,116 @@ phoneNumber: groupsTable.phoneNumber,
   });
 
   const httpServer = createServer(app);
+
+  // EmailService is already initialized as singleton in email.ts
+
+  // Check if user is authenticated middleware
+  const requireAuth = (req: Request, res: Response, next: Function) => {
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    res.status(401).json({ message: "Unauthorized" });
+  };
+
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // SMTP Configuration endpoints
+  app.get("/api/smtp-config", requireAuth, async (req, res) => {
+    try {
+      // Only admin can access SMTP config
+      if ((req.user as Express.User).role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get SMTP config from emailService
+      const smtpConfig: SMTPConfig = emailService.getConfig();
+
+      res.json(smtpConfig);
+    } catch (error) {
+      console.error("Error fetching SMTP config:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/smtp-config", requireAuth, async (req, res) => {
+    try {
+      // Only admin can update SMTP config
+      if ((req.user as Express.User).role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { host, port, secure, user, password, fromName, fromEmail } = req.body;
+
+      // Validate required fields
+      if (!host || !port || !user || !password || !fromName || !fromEmail) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      const smtpConfig: SMTPConfig = {
+        host,
+        port: parseInt(port),
+        secure: secure || false,
+        user,
+        password,
+        fromName,
+        fromEmail
+      };
+
+      // Update email service configuration
+      await emailService.updateConfig(smtpConfig);
+
+      res.json({ 
+        message: "SMTP configuration updated successfully",
+        config: smtpConfig 
+      });
+    } catch (error) {
+      console.error("Error updating SMTP config:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/smtp-config/test", requireAuth, async (req, res) => {
+    try {
+      // Only admin can test SMTP config
+      if ((req.user as Express.User).role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { testEmail } = req.body;
+      const targetEmail = testEmail || `${(req.user as Express.User).username}@test.com`;
+
+      // Test SMTP connection first
+      const connectionOk = await emailService.testConnection();
+      if (!connectionOk) {
+        return res.status(400).json({ message: "SMTP connection failed. Please check configuration." });
+      }
+
+      // Send test email
+      const emailSent = await emailService.sendTestEmail(targetEmail);
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send test email" });
+      }
+
+      res.json({ 
+        message: "SMTP test completed successfully",
+        testEmail: targetEmail
+      });
+    } catch (error) {
+      console.error("Error testing SMTP:", error);
+      res.status(500).json({ message: "SMTP test failed" });
+    }
+  });
+
+  // Support routes
+  app.use("/api/support-requests", supportRouter);
+
+  // Support requests routes
+  app.get('/api/support-requests', isAuthenticated, supportController.getAllSupportRequests);
+  app.put('/api/support-requests/:id', isAuthenticated, supportController.updateSupportRequest);
+  app.put('/api/support-requests/:id/assign', isAuthenticated, supportController.assignSupportRequest);
   return httpServer;
 }
 
