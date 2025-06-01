@@ -34,7 +34,7 @@ export default function GroupsManagementPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [groupTypeFilter, setGroupTypeFilter] = useState<'public' | 'private' | 'all'>('all');
-  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
+  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('all');
   const [pushJoinOpen, setPushJoinOpen] = useState(false);
   const [pushJoinGroup, setPushJoinGroup] = useState<any>(null);
 
@@ -327,7 +327,7 @@ export default function GroupsManagementPage() {
                     setEndDate(undefined);
                     setSelectedUserId(null);
                     setGroupTypeFilter('all');
-                    setClassificationFilter('new');
+                    setClassificationFilter('all');
                     setActiveTab('all');
                     setSearchQuery('');
                     toast({

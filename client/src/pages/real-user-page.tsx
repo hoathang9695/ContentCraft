@@ -37,7 +37,7 @@ export default function RealUserPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
-  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
+  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('all');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -352,7 +352,7 @@ export default function RealUserPage() {
                     setEndDate(undefined);
                     setSelectedUserId(null);
                     setVerificationStatus('unverified');
-                    setClassificationFilter('new');
+                    setClassificationFilter('all');
                     setActiveTab('all');
                     setSearchQuery('');
                     toast({
