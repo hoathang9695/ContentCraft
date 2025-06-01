@@ -4,7 +4,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { desc, eq, and, gte, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, like, sql, count, isNotNull, isNull, or } from "drizzle-orm";
 import {
   insertContentSchema,
   insertCategorySchema,
@@ -121,13 +121,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .where(eq(groups.classification, "new")),
           ]);
 
-        // Đếm support requests có status = 'pending' và type = 'support'
+        // Đếm support requests có status = 'pending' và type = 'support' (hoặc không có type - backward compatibility)
         const pendingSupportRequests = await db
           .select({ count: sql`count(*)::int` })
           .from(supportRequests)
           .where(and(
             eq(supportRequests.status, "pending"),
-            eq(supportRequests.type, "support")
+            or(
+              eq(supportRequests.type, "support"),
+              isNull(supportRequests.type)
+            )
           ));
 
         // Đếm feedback requests có type = 'feedback' và status = 'pending'
@@ -937,7 +940,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user-activities/:userId", isAdmin, async (req, res) => {
     try {
       const userId = Number(req.params.userId);
-      const activities = await storage.getUserActivities(userId);
+      Code analysis: The code needs to import missing modules `isNull` and `or` from `drizzle-orm` and also fix a bug in the badge counting logic to differentiate between support and feedback requests.
+
+```
+const activities = await storage.getUserActivities(userId);
       res.json(activities);
     } catch (error) {
       res.status(500).json({ message: "Error fetching user activities" });
@@ -3031,15 +3037,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(eq(groups.classification, "new")),
         ]);
 
-      // Đếm support requests có status = 'pending'
-      const pendingSupportRequests = await db
-        .select({ count: sql`count(*)::int` })
-        .from(supportRequests)
-        .where(eq(supportRequests.status, "pending"));
+      // Đếm support requests có status = 'pending' và type = 'support' (hoặc không có type - backward compatibility)
+        const pendingSupportRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(and(
+            eq(supportRequests.status, "pending"),
+            or(
+              eq(supportRequests.type, "support"),
+              isNull(supportRequests.type)
+            )
+          ));
 
-      const pendingSupport = pendingSupportRequests[0]?.count || 0;
-
-      // Đếm feedback requests có type = 'feedback' và status = 'pending'
+        // Đếm feedback requests có type = 'feedback' và status = 'pending'
         const pendingFeedbackRequests = await db
           .select({ count: sql`count(*)::int` })
           .from(supportRequests)
@@ -3050,6 +3060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             )
           );
 
+        const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
 
       const badgeCounts = {
