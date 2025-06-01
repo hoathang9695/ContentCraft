@@ -6,6 +6,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupKafkaConsumer, disconnectKafkaConsumer } from "./kafka-consumer";
+import { emailService, SMTPConfig } from "./email";
+import { simulateKafkaMessage } from "./kafka-simulator";
+import { FileCleanupService } from "./file-cleanup";
 
 const app = express();
 app.use(express.json());
@@ -21,12 +24,12 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
   // Cho phép các headers
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
+
   // Xử lý OPTIONS request (preflight)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-  
+
   next();
 });
 
@@ -79,10 +82,10 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     // Log the error for debugging
     console.error('Application error:', err);
-    
+
     const status = err.status || err.statusCode || 500;
     let message = err.message || "Internal Server Error";
-    
+
     // Database connection errors
     if (err.code && (err.code.startsWith('57') || err.code === '08006' || err.code === '08001')) {
       message = "Database service unavailable. Please try again later.";
@@ -113,43 +116,37 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
-    
-    // Khởi động Kafka consumer (có thể bỏ comment nếu có Kafka server)
-    // Chỉ kết nối với Kafka khi có biến môi trường KAFKA_ENABLED=true
-    if (process.env.KAFKA_ENABLED === 'true') {
-  
-      setupKafkaConsumer()
-        .then(() => log('Kafka consumer started successfully', 'kafka'))
-        .catch(err => log(`Failed to start Kafka consumer: ${err}`, 'kafka-error'));
-    } else {
-      log('Kafka consumer disabled. Set KAFKA_ENABLED=true to enable.', 'kafka');
-    }
-  });
-  
+    log(`serving on port ${port}`, "express");
+
+  // Start automatic file cleanup service
+  const fileCleanup = FileCleanupService.getInstance();
+  fileCleanup.startAutoCleanup();
+  log('File cleanup service started', 'express');
+});
+
   // Xử lý tắt ứng dụng
   const shutdown = async () => {
     log('Shutting down server...', 'app');
-    
+
     // Đóng Kafka consumer nếu đang chạy
     if (process.env.KAFKA_ENABLED === 'true') {
       await disconnectKafkaConsumer()
         .catch(err => log(`Error disconnecting Kafka consumer: ${err}`, 'kafka-error'));
     }
-    
+
     // Đóng server
     server.close(() => {
       log('Server closed', 'app');
       process.exit(0);
     });
-    
+
     // Nếu server không đóng trong 5 giây, thoát cưỡng bức
     setTimeout(() => {
       log('Server close timeout, forcing exit', 'app');
       process.exit(1);
     }, 5000);
   };
-  
+
   // Xử lý các sự kiện thoát
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
