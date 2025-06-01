@@ -2154,7 +2154,7 @@ phoneNumber: groupsTable.phoneNumber,
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Get SMTP config from emailService or default values
+      // Get SMTP config from emailService
       const smtpConfig: SMTPConfig = emailService.getConfig();
 
       res.json(smtpConfig);
@@ -2189,7 +2189,7 @@ phoneNumber: groupsTable.phoneNumber,
       };
 
       // Update email service configuration
-      emailService.updateConfig(smtpConfig);
+      await emailService.updateConfig(smtpConfig);
 
       res.json({ 
         message: "SMTP configuration updated successfully",
