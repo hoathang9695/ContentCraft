@@ -543,7 +543,13 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="text-white"
+                style={{ 
+                  backgroundColor: '#7367e0',
+                  '&:hover': { backgroundColor: '#5a52cc' }
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5a52cc'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#7367e0'}
               >
                 {isLoading ? (
                   "Đang gửi..."
