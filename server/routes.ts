@@ -1,4 +1,4 @@
-import express, { type Express, Request, Response, NextFunction } from "express";
+import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
@@ -878,7 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get editor users for anyone (accessible to all authenticated users)
-  app.get("/api/editors", isAuthenticated,async (req, res) => {
+  app.get("/api/editors", isAuthenticated, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       // Filter for active editors only
@@ -943,9 +943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if content is assigned to the current user or if user is admin
       if (content.assigned_to_id !== user.id && user.role !== 'admin') {
         return res.status(403).json({ message: "You can only complete content assigned to you" });
-      }
-
-      // Complete processing
+      }// Complete processing
       const completedContent = await storage.completeProcessing(contentId, result, user.id);
 
       res.json({ 
@@ -953,8 +951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Content processing completed successfully",
         data: completedContent
       });
-    } catch (error) {
-      res.status(500).json({ 
+    } catch (error) {res.status(500).json({ 
         success: false,
         message: "Error completing content processing",
         error: error instanceof Error ? error.message : String(error)
@@ -1426,7 +1423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fakeUser) {
         return res.status(404).json({ message: "Fake user not found" });
       }
-
+      
       res.json(fakeUser);
 
     } catch (error) {
@@ -1648,29 +1645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Support routes
   const supportRouter = (await import('./routes/support.router')).default;
-  app.use('/api/support-requests', supportRouter);
-
-  // Send email endpoint
-  app.post('/api/send-email', isAuthenticated, async (req, res) => {
-    try {
-      const { to, subject, content } = req.body;
-
-      if (!to || !subject || !content) {
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
-
-      const success = await emailService.sendEmail(to, subject, content);
-
-      if (success) {
-        res.json({ message: 'Email sent successfully' });
-      } else {
-        res.status(500).json({ message: 'Failed to send email' });
-      }
-    } catch (error) {
-      console.error('Error sending email:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
+  app.use("/api/support-requests", supportRouter);
 
   // Pages API endpoints
   // Get all pages 
@@ -1820,9 +1795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Import pages from schema
-      ```
-// Fix syntax errors and ensure code completeness.
-const { pages } = await import("../shared/schema");
+      const { pages } = await import("../shared/schema");
 
       // Update the page classification
       const updatedPage = await db
@@ -1934,7 +1907,7 @@ const { pages } = await import("../shared/schema");
             groupType: groupsTable.groupType,
             categories: groupsTable.categories,
             classification: groupsTable.classification,
-            phoneNumber: groupsTable.phoneNumber,
+phoneNumber: groupsTable.phoneNumber,
             monetizationEnabled: groupsTable.monetizationEnabled,
             adminData: groupsTable.adminData,
             createdAt: groupsTable.createdAt,
@@ -2167,7 +2140,7 @@ const { pages } = await import("../shared/schema");
     }
     res.status(401).json({ message: "Unauthorized" });
   };
-
+  
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
