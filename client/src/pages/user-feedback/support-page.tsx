@@ -423,8 +423,9 @@ export default function SupportPage() {
                                   title: "Thành công",
                                   description: "Đã cập nhật trạng thái yêu cầu",
                                 });
-                                // Invalidate and refetch the support requests query
+                                // Invalidate and refetch the support requests query and badge counts
                                 queryClient.invalidateQueries(['/api/support-requests']);
+                                queryClient.invalidateQueries(['/api/badge-counts']);
                               } else {
                                 throw new Error('Failed to update status');
                               }
