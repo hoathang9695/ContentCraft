@@ -15,6 +15,10 @@ export interface SupportRequest {
   updated_at: string;
 }
 
+export interface FeedbackRequest extends SupportRequest {
+  type: 'feedback';
+}
+
 export interface FeedbackRequest {
   id: number;
   full_name: string;
