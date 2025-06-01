@@ -1,4 +1,3 @@
-
 import * as nodemailer from 'nodemailer';
 import { db } from './db';
 import { smtpConfig } from '@shared/schema';
@@ -79,7 +78,7 @@ export class EmailService {
         .where(eq(smtpConfig.isActive, true))
         .orderBy(smtpConfig.createdAt)
         .limit(1);
-      
+
       if (result.length > 0) {
         const dbConfig = result[0];
         this.config = {
@@ -172,25 +171,89 @@ export class EmailService {
     }
   }
 
-  public async sendEmail(to: string, subject: string, html: string, text?: string): Promise<boolean> {
+  public async sendEmail(to: string, subject: string, content: string): Promise<boolean> {
     if (!this.transporter) {
-      console.error("SMTP not configured");
+      console.error('SMTP transporter not initialized');
       return false;
     }
 
     try {
-      const info = await this.transporter.sendMail({
-        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+      const mailOptions = {
+        from: this.config ? `"${this.config.fromName}" <${this.config.fromEmail}>` : 'noreply@example.com',
         to,
         subject,
-        text,
-        html,
-      });
+        html: content
+      };
 
-      console.log("Email sent successfully:", info.messageId);
+      await this.transporter.sendMail(mailOptions);
+      console.log(`Email sent successfully to ${to}`);
       return true;
     } catch (error) {
-      console.error("Error sending email:", error);
+      console.error('Error sending email:', error);
+      return false;
+    }
+  }
+
+  async sendReplyEmail(data: {
+    to: string;
+    subject: string;
+    content: string;
+    originalRequest: {
+      id: number;
+      full_name: string;
+      subject: string;
+      content: string;
+    };
+  }): Promise<boolean> {
+    if (!this.transporter) {
+      console.error('SMTP transporter not initialized');
+      return false;
+    }
+
+    try {
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #333; margin: 0 0 10px 0;">Phản hồi từ hệ thống hỗ trợ</h2>
+            <p style="margin: 0; color: #666;">Cảm ơn bạn đã liên hệ với chúng tôi. Dưới đây là phản hồi cho yêu cầu hỗ trợ của bạn.</p>
+          </div>
+
+          <div style="background-color: #fff; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: #495057; margin: 0 0 15px 0;">Nội dung phản hồi:</h3>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #007bff;">
+              ${data.content.replace(/\n/g, '<br>')}
+            </div>
+          </div>
+
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
+            <h4 style="color: #6c757d; margin: 0 0 10px 0;">Yêu cầu gốc của bạn:</h4>
+            <p style="margin: 0 0 5px 0; color: #495057;"><strong>Chủ đề:</strong> ${data.originalRequest.subject}</p>
+            <p style="margin: 0; color: #6c757d; font-size: 14px; padding: 10px; background-color: #fff; border-radius: 4px;">
+              ${data.originalRequest.content.replace(/\n/g, '<br>')}
+            </p>
+          </div>
+
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; text-align: center;">
+            <p style="margin: 0; color: #6c757d; font-size: 12px;">
+              Email này được gửi tự động từ hệ thống hỗ trợ khách hàng.<br>
+              Nếu bạn có thêm câu hỏi, vui lòng liên hệ lại với chúng tôi.
+            </p>
+          </div>
+        </div>
+      `;
+
+      const mailOptions = {
+        from: this.config ? `"${this.config.fromName}" <${this.config.fromEmail}>` : 'noreply@example.com',
+        to: data.to,
+        subject: data.subject,
+        html: htmlContent
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      console.log(`Reply email sent successfully to ${data.to} for request #${data.originalRequest.id}`);
+      return true;
+    } catch (error) {
+      console.error('Error sending reply email:', error);
       return false;
     }
   }
