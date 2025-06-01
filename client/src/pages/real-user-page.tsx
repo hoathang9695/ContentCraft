@@ -34,10 +34,8 @@ export default function RealUserPage() {
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
-  const [startDate, setStartDate] = useState<Date>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  );
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
   const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
 
@@ -56,7 +54,7 @@ export default function RealUserPage() {
   useEffect(() => {
     setDebouncedSearchQuery('');
     setPage(1); // Reset về trang 1 khi thay đổi filter
-  }, [startDate, endDate, verificationStatus, activeTab, selectedUserId, classificationFilter]);
+  }, [verificationStatus, activeTab, selectedUserId, classificationFilter]);
 
   const handlePushFollow = async (userIds: string[]) => {
     try {
@@ -140,7 +138,7 @@ export default function RealUserPage() {
 
   // Fetch real users with server-side filtering
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/real-users", page, limit, startDate, endDate, verificationStatus, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
+    queryKey: ["/api/real-users", page, limit, startDate?.toISOString(), endDate?.toISOString(), verificationStatus, debouncedSearchQuery, activeTab, selectedUserId, classificationFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -274,7 +272,7 @@ export default function RealUserPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "dd/MM/yyyy") : "Chọn ngày"}
+                      {startDate ? format(startDate, "dd/MM/yyyy") : "Tất cả"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -282,11 +280,9 @@ export default function RealUserPage() {
                       mode="single"
                       selected={startDate}
                       onSelect={(date) => {
-                        if (date) {
-                          setStartDate(date);
-                          if (date > endDate) {
-                            setEndDate(date);
-                          }
+                        setStartDate(date);
+                        if (date && endDate && date > endDate) {
+                          setEndDate(date);
                         }
                       }}
                       initialFocus
@@ -307,7 +303,7 @@ export default function RealUserPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "dd/MM/yyyy") : "Chọn ngày"}
+                      {endDate ? format(endDate, "dd/MM/yyyy") : "Tất cả"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -315,11 +311,9 @@ export default function RealUserPage() {
                       mode="single"
                       selected={endDate}
                       onSelect={(date) => {
-                        if (date) {
-                          setEndDate(date);
-                          if (date < startDate) {
-                            setStartDate(date);
-                          }
+                        setEndDate(date);
+                        if (date && startDate && date < startDate) {
+                          setStartDate(date);
                         }
                       }}
                       initialFocus
@@ -333,9 +327,12 @@ export default function RealUserPage() {
                   variant="default" 
                   className="bg-green-600 hover:bg-green-700 text-white"
                   onClick={() => {
+                    const description = startDate && endDate 
+                      ? `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`
+                      : "Hiển thị tất cả dữ liệu";
                     toast({
                       title: "Đã áp dụng bộ lọc",
-                      description: `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`,
+                      description,
                     });
                   }}
                 >
@@ -346,10 +343,8 @@ export default function RealUserPage() {
                   variant="outline" 
                   className="bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800"
                   onClick={() => {
-                    const today = new Date();
-                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                    setStartDate(firstDayOfMonth);
-                    setEndDate(today);
+                    setStartDate(undefined);
+                    setEndDate(undefined);
                     setSelectedUserId(null);
                     setVerificationStatus('unverified');
                     setClassificationFilter('new');
@@ -357,7 +352,7 @@ export default function RealUserPage() {
                     setSearchQuery('');
                     toast({
                       title: "Đã đặt lại bộ lọc",
-                      description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, "dd/MM/yyyy")} đến ${format(today, "dd/MM/yyyy")}`,
+                      description: "Hiển thị tất cả dữ liệu",
                     });
                   }}
                 >
