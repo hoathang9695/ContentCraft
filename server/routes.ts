@@ -1424,8 +1424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fakeUser) {
         return res.status(404).json({ message: "Fake user not found" });
       }
-  // Get all real users 
-      res.json(fakeUser);
+  res.json(fakeUser);
 
     } catch (error) {
       res.status(500).json({ 
