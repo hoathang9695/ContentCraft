@@ -288,7 +288,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className={`dialog-content ${isExpanded ? 'max-w-[100vw] max-h-[100vh] w-[100vw] h-[100vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}
+        className={`dialog-content ${isExpanded ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}
       >
         {/* Header */}
         <DialogHeader className="p-4 pb-0 flex-shrink-0">
