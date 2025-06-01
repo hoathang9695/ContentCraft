@@ -1806,7 +1806,8 @@ const users = await storage.getAllUsers();
             processorUsername: users.username
           })
           .from(pagesTable)
-          .leftJoin(users, eq(pagesTable.assignedToId, users.id))          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)```text
+          .leftJoin(users, eq(pagesTable.assignedToId, users.id))
+          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
           .orderBy(desc(pagesTable.createdAt))
           .limit(limit)
           .offset(offset);
