@@ -37,7 +37,7 @@ export default function PageManagementPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [pageTypeFilter, setPageTypeFilter] = useState<'personal' | 'business' | 'community' | 'all'>('all');
-  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('new');
+  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('all');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -327,7 +327,7 @@ export default function PageManagementPage() {
                     setEndDate(undefined);
                     setSelectedUserId(null);
                     setPageTypeFilter('all');
-                    setClassificationFilter('new');
+                    setClassificationFilter('all');
                     setActiveTab('all');
                     setSearchQuery('');
                     toast({
