@@ -297,8 +297,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  // Function to broadcast feedback badge updates
+  const broadcastFeedbackBadgeUpdate = async () => {
+    try {
+      const { groups, supportRequests } = await import("../shared/schema");
+      const { pages } = await import("../shared/schema");
+      const { users } = await import("../shared/schema");
+      const { realUsers } = await import("../shared/schema");
+
+      const [realUsersNewCount, pagesNewCount, groupsNewCount] =
+        await Promise.all([
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(realUsers)
+            .where(eq(realUsers.classification, "new")),
+
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(pages)
+            .where(eq(pages.classification, "new")),
+
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(groups)
+            .where(eq(groups.classification, "new")),
+        ]);
+
+      // Đếm support requests có status = 'pending' và type = 'support' (hoặc không có type - backward compatibility)
+      const pendingSupportRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(and(
+          eq(supportRequests.status, "pending"),
+          or(
+            eq(supportRequests.type, "support"),
+            isNull(supportRequests.type)
+          )
+        ));
+
+      // Đếm feedback requests có type = 'feedback' và status = 'pending'
+      const pendingFeedbackRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(
+          and(
+            eq(supportRequests.type, "feedback"),
+            eq(supportRequests.status, "pending")
+          )
+        );
+
+      const pendingSupport = pendingSupportRequests[0]?.count || 0;
+      const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+
+      // Tổng số pending requests (support + feedback) cho menu cha "Xử lý phản hồi"
+      const totalPendingRequests = pendingSupport + pendingFeedback;
+
+      const badgeCounts = {
+        realUsers: realUsersNewCount[0]?.count || 0,
+        pages: pagesNewCount[0]?.count || 0,
+        groups: groupsNewCount[0]?.count || 0,
+        supportRequests: pendingSupport,
+        feedbackRequests: pendingFeedback,
+        totalRequests: totalPendingRequests, // Tổng cho menu cha
+      };
+
+      const filteredBadgeCounts = {
+        realUsers:
+          badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
+        pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
+        groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined,
+        supportRequests:
+          badgeCounts.supportRequests > 0
+            ? badgeCounts.supportRequests
+            : undefined,
+        feedbackRequests:
+          badgeCounts.feedbackRequests > 0
+            ? badgeCounts.feedbackRequests
+            : undefined,
+        totalRequests:
+          badgeCounts.totalRequests > 0
+            ? badgeCounts.totalRequests
+            : undefined,
+      };
+
+      // Broadcast to all connected clients
+      io.emit("badge-update", filteredBadgeCounts);
+      console.log("Broadcasted feedback badge update:", filteredBadgeCounts);
+    } catch (error) {
+      console.error("Error broadcasting feedback badge update:", error);
+    }
+  };
+
   // Make broadcastBadgeUpdate available globally
   (global as any).broadcastBadgeUpdate = broadcastBadgeUpdate;
+  (global as any).broadcastFeedbackBadgeUpdate = broadcastFeedbackBadgeUpdate;
 
   // Set up authentication routes
   setupAuth(app);
