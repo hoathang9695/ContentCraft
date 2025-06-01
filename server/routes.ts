@@ -2705,7 +2705,6 @@ app.post('/api/send-email', isAuthenticated, async (req, res) => {
 
       // Update the page classification
       const updatedPage = await db
-        ```python
         .update(pages)
         .set({ 
           classification,
