@@ -940,10 +940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user-activities/:userId", isAdmin, async (req, res) => {
     try {
       const userId = Number(req.params.userId);
-      Code analysis: The code needs to import missing modules `isNull` and `or` from `drizzle-orm` and also fix a bug in the badge counting logic to differentiate between support and feedback requests.
-
-```
-const activities = await storage.getUserActivities(userId);
+      const activities = await storage.getUserActivities(userId);
       res.json(activities);
     } catch (error) {
       res.status(500).json({ message: "Error fetching user activities" });
