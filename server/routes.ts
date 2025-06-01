@@ -1,16 +1,30 @@
 import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { Server as SocketIOServer } from 'socket.io';
+import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { desc, eq, and, gte, lte, or, sql } from 'drizzle-orm';
-import { insertContentSchema, insertCategorySchema, insertLabelSchema, insertFakeUserSchema, supportRequests, users, realUsers, type SupportRequest, type InsertSupportRequest } from "@shared/schema";
+import { desc, eq, and, gte, lte, or, sql } from "drizzle-orm";
+import {
+  insertContentSchema,
+  insertCategorySchema,
+  insertLabelSchema,
+  insertFakeUserSchema,
+  supportRequests,
+  users,
+  realUsers,
+  type SupportRequest,
+  type InsertSupportRequest,
+} from "@shared/schema";
 import { pool, db } from "./db";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { simulateKafkaMessage, simulateMultipleMessages, simulateMassMessages } from "./kafka-simulator";
+import {
+  simulateKafkaMessage,
+  simulateMultipleMessages,
+  simulateMassMessages,
+} from "./kafka-simulator";
 import { log } from "./vite";
 import { emailService, SMTPConfig } from "./email";
 
@@ -29,33 +43,37 @@ const storage_config = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Create a unique filename using timestamp and original extension
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
-    cb(null, 'avatar-' + uniqueSuffix + ext);
-  }
+    cb(null, "avatar-" + uniqueSuffix + ext);
+  },
 });
 
 // Configure file filter
-const fileFilter = (req: Express.Request, file: multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (
+  req: Express.Request,
+  file: multer.File,
+  cb: multer.FileFilterCallback,
+) => {
   // Accept images only
   if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-    return cb(new Error('Only image files are allowed!'));
+    return cb(new Error("Only image files are allowed!"));
   }
   cb(null, true);
 };
 
 // Setup upload middleware
-const upload = multer({ 
+const upload = multer({
   storage: storage_config,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 1024 * 1024 * 5 // 5MB max file size
-  }
+    fileSize: 1024 * 1024 * 5, // 5MB max file size
+  },
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from public directory
-  app.use('/images', express.static(path.join(process.cwd(), 'public/images')));
+  app.use("/images", express.static(path.join(process.cwd(), "public/images")));
 
   const httpServer = createServer(app);
 
@@ -63,44 +81,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const io = new SocketIOServer(httpServer, {
     cors: {
       origin: "*",
-      methods: ["GET", "POST"]
-    }
+      methods: ["GET", "POST"],
+    },
   });
 
   // Socket.IO connection handling
-  io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id);
+  io.on("connection", (socket) => {
+    console.log("Client connected:", socket.id);
 
     // Handle initial badge counts request
-    socket.on('request-badge-counts', async () => {
+    socket.on("request-badge-counts", async () => {
       try {
         const { groups, supportRequests } = await import("../shared/schema");
         const { pages } = await import("../shared/schema");
         const { users } = await import("../shared/schema");
         const { realUsers } = await import("../shared/schema");
 
-        const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
-          db.select({
-            count: sql<number>`count(*)`
-          }).from(realUsers)
-          .where(eq(realUsers.classification, 'new')),
+        const [realUsersNewCount, pagesNewCount, groupsNewCount] =
+          await Promise.all([
+            db
+              .select({
+                count: sql<number>`count(*)`,
+              })
+              .from(realUsers)
+              .where(eq(realUsers.classification, "new")),
 
-          db.select({
-            count: sql<number>`count(*)`
-          }).from(pages)
-          .where(eq(pages.classification, 'new')),
+            db
+              .select({
+                count: sql<number>`count(*)`,
+              })
+              .from(pages)
+              .where(eq(pages.classification, "new")),
 
-          db.select({
-            count: sql<number>`count(*)`
-          }).from(groups)
-          .where(eq(groups.classification, 'new'))
-        ]);
+            db
+              .select({
+                count: sql<number>`count(*)`,
+              })
+              .from(groups)
+              .where(eq(groups.classification, "new")),
+          ]);
 
         // Đếm support requests có status = 'pending'
         const pendingSupportRequests = await db
           .select({ count: sql`count(*)::int` })
           .from(supportRequests)
-          .where(eq(supportRequests.status, 'pending'));
+          .where(eq(supportRequests.status, "pending"));
 
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
 
@@ -108,26 +133,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           realUsers: realUsersNewCount[0]?.count || 0,
           pages: pagesNewCount[0]?.count || 0,
           groups: groupsNewCount[0]?.count || 0,
-          supportRequests: pendingSupport
+          supportRequests: pendingSupport,
         };
 
         const filteredBadgeCounts = {
-          realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
+          realUsers:
+            badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
           pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
           groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined,
-          supportRequests: badgeCounts.supportRequests > 0 ? badgeCounts.supportRequests : undefined
+          supportRequests:
+            badgeCounts.supportRequests > 0
+              ? badgeCounts.supportRequests
+              : undefined,
         };
 
         // Send initial data to requesting client
-        socket.emit('badge-update', filteredBadgeCounts);
-        console.log('Sent initial badge counts to client:', socket.id, filteredBadgeCounts);
+        socket.emit("badge-update", filteredBadgeCounts);
+        console.log(
+          "Sent initial badge counts to client:",
+          socket.id,
+          filteredBadgeCounts,
+        );
       } catch (error) {
-        console.error('Error sending initial badge counts:', error);
+        console.error("Error sending initial badge counts:", error);
       }
     });
 
-    socket.on('disconnect', () => {
-      console.log('Client disconnected:', socket.id);
+    socket.on("disconnect", () => {
+      console.log("Client disconnected:", socket.id);
     });
   });
 
@@ -136,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const result = await db
       .select({ count: sql`count(*)::int` })
       .from(realUsers)
-      .where(eq(realUsers.classification, 'new'));
+      .where(eq(realUsers.classification, "new"));
     return result[0]?.count || 0;
   }
 
@@ -145,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const result = await db
       .select({ count: sql`count(*)::int` })
       .from(pages)
-      .where(eq(pages.classification, 'new'));
+      .where(eq(pages.classification, "new"));
     return result[0]?.count || 0;
   }
 
@@ -154,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const result = await db
       .select({ count: sql`count(*)::int` })
       .from(groups)
-      .where(eq(groups.classification, 'new'));
+      .where(eq(groups.classification, "new"));
     return result[0]?.count || 0;
   }
 
@@ -163,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const result = await db
       .select({ count: sql`count(*)::int` })
       .from(supportRequests)
-      .where(eq(supportRequests.status, 'pending'));
+      .where(eq(supportRequests.status, "pending"));
     return result[0]?.count || 0;
   }
 
@@ -175,28 +208,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { users } = await import("../shared/schema");
       const { realUsers } = await import("../shared/schema");
 
-      const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
-        db.select({
-          count: sql<number>`count(*)`
-        }).from(realUsers)
-        .where(eq(realUsers.classification, 'new')),
+      const [realUsersNewCount, pagesNewCount, groupsNewCount] =
+        await Promise.all([
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(realUsers)
+            .where(eq(realUsers.classification, "new")),
 
-        db.select({
-          count: sql<number>`count(*)`
-        }).from(pages)
-        .where(eq(pages.classification, 'new')),
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(pages)
+            .where(eq(pages.classification, "new")),
 
-        db.select({
-          count: sql<number>`count(*)`
-        }).from(groups)
-        .where(eq(groups.classification, 'new'))
-      ]);
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(groups)
+            .where(eq(groups.classification, "new")),
+        ]);
 
       // Đếm support requests có status = 'pending'
       const pendingSupportRequests = await db
         .select({ count: sql`count(*)::int` })
         .from(supportRequests)
-        .where(eq(supportRequests.status, 'pending'));
+        .where(eq(supportRequests.status, "pending"));
 
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
 
@@ -204,21 +244,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         realUsers: realUsersNewCount[0]?.count || 0,
         pages: pagesNewCount[0]?.count || 0,
         groups: groupsNewCount[0]?.count || 0,
-        supportRequests: pendingSupport
+        supportRequests: pendingSupport,
       };
 
       const filteredBadgeCounts = {
-        realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
+        realUsers:
+          badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
         pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
         groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined,
-        supportRequests: badgeCounts.supportRequests > 0 ? badgeCounts.supportRequests : undefined
+        supportRequests:
+          badgeCounts.supportRequests > 0
+            ? badgeCounts.supportRequests
+            : undefined,
       };
 
       // Broadcast to all connected clients
-      io.emit('badge-update', filteredBadgeCounts);
-      console.log('Broadcasted badge update:', filteredBadgeCounts);
+      io.emit("badge-update", filteredBadgeCounts);
+      console.log("Broadcasted badge update:", filteredBadgeCounts);
     } catch (error) {
-      console.error('Error broadcasting badge update:', error);
+      console.error("Error broadcasting badge update:", error);
     }
   };
 
@@ -235,24 +279,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sessionID: req.sessionID,
       hasSession: !!req.session,
       isAuthenticated: req.isAuthenticated(),
-      user: req.isAuthenticated() ? { 
-        id: (req.user as Express.User)?.id,
-        username: (req.user as Express.User)?.username,
-        role: (req.user as Express.User)?.role
-      } : 'Not authenticated'
+      user: req.isAuthenticated()
+        ? {
+            id: (req.user as Express.User)?.id,
+            username: (req.user as Express.User)?.username,
+            role: (req.user as Express.User)?.role,
+          }
+        : "Not authenticated",
     });
 
     // Ghi log chi tiết thông tin session
     console.log("Session details:", {
-      session: req.session ? 'Session exists' : 'No session',
+      session: req.session ? "Session exists" : "No session",
       cookie: req.session?.cookie,
       passport: req.session ? (req.session as any).passport : null,
       headers: {
         cookie: req.headers.cookie,
         referer: req.headers.referer,
-        origin: req.headers.origin
+        origin: req.headers.origin,
       },
-      method: req.method
+      method: req.method,
     });
 
     if (req.isAuthenticated()) {
@@ -260,7 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Kiểm tra đặc biệt cho trường hợp cookie bị mất
-    if (!req.headers.cookie || !req.headers.cookie.includes('connect.sid')) {
+    if (!req.headers.cookie || !req.headers.cookie.includes("connect.sid")) {
       console.log("Missing session cookie in request!");
     }
 
@@ -269,40 +315,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Content routes
-  const contentRouter = (await import('./routes/content.router')).default;
+  const contentRouter = (await import("./routes/content.router")).default;
   app.use("/api/contents", contentRouter);
-
 
   app.get("/api/my-contents", isAuthenticated, async (req, res) => {
     try {
       // Log thông tin để debug
-      console.log("User ID requesting contents:", (req.user as Express.User).id);
+      console.log(
+        "User ID requesting contents:",
+        (req.user as Express.User).id,
+      );
       console.log("User role:", (req.user as Express.User).role);
 
-      const contents = await storage.getContentsByAssignee((req.user as Express.User).id);
+      const contents = await storage.getContentsByAssignee(
+        (req.user as Express.User).id,
+      );
 
       // Thêm log để kiểm tra số lượng và trạng thái nội dung đang trả về
       console.log("Total contents returned:", contents.length);
-      console.log("Contents with 'processing' status:", 
-        contents.filter(c => c.status === 'processing').length);
-      console.log("Contents with 'unverified' source:", 
-        contents.filter(c => c.sourceVerification === 'unverified').length);
-      console.log("Contents with BOTH 'processing' AND 'unverified':", 
-        contents.filter(c => c.status === 'processing' && c.sourceVerification === 'unverified').length);
+      console.log(
+        "Contents with 'processing' status:",
+        contents.filter((c) => c.status === "processing").length,
+      );
+      console.log(
+        "Contents with 'unverified' source:",
+        contents.filter((c) => c.sourceVerification === "unverified").length,
+      );
+      console.log(
+        "Contents with BOTH 'processing' AND 'unverified':",
+        contents.filter(
+          (c) =>
+            c.status === "processing" && c.sourceVerification === "unverified",
+        ).length,
+      );
 
       // Kiểm tra và in thông tin nội dung đầu tiên để debug
       if (contents.length > 0) {
         console.log("First content example:", {
           id: contents[0].id,
           status: contents[0].status,
-          verification: contents[0].sourceVerification
+          verification: contents[0].sourceVerification,
         });
       }
 
       res.json(contents);
     } catch (error) {
       console.error("Error fetching contents:", error);
-      res.status(500).json({ message: "Error fetching your assigned contents" });
+      res
+        .status(500)
+        .json({ message: "Error fetching your assigned contents" });
     }
   });
 
@@ -317,11 +378,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { startDate, endDate } = req.query;
 
       // Create cache key
-      const cacheKey = `stats-${user.id}-${user.role}-${startDate || 'all'}-${endDate || 'all'}`;
+      const cacheKey = `stats-${user.id}-${user.role}-${startDate || "all"}-${endDate || "all"}`;
       const cached = statsCache.get(cacheKey);
 
       // Return cached result if still valid
-      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         console.log("Returning cached stats");
         return res.json(cached.data);
       }
@@ -341,25 +402,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         dateConditions.push(
           or(
-            and(
-              gte(contents.createdAt, start),
-              lte(contents.createdAt, end)
-            ),
-            and(
-              gte(contents.updatedAt, start),
-              lte(contents.updatedAt, end)
-            )
-          )
+            and(gte(contents.createdAt, start), lte(contents.createdAt, end)),
+            and(gte(contents.updatedAt, start), lte(contents.updatedAt, end)),
+          ),
         );
       }
 
       // User filter condition
-      const userConditions = user.role === 'admin' 
-        ? [] 
-        : [eq(contents.assigned_to_id, user.id)];
+      const userConditions =
+        user.role === "admin" ? [] : [eq(contents.assigned_to_id, user.id)];
 
       const whereClause = [...dateConditions, ...userConditions];
-      const finalWhere = whereClause.length > 0 ? and(...whereClause) : undefined;
+      const finalWhere =
+        whereClause.length > 0 ? and(...whereClause) : undefined;
 
       // Sử dụng một query duy nhất để lấy tất cả stats
       const statsQuery = await db
@@ -373,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           unsafe: sql<number>`count(*) filter (where safe = false)`,
           unchecked: sql<number>`count(*) filter (where safe is null)`,
           assigned: sql<number>`count(*) filter (where assigned_to_id is not null)`,
-          unassigned: sql<number>`count(*) filter (where assigned_to_id is null)`
+          unassigned: sql<number>`count(*) filter (where assigned_to_id is null)`,
         })
         .from(contents)
         .where(finalWhere);
@@ -382,31 +437,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Lấy assignment per user chỉ khi cần thiết (admin)
       let assignedPerUser = [];
-      if (user.role === 'admin') {
+      if (user.role === "admin") {
         const assignmentQuery = await db
           .select({
             userId: contents.assigned_to_id,
             username: users.username,
             name: users.name,
-            count: sql<number>`count(*)`
+            count: sql<number>`count(*)`,
           })
           .from(contents)
           .innerJoin(users, eq(contents.assigned_to_id, users.id))
           .where(
             and(
-              eq(users.status, 'active'),
-              eq(users.role, 'editor'),
-              finalWhere
-            )
+              eq(users.status, "active"),
+              eq(users.role, "editor"),
+              finalWhere,
+            ),
           )
           .groupBy(contents.assigned_to_id, users.username, users.name)
           .orderBy(desc(sql`count(*)`));
 
-        assignedPerUser = assignmentQuery.map(row => ({
+        assignedPerUser = assignmentQuery.map((row) => ({
           userId: row.userId,
           username: row.username,
           name: row.name,
-          count: Number(row.count)
+          count: Number(row.count),
         }));
       }
 
@@ -417,33 +472,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Real users stats với aggregation
       const { pages, groups } = await import("../shared/schema");
 
-      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats] = await Promise.all([
-        // Real users aggregation
-        db.select({
-          total: sql<number>`count(distinct ${realUsers.id})`,
-          new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`
-        }).from(realUsers),
+      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats] =
+        await Promise.all([
+          // Real users aggregation
+          db
+            .select({
+              total: sql<number>`count(distinct ${realUsers.id})`,
+              new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`,
+            })
+            .from(realUsers),
 
-        // Pages aggregation
-        db.select({
-          total: sql<number>`count(*)`,
-          new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`
-        }).from(pages),
+          // Pages aggregation
+          db
+            .select({
+              total: sql<number>`count(*)`,
+              new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`,
+            })
+            .from(pages),
 
-        // Groups aggregation
-        db.select({
-          total: sql<number>`count(*)`,
-          new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`
-        }).from(groups),
+          // Groups aggregation
+          db
+            .select({
+              total: sql<number>`count(*)`,
+              new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`,
+            })
+            .from(groups),
 
-        // Support requests aggregation
-        db.select({
-          total: sql<number>`count(*)`,
-          pending: sql<number>`count(*) filter (where status = 'pending')`,
-          processing: sql<number>`count(*) filter (where status = 'processing')`,
-          completed: sql<number>`count(*) filter (where status = 'completed')`
-        }).from(supportRequests)
-      ]);
+          // Support requests aggregation
+          db
+            .select({
+              total: sql<number>`count(*)`,
+              pending: sql<number>`count(*) filter (where status = 'pending')`,
+              processing: sql<number>`count(*) filter (where status = 'processing')`,
+              completed: sql<number>`count(*) filter (where status = 'completed')`,
+            })
+            .from(supportRequests),
+        ]);
 
       const totalRealUsers = Number(realUsersStats[0]?.total || 0);
       const newRealUsers = Number(realUsersStats[0]?.new || 0);
@@ -452,20 +516,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalGroups = Number(groupsStats[0]?.total || 0);
       const newGroups = Number(groupsStats[0]?.new || 0);
       const totalSupportRequests = Number(supportRequestsStats[0]?.total || 0);
-      const pendingSupportRequests = Number(supportRequestsStats[0]?.pending || 0);
-      const processingSupportRequests = Number(supportRequestsStats[0]?.processing || 0);
-      const completedSupportRequests = Number(supportRequestsStats[0]?.completed || 0);
+      const pendingSupportRequests = Number(
+        supportRequestsStats[0]?.pending || 0,
+      );
+      const processingSupportRequests = Number(
+        supportRequestsStats[0]?.processing || 0,
+      );
+      const completedSupportRequests = Number(
+        supportRequestsStats[0]?.completed || 0,
+      );
 
       console.log("Optimized stats:", {
         realUsers: { total: totalRealUsers, new: newRealUsers },
         pages: { total: totalPages, new: newPages },
         groups: { total: totalGroups, new: newGroups },
-        supportRequests: { 
-          total: totalSupportRequests, 
+        supportRequests: {
+          total: totalSupportRequests,
           pending: pendingSupportRequests,
-          processing: processingSupportRequests, 
-          completed: completedSupportRequests 
-        }
+          processing: processingSupportRequests,
+          completed: completedSupportRequests,
+        },
       });
 
       const result = {
@@ -474,8 +544,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completed: Number(contentStats.completed),
         // Thông tin trạng thái xác minh nguồn
         verified: Number(contentStats.verified),
-        unverified: Number(contentStats.unverified), 
-        // Thông tin trạng thái an toàn  
+        unverified: Number(contentStats.unverified),
+        // Thông tin trạng thái an toàn
         safe: Number(contentStats.safe),
         unsafe: Number(contentStats.unsafe),
         unchecked: Number(contentStats.unchecked),
@@ -498,16 +568,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processingSupportRequests,
         completedSupportRequests,
         // Thông tin khoảng thời gian nếu có lọc
-        period: startDate && endDate ? {
-          start: startDate,
-          end: endDate
-        } : null
+        period:
+          startDate && endDate
+            ? {
+                start: startDate,
+                end: endDate,
+              }
+            : null,
       };
 
       // Cache the result
       statsCache.set(cacheKey, {
         data: result,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       // Clean old cache entries
@@ -519,9 +592,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       console.error("Error in /api/stats:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching statistics",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -529,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User management routes (admin only)
   // Check if user is admin middleware
   const isAdmin = (req: Request, res: Response, next: Function) => {
-    if (req.isAuthenticated() && (req.user as Express.User).role === 'admin') {
+    if (req.isAuthenticated() && (req.user as Express.User).role === "admin") {
       return next();
     }
     res.status(403).json({ message: "Admin access required" });
@@ -553,7 +626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = Number(req.params.id);
       const { status } = req.body;
 
-      if (!status || !['active', 'pending', 'blocked'].includes(status)) {
+      if (!status || !["active", "pending", "blocked"].includes(status)) {
         return res.status(400).json({ message: "Invalid status value" });
       }
 
@@ -578,8 +651,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Không cho phép xóa admin đầu tiên (id=1)
       if (userId === 1) {
-        return res.status(400).json({ 
-          message: "Cannot delete the main administrator account" 
+        return res.status(400).json({
+          message: "Cannot delete the main administrator account",
         });
       }
 
@@ -594,8 +667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: (req.user as Express.User).id,
         activityType: "delete_user",
         metadata: {
-          details: `Deleted user ${user.username} (ID: ${userId}) and reassigned their content`
-        }
+          details: `Deleted user ${user.username} (ID: ${userId}) and reassigned their content`,
+        },
       });
 
       // Thực hiện xóa user
@@ -605,14 +678,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete user" });
       }
 
-      res.json({ 
+      res.json({
         message: "User deleted successfully",
-        success: true
+        success: true,
       });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error deleting user",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -632,7 +705,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await hashPassword(newPassword);
 
       // Update user's password
-      const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
+      const updatedUser = await storage.updateUser(userId, {
+        password: hashedPassword,
+      });
 
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
@@ -652,8 +727,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { department, position, role } = req.body;
 
       // Validate role if it's provided
-      if (role && !['admin', 'editor', 'viewer'].includes(role)) {
-        return res.status(400).json({ success: false, message: "Invalid role value" });
+      if (role && !["admin", "editor", "viewer"].includes(role)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid role value" });
       }
 
       // Build update object with only the fields that are provided
@@ -663,60 +740,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (role) updateData.role = role;
 
       if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ success: false, message: "No valid fields to update" });
+        return res
+          .status(400)
+          .json({ success: false, message: "No valid fields to update" });
       }
 
       const updatedUser = await storage.updateUser(userId, updateData);
 
       if (!updatedUser) {
-        return res.status(404).json({ success: false, message: "User not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
       }
 
       // Remove password from response
       const { password, ...safeUser } = updatedUser;
       return res.json({ success: true, data: safeUser });
     } catch (error) {
-      return res.status(500).json({ success: false, message: "Error updating user details" });
+      return res
+        .status(500)
+        .json({ success: false, message: "Error updating user details" });
     }
   });
 
   // Serve uploaded files as static assets
-  app.use('/uploads', express.static(uploadDir));
+  app.use("/uploads", express.static(uploadDir));
 
   // Serve robots.txt từ public directory
-  app.get('/robots.txt', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'public', 'robots.txt'));
+  app.get("/robots.txt", (req, res) => {
+    res.sendFile(path.join(process.cwd(), "public", "robots.txt"));
   });
 
   // Upload user avatar (authenticated user)
-  app.post("/api/user/avatar/upload", isAuthenticated, upload.single('avatar'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+  app.post(
+    "/api/user/avatar/upload",
+    isAuthenticated,
+    upload.single("avatar"),
+    async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const userId = (req.user as Express.User).id;
+
+        // Generate relative URL to the uploaded file
+        const avatarUrl = `/uploads/${path.basename(req.file.path)}`;
+
+        const updatedUser = await storage.updateUser(userId, { avatarUrl });
+
+        if (!updatedUser) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        // Remove password from response
+        const { password, ...safeUser } = updatedUser;
+        res.json(safeUser);
+      } catch (error) {
+        if (error instanceof Error) {
+          res
+            .status(400)
+            .json({ message: error.message || "Error uploading avatar" });
+        } else {
+          res.status(500).json({ message: "Error uploading avatar" });
+        }
       }
-
-      const userId = (req.user as Express.User).id;
-
-      // Generate relative URL to the uploaded file
-      const avatarUrl = `/uploads/${path.basename(req.file.path)}`;
-
-      const updatedUser = await storage.updateUser(userId, { avatarUrl });
-
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Remove password from response
-      const { password, ...safeUser } = updatedUser;
-      res.json(safeUser);
-    } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ message: error.message || "Error uploading avatar" });
-      } else {
-        res.status(500).json({ message: "Error uploading avatar" });
-      }
-    }
-  });
+    },
+  );
 
   // Keep the old endpoint for backward compatibility
   app.patch("/api/user/avatar", isAuthenticated, async (req, res) => {
@@ -756,12 +846,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { currentPassword, newPassword } = req.body;
 
       if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Current password and new password are required" });
+        return res
+          .status(400)
+          .json({ message: "Current password and new password are required" });
       }
 
       // Validate password length
       if (newPassword.length < 6) {
-        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+        return res
+          .status(400)
+          .json({ message: "New password must be at least 6 characters long" });
       }
 
       // Get current user
@@ -771,14 +865,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify current password
-      const isPasswordCorrect = await comparePasswords(currentPassword, user.password);
+      const isPasswordCorrect = await comparePasswords(
+        currentPassword,
+        user.password,
+      );
       if (!isPasswordCorrect) {
-        return res.status(400).json({ message: "Current password is incorrect" });
+        return res
+          .status(400)
+          .json({ message: "Current password is incorrect" });
       }
 
       // Hash new password and update
       const hashedPassword = await hashPassword(newPassword);
-      const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
+      const updatedUser = await storage.updateUser(userId, {
+        password: hashedPassword,
+      });
 
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
@@ -831,7 +932,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to send content updates to Gorse service
   app.post("/api/kafka/send", isAuthenticated, async (req, res) => {
     try {
-      const { externalId, categories, labels, safe, sourceVerification } = req.body;
+      const { externalId, categories, labels, safe, sourceVerification } =
+        req.body;
 
       if (!externalId) {
         return res.status(400).json({ message: "External ID is required" });
@@ -839,19 +941,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Here you would normally send this to your Gorse service using Kafka
       // For now, we'll simulate a successful response
-      log(`Sending update to Gorse service for item ${externalId}`, 'kafka');
-      log(`Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || 'unverified'}`, 'kafka');
+      log(`Sending update to Gorse service for item ${externalId}`, "kafka");
+      log(
+        `Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || "unverified"}`,
+        "kafka",
+      );
 
       res.json({
         success: true,
         message: "Successfully sent content update to Gorse service",
-        data: { externalId, categories, labels, safe, sourceVerification }
+        data: { externalId, categories, labels, safe, sourceVerification },
       });
     } catch (error) {
       res.status(500).json({
         success: false,
         message: "Error sending content update to Gorse service",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -861,19 +966,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Tạo ID ngẫu nhiên cho nội dung test
       const contentId = `test-${Date.now()}`;
-
-      ```
       const message = await simulateKafkaMessage(contentId);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Kafka message simulated successfully (test endpoint)",
-        data: message
+        data: message,
       });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Error simulating Kafka message",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -885,18 +988,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: "Updated content statuses successfully",
-        updatedCount: count
+        updatedCount: count,
       });
     } catch (error) {
       res.status(500).json({
         success: false,
         message: "Error updating content status",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
 
-  // Endpoint không cần xác thực để tạo nhiều nội dung (chỉ cho môi trường phát triển)
+  // Endpoint không cần xác thực để tạo nhiều nội dung (chỉ cho môi tr �ờng phát triển)
   app.post("/api/kafka/dev-simulate", async (req, res) => {
     try {
       const { count = 5 } = req.body;
@@ -904,20 +1007,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Giới hạn số lượng tin nhắn từ 1 đến 50
       const messageCount = Math.min(Math.max(1, Number(count)), 50);
 
-      log(`Development mode: Simulating ${messageCount} Kafka messages without authentication`, 'kafka-simulator');
+      log(
+        `Development mode: Simulating ${messageCount} Kafka messages without authentication`,
+        "kafka-simulator",
+      );
 
       const messages = await simulateMultipleMessages(messageCount);
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: `${messages.length} Kafka messages simulated successfully`,
-        data: messages
+        data: messages,
       });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Error simulating Kafka messages",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -925,18 +1031,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Simulate a single kafka message (admin only)
   app.post("/api/kafka/simulate", isAdmin, async (req, res) => {
     try {
-      const { externalId, categories, labels, safe, sourceVerification } = req.body;
+      const { externalId, categories, labels, safe, sourceVerification } =
+        req.body;
 
       if (!externalId) {
         return res.status(400).json({
           success: false,
-          message: "Item ID is required"
+          message: "Item ID is required",
         });
       }
 
       // Simulate sending content update to your Gorse service using Kafka
-      log(`Sending update to Gorse service for item ${externalId}`, 'kafka');
-      log(`Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || 'unverified'}`, 'kafka');
+      log(`Sending update to Gorse service for item ${externalId}`, "kafka");
+      log(
+        `Data: categories=${categories}, labels=${labels}, safe=${safe}, sourceVerification=${sourceVerification || "unverified"}`,
+        "kafka",
+      );
 
       // Simulate Kafka message
       await simulateKafkaMessage(externalId);
@@ -944,13 +1054,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: "Kafka message simulated successfully",
-        data: { externalId, categories, labels, safe, sourceVerification }
+        data: { externalId, categories, labels, safe, sourceVerification },
       });
     } catch (error) {
       res.status(500).json({
         success: false,
         message: "Error simulating Kafka message",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -964,16 +1074,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const messageCount = Math.min(Math.max(1, Number(count)), 20);
 
       const messages = await simulateMultipleMessages(messageCount);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: `${messages.length} Kafka messages simulated successfully`,
-        data: messages
+        data: messages,
       });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Error simulating Kafka messages",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -986,22 +1096,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate count (no upper limit for mass simulation)
       const messageCount = Math.max(1, Number(count));
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: `Starting simulation of ${messageCount} Kafka messages. This may take some time...`,
       });
 
       // Asynchronously process messages without blocking response
-      simulateMassMessages(messageCount).then(messages => {
-        console.log(`Completed processing ${messages.length} messages in mass simulation`);
-      }).catch(err => {
-        console.error('Error in mass simulation:', err);
-      });
+      simulateMassMessages(messageCount)
+        .then((messages) => {
+          console.log(
+            `Completed processing ${messages.length} messages in mass simulation`,
+          );
+        })
+        .catch((err) => {
+          console.error("Error in mass simulation:", err);
+        });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Error starting mass Kafka message simulation",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1012,7 +1126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       // Filter for active editors only
       const assignableUsers = users
-        .filter(user => user.role === 'editor' && user.status === 'active')
+        .filter((user) => user.role === "editor" && user.status === "active")
         .map(({ password, ...user }) => user);
 
       res.json(assignableUsers);
@@ -1027,7 +1141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       // Filter for active editors only
       const editorUsers = users
-        .filter(user => user.role === 'editor' && user.status === 'active')
+        .filter((user) => user.role === "editor" && user.status === "active")
         .map(({ id, username, name }) => ({ id, username, name }));
 
       res.json(editorUsers);
@@ -1046,22 +1160,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User ID is required" });
       }
 
-      const content = await storage.assignContentToUser(contentId, Number(userId));
+      const content = await storage.assignContentToUser(
+        contentId,
+        Number(userId),
+      );
 
       if (!content) {
         return res.status(404).json({ message: "Content not found" });
       }
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Content assigned successfully",
-        data: content
+        data: content,
       });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Error assigning content to user",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1074,7 +1191,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as Express.User;
 
       if (!result) {
-        return res.status(400).json({ message: "Processing result is required" });
+        return res
+          .status(400)
+          .json({ message: "Processing result is required" });
       }
 
       // Get the content
@@ -1085,20 +1204,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if content is assigned to the current user or if user is admin
-      if (content.assigned_to_id !== user.id && user.role !== 'admin') {
-        return res.status(403).json({ message: "You can only complete content assigned to you" });
-      }// Complete processing
-      const completedContent = await storage.completeProcessing(contentId, result, user.id);
+      if (content.assigned_to_id !== user.id && user.role !== "admin") {
+        return res
+          .status(403)
+          .json({ message: "You can only complete content assigned to you" });
+      } // Complete processing
+      const completedContent = await storage.completeProcessing(
+        contentId,
+        result,
+        user.id,
+      );
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Content processing completed successfully",
-        data: completedContent
+        data: completedContent,
       });
-    } catch (error) {res.status(500).json({ 
+    } catch (error) {
+      res.status(500).json({
         success: false,
         message: "Error completing content processing",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1120,7 +1246,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newCount = currentCount + count;
 
       // Cập nhật nội dung
-      const updated = await storage.updateContent(contentId, { comments: newCount });
+      const updated = await storage.updateContent(contentId, {
+        comments: newCount,
+      });
 
       if (!updated) {
         return res.status(404).json({ message: "Content update failed" });
@@ -1129,144 +1257,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: "Comments count updated successfully",
-        data: updated
+        data: updated,
       });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Error updating comments count",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
 
   // API để gửi comment đến API bên ngoài
-  app.post("/api/contents/:externalId/send-comment", isAuthenticated, async (req, res) => {
-    try {
-      const { externalId } = req.params;
-      const { fakeUserId, comment } = req.body;
-
-      if (!externalId) {
-        return res.status(400).json({ success: false, message: "External ID is required" });
-      }
-
-      if (!fakeUserId) {
-        return res.status(400).json({ success: false, message: "Fake user ID is required" });
-      }
-
-      if (!comment) {
-        return res.status(400).json({ success: false, message: "Comment content is required" });
-      }
-
-      // Lấy thông tin fake user
-      const fakeUser = await storage.getFakeUser(Number(fakeUserId));
-      if (!fakeUser) {
-        return res.status(404).json({ success: false, message: "Fake user not found" });
-      }
-
-      // Kiểm tra token của fake user
-      if (!fakeUser.token) {
-        return res.status(400).json({ success: false, message: "Fake user does not have a valid token" });
-      }
-
-      // Tìm nội dung từ external ID
-      const contents = await storage.getAllContents();
-      const content = contents.find(c => c.externalId === externalId);
-
-      if (!content) {
-        return res.status(404).json({ success: false, message: "Content with this external ID not found" });
-      }
-
+  app.post(
+    "/api/contents/:externalId/send-comment",
+    isAuthenticated,
+    async (req, res) => {
       try {
-        // Gửi comment đến API bên ngoài
-        const response = await fetch(`https://prod-sn.emso.vn/api/v1/statuses/${externalId}/comments`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${fakeUser.token}`
-          },
-          body: JSON.stringify({
-            status: comment
-          })
-        });
+        const { externalId } = req.params;
+        const { fakeUserId, comment } = req.body;
 
-        // Kiểm tra kết quả từ API
-        if (response.ok) {
-          const apiResponse = await response.json();
+        if (!externalId) {
+          return res
+            .status(400)
+            .json({ success: false, message: "External ID is required" });
+        }
 
-          // Tăng số lượng comment trong database
-          const currentCount = content.comments || 0;
-          const updated = await storage.updateContent(content.id, { comments: currentCount + 1 });
+        if (!fakeUserId) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Fake user ID is required" });
+        }
 
-          return res.json({
-            success: true,
-            message: "Comment sent successfully",
-            data: {
-              externalId,
-              contentId: content.id,
-              apiResponse
-            }
-          });
-        } else {
-          const errorData = await response.json();
-          return res.status(response.status).json({
+        if (!comment) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Comment content is required" });
+        }
+
+        // Lấy thông tin fake user
+        const fakeUser = await storage.getFakeUser(Number(fakeUserId));
+        if (!fakeUser) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Fake user not found" });
+        }
+
+        // Kiểm tra token của fake user
+        if (!fakeUser.token) {
+          return res
+            .status(400)
+            .json({
+              success: false,
+              message: "Fake user does not have a valid token",
+            });
+        }
+
+        // Tìm nội dung từ external ID
+        const contents = await storage.getAllContents();
+        const content = contents.find((c) => c.externalId === externalId);
+
+        if (!content) {
+          return res
+            .status(404)
+            .json({
+              success: false,
+              message: "Content with this external ID not found",
+            });
+        }
+
+        try {
+          // Gửi comment đến API bên ngoài
+          const response = await fetch(
+            `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/comments`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${fakeUser.token}`,
+              },
+              body: JSON.stringify({
+                status: comment,
+              }),
+            },
+          );
+
+          // Kiểm tra kết quả từ API
+          if (response.ok) {
+            const apiResponse = await response.json();
+
+            // Tăng số lượng comment trong database
+            const currentCount = content.comments || 0;
+            const updated = await storage.updateContent(content.id, {
+              comments: currentCount + 1,
+            });
+
+            return res.json({
+              success: true,
+              message: "Comment sent successfully",
+              data: {
+                externalId,
+                contentId: content.id,
+                apiResponse,
+              },
+            });
+          } else {
+            const errorData = await response.json();
+            return res.status(response.status).json({
+              success: false,
+              message: "Failed to send comment to external API",
+              error: errorData,
+            });
+          }
+        } catch (error) {
+          return res.status(500).json({
             success: false,
-            message: "Failed to send comment to external API",
-            error: errorData
+            message: "Error sending comment to external API",
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       } catch (error) {
-        return res.status(500).json({
+        res.status(500).json({
           success: false,
-          message: "Error sending comment to external API",
-          error: error instanceof Error ? error.message : String(error)
+          message: "Error processing request",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
-    } catch (error) {
-      res.status(500).json({ 
-        success: false,
-        message: "Error processing request",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
+    },
+  );
 
   // API để tăng số lượng reactions
-  app.patch("/api/contents/:id/reactions", isAuthenticated, async (req, res) => {
-    try {
-      const contentId = Number(req.params.id);
-      const { count = 1 } = req.body;
+  app.patch(
+    "/api/contents/:id/reactions",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const contentId = Number(req.params.id);
+        const { count = 1 } = req.body;
 
-      // Lấy thông tin nội dung
-      const content = await storage.getContent(contentId);
-      if (!content) {
-        return res.status(404).json({ message: "Content not found" });
+        // Lấy thông tin nội dung
+        const content = await storage.getContent(contentId);
+        if (!content) {
+          return res.status(404).json({ message: "Content not found" });
+        }
+
+        // Tính toán số lượng reactions mới
+        const currentCount = content.reactions || 0;
+        const newCount = currentCount + count;
+
+        // Cập nhật nội dung
+        const updated = await storage.updateContent(contentId, {
+          reactions: newCount,
+        });
+
+        if (!updated) {
+          return res.status(404).json({ message: "Content update failed" });
+        }
+
+        res.json({
+          success: true,
+          message: "Reactions count updated successfully",
+          data: updated,
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: "Error updating reactions count",
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
-
-      // Tính toán số lượng reactions mới
-      const currentCount = content.reactions || 0;
-      const newCount = currentCount + count;
-
-      // Cập nhật nội dung
-      const updated = await storage.updateContent(contentId, { reactions: newCount });
-
-      if (!updated) {
-        return res.status(404).json({ message: "Content update failed" });
-      }
-
-      res.json({
-        success: true,
-        message: "Reactions count updated successfully",
-        data: updated
-      });
-    } catch (error) {
-      res.status(500).json({ 
-        success: false,
-        message: "Error updating reactions count",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
+    },
+  );
 
   // ===== Categories and Labels API =====
 
@@ -1276,9 +1437,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allCategories = await storage.getAllCategories();
       res.json(allCategories);
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching categories",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1295,9 +1456,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(category);
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching category",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1310,14 +1471,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newCategory);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors,
         });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error creating category",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1333,19 +1494,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validatedData = insertCategorySchema.parse(req.body);
-      const updatedCategory = await storage.updateCategory(categoryId, validatedData);
+      const updatedCategory = await storage.updateCategory(
+        categoryId,
+        validatedData,
+      );
 
       res.json(updatedCategory);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors,
         });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error updating category",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1368,9 +1532,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: "Error deleting category" });
       }
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error deleting category",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1381,9 +1545,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allLabels = await storage.getAllLabels();
       res.json(allLabels);
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching labels",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1401,9 +1565,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const labels = await storage.getLabelsByCategory(categoryId);
       res.json(labels);
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching labels for category",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1420,9 +1584,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(label);
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching label",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1442,14 +1606,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newLabel);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors,
         });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error creating label",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1467,7 +1631,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertLabelSchema.parse(req.body);
 
       // Verify the category exists if categoryId is being changed
-      if (validatedData.categoryId && validatedData.categoryId !== existingLabel.categoryId) {
+      if (
+        validatedData.categoryId &&
+        validatedData.categoryId !== existingLabel.categoryId
+      ) {
         const category = await storage.getCategory(validatedData.categoryId);
         if (!category) {
           return res.status(400).json({ message: "Category not found" });
@@ -1478,14 +1645,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedLabel);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors,
         });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error updating label",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1508,9 +1675,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: "Error deleting label" });
       }
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error deleting label",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1523,7 +1690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = parseInt(req.query.pageSize as string) || 10;
-      const search = req.query.search as string || '';
+      const search = (req.query.search as string) || "";
 
       console.log("Parsed parameters:", { page, pageSize, search });
 
@@ -1535,25 +1702,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log("Using pagination - calling getFakeUsersWithPagination");
-      const result = await storage.getFakeUsersWithPagination(page, pageSize, search);
-      console.log("Pagination result:", { 
-        total: result.total, 
+      const result = await storage.getFakeUsersWithPagination(
+        page,
+        pageSize,
+        search,
+      );
+      console.log("Pagination result:", {
+        total: result.total,
         usersCount: result.users.length,
         page: result.page,
-        totalPages: result.totalPages 
+        totalPages: result.totalPages,
       });
 
       // Set cache control headers to prevent caching issues
-      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
+      res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.set("Pragma", "no-cache");
+      res.set("Expires", "0");
 
       res.json(result);
     } catch (error) {
       console.error("Error in fake users API:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching fake users",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1569,55 +1740,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(fakeUser);
-
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching fake user",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
 
   // Update real user classification
-  app.put("/api/real-users/:id/classification", isAuthenticated, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { classification } = req.body;
+  app.put(
+    "/api/real-users/:id/classification",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { classification } = req.body;
 
-      if (!['new', 'potential', 'non_potential'].includes(classification)) {
-        return res.status(400).json({ message: "Invalid classification value" });
+        if (!["new", "potential", "non_potential"].includes(classification)) {
+          return res
+            .status(400)
+            .json({ message: "Invalid classification value" });
+        }
+
+        const updatedUser = await db
+          .update(realUsers)
+          .set({
+            classification,
+            updatedAt: new Date(),
+          })
+          .where(eq(realUsers.id, parseInt(id)))
+          .returning();
+
+        if (updatedUser.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({
+          message: "Classification updated successfully",
+          user: updatedUser[0],
+        });
+
+        // Broadcast badge update to all clients
+        if ((global as any).broadcastBadgeUpdate) {
+          (global as any).broadcastBadgeUpdate();
+        }
+      } catch (error) {
+        console.error("Error updating classification:", error);
+        res.status(500).json({
+          message: "Error updating classification",
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
-
-      const updatedUser = await db
-        .update(realUsers)
-        .set({ 
-          classification,
-          updatedAt: new Date()
-        })
-        .where(eq(realUsers.id, parseInt(id)))
-        .returning();
-
-      if (updatedUser.length === 0) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.json({ 
-        message: "Classification updated successfully",
-        user: updatedUser[0]
-      });
-
-      // Broadcast badge update to all clients
-      if ((global as any).broadcastBadgeUpdate) {
-        (global as any).broadcastBadgeUpdate();
-      }
-    } catch (error) {
-      console.error("Error updating classification:", error);
-      res.status(500).json({ 
-        message: "Error updating classification",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
+    },
+  );
 
   // Create fake user (admin only)
   app.post("/api/fake-users", isAdmin, async (req, res) => {
@@ -1625,15 +1801,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate with insertFakeUserSchema
       const validatedData = insertFakeUserSchema.parse({
         ...req.body,
-        status: req.body.status || 'active' // Default status is active
+        status: req.body.status || "active", // Default status is active
       });
 
       // Kiểm tra xem token đã tồn tại chưa
-      const existingFakeUser = await storage.getFakeUserByToken(validatedData.token);
+      const existingFakeUser = await storage.getFakeUserByToken(
+        validatedData.token,
+      );
       if (existingFakeUser) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Token đã tồn tại",
-          error: "Token này đã được sử dụng bởi một người dùng ảo khác" 
+          error: "Token này đã được sử dụng bởi một người dùng ảo khác",
         });
       }
 
@@ -1641,14 +1819,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newFakeUser);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors,
         });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error creating fake user",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1659,9 +1837,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { users } = req.body;
 
       if (!Array.isArray(users) || users.length === 0) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Dữ liệu không hợp lệ",
-          error: "Cần cung cấp danh sách người dùng ảo" 
+          error: "Cần cung cấp danh sách người dùng ảo",
         });
       }
 
@@ -1675,11 +1853,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const validatedData = insertFakeUserSchema.parse({
             name: userData.name,
             token: userData.token,
-            status: 'active'
+            status: "active",
           });
 
           // Kiểm tra token đã tồn tại chưa
-          const existingFakeUser = await storage.getFakeUserByToken(validatedData.token);
+          const existingFakeUser = await storage.getFakeUserByToken(
+            validatedData.token,
+          );
           if (existingFakeUser) {
             errors.push(`Token "${validatedData.token}" đã tồn tại`);
             failedCount++;
@@ -1690,7 +1870,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.createFakeUser(validatedData);
           successCount++;
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
           errors.push(`Lỗi với "${userData.name}": ${errorMsg}`);
           failedCount++;
         }
@@ -1699,12 +1880,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: successCount,
         failed: failedCount,
-        errors: errors
+        errors: errors,
       });
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error bulk uploading fake users",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1723,28 +1904,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertFakeUserSchema.partial().parse(req.body);
 
       // Nếu đang cập nhật token, kiểm tra xem token mới đã tồn tại chưa
-      if (validatedData.token && validatedData.token !== existingFakeUser.token) {
-        const duplicateUser = await storage.getFakeUserByToken(validatedData.token);
+      if (
+        validatedData.token &&
+        validatedData.token !== existingFakeUser.token
+      ) {
+        const duplicateUser = await storage.getFakeUserByToken(
+          validatedData.token,
+        );
         if (duplicateUser && duplicateUser.id !== fakeUserId) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             message: "Token đã tồn tại",
-            error: "Token này đã được sử dụng bởi một người dùng ảo khác" 
+            error: "Token này đã được sử dụng bởi một người dùng ảo khác",
           });
         }
       }
 
-      const updatedFakeUser = await storage.updateFakeUser(fakeUserId, validatedData);
+      const updatedFakeUser = await storage.updateFakeUser(
+        fakeUserId,
+        validatedData,
+      );
       res.json(updatedFakeUser);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors,
         });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error updating fake user",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1767,9 +1956,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: "Error deleting fake user" });
       }
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error deleting fake user",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1785,132 +1974,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(randomFakeUser);
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching random fake user",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
 
   // Support routes
-  const supportRouter = (await import('./routes/support.router')).default;
-  const { SupportController } = await import('./controllers/support.controller');
+  const supportRouter = (await import("./routes/support.router")).default;
+  const { SupportController } = await import(
+    "./controllers/support.controller"
+  );
   const supportController = new SupportController();
 
   app.use("/api/support-requests", supportRouter);
 
   // Support requests routes
-  app.get('/api/support-requests', isAuthenticated, supportController.getAllSupportRequests);
-  app.put('/api/support-requests/:id', isAuthenticated, supportController.updateSupportRequest);
-  app.put('/api/support-requests/:id/assign', isAuthenticated, supportController.assignSupportRequest);
-app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attachments', 10), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { to, subject, content, response_content } = req.body;
-      const user = req.user as Express.User;
-      const attachments = req.files as Express.Multer.File[] || [];
+  app.get(
+    "/api/support-requests",
+    isAuthenticated,
+    supportController.getAllSupportRequests,
+  );
+  app.put(
+    "/api/support-requests/:id",
+    isAuthenticated,
+    supportController.updateSupportRequest,
+  );
+  app.put(
+    "/api/support-requests/:id/assign",
+    isAuthenticated,
+    supportController.assignSupportRequest,
+  );
+  app.post(
+    "/api/support-requests/:id/reply",
+    isAuthenticated,
+    upload.array("attachments", 10),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { to, subject, content, response_content } = req.body;
+        const user = req.user as Express.User;
+        const attachments = (req.files as Express.Multer.File[]) || [];
 
-      // Get support request
-      const supportRequest = await db.query.supportRequests.findFirst({
-        where: eq(supportRequests.id, parseInt(id))
-      });
+        // Get support request
+        const supportRequest = await db.query.supportRequests.findFirst({
+          where: eq(supportRequests.id, parseInt(id)),
+        });
 
-      if (!supportRequest) {
-        return res.status(404).json({ message: 'Support request not found' });
-      }
-
-      if (user.role !== 'admin' && supportRequest.assigned_to_id !== user.id) {
-        return res.status(403).json({ message: 'Not authorized to reply to this request' });
-      }
-
-      // Process attachments for email
-      const emailAttachments = attachments.map(file => ({
-        filename: file.originalname,
-        path: file.path,
-        contentType: file.mimetype
-      }));
-
-      // Send email with attachments
-      const emailSent = await emailService.sendReplyEmailWithAttachments({
-        to,
-        subject,
-        content,
-        attachments: emailAttachments,
-        originalRequest: {
-          id: supportRequest.id,
-          full_name: supportRequest.full_name,
-          subject: supportRequest.subject,
-          content: supportRequest.content
+        if (!supportRequest) {
+          return res.status(404).json({ message: "Support request not found" });
         }
-      });
 
-      // Clean up temporary files after sending email
-      if (emailSent) {
-        // Delete uploaded files after successful email send
-        attachments.forEach(file => {
-          try {
-            fs.unlinkSync(file.path);
-            console.log(`Deleted temporary file: ${file.path}`);
-          } catch (error) {
-            console.error(`Failed to delete file ${file.path}:`, error);
-          }
+        if (
+          user.role !== "admin" &&
+          supportRequest.assigned_to_id !== user.id
+        ) {
+          return res
+            .status(403)
+            .json({ message: "Not authorized to reply to this request" });
+        }
+
+        // Process attachments for email
+        const emailAttachments = attachments.map((file) => ({
+          filename: file.originalname,
+          path: file.path,
+          contentType: file.mimetype,
+        }));
+
+        // Send email with attachments
+        const emailSent = await emailService.sendReplyEmailWithAttachments({
+          to,
+          subject,
+          content,
+          attachments: emailAttachments,
+          originalRequest: {
+            id: supportRequest.id,
+            full_name: supportRequest.full_name,
+            subject: supportRequest.subject,
+            content: supportRequest.content,
+          },
+        });
+
+        // Clean up temporary files after sending email
+        if (emailSent) {
+          // Delete uploaded files after successful email send
+          attachments.forEach((file) => {
+            try {
+              fs.unlinkSync(file.path);
+              console.log(`Deleted temporary file: ${file.path}`);
+            } catch (error) {
+              console.error(`Failed to delete file ${file.path}:`, error);
+            }
+          });
+        }
+
+        if (!emailSent) {
+          // Also clean up files even if email failed to prevent accumulation
+          attachments.forEach((file) => {
+            try {
+              fs.unlinkSync(file.path);
+              console.log(
+                `Deleted temporary file after email failure: ${file.path}`,
+              );
+            } catch (error) {
+              console.error(`Failed to delete file ${file.path}:`, error);
+            }
+          });
+          return res
+            .status(500)
+            .json({
+              message:
+                "Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.",
+              details: "Email configuration or authentication failed",
+            });
+        }
+
+        // Update support request status
+        const result = await db
+          .update(supportRequests)
+          .set({
+            status: "completed" as any,
+            response_content,
+            responder_id: user.id,
+            response_time: new Date(),
+            updated_at: new Date(),
+          })
+          .where(eq(supportRequests.id, parseInt(id)))
+          .returning();
+
+        return res.json({
+          message: "Reply sent successfully",
+          supportRequest: result[0],
+        });
+      } catch (error) {
+        console.error("Error sending reply:", error);
+        return res.status(500).json({
+          message: "Error sending reply",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
-
-      if (!emailSent) {
-        // Also clean up files even if email failed to prevent accumulation
-        attachments.forEach(file => {
-          try {
-            fs.unlinkSync(file.path);
-            console.log(`Deleted temporary file after email failure: ${file.path}`);
-          } catch (error) {
-            console.error(`Failed to delete file ${file.path}:`, error);
-          }
-        });
-        return res.status(500).json({ message: 'Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.',
-          details: 'Email configuration or authentication failed' });
-      }
-
-      // Update support request status
-      const result = await db.update(supportRequests)
-        .set({
-          status: 'completed' as any,
-          response_content,
-          responder_id: user.id,
-          response_time: new Date(),
-          updated_at: new Date()
-        })
-        .where(eq(supportRequests.id, parseInt(id)))
-        .returning();
-
-      return res.json({ message: 'Reply sent successfully', supportRequest: result[0] });
-    } catch (error) {
-      console.error('Error sending reply:', error);
-      return res.status(500).json({ 
-        message: 'Error sending reply',
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
+    },
+  );
 
   // Pages API endpoints
-  // Get all pages 
+  // Get all pages
   app.get("/api/pages", isAuthenticated, async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const offset = (page - 1) * limit;
 
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : undefined;
       const pageType = req.query.pageType as string;
       const search = req.query.search as string;
-      const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
-      const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+      const activeTab = req.query.activeTab as
+        | "all"
+        | "processed"
+        | "unprocessed";
+      const assignedToId = req.query.assignedToId
+        ? parseInt(req.query.assignedToId as string)
+        : undefined;
       const classification = req.query.classification as string;
 
       console.log("Pages API called with params:", {
-        page, limit, offset, startDate, endDate, pageType, search, activeTab, assignedToId, classification
+        page,
+        limit,
+        offset,
+        startDate,
+        endDate,
+        pageType,
+        search,
+        activeTab,
+        assignedToId,
+        classification,
       });
 
       // Import pages from schema
@@ -1925,8 +2167,8 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
         conditions.push(
           and(
             gte(pagesTable.createdAt, startDate),
-            lte(pagesTable.createdAt, endDate)
-          )
+            lte(pagesTable.createdAt, endDate),
+          ),
         );
       }
 
@@ -1952,13 +2194,14 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
           or(
             sql`LOWER(${pagesTable.pageName}::jsonb->>'page_name') LIKE ${searchPattern}`,
             sql`LOWER(${pagesTable.pageName}::jsonb->>'name') LIKE ${searchPattern}`,
-            sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`
-          )
+            sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`,
+          ),
         );
       }
 
       const whereConditions = conditions;
-      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+      const whereClause =
+        whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
       // Get total count
       const totalResult = await db
@@ -1971,37 +2214,39 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
       const { users } = await import("../shared/schema");
       // Update pages API to return manager data from managerId column
       const pagesData = await db
-          .select({
-            id: pagesTable.id,
-            pageName: pagesTable.pageName,
-            pageType: pagesTable.pageType,
-            classification: pagesTable.classification,
-            phoneNumber: pagesTable.phoneNumber,
-            monetizationEnabled: pagesTable.monetizationEnabled,
-            adminData: pagesTable.adminData,
-            createdAt: pagesTable.createdAt,
-            updatedAt: pagesTable.updatedAt,
-            assignedToId: pagesTable.assignedToId,
-            processorId: users.id,
-            processorName: users.name,
-            processorUsername: users.username
-          })
-          .from(pagesTable)
-          .leftJoin(users, eq(pagesTable.assignedToId, users.id))
-          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-          .orderBy(desc(pagesTable.createdAt))
-          .limit(limit)
-          .offset(offset);
+        .select({
+          id: pagesTable.id,
+          pageName: pagesTable.pageName,
+          pageType: pagesTable.pageType,
+          classification: pagesTable.classification,
+          phoneNumber: pagesTable.phoneNumber,
+          monetizationEnabled: pagesTable.monetizationEnabled,
+          adminData: pagesTable.adminData,
+          createdAt: pagesTable.createdAt,
+          updatedAt: pagesTable.updatedAt,
+          assignedToId: pagesTable.assignedToId,
+          processorId: users.id,
+          processorName: users.name,
+          processorUsername: users.username,
+        })
+        .from(pagesTable)
+        .leftJoin(users, eq(pagesTable.assignedToId, users.id))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(pagesTable.createdAt))
+        .limit(limit)
+        .offset(offset);
 
       // Transform the data to match expected format
-      const transformedPages = pagesData.map(page => ({
+      const transformedPages = pagesData.map((page) => ({
         ...page,
-        classification: page.classification || 'new',
-        processor: page.processorId ? {
-          id: page.processorId,
-          name: page.processorName,
-          username: page.processorUsername
-        } : null
+        classification: page.classification || "new",
+        processor: page.processorId
+          ? {
+              id: page.processorId,
+              name: page.processorName,
+              username: page.processorUsername,
+            }
+          : null,
       }));
 
       console.log(`Found ${transformedPages.length} pages for page ${page}`);
@@ -2012,87 +2257,109 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
           total,
           totalPages: Math.ceil(total / limit),
           currentPage: page,
-          itemsPerPage: limit
-        }
+          itemsPerPage: limit,
+        },
       });
     } catch (error) {
       console.error("Error fetching pages:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching pages",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
 
   // Update page classification
-  app.put("/api/pages/:id/classification", isAuthenticated, async (req, res) => {
-    try {
-      const pageId = parseInt(req.params.id);
-      const { classification } = req.body;
+  app.put(
+    "/api/pages/:id/classification",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const pageId = parseInt(req.params.id);
+        const { classification } = req.body;
 
-      // Validate classification value
-      const validClassifications = ['new', 'potential', 'non_potential'];
-      if (!validClassifications.includes(classification)) {
-        return res.status(400).json({ 
-          message: "Invalid classification value",
-          validValues: validClassifications
+        // Validate classification value
+        const validClassifications = ["new", "potential", "non_potential"];
+        if (!validClassifications.includes(classification)) {
+          return res.status(400).json({
+            message: "Invalid classification value",
+            validValues: validClassifications,
+          });
+        }
+
+        // Import pages from schema
+        const { pages } = await import("../shared/schema");
+
+        // Update the page classification
+        const updatedPage = await db
+          .update(pages)
+          .set({
+            classification,
+            updatedAt: new Date(),
+          })
+          .where(eq(pages.id, pageId))
+          .returning();
+
+        if (!updatedPage.length) {
+          return res.status(404).json({ message: "Page not found" });
+        }
+
+        res.json({
+          success: true,
+          message: "Classification updated successfully",
+          data: updatedPage[0],
+        });
+
+        // Broadcast badge update to all clients
+        if ((global as any).broadcastBadgeUpdate) {
+          (global as any).broadcastBadgeUpdate();
+        }
+      } catch (error) {
+        console.error("Error updating page classification:", error);
+        res.status(500).json({
+          message: "Error updating page classification",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
-
-      // Import pages from schema
-      const { pages } = await import("../shared/schema");
-
-      // Update the page classification
-      const updatedPage = await db
-        .update(pages)
-        .set({ 
-          classification,
-          updatedAt: new Date()
-        })
-        .where(eq(pages.id, pageId))
-        .returning();
-
-      if (!updatedPage.length) {
-        return res.status(404).json({ message: "Page not found" });
-      }
-
-      res.json({ 
-        success: true, 
-        message: "Classification updated successfully",
-        data: updatedPage[0] 
-      });
-
-      // Broadcast badge update to all clients
-      if ((global as any).broadcastBadgeUpdate) {
-        (global as any).broadcastBadgeUpdate();
-      }
-    } catch (error) {
-      console.error("Error updating page classification:", error);
-      res.status(500).json({ 
-        message: "Error updating page classification",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
+    },
+  );
 
   // Groups API endpoints
-  // Get all groups 
+  // Get all groups
   app.get("/api/groups", isAuthenticated, async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const offset = (page - 1) * limit;
 
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : undefined;
       const groupType = req.query.groupType as string;
       const search = req.query.search as string;
-      const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
-      const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+      const activeTab = req.query.activeTab as
+        | "all"
+        | "processed"
+        | "unprocessed";
+      const assignedToId = req.query.assignedToId
+        ? parseInt(req.query.assignedToId as string)
+        : undefined;
       const classification = req.query.classification as string;
 
       console.log("Groups API called with params:", {
-        page, limit, offset, startDate, endDate, groupType, search, activeTab, assignedToId, classification
+        page,
+        limit,
+        offset,
+        startDate,
+        endDate,
+        groupType,
+        search,
+        activeTab,
+        assignedToId,
+        classification,
       });
 
       // Import groups from schema
@@ -2107,8 +2374,8 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
         conditions.push(
           and(
             gte(groupsTable.createdAt, startDate),
-            lte(groupsTable.createdAt, endDate)
-          )
+            lte(groupsTable.createdAt, endDate),
+          ),
         );
       }
 
@@ -2129,18 +2396,19 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
 
       // Search filter
       // Add search condition - search in group name, phone number, and categories
-        if (search) {
-          conditions.push(
-            or(
-              sql`${groupsTable.groupName}->>'group_name' ILIKE ${`%${search}%`}`,
-              sql`${groupsTable.phoneNumber} ILIKE ${`%${search}%`}`,
-              sql`${groupsTable.categories} ILIKE ${`%${search}%`}`
-            )
-          );
-        }
+      if (search) {
+        conditions.push(
+          or(
+            sql`${groupsTable.groupName}->>'group_name' ILIKE ${`%${search}%`}`,
+            sql`${groupsTable.phoneNumber} ILIKE ${`%${search}%`}`,
+            sql`${groupsTable.categories} ILIKE ${`%${search}%`}`,
+          ),
+        );
+      }
 
       const whereConditions = conditions;
-      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+      const whereClause =
+        whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
       // Get total count
       const totalResult = await db
@@ -2151,38 +2419,40 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
       const total = Number(totalResult[0]?.count || 0);
 
       const groupsData = await db
-          .select({
-            id: groupsTable.id,
-            groupName: groupsTable.groupName,
-            groupType: groupsTable.groupType,
-            categories: groupsTable.categories,
-            classification: groupsTable.classification,
-phoneNumber: groupsTable.phoneNumber,
-            monetizationEnabled: groupsTable.monetizationEnabled,
-            adminData: groupsTable.adminData,
-            createdAt: groupsTable.createdAt,
-            updatedAt: groupsTable.updatedAt,
-            assignedToId: groupsTable.assignedToId,
-            processorId: users.id,
-            processorName: users.name,
-            processorUsername: users.username
-          })
-          .from(groupsTable)
-          .leftJoin(users, eq(groupsTable.assignedToId, users.id))
-          .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-          .orderBy(desc(groupsTable.createdAt))
-          .limit(limit)
-          .offset(offset);
+        .select({
+          id: groupsTable.id,
+          groupName: groupsTable.groupName,
+          groupType: groupsTable.groupType,
+          categories: groupsTable.categories,
+          classification: groupsTable.classification,
+          phoneNumber: groupsTable.phoneNumber,
+          monetizationEnabled: groupsTable.monetizationEnabled,
+          adminData: groupsTable.adminData,
+          createdAt: groupsTable.createdAt,
+          updatedAt: groupsTable.updatedAt,
+          assignedToId: groupsTable.assignedToId,
+          processorId: users.id,
+          processorName: users.name,
+          processorUsername: users.username,
+        })
+        .from(groupsTable)
+        .leftJoin(users, eq(groupsTable.assignedToId, users.id))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(groupsTable.createdAt))
+        .limit(limit)
+        .offset(offset);
 
       // Transform the data to match expected format
-      const transformedGroups = groupsData.map(group => ({
+      const transformedGroups = groupsData.map((group) => ({
         ...group,
-        classification: group.classification || 'new',
-        processor: group.processorId ? {
-          id: group.processorId,
-          name: group.processorName,
-          username: group.processorUsername
-        } : null
+        classification: group.classification || "new",
+        processor: group.processorId
+          ? {
+              id: group.processorId,
+              name: group.processorName,
+              username: group.processorUsername,
+            }
+          : null,
       }));
 
       console.log(`Found ${transformedGroups.length} groups for page ${page}`);
@@ -2193,86 +2463,111 @@ phoneNumber: groupsTable.phoneNumber,
           total,
           totalPages: Math.ceil(total / limit),
           currentPage: page,
-          itemsPerPage: limit
-        }
+          itemsPerPage: limit,
+        },
       });
     } catch (error) {
       console.error("Error fetching groups:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching groups",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
 
   // Update group classification
-  app.put("/api/groups/:id/classification", isAuthenticated, async (req, res) => {
-    try {
-      const groupId = parseInt(req.params.id);
-      const { classification } = req.body;
+  app.put(
+    "/api/groups/:id/classification",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const groupId = parseInt(req.params.id);
+        const { classification } = req.body;
 
-      // Validate classification value
-      const validClassifications = ['new', 'potential', 'non_potential'];
-      if (!validClassifications.includes(classification)) {
-        return res.status(400).json({ 
-          message: "Invalid classification value",
-          validValues: validClassifications
+        // Validate classification value
+        const validClassifications = ["new", "potential", "non_potential"];
+        if (!validClassifications.includes(classification)) {
+          return res.status(400).json({
+            message: "Invalid classification value",
+            validValues: validClassifications,
+          });
+        }
+
+        // Import groups from schema
+        const { groups } = await import("../shared/schema");
+
+        // Update the group classification
+        const updatedGroup = await db
+          .update(groups)
+          .set({
+            classification,
+            updatedAt: new Date(),
+          })
+          .where(eq(groups.id, groupId))
+          .returning();
+
+        if (!updatedGroup.length) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        res.json({
+          success: true,
+          message: "Classification updated successfully",
+          data: updatedGroup[0],
+        });
+
+        // Broadcast badge update to all clients
+        if ((global as any).broadcastBadgeUpdate) {
+          (global as any).broadcastBadgeUpdate();
+        }
+      } catch (error) {
+        console.error("Error updating group classification:", error);
+        res.status(500).json({
+          message: "Error updating group classification",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
+    },
+  );
 
-      // Import groups from schema
-      const { groups } = await import("../shared/schema");
-
-      // Update the group classification
-      const updatedGroup = await db
-        .update(groups)
-        .set({ 
-          classification,
-          updatedAt: new Date()
-        })
-        .where(eq(groups.id, groupId))
-        .returning();
-
-      if (!updatedGroup.length) {
-        return res.status(404).json({ message: "Group not found" });
-      }
-
-      res.json({ 
-        success: true, 
-        message: "Classification updated successfully",
-        data: updatedGroup[0] 
-      });
-
-      // Broadcast badge update to all clients
-      if ((global as any).broadcastBadgeUpdate) {
-        (global as any).broadcastBadgeUpdate();
-      }
-    } catch (error) {
-      console.error("Error updating group classification:", error);
-      res.status(500).json({ 
-        message: "Error updating group classification",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // Get all real users 
+  // Get all real users
   app.get("/api/real-users", isAuthenticated, async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const offset = (page - 1) * limit;
 
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-      const verificationStatus = req.query.verificationStatus as 'verified' | 'unverified' | undefined;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : undefined;
+      const verificationStatus = req.query.verificationStatus as
+        | "verified"
+        | "unverified"
+        | undefined;
       const search = req.query.search as string;
-      const activeTab = req.query.activeTab as 'all' | 'processed' | 'unprocessed';
-      const assignedToId = req.query.assignedToId ? parseInt(req.query.assignedToId as string) : undefined;
+      const activeTab = req.query.activeTab as
+        | "all"
+        | "processed"
+        | "unprocessed";
+      const assignedToId = req.query.assignedToId
+        ? parseInt(req.query.assignedToId as string)
+        : undefined;
       const classification = req.query.classification as string;
 
       console.log("Real users API called with params:", {
-        page, limit, offset, startDate, endDate, verificationStatus, search, activeTab, assignedToId, classification
+        page,
+        limit,
+        offset,
+        startDate,
+        endDate,
+        verificationStatus,
+        search,
+        activeTab,
+        assignedToId,
+        classification,
       });
 
       // Build conditions
@@ -2283,16 +2578,16 @@ phoneNumber: groupsTable.phoneNumber,
         conditions.push(
           and(
             gte(realUsers.createdAt, startDate),
-            lte(realUsers.createdAt, endDate)
-          )
+            lte(realUsers.createdAt, endDate),
+          ),
         );
       }
 
       // Verification status filter
-      if (verificationStatus === 'verified') {
-        conditions.push(eq(realUsers.verified, 'verified'));
-      } else if (verificationStatus === 'unverified') {
-        conditions.push(eq(realUsers.verified, 'unverified'));
+      if (verificationStatus === "verified") {
+        conditions.push(eq(realUsers.verified, "verified"));
+      } else if (verificationStatus === "unverified") {
+        conditions.push(eq(realUsers.verified, "unverified"));
       }
 
       // Assigned user filter
@@ -2301,9 +2596,9 @@ phoneNumber: groupsTable.phoneNumber,
       }
 
       // Classification filter
-       if (classification) {
-         conditions.push(eq(realUsers.classification, classification));
-       }
+      if (classification) {
+        conditions.push(eq(realUsers.classification, classification));
+      }
 
       // Search filter
       if (search && search.trim()) {
@@ -2312,15 +2607,16 @@ phoneNumber: groupsTable.phoneNumber,
           or(
             sql`LOWER(UNACCENT(${realUsers.fullName}::jsonb->>'name')) LIKE ${searchPattern}`,
             sql`LOWER(${realUsers.fullName}::jsonb->>'name') LIKE ${searchPattern}`,
-            sql`LOWER(${realUsers.email}) LIKE ${searchPattern}`
-          )
+            sql`LOWER(${realUsers.email}) LIKE ${searchPattern}`,
+          ),
         );
       }
 
       // Active tab filter (processed/unprocessed)
       // This is for future implementation when we add processing status
 
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
 
       // Get total count
       const totalResult = await db
@@ -2344,7 +2640,7 @@ phoneNumber: groupsTable.phoneNumber,
           assignedToId: realUsers.assignedToId,
           processorId: users.id,
           processorName: users.name,
-          processorUsername: users.username
+          processorUsername: users.username,
         })
         .from(realUsers)
         .leftJoin(users, eq(realUsers.assignedToId, users.id))
@@ -2354,17 +2650,21 @@ phoneNumber: groupsTable.phoneNumber,
         .offset(offset);
 
       // Transform the data to match expected format
-      const transformedUsers = realUsersData.map(user => ({
+      const transformedUsers = realUsersData.map((user) => ({
         ...user,
-        classification: user.classification || 'new', // Use DB classification or default
-        processor: user.processorId ? {
-          id: user.processorId,
-          name: user.processorName,
-          username: user.processorUsername
-        } : null
+        classification: user.classification || "new", // Use DB classification or default
+        processor: user.processorId
+          ? {
+              id: user.processorId,
+              name: user.processorName,
+              username: user.processorUsername,
+            }
+          : null,
       }));
 
-      console.log(`Found ${transformedUsers.length} real users for page ${page}`);
+      console.log(
+        `Found ${transformedUsers.length} real users for page ${page}`,
+      );
 
       res.json({
         data: transformedUsers,
@@ -2372,14 +2672,14 @@ phoneNumber: groupsTable.phoneNumber,
           total,
           totalPages: Math.ceil(total / limit),
           currentPage: page,
-          itemsPerPage: limit
-        }
+          itemsPerPage: limit,
+        },
       });
     } catch (error) {
       console.error("Error fetching real users:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Error fetching real users",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -2424,7 +2724,8 @@ phoneNumber: groupsTable.phoneNumber,
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const { host, port, secure, user, password, fromName, fromEmail } = req.body;
+      const { host, port, secure, user, password, fromName, fromEmail } =
+        req.body;
 
       // Validate required fields
       if (!host || !port || !user || !password || !fromName || !fromEmail) {
@@ -2438,15 +2739,15 @@ phoneNumber: groupsTable.phoneNumber,
         user,
         password,
         fromName,
-        fromEmail
+        fromEmail,
       };
 
       // Update email service configuration
       await emailService.updateConfig(smtpConfig);
 
-      res.json({ 
+      res.json({
         message: "SMTP configuration updated successfully",
-        config: smtpConfig 
+        config: smtpConfig,
       });
     } catch (error) {
       console.error("Error updating SMTP config:", error);
@@ -2462,12 +2763,17 @@ phoneNumber: groupsTable.phoneNumber,
       }
 
       const { testEmail } = req.body;
-      const targetEmail = testEmail || `${(req.user as Express.User).username}@test.com`;
+      const targetEmail =
+        testEmail || `${(req.user as Express.User).username}@test.com`;
 
       // Test SMTP connection first
       const connectionOk = await emailService.testConnection();
       if (!connectionOk) {
-        return res.status(400).json({ message: "SMTP connection failed. Please check configuration." });
+        return res
+          .status(400)
+          .json({
+            message: "SMTP connection failed. Please check configuration.",
+          });
       }
 
       // Send test email
@@ -2476,9 +2782,9 @@ phoneNumber: groupsTable.phoneNumber,
         return res.status(500).json({ message: "Failed to send test email" });
       }
 
-      res.json({ 
+      res.json({
         message: "SMTP test completed successfully",
-        testEmail: targetEmail
+        testEmail: targetEmail,
       });
     } catch (error) {
       console.error("Error testing SMTP:", error);
@@ -2499,8 +2805,8 @@ phoneNumber: groupsTable.phoneNumber,
       console.log("Content stats requested");
 
       // Get cached data
-      const cached = contentStatsCache.get('content-stats');
-      if (cached && (Date.now() - cached.timestamp) < CONTENT_CACHE_DURATION) {
+      const cached = contentStatsCache.get("content-stats");
+      if (cached && Date.now() - cached.timestamp < CONTENT_CACHE_DURATION) {
         console.log("Returning cached content stats");
         return res.json(cached.data);
       }
@@ -2509,24 +2815,30 @@ phoneNumber: groupsTable.phoneNumber,
       const { contents } = await import("../shared/schema");
 
       const [contentStats] = await Promise.all([
-        db.select({
-          total: sql<number>`count(*)`,
-          pending: sql<number>`count(*) filter (where status = 'pending')`,
-          completed: sql<number>`count(*) filter (where status = 'completed')`
-        }).from(contents)
+        db
+          .select({
+            total: sql<number>`count(*)`,
+            pending: sql<number>`count(*) filter (where status = 'pending')`,
+            completed: sql<number>`count(*) filter (where status = 'completed')`,
+          })
+          .from(contents),
       ]);
 
       const data = {
         total: contentStats?.total || 0,
         pending: contentStats?.pending || 0,
-        completed: contentStats?.completed || 0
+        completed: contentStats?.completed || 0,
       };
 
       // Cache for 5 minutes
-      contentStatsCache.set('content-stats', {
-        data: data,
-        timestamp: Date.now()
-      }, 300);
+      contentStatsCache.set(
+        "content-stats",
+        {
+          data: data,
+          timestamp: Date.now(),
+        },
+        300,
+      );
 
       res.json(data);
     } catch (error) {
@@ -2541,7 +2853,7 @@ phoneNumber: groupsTable.phoneNumber,
       console.log("Dashboard stats requested");
 
       // Check cache first
-      const cached = cache.get('dashboard-stats');
+      const cached = cache.get("dashboard-stats");
       if (cached) {
         console.log("Returning cached dashboard stats");
         return res.json(cached);
@@ -2552,43 +2864,61 @@ phoneNumber: groupsTable.phoneNumber,
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
       // Real users stats với aggregation
-      const { pages, groups, supportRequests } = await import("../shared/schema");
+      const { pages, groups, supportRequests } = await import(
+        "../shared/schema"
+      );
       const { users } = await import("../shared/schema");
       const { realUsers } = await import("../shared/schema");
 
-      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats, contentStats] = await Promise.all([
+      const [
+        realUsersStats,
+        pagesStats,
+        groupsStats,
+        supportRequestsStats,
+        contentStats,
+      ] = await Promise.all([
         // Real users aggregation
-        db.select({
-          total: sql<number>`count(distinct ${realUsers.id})`,
-          new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`
-        }).from(realUsers),
+        db
+          .select({
+            total: sql<number>`count(distinct ${realUsers.id})`,
+            new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`,
+          })
+          .from(realUsers),
 
         // Pages aggregation
-        db.select({
-          total: sql<number>`count(*)`,
-          new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`
-        }).from(pages),
+        db
+          .select({
+            total: sql<number>`count(*)`,
+            new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`,
+          })
+          .from(pages),
 
         // Groups aggregation
-        db.select({
-          total: sql<number>`count(*)`,
-          new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`
-        }).from(groups),
+        db
+          .select({
+            total: sql<number>`count(*)`,
+            new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`,
+          })
+          .from(groups),
 
         // Support requests aggregation
-        db.select({
-          total: sql<number>`count(*)`,
-          pending: sql<number>`count(*) filter (where status = 'pending')`,
-          processing: sql<number>`count(*) filter (where status = 'processing')`,
-          completed: sql<number>`count(*) filter (where status = 'completed')`
-        }).from(supportRequests),
+        db
+          .select({
+            total: sql<number>`count(*)`,
+            pending: sql<number>`count(*) filter (where status = 'pending')`,
+            processing: sql<number>`count(*) filter (where status = 'processing')`,
+            completed: sql<number>`count(*) filter (where status = 'completed')`,
+          })
+          .from(supportRequests),
 
-                // Content stats aggregation
-                db.select({
-                    total: sql<number>`count(*)`,
-                    pending: sql<number>`count(*) filter (where status = 'pending')`,
-                    completed: sql<number>`count(*) filter (where status = 'completed')`
-                }).from(contents)
+        // Content stats aggregation
+        db
+          .select({
+            total: sql<number>`count(*)`,
+            pending: sql<number>`count(*) filter (where status = 'pending')`,
+            completed: sql<number>`count(*) filter (where status = 'completed')`,
+          })
+          .from(contents),
       ]);
 
       const stats = {
@@ -2613,13 +2943,13 @@ phoneNumber: groupsTable.phoneNumber,
         // Content stats với better aggregation
         totalContents: contentStats[0]?.total || 0,
         pendingContents: contentStats[0]?.pending || 0,
-        completedContents: contentStats[0]?.completed || 0
+        completedContents: contentStats[0]?.completed || 0,
       };
 
       console.log("Dashboard stats calculated:", stats);
 
       // Cache for 5 minutes
-      cache.set('dashboard-stats', stats, 300);
+      cache.set("dashboard-stats", stats, 300);
 
       res.json(stats);
     } catch (error) {
@@ -2632,40 +2962,49 @@ phoneNumber: groupsTable.phoneNumber,
   app.get("/api/badge-counts", requireAuth, async (req, res) => {
     try {
       // Check cache first
-      const cached = cache.get('badge-counts');
+      const cached = cache.get("badge-counts");
       if (cached) {
         return res.json(cached);
       }
 
-      const { pages, groups, supportRequests } = await import("../shared/schema");
+      const { pages, groups, supportRequests } = await import(
+        "../shared/schema"
+      );
       const { users } = await import("../shared/schema");
       const { realUsers } = await import("../shared/schema");
 
-      const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
-        // Real users with "new" classification
-        db.select({
-          count: sql<number>`count(*)`
-        }).from(realUsers)
-        .where(eq(realUsers.classification, 'new')),
+      const [realUsersNewCount, pagesNewCount, groupsNewCount] =
+        await Promise.all([
+          // Real users with "new" classification
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(realUsers)
+            .where(eq(realUsers.classification, "new")),
 
-        // Pages with "new" classification
-        db.select({
-          count: sql<number>`count(*)`
-        }).from(pages)
-        .where(eq(pages.classification, 'new')),
+          // Pages with "new" classification
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(pages)
+            .where(eq(pages.classification, "new")),
 
-        // Groups with "new" classification
-        db.select({
-          count: sql<number>`count(*)`
-        }).from(groups)
-        .where(eq(groups.classification, 'new'))
-      ]);
+          // Groups with "new" classification
+          db
+            .select({
+              count: sql<number>`count(*)`,
+            })
+            .from(groups)
+            .where(eq(groups.classification, "new")),
+        ]);
 
       // Đếm support requests có status = 'pending'
       const pendingSupportRequests = await db
         .select({ count: sql`count(*)::int` })
         .from(supportRequests)
-        .where(eq(supportRequests.status, 'pending'));
+        .where(eq(supportRequests.status, "pending"));
 
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
 
@@ -2673,19 +3012,23 @@ phoneNumber: groupsTable.phoneNumber,
         realUsers: realUsersNewCount[0]?.count || 0,
         pages: pagesNewCount[0]?.count || 0,
         groups: groupsNewCount[0]?.count || 0,
-        supportRequests: pendingSupport
+        supportRequests: pendingSupport,
       };
 
       // Chỉ trả về các badge có giá trị > 0
       const filteredBadgeCounts = {
-        realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
+        realUsers:
+          badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
         pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
         groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined,
-        supportRequests: badgeCounts.supportRequests > 0 ? badgeCounts.supportRequests : undefined
+        supportRequests:
+          badgeCounts.supportRequests > 0
+            ? badgeCounts.supportRequests
+            : undefined,
       };
 
-// Cache for 5 minutes để giảm tải database
-      cache.set('badge-counts', filteredBadgeCounts, 300);
+      // Cache for 5 minutes để giảm tải database
+      cache.set("badge-counts", filteredBadgeCounts, 300);
 
       res.json(filteredBadgeCounts);
     } catch (error) {
@@ -2698,9 +3041,21 @@ phoneNumber: groupsTable.phoneNumber,
   app.use("/api/support-requests", supportRouter);
 
   // Support requests routes
-  app.get('/api/support-requests', isAuthenticated, supportController.getAllSupportRequests);
-  app.put('/api/support-requests/:id', isAuthenticated, supportController.updateSupportRequest);
-  app.put('/api/support-requests/:id/assign', isAuthenticated, supportController.assignSupportRequest);
+  app.get(
+    "/api/support-requests",
+    isAuthenticated,
+    supportController.getAllSupportRequests,
+  );
+  app.put(
+    "/api/support-requests/:id",
+    isAuthenticated,
+    supportController.updateSupportRequest,
+  );
+  app.put(
+    "/api/support-requests/:id/assign",
+    isAuthenticated,
+    supportController.assignSupportRequest,
+  );
   return httpServer;
 }
 
