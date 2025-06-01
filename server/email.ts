@@ -217,12 +217,43 @@ export class EmailService {
       content: string;
     };
   }): Promise<boolean> {
+    return this.sendReplyEmailWithAttachments({
+      ...data,
+      attachments: []
+    });
+  }
+
+  async sendReplyEmailWithAttachments(data: {
+    to: string;
+    subject: string;
+    content: string;
+    attachments?: Array<{
+      filename: string;
+      path: string;
+      contentType?: string;
+    }>;
+    originalRequest: {
+      id: number;
+      full_name: string;
+      subject: string;
+      content: string;
+    };
+  }): Promise<boolean> {
     if (!this.transporter) {
       console.error('SMTP transporter not initialized');
       return false;
     }
 
     try {
+      const attachmentInfo = data.attachments && data.attachments.length > 0 
+        ? `<div style="background-color: #e8f4fd; padding: 15px; border-radius: 6px; margin-top: 15px;">
+             <h4 style="color: #0066cc; margin: 0 0 10px 0; font-size: 14px;">📎 Tập tin đính kèm:</h4>
+             <ul style="margin: 0; padding-left: 20px; color: #495057;">
+               ${data.attachments.map(att => `<li style="margin-bottom: 5px;">${att.filename}</li>`).join('')}
+             </ul>
+           </div>`
+        : '';
+
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -235,6 +266,7 @@ export class EmailService {
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #007bff;">
               ${data.content.replace(/\n/g, '<br>')}
             </div>
+            ${attachmentInfo}
           </div>
 
           <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
@@ -254,15 +286,24 @@ export class EmailService {
         </div>
       `;
 
-      const mailOptions = {
+      const mailOptions: any = {
         from: this.config ? `"${this.config.fromName}" <${this.config.fromEmail}>` : 'noreply@example.com',
         to: data.to,
         subject: data.subject,
         html: htmlContent
       };
 
+      // Add attachments if any
+      if (data.attachments && data.attachments.length > 0) {
+        mailOptions.attachments = data.attachments.map(attachment => ({
+          filename: attachment.filename,
+          path: attachment.path,
+          contentType: attachment.contentType
+        }));
+      }
+
       await this.transporter.sendMail(mailOptions);
-      console.log(`Reply email sent successfully to ${data.to} for request #${data.originalRequest.id}`);
+      console.log(`Reply email sent successfully to ${data.to} for request #${data.originalRequest.id} with ${data.attachments?.length || 0} attachments`);
       return true;
     } catch (error) {
       console.error('Error sending reply email:', error);
