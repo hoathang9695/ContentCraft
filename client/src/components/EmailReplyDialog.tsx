@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Send, Bold, Italic, Underline, Link, Paperclip } from "lucide-react";
+import { X, Send, Bold, Italic, Underline, Link, Paperclip, Maximize2, Minimize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface SupportRequest {
@@ -31,6 +31,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     content: ""
   });
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]); // State to manage attached files
+  const [isExpanded, setIsExpanded] = useState(false); // State to manage expanded dialog
 
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -286,19 +287,31 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[800px] max-h-[90vh] p-0 gap-0 flex flex-col">
+      <DialogContent className={`${isExpanded ? 'max-w-[100vw] max-h-[100vh] w-[100vw] h-[100vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}>
         {/* Header */}
         <DialogHeader className="p-4 pb-0 flex-shrink-0">
           <div className="flex justify-between items-center">
             <DialogTitle className="text-lg font-medium">Phản hồi khách hàng</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="h-8 w-8"
+                title={isExpanded ? "Thu nhỏ" : "Mở rộng"}
+              >
+                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+                title="Đóng"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
