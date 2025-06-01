@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -32,11 +34,18 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState<string>('');
   const [extractedComments, setExtractedComments] = useState<string[]>([]);
+  const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female' | 'other'>('all');
+  
   // Fetch fake users
-  const { data: fakeUsers = [] } = useQuery<FakeUser[]>({
+  const { data: allFakeUsers = [] } = useQuery<FakeUser[]>({
     queryKey: ['/api/fake-users'],
     enabled: open && !!externalId, // Only fetch when dialog is open and we have an externalId
   });
+
+  // Filter fake users by selected gender
+  const fakeUsers = selectedGender === 'all' 
+    ? allFakeUsers 
+    : allFakeUsers.filter(user => user.gender === selectedGender);
 
   // Hàm lấy ngẫu nhiên một người dùng ảo từ danh sách
   // Đảm bảo không lấy trùng lặp người dùng (trừ khi không còn lựa chọn)
@@ -79,6 +88,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   useEffect(() => {
     if (!open) {
       setCommentText('');
+      setSelectedGender('all');
     }
   }, [open]);
 
@@ -151,9 +161,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
     // Kiểm tra nếu không có người dùng ảo nào khi có externalId
     if (externalId && fakeUsers.length === 0) {
+      const errorMessage = allFakeUsers.length === 0 
+        ? 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.'
+        : `Không có người dùng ảo nào với giới tính "${selectedGender === 'male' ? 'Nam' : selectedGender === 'female' ? 'Nữ' : 'Khác'}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`;
+      
       toast({
         title: 'Lỗi',
-        description: 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.',
+        description: errorMessage,
         variant: 'destructive',
       });
       return;
@@ -430,21 +444,48 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         <div className="space-y-4 my-4 flex-1 overflow-y-auto pr-2">
           {/* Hiển thị thông tin về người dùng ảo nếu có externalId */}
           {externalId && (
-            <div className="flex flex-col space-y-2">
+            <div className="flex flex-col space-y-3">
+              {/* Gender selection */}
+              <div className="space-y-2">
+                <Label htmlFor="gender-select" className="text-sm font-medium">
+                  Lọc theo giới tính người dùng ảo
+                </Label>
+                <Select value={selectedGender} onValueChange={(value: 'all' | 'male' | 'female' | 'other') => setSelectedGender(value)}>
+                  <SelectTrigger id="gender-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả giới tính</SelectItem>
+                    <SelectItem value="male">Nam</SelectItem>
+                    <SelectItem value="female">Nữ</SelectItem>
+                    <SelectItem value="other">Khác</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md text-sm">
                 <p className="font-medium">Thông tin người dùng ảo</p>
                 <p className="mt-1">
                   {fakeUsers.length > 0 
                     ? "Hệ thống sẽ tự động chọn ngẫu nhiên một người dùng ảo khác nhau để gửi mỗi comment" 
-                    : "Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý."}
+                    : selectedGender === 'all' 
+                      ? "Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý."
+                      : `Không có người dùng ảo nào với giới tính "${selectedGender === 'male' ? 'Nam' : selectedGender === 'female' ? 'Nữ' : 'Khác'}". Hãy thử chọn giới tính khác hoặc tạo thêm người dùng ảo.`}
                 </p>
                 {fakeUsers.length > 0 && (
                   <p className="mt-1 text-xs">
-                    Có tổng cộng {fakeUsers.length} người dùng ảo có thể sử dụng để gửi comment
+                    {selectedGender === 'all' 
+                      ? `Có tổng cộng ${fakeUsers.length} người dùng ảo có thể sử dụng để gửi comment`
+                      : `Có ${fakeUsers.length} người dùng ảo ${selectedGender === 'male' ? 'nam' : selectedGender === 'female' ? 'nữ' : 'giới tính khác'} có thể sử dụng để gửi comment`}
+                  </p>
+                )}
+                {allFakeUsers.length > 0 && fakeUsers.length === 0 && selectedGender !== 'all' && (
+                  <p className="mt-1 text-xs text-orange-600">
+                    Tổng cộng có {allFakeUsers.length} người dùng ảo, nhưng không có ai với giới tính đã chọn.
                   </p>
                 )}
               </div>
-              {fakeUsers.length === 0 && (
+              {allFakeUsers.length === 0 && (
                 <p className="text-xs text-red-500">
                   Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý.
                 </p>
