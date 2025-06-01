@@ -2233,10 +2233,6 @@ phoneNumber: groupsTable.phoneNumber,
     }
   });
 
-  // Support routes
-  const supportRouter = (await import('./routes/support.router')).default;
-  app.use("/api/support-requests", supportRouter);
-
   // Support requests routes
   app.get('/api/support-requests', isAuthenticated, supportController.getAllSupportRequests);
   app.put('/api/support-requests/:id', isAuthenticated, supportController.updateSupportRequest);
