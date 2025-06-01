@@ -161,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Sử dụng aggregation query thay vì fetch toàn bộ dữ liệu
       const { contents } = await import("../shared/schema");
-      
+
       // Build date conditions
       const dateConditions = [];
       if (startDate && endDate) {
@@ -247,26 +247,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Real users stats với aggregation
       const { pages, groups } = await import("../shared/schema");
-      
+
       const [realUsersStats, pagesStats, groupsStats, supportRequestsStats] = await Promise.all([
         // Real users aggregation
         db.select({
           total: sql<number>`count(distinct ${realUsers.id})`,
           new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`
         }).from(realUsers),
-        
+
         // Pages aggregation
         db.select({
           total: sql<number>`count(*)`,
           new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`
         }).from(pages),
-        
+
         // Groups aggregation
         db.select({
           total: sql<number>`count(*)`,
           new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`
         }).from(groups),
-        
+
         // Support requests aggregation
         db.select({
           total: sql<number>`count(*)`,
@@ -2301,6 +2301,186 @@ phoneNumber: groupsTable.phoneNumber,
     } catch (error) {
       console.error("Error testing SMTP:", error);
       res.status(500).json({ message: "SMTP test failed" });
+    }
+  });
+
+  // Caching mechanism using Map
+  const cache = new Map();
+
+  // Content stats cache using Map
+  let contentStatsCache = new Map();
+  const CONTENT_CACHE_DURATION = 300000; // 5 minutes (300 seconds)
+
+  // Get content stats
+  app.get("/api/content-stats", requireAuth, async (req, res) => {
+    try {
+      console.log("Content stats requested");
+
+      // Get cached data
+      const cached = contentStatsCache.get('content-stats');
+      if (cached && (Date.now() - cached.timestamp) < CONTENT_CACHE_DURATION) {
+        console.log("Returning cached content stats");
+        return res.json(cached.data);
+      }
+
+      // Get total counts
+      const { contents } = await import("../shared/schema");
+
+      const [contentStats] = await Promise.all([
+        db.select({
+          total: sql<number>`count(*)`,
+          pending: sql<number>`count(*) filter (where status = 'pending')`,
+          completed: sql<number>`count(*) filter (where status = 'completed')`
+        }).from(contents)
+      ]);
+
+      const data = {
+        total: contentStats?.total || 0,
+        pending: contentStats?.pending || 0,
+        completed: contentStats?.completed || 0
+      };
+
+      // Cache for 5 minutes
+      contentStatsCache.set('content-stats', {
+        data: data,
+        timestamp: Date.now()
+      }, 300);
+
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching content stats:", error);
+      res.status(500).json({ error: "Failed to fetch content stats" });
+    }
+  });
+
+  // Support requests aggregation
+  app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
+    try {
+      console.log("Dashboard stats requested");
+
+      // Check cache first
+      const cached = cache.get('dashboard-stats');
+      if (cached) {
+        console.log("Returning cached dashboard stats");
+        return res.json(cached);
+      }
+
+      // Real users và groups
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      // Real users stats với aggregation
+      const { pages, groups } = await import("../shared/schema");
+
+      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats] = await Promise.all([
+        // Real users aggregation
+        db.select({
+          total: sql<number>`count(distinct ${realUsers.id})`,
+          new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`
+        }).from(realUsers),
+
+        // Pages aggregation
+        db.select({
+          total: sql<number>`count(*)`,
+          new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`
+        }).from(pages),
+
+        // Groups aggregation
+        db.select({
+          total: sql<number>`count(*)`,
+          new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`
+        }).from(groups),
+
+        // Support requests aggregation
+        db.select({
+          total: sql<number>`count(*)`,
+          pending: sql<number>`count(*) filter (where status = 'pending')`,
+          processing: sql<number>`count(*) filter (where status = 'processing')`,
+          completed: sql<number>`count(*) filter (where status = 'completed')`
+        }).from(supportRequests)
+      ]);
+
+      const stats = {
+        // Real users
+        totalRealUsers: realUsersStats[0]?.total || 0,
+        newRealUsers: realUsersStats[0]?.new || 0,
+
+        // Pages
+        totalPages: pagesStats[0]?.total || 0,
+        newPages: pagesStats[0]?.new || 0,
+
+        // Groups
+        totalGroups: groupsStats[0]?.total || 0,
+        newGroups: groupsStats[0]?.new || 0,
+
+        // Support requests
+        totalSupportRequests: supportRequestsStats[0]?.total || 0,
+        pendingSupportRequests: supportRequestsStats[0]?.pending || 0,
+        processingSupportRequests: supportRequestsStats[0]?.processing || 0,
+        completedSupportRequests: supportRequestsStats[0]?.completed || 0,
+
+        // Content stats với better aggregation
+        totalContents: contentStats?.total || 0,
+        pendingContents: contentStats?.pending || 0,
+        completedContents: contentStats?.completed || 0
+      };
+
+      console.log("Dashboard stats calculated:", stats);
+
+      // Cache for 5 minutes
+      cache.set('dashboard-stats', stats, 300);
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ error: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Badge counts for sidebar
+  app.get("/api/badge-counts", requireAuth, async (req, res) => {
+    try {
+      // Check cache first
+      const cached = cache.get('badge-counts');
+      if (cached) {
+        return res.json(cached);
+      }
+
+      const { pages, groups, realUsers } = await import("../shared/schema");
+
+      const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
+        // Real users with "new" classification
+        db.select({
+          count: sql<number>`count(*)`
+        }).from(realUsers)
+        .where(eq(realUsers.classification, 'new')),
+
+        // Pages with "new" classification
+        db.select({
+          count: sql<number>`count(*)`
+        }).from(pages)
+        .where(eq(pages.classification, 'new')),
+
+        // Groups with "new" classification
+        db.select({
+          count: sql<number>`count(*)`
+        }).from(groups)
+        .where(eq(groups.classification, 'new'))
+      ]);
+
+      const counts = {
+        realUsers: Number(realUsersNewCount[0]?.count || 0),
+        pages: Number(pagesNewCount[0]?.count || 0),
+        groups: Number(groupsNewCount[0]?.count || 0)
+      };
+
+      // Cache for 2 minutes
+      cache.set('badge-counts', counts, 120);
+
+      res.json(counts);
+    } catch (error) {
+      console.error("Error fetching badge counts:", error);
+      res.status(500).json({ error: "Failed to fetch badge counts" });
     }
   });
 

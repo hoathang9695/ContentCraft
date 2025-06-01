@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useQuery } from '@tanstack/react-query';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -30,22 +31,36 @@ interface SidebarItemProps {
   children: React.ReactNode;
   isActive: boolean;
   onClick?: () => void;
+  badge?: number;
 }
 
-function SidebarItem({ href, icon: Icon, children, isActive, onClick }: SidebarItemProps) {
+interface BadgeCounts {
+  realUsers: number;
+  pages: number;
+  groups: number;
+}
+
+function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: SidebarItemProps) {
   return (
     <Link href={href}>
       <div
         className={cn(
-          "group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
+          "group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md cursor-pointer relative",
           isActive
             ? "bg-primary text-primary-foreground"
             : "text-foreground hover:bg-muted hover:text-foreground"
         )}
         onClick={onClick}
       >
-        <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-        {children}
+        <div className="flex items-center">
+          <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+          {children}
+        </div>
+        {badge && badge > 0 && (
+          <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] px-1">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
       </div>
     </Link>
   );
@@ -57,6 +72,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const isAdmin = user?.role === 'admin';
+
+  // Fetch badge counts
+  const { data: badgeCounts } = useQuery<BadgeCounts>({
+    queryKey: ['/api/badge-counts'],
+    queryFn: async () => {
+      const response = await fetch('/api/badge-counts');
+      if (!response.ok) throw new Error('Failed to fetch badge counts');
+      return response.json();
+    },
+    refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000 // Consider data stale after 30 seconds
+  });
 
   const isActivePath = (path: string) => {
     if (path === '/') {
@@ -104,6 +131,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Users}
               isActive={isActivePath('/real-user')}
               onClick={handleItemClick}
+              badge={badgeCounts?.realUsers}
             >
               Người dùng thật
             </SidebarItem>
@@ -113,6 +141,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Folder}
               isActive={isActivePath('/page-management')}
               onClick={handleItemClick}
+              badge={badgeCounts?.pages}
             >
               Quản lý trang
             </SidebarItem>
@@ -122,6 +151,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Users}
               isActive={isActivePath('/groups-management')}
               onClick={handleItemClick}
+              badge={badgeCounts?.groups}
             >
               Quản lý nhóm
             </SidebarItem>
