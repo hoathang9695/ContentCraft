@@ -29,15 +29,14 @@ import {
 } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-debounce';
+import { queryClient } from '@/lib/queryClient';
 
 export default function ContentPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
-  const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
-  const [endDate, setEndDate] = useState<Date>(today);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [sourceStatus, setSourceStatus] = useState('unverified');
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -71,10 +70,11 @@ export default function ContentPage() {
 
   const handleDateFilter = () => {
     console.log('Filtering by date range:', {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      startDate: startDate?.toISOString(),
+      endDate: endDate?.toISOString()
     });
-    // Remove unnecessary setTimeout that causes duplicate state updates
+    // Force refetch with new date range
+    queryClient.invalidateQueries(['/api/contents']);
   };
 
   const toggleSourceStatus = () => {
@@ -154,7 +154,7 @@ export default function ContentPage() {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                  {startDate ? format(startDate, 'dd/MM/yyyy') : "Tất cả"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -187,7 +187,7 @@ export default function ContentPage() {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                  {endDate ? format(endDate, 'dd/MM/yyyy') : "Tất cả"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -213,11 +213,19 @@ export default function ContentPage() {
               variant="default" 
               className="h-10 bg-green-600 hover:bg-green-700 text-white" 
               onClick={() => {
-                handleDateFilter();
-                toast({
-                  title: "Đã áp dụng bộ lọc",
-                  description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
-                });
+                if (startDate && endDate) {
+                  handleDateFilter();
+                  toast({
+                    title: "Đã áp dụng bộ lọc",
+                    description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+                  });
+                } else {
+                  toast({
+                    title: "Vui lòng chọn ngày",
+                    description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                    variant: "destructive",
+                  });
+                }
               }}
             >
               Áp dụng
@@ -227,15 +235,12 @@ export default function ContentPage() {
               variant="outline" 
               className="h-10" 
               onClick={() => {
-                const today = new Date();
-                const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                setStartDate(firstDayOfMonth);
-                setEndDate(today);
+                setStartDate(undefined);
+                setEndDate(undefined);
                 toast({
                   title: "Đã đặt lại bộ lọc",
-                  description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, 'dd/MM/yyyy')} đến ${format(today, 'dd/MM/yyyy')}`,
+                  description: "Hiển thị tất cả dữ liệu",
                 });
-                // Remove unnecessary timeout
               }}
             >
               Xóa bộ lọc
@@ -247,12 +252,12 @@ export default function ContentPage() {
       {activeTab === 'all' && (
         <ContentTable 
           title="Tất cả nội dung" 
-          startDate={startDate}
-          endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           assignedUserId={selectedUser}
           searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
+          startDate={startDate}
+          endDate={endDate}
         />
       )}
 
@@ -260,11 +265,11 @@ export default function ContentPage() {
         <ContentTable 
           title="Nội dung đã xử lý" 
           statusFilter="completed" 
-          startDate={startDate}
-          endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
+          startDate={startDate}
+          endDate={endDate}
         />
       )}
 
@@ -272,11 +277,11 @@ export default function ContentPage() {
         <ContentTable 
           title="Nội dung chưa xử lý" 
           statusFilter="pending" 
-          startDate={startDate}
-          endDate={endDate}
           sourceVerification={sourceStatus as 'verified' | 'unverified'}
           searchQuery={debouncedSearchQuery}
           onSearchChange={handleSearch}
+          startDate={startDate}
+          endDate={endDate}
         />
       )}
     </DashboardLayout>

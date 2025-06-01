@@ -60,10 +60,8 @@ interface SupportRequest {
 export default function SupportPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const [startDate, setStartDate] = useState<Date>(firstDayOfMonth);
-  const [endDate, setEndDate] = useState<Date>(today);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [userFilter, setUserFilter] = useState<number | null>(null);
   const [searchResults, setSearchResults] = useState<SupportRequest[]>([]);
@@ -72,12 +70,12 @@ export default function SupportPage() {
   const [pageSize, setPageSize] = useState<number>(20);
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
-    queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
+    queryKey: ['/api/support-requests', userFilter, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       const params = new URLSearchParams();
+      if (userFilter) params.append('userId', userFilter.toString());
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
-      if (userFilter) params.append('userId', userFilter.toString());
       const response = await fetch(`/api/support-requests?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch support requests');
       return response.json();
@@ -94,15 +92,6 @@ export default function SupportPage() {
     if (!supportRequests) return [];
 
     return supportRequests.filter(request => {
-      if (startDate && endDate) {
-        const requestDate = new Date(request.created_at);
-        const start = startOfDay(startDate);
-        const end = endOfDay(endDate);
-        if (!(requestDate >= start && requestDate <= end)) {
-          return false;
-        }
-      }
-
       if (statusFilter !== 'all' && request.status !== statusFilter) {
         return false;
       }
@@ -123,7 +112,7 @@ export default function SupportPage() {
 
       return true;
     });
-  }, [supportRequests, startDate, endDate, statusFilter, userFilter, searchTerm]);
+  }, [supportRequests, statusFilter, userFilter, searchTerm]);
 
   const handleDateFilter = () => {
     toast({
@@ -205,7 +194,7 @@ export default function SupportPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                      {startDate ? format(startDate, 'dd/MM/yyyy') : "Tất cả"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -238,7 +227,7 @@ export default function SupportPage() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, 'dd/MM/yyyy') : <span>Chọn ngày</span>}
+                      {endDate ? format(endDate, 'dd/MM/yyyy') : "Tất cả"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -272,13 +261,11 @@ export default function SupportPage() {
                   variant="outline" 
                   className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
                   onClick={() => {
-                    const today = new Date();
-                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                    setStartDate(firstDayOfMonth);
-                    setEndDate(today);
+                    setStartDate(undefined);
+                    setEndDate(undefined);
                     toast({
                       title: "Đã đặt lại bộ lọc",
-                      description: `Hiển thị dữ liệu từ ${format(firstDayOfMonth, 'dd/MM/yyyy')} đến ${format(today, 'dd/MM/yyyy')}`,
+                      description: "Hiển thị tất cả dữ liệu",
                     });
                   }}
                 >
@@ -299,29 +286,6 @@ export default function SupportPage() {
         </div>
 
         <div className="bg-card rounded-lg shadow">
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Tổng số: <span className="font-medium">{filteredRequests.length}</span> yêu cầu
-                {statusFilter !== 'all' && (
-                  <span className="ml-2">
-                    (Lọc: {statusFilter === 'completed' ? 'Đã xử lý' : 'Chưa xử lý'})
-                  </span>
-                )}
-              </div>
-              <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(parseInt(value))}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10 / trang</SelectItem>
-                  <SelectItem value="20">20 / trang</SelectItem>
-                  <SelectItem value="50">50 / trang</SelectItem>
-                  <SelectItem value="100">100 / trang</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
           <DataTable
             data={filteredRequests}
             isLoading={isLoading}
