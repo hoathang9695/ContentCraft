@@ -311,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Groups statistics
-      const { groups } await import("../shared/schema");
+      const { groups } = await import("../shared/schema");
       const allGroups = await db.select().from(groups);
       const totalGroups = allGroups.length;
 
