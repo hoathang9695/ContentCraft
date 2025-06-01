@@ -231,6 +231,7 @@ export class EmailService {
       filename: string;
       path: string;
       contentType?: string;
+      cid?: string;
     }>;
     originalRequest: {
       id: number;
@@ -245,11 +246,54 @@ export class EmailService {
     }
 
     try {
-      const attachmentInfo = data.attachments && data.attachments.length > 0 
+      // Process content to handle embedded images
+      let processedContent = data.content;
+      const imageAttachments: Array<any> = [];
+      const fileAttachments: Array<any> = [];
+
+      // Extract data URLs from content and replace with CID references
+      const dataUrlRegex = /<img[^>]+src="data:([^;]+);base64,([^"]+)"[^>]*>/g;
+      let match;
+      let imageIndex = 0;
+
+      while ((match = dataUrlRegex.exec(data.content)) !== null) {
+        const mimeType = match[1];
+        const base64Data = match[2];
+        const cid = `embedded-image-${imageIndex}`;
+        
+        // Replace data URL with CID reference
+        processedContent = processedContent.replace(match[0], 
+          match[0].replace(`data:${mimeType};base64,${base64Data}`, `cid:${cid}`)
+        );
+
+        // Add to embedded attachments
+        imageAttachments.push({
+          filename: `embedded-image-${imageIndex}.${mimeType.split('/')[1]}`,
+          content: base64Data,
+          encoding: 'base64',
+          cid: cid,
+          contentType: mimeType
+        });
+        
+        imageIndex++;
+      }
+
+      // Prepare file attachments (from file uploads)
+      if (data.attachments && data.attachments.length > 0) {
+        data.attachments.forEach(attachment => {
+          fileAttachments.push({
+            filename: attachment.filename,
+            path: attachment.path,
+            contentType: attachment.contentType
+          });
+        });
+      }
+
+      const attachmentInfo = fileAttachments.length > 0 
         ? `<div style="background-color: #e8f4fd; padding: 15px; border-radius: 6px; margin-top: 15px;">
              <h4 style="color: #0066cc; margin: 0 0 10px 0; font-size: 14px;">📎 Tập tin đính kèm:</h4>
              <ul style="margin: 0; padding-left: 20px; color: #495057;">
-               ${data.attachments.map(att => `<li style="margin-bottom: 5px;">${att.filename}</li>`).join('')}
+               ${fileAttachments.map(att => `<li style="margin-bottom: 5px;">${att.filename}</li>`).join('')}
              </ul>
            </div>`
         : '';
@@ -264,7 +308,7 @@ export class EmailService {
           <div style="background-color: #fff; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px;">
             <h3 style="color: #495057; margin: 0 0 15px 0;">Nội dung phản hồi:</h3>
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #007bff;">
-              ${data.content.replace(/\n/g, '<br>')}
+              ${processedContent}
             </div>
             ${attachmentInfo}
           </div>
@@ -290,20 +334,12 @@ export class EmailService {
         from: this.config ? `"${this.config.fromName}" <${this.config.fromEmail}>` : 'noreply@example.com',
         to: data.to,
         subject: data.subject,
-        html: htmlContent
+        html: htmlContent,
+        attachments: [...imageAttachments, ...fileAttachments]
       };
 
-      // Add attachments if any
-      if (data.attachments && data.attachments.length > 0) {
-        mailOptions.attachments = data.attachments.map(attachment => ({
-          filename: attachment.filename,
-          path: attachment.path,
-          contentType: attachment.contentType
-        }));
-      }
-
       await this.transporter.sendMail(mailOptions);
-      console.log(`Reply email sent successfully to ${data.to} for request #${data.originalRequest.id} with ${data.attachments?.length || 0} attachments`);
+      console.log(`Reply email sent successfully to ${data.to} for request #${data.originalRequest.id} with ${imageAttachments.length} embedded images and ${fileAttachments.length} file attachments`);
       return true;
     } catch (error) {
       console.error('Error sending reply email:', error);

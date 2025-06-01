@@ -56,6 +56,70 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     }
   };
 
+  // Handle paste events to capture images
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      // Check if the item is an image
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault();
+        
+        const file = item.getAsFile();
+        if (file) {
+          // Create a unique filename for the pasted image
+          const timestamp = Date.now();
+          const fileName = `pasted-image-${timestamp}.${file.type.split('/')[1]}`;
+          
+          // Create a new File object with a proper name
+          const namedFile = new File([file], fileName, { type: file.type });
+          
+          // Add to attached files
+          setAttachedFiles(prev => [...prev, namedFile]);
+          
+          // Create a data URL for display in editor
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const dataUrl = event.target?.result as string;
+            
+            // Insert image into editor at cursor position
+            if (editorRef.current) {
+              const selection = window.getSelection();
+              if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.alt = fileName;
+                
+                range.deleteContents();
+                range.insertNode(img);
+                
+                // Move cursor after image
+                range.setStartAfter(img);
+                range.setEndAfter(img);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                handleEditorChange();
+              }
+            }
+          };
+          reader.readAsDataURL(file);
+          
+          toast({
+            title: "Hình ảnh đã được thêm",
+            description: `${fileName} đã được thêm vào email và danh sách đính kèm`,
+          });
+        }
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!request) return;
@@ -67,17 +131,21 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
     setIsLoading(true);
     try {
+      // Create FormData to handle file uploads
+      const submitFormData = new FormData();
+      submitFormData.append('to', formData.to);
+      submitFormData.append('subject', formData.subject);
+      submitFormData.append('content', htmlContent);
+      submitFormData.append('response_content', plainTextContent);
+      
+      // Add attached files
+      attachedFiles.forEach((file, index) => {
+        submitFormData.append('attachments', file);
+      });
+
       const response = await fetch(`/api/support-requests/${request.id}/reply`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: formData.to,
-          subject: formData.subject,
-          content: htmlContent, // Send HTML content
-          response_content: plainTextContent // Store plain text in DB
-        })
+        body: submitFormData // Send FormData instead of JSON
       });
 
       if (response.ok) {
@@ -337,6 +405,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
                 onInput={handleEditorChange}
                 onBlur={handleEditorChange}
+                onPaste={handlePaste}
                 suppressContentEditableWarning={true}
                 data-placeholder="Nhập nội dung phản hồi..."
               />
