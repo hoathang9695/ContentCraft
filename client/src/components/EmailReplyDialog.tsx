@@ -505,11 +505,22 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 /* Hide default dialog close button with stronger selector */
                 .dialog-content > button[data-radix-dialog-close],
                 [data-radix-dialog-content] > button[data-radix-dialog-close],
-                button[data-radix-dialog-close] {
+                button[data-radix-dialog-close],
+                [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"] {
                   display: none !important;
                   visibility: hidden !important;
                   opacity: 0 !important;
                   pointer-events: none !important;
+                  position: absolute !important;
+                  left: -9999px !important;
+                  width: 0 !important;
+                  height: 0 !important;
+                  overflow: hidden !important;
+                }
+                
+                /* Additional specific selector for the exact button structure */
+                .dialog-content button.absolute.right-4.top-4 {
+                  display: none !important;
                 }
               `}</style>
             </div>
