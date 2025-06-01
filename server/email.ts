@@ -1,5 +1,5 @@
 
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import { db } from './db';
 import { smtpConfig } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -65,7 +65,7 @@ export class EmailService {
       return;
     }
 
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host: this.config.host,
       port: this.config.port,
       secure: this.config.secure,
