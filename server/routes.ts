@@ -121,19 +121,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .where(eq(groups.classification, "new")),
           ]);
 
-        // Đếm support requests có status = 'pending'
+        // Đếm support requests có status = 'pending' và type = 'support'
         const pendingSupportRequests = await db
           .select({ count: sql`count(*)::int` })
           .from(supportRequests)
-          .where(eq(supportRequests.status, "pending"));
+          .where(and(
+            eq(supportRequests.status, "pending"),
+            eq(supportRequests.type, "support")
+          ));
+
+        // Đếm feedback requests có status = 'pending' và type = 'feedback'
+        const pendingFeedbackRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(and(
+            eq(supportRequests.status, "pending"),
+            eq(supportRequests.type, "feedback")
+          ));
 
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
+        const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
 
         const badgeCounts = {
           realUsers: realUsersNewCount[0]?.count || 0,
           pages: pagesNewCount[0]?.count || 0,
           groups: groupsNewCount[0]?.count || 0,
           supportRequests: pendingSupport,
+          feedbackRequests: pendingFeedback,
         };
 
         const filteredBadgeCounts = {
@@ -144,6 +158,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           supportRequests:
             badgeCounts.supportRequests > 0
               ? badgeCounts.supportRequests
+              : undefined,
+          feedbackRequests:
+            badgeCounts.feedbackRequests > 0
+              ? badgeCounts.feedbackRequests
               : undefined,
         };
 
