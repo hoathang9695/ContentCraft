@@ -79,6 +79,11 @@ router.put('/feedback-requests/:id', async (req, res) => {
       .set(updates)
       .where(eq(supportRequests.id, parseInt(id)));
 
+    // Broadcast badge update after status change
+    if ((global as any).broadcastBadgeUpdate) {
+      await (global as any).broadcastBadgeUpdate();
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating feedback request:', error);

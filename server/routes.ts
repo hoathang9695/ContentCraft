@@ -130,18 +130,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(supportRequests.type, "support")
           ));
 
-        // Đếm feedback requests có status = 'pending' và type = 'feedback'
+        // Đếm feedback requests có type = 'feedback' và status = 'pending'
         const pendingFeedbackRequests = await db
           .select({ count: sql`count(*)::int` })
           .from(supportRequests)
-          .where(and(
-            eq(supportRequests.status, "pending"),
-            eq(supportRequests.type, "feedback")
-          ));
+          .where(
+            and(
+              eq(supportRequests.type, "feedback"),
+              eq(supportRequests.status, "pending")
+            )
+          );
 
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
-        
+
         // Tổng số pending requests (support + feedback) cho menu cha "Xử lý phản hồi"
         const totalPendingRequests = pendingSupport + pendingFeedback;
 
@@ -2973,7 +2975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalContents: contentStats[0]?.total || 0,
         pendingContents: contentStats[0]?.pending || 0,
         completedContents: contentStats[0]?.completed || 0,
-      };
+      };```text
 
       console.log("Dashboard stats calculated:", stats);
 
@@ -3037,11 +3039,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
 
+      // Đếm feedback requests có type = 'feedback' và status = 'pending'
+        const pendingFeedbackRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(
+            and(
+              eq(supportRequests.type, "feedback"),
+              eq(supportRequests.status, "pending")
+            )
+          );
+
+        const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
         pages: pagesNewCount[0]?.count || 0,
         groups: groupsNewCount[0]?.count || 0,
         supportRequests: pendingSupport,
+        feedbackRequests: pendingFeedback,
       };
 
       // Chỉ trả về các badge có giá trị > 0
@@ -3053,6 +3069,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         supportRequests:
           badgeCounts.supportRequests > 0
             ? badgeCounts.supportRequests
+            : undefined,
+            feedbackRequests:
+          badgeCounts.feedbackRequests > 0
+            ? badgeCounts.feedbackRequests
             : undefined,
       };
 
