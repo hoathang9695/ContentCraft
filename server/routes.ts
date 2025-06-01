@@ -1374,19 +1374,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all fake users with pagination (available for all authenticated users for comment functionality)
   app.get("/api/fake-users", isAuthenticated, async (req, res) => {
     try {
+      console.log("Fake users API called with query:", req.query);
+      
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = parseInt(req.query.pageSize as string) || 10;
       const search = req.query.search as string || '';
 
+      console.log("Parsed parameters:", { page, pageSize, search });
+
       // Nếu không có phân trang (để compatibility với comment functionality)
-      if (!req.query.page) {
+      if (!req.query.page && !req.query.pageSize) {
+        console.log("No pagination params - returning all fake users");
         const fakeUsers = await storage.getAllFakeUsers();
         return res.json(fakeUsers);
       }
 
+      console.log("Using pagination - calling getFakeUsersWithPagination");
       const result = await storage.getFakeUsersWithPagination(page, pageSize, search);
+      console.log("Pagination result:", { 
+        total: result.total, 
+        usersCount: result.users.length,
+        page: result.page,
+        totalPages: result.totalPages 
+      });
+      
+      // Set cache control headers to prevent caching issues
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(result);
     } catch (error) {
+      console.error("Error in fake users API:", error);
       res.status(500).json({ 
         message: "Error fetching fake users",
         error: error instanceof Error ? error.message : String(error)

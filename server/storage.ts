@@ -856,6 +856,8 @@ async getFakeUsersWithPagination(page: number, pageSize: number, search: string 
     pageSize: number;
     totalPages: number;
   }> {
+    console.log("Storage: getFakeUsersWithPagination called with:", { page, pageSize, search });
+    
     const offset = (page - 1) * pageSize;
 
     // Build search conditions
@@ -873,31 +875,40 @@ async getFakeUsersWithPagination(page: number, pageSize: number, search: string 
 
     const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
 
-    // Get total count
-    const countResult = await db
-      .select({ count: count() })
-      .from(fakeUsers)
-      .where(whereClause);
+    try {
+      // Get total count
+      const countResult = await db
+        .select({ count: count() })
+        .from(fakeUsers)
+        .where(whereClause);
 
-    const total = countResult[0]?.count || 0;
-    const totalPages = Math.ceil(total / pageSize);
+      const total = Number(countResult[0]?.count || 0);
+      const totalPages = Math.ceil(total / pageSize);
 
-    // Get paginated data
-    const results = await db
-      .select()
-      .from(fakeUsers)
-      .where(whereClause)
-      .orderBy(fakeUsers.name)
-      .limit(pageSize)
-      .offset(offset);
+      console.log("Storage: Total fake users found:", total);
 
-    return {
-      users: results,
-      total,
-      page,
-      pageSize,
-      totalPages
-    };
+      // Get paginated data
+      const results = await db
+        .select()
+        .from(fakeUsers)
+        .where(whereClause)
+        .orderBy(fakeUsers.name)
+        .limit(pageSize)
+        .offset(offset);
+
+      console.log("Storage: Returning", results.length, "fake users for page", page);
+
+      return {
+        users: results,
+        total,
+        page,
+        pageSize,
+        totalPages
+      };
+    } catch (error) {
+      console.error("Storage: Error in getFakeUsersWithPagination:", error);
+      throw error;
+    }
   }
 }
 

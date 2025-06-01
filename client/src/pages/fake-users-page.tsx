@@ -118,7 +118,28 @@ export default function FakeUsersPage() {
     totalPages: number;
   }>({
     queryKey: ["/api/fake-users", currentPage, pageSize, debouncedSearchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        pageSize: pageSize.toString(),
+        ...(debouncedSearchQuery && { search: debouncedSearchQuery })
+      });
+      
+      console.log("Fetching fake users with params:", params.toString());
+      
+      const response = await fetch(`/api/fake-users?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Fake users API response:", data);
+      
+      return data;
+    },
     enabled: isAdmin, // Chỉ kích hoạt truy vấn nếu là admin
+    staleTime: 0, // Disable caching
+    gcTime: 0, // Disable cache time
   });
 
   const fakeUsers = fakeUsersResponse?.users || [];
