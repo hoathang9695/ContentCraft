@@ -13,4 +13,5 @@ export interface BadgeCounts {
   realUsers: number;
   pages: number;
   groups: number;
+  supportRequests: number;
 }

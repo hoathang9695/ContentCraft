@@ -58,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/images', express.static(path.join(process.cwd(), 'public/images')));
 
   const httpServer = createServer(app);
-  
+
   // Setup Socket.IO
   const io = new SocketIOServer(httpServer, {
     cors: {
@@ -74,7 +74,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Handle initial badge counts request
     socket.on('request-badge-counts', async () => {
       try {
-        const { pages, groups, realUsers } = await import("../shared/schema");
+        const { groups, supportRequests } = await import("../shared/schema");
+        const { pages } = await import("../shared/schema");
+        const { users } = await import("../shared/schema");
+        const { realUsers } = await import("../shared/schema");
 
         const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
           db.select({
@@ -93,16 +96,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(groups.classification, 'new'))
         ]);
 
+        // Đếm support requests có status = 'pending'
+        const pendingSupportRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(eq(supportRequests.status, 'pending'));
+
+        const pendingSupport = pendingSupportRequests[0]?.count || 0;
+
         const badgeCounts = {
           realUsers: realUsersNewCount[0]?.count || 0,
           pages: pagesNewCount[0]?.count || 0,
-          groups: groupsNewCount[0]?.count || 0
+          groups: groupsNewCount[0]?.count || 0,
+          supportRequests: pendingSupport
         };
 
         const filteredBadgeCounts = {
           realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
           pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
-          groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined
+          groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined,
+          supportRequests: badgeCounts.supportRequests > 0 ? badgeCounts.supportRequests : undefined
         };
 
         // Send initial data to requesting client
@@ -118,10 +131,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  async function countNewRealUsers() {
+    const { realUsers } = await import("../shared/schema");
+    const result = await db
+      .select({ count: sql`count(*)::int` })
+      .from(realUsers)
+      .where(eq(realUsers.classification, 'new'));
+    return result[0]?.count || 0;
+  }
+
+  async function countNewPages() {
+    const { pages } = await import("../shared/schema");
+    const result = await db
+      .select({ count: sql`count(*)::int` })
+      .from(pages)
+      .where(eq(pages.classification, 'new'));
+    return result[0]?.count || 0;
+  }
+
+  async function countNewGroups() {
+    const { groups } = await import("../shared/schema");
+    const result = await db
+      .select({ count: sql`count(*)::int` })
+      .from(groups)
+      .where(eq(groups.classification, 'new'));
+    return result[0]?.count || 0;
+  }
+
+  async function countPendingSupportRequests() {
+    const { supportRequests } = await import("../shared/schema");
+    const result = await db
+      .select({ count: sql`count(*)::int` })
+      .from(supportRequests)
+      .where(eq(supportRequests.status, 'pending'));
+    return result[0]?.count || 0;
+  }
+
   // Function to broadcast badge updates
   const broadcastBadgeUpdate = async () => {
     try {
-      const { pages, groups, realUsers } = await import("../shared/schema");
+      const { groups, supportRequests } = await import("../shared/schema");
+      const { pages } = await import("../shared/schema");
+      const { users } = await import("../shared/schema");
+      const { realUsers } = await import("../shared/schema");
 
       const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
         db.select({
@@ -140,16 +192,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(groups.classification, 'new'))
       ]);
 
+      // Đếm support requests có status = 'pending'
+      const pendingSupportRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(eq(supportRequests.status, 'pending'));
+
+      const pendingSupport = pendingSupportRequests[0]?.count || 0;
+
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
         pages: pagesNewCount[0]?.count || 0,
-        groups: groupsNewCount[0]?.count || 0
+        groups: groupsNewCount[0]?.count || 0,
+        supportRequests: pendingSupport
       };
 
       const filteredBadgeCounts = {
         realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
         pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
-        groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined
+        groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined,
+        supportRequests: badgeCounts.supportRequests > 0 ? badgeCounts.supportRequests : undefined
       };
 
       // Broadcast to all connected clients
@@ -800,6 +862,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Tạo ID ngẫu nhiên cho nội dung test
       const contentId = `test-${Date.now()}`;
 
+      ```
       const message = await simulateKafkaMessage(contentId);
       res.json({ 
         success: true, 
@@ -2489,9 +2552,11 @@ phoneNumber: groupsTable.phoneNumber,
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
       // Real users stats với aggregation
-      const { pages, groups } = await import("../shared/schema");
+      const { pages, groups, supportRequests } = await import("../shared/schema");
+      const { users } = await import("../shared/schema");
+      const { realUsers } = await import("../shared/schema");
 
-      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats] = await Promise.all([
+      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats, contentStats] = await Promise.all([
         // Real users aggregation
         db.select({
           total: sql<number>`count(distinct ${realUsers.id})`,
@@ -2516,7 +2581,14 @@ phoneNumber: groupsTable.phoneNumber,
           pending: sql<number>`count(*) filter (where status = 'pending')`,
           processing: sql<number>`count(*) filter (where status = 'processing')`,
           completed: sql<number>`count(*) filter (where status = 'completed')`
-        }).from(supportRequests)
+        }).from(supportRequests),
+
+                // Content stats aggregation
+                db.select({
+                    total: sql<number>`count(*)`,
+                    pending: sql<number>`count(*) filter (where status = 'pending')`,
+                    completed: sql<number>`count(*) filter (where status = 'completed')`
+                }).from(contents)
       ]);
 
       const stats = {
@@ -2539,9 +2611,9 @@ phoneNumber: groupsTable.phoneNumber,
         completedSupportRequests: supportRequestsStats[0]?.completed || 0,
 
         // Content stats với better aggregation
-        totalContents: contentStats?.total || 0,
-        pendingContents: contentStats?.pending || 0,
-        completedContents: contentStats?.completed || 0
+        totalContents: contentStats[0]?.total || 0,
+        pendingContents: contentStats[0]?.pending || 0,
+        completedContents: contentStats[0]?.completed || 0
       };
 
       console.log("Dashboard stats calculated:", stats);
@@ -2565,7 +2637,9 @@ phoneNumber: groupsTable.phoneNumber,
         return res.json(cached);
       }
 
-      const { pages, groups, realUsers } = await import("../shared/schema");
+      const { pages, groups, supportRequests } = await import("../shared/schema");
+      const { users } = await import("../shared/schema");
+      const { realUsers } = await import("../shared/schema");
 
       const [realUsersNewCount, pagesNewCount, groupsNewCount] = await Promise.all([
         // Real users with "new" classification
@@ -2587,17 +2661,27 @@ phoneNumber: groupsTable.phoneNumber,
         .where(eq(groups.classification, 'new'))
       ]);
 
+      // Đếm support requests có status = 'pending'
+      const pendingSupportRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(eq(supportRequests.status, 'pending'));
+
+      const pendingSupport = pendingSupportRequests[0]?.count || 0;
+
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
         pages: pagesNewCount[0]?.count || 0,
-        groups: groupsNewCount[0]?.count || 0
+        groups: groupsNewCount[0]?.count || 0,
+        supportRequests: pendingSupport
       };
 
-      // Chỉ trả về badge count > 0 để tránh hiển thị số 0
+      // Chỉ trả về các badge có giá trị > 0
       const filteredBadgeCounts = {
         realUsers: badgeCounts.realUsers > 0 ? badgeCounts.realUsers : undefined,
         pages: badgeCounts.pages > 0 ? badgeCounts.pages : undefined,
-        groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined
+        groups: badgeCounts.groups > 0 ? badgeCounts.groups : undefined,
+        supportRequests: badgeCounts.supportRequests > 0 ? badgeCounts.supportRequests : undefined
       };
 
 // Cache for 5 minutes để giảm tải database

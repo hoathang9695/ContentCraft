@@ -39,6 +39,7 @@ interface BadgeCounts {
   realUsers?: number;
   pages?: number;
   groups?: number;
+  supportRequests?: number;
 }
 
 function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: SidebarItemProps) {
@@ -176,6 +177,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     e.preventDefault();
                     setIsExpanded(!isExpanded);
                   }}
+                  badge={badgeCounts?.supportRequests}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span>Xử lý phản hồi</span>
@@ -191,6 +193,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   icon={HelpCircle}
                   isActive={isActivePath('/user-feedback/support')}
                   onClick={handleItemClick}
+                  badge={badgeCounts?.supportRequests}
                 >
                   Yêu cầu hỗ trợ
                 </SidebarItem>
