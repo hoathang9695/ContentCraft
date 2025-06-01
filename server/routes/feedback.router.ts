@@ -15,43 +15,43 @@ router.get('/feedback-requests', async (req, res) => {
     const conditions = [eq(supportRequests.type, 'feedback')];
     
     if (userId) {
-      conditions.push(eq(supportRequests.assignedToId, parseInt(userId as string)));
+      conditions.push(eq(supportRequests.assigned_to_id, parseInt(userId as string)));
     }
     
     if (startDate) {
-      conditions.push(gte(supportRequests.createdAt, new Date(startDate as string)));
+      conditions.push(gte(supportRequests.created_at, new Date(startDate as string)));
     }
     
     if (endDate) {
-      conditions.push(lte(supportRequests.createdAt, new Date(endDate as string)));
+      conditions.push(lte(supportRequests.created_at, new Date(endDate as string)));
     }
 
     const whereCondition = conditions.length > 1 ? and(...conditions) : conditions[0];
 
     const result = await db.select({
       id: supportRequests.id,
-      full_name: supportRequests.fullName,
+      full_name: supportRequests.full_name,
       email: supportRequests.email,
       subject: supportRequests.subject,
       content: supportRequests.content,
       status: supportRequests.status,
-      assigned_to_id: supportRequests.assignedToId,
+      assigned_to_id: supportRequests.assigned_to_id,
       assigned_to_name: users.name,
-      assigned_at: supportRequests.assignedAt,
-      response_content: supportRequests.responseContent,
-      responder_id: supportRequests.responderId,
-      response_time: supportRequests.responseTime,
-      created_at: supportRequests.createdAt,
-      updated_at: supportRequests.updatedAt,
-      feedback_type: supportRequests.feedbackType,
-      feature_type: supportRequests.featureType,
-      detailed_description: supportRequests.detailedDescription,
-      attachment_url: supportRequests.attachmentUrl,
+      assigned_at: supportRequests.assigned_at,
+      response_content: supportRequests.response_content,
+      responder_id: supportRequests.responder_id,
+      response_time: supportRequests.response_time,
+      created_at: supportRequests.created_at,
+      updated_at: supportRequests.updated_at,
+      feedback_type: supportRequests.feedback_type,
+      feature_type: supportRequests.feature_type,
+      detailed_description: supportRequests.detailed_description,
+      attachment_url: supportRequests.attachment_url,
     })
     .from(supportRequests)
-    .leftJoin(users, eq(supportRequests.assignedToId, users.id))
+    .leftJoin(users, eq(supportRequests.assigned_to_id, users.id))
     .where(whereCondition)
-    .orderBy(desc(supportRequests.createdAt));
+    .orderBy(desc(supportRequests.created_at));
     
     res.json(result);
   } catch (error) {
