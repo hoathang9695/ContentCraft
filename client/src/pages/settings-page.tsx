@@ -391,37 +391,44 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button 
-                onClick={handleSaveSMTPConfig}
-                disabled={updateSMTPMutation.isPending}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                {updateSMTPMutation.isPending ? "Đang lưu..." : "Lưu cấu hình"}
-              </Button>
-
-              <div className="space-y-2">
-                <Label htmlFor="test-email">Email test (để trống sẽ dùng email mặc định)</Label>
-                <Input
-                  id="test-email"
-                  type="email"
-                  value={testEmail}
-                  onChange={(e) => setTestEmail(e.target.value)}
-                  placeholder={`${user?.username}@test.com`}
-                />
+            <div className="space-y-4 pt-4">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleSaveSMTPConfig}
+                  disabled={updateSMTPMutation.isPending}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  {updateSMTPMutation.isPending ? "Đang lưu..." : "Lưu cấu hình"}
+                </Button>
               </div>
 
-              <Button 
-                variant="outline"
-                onClick={handleTestSMTP}
-                disabled={testSMTPMutation.isPending || !smtpConfig.user || !smtpConfig.password}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                {testSMTPMutation.isPending ? "Đang test..." : "Test gửi email"}
-              </Button>
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium mb-3">Email test (để trống sẽ dùng email mặc định)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="space-y-2">
+                    <Input
+                      id="test-email"
+                      type="email"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      placeholder={`tubn@emso.vn`}
+                    />
+                  </div>
 
-              <div className="text-sm text-muted-foreground">
-                Email test sẽ được gửi đến: <strong>{testEmail || `${user?.username}@test.com`}</strong>
+                  <Button 
+                    variant="outline"
+                    onClick={handleTestSMTP}
+                    disabled={testSMTPMutation.isPending || !smtpConfig.user || !smtpConfig.password}
+                    className="w-full md:w-auto"
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    {testSMTPMutation.isPending ? "Đang test..." : "Test gửi email"}
+                  </Button>
+
+                  <div className="text-sm text-muted-foreground">
+                    Email test sẽ được gửi đến: <strong>{testEmail || `tubn@emso.vn`}</strong>
+                  </div>
+                </div>
               </div>
             </div>
 
