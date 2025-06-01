@@ -1795,8 +1795,7 @@ app.post('/api/support-requests/:id/reply', isAuthenticated, upload.array('attac
       // Update pages API to return manager data from managerId column
       const { users } = await import("../shared/schema");
       // Update pages API to return manager data from managerId column
-      // Update pages API to return manager data from managerId column
-      constpagesData = await db
+      const pagesData = await db
           .select({
             id: pagesTable.id,
             pageName: pagesTable.pageName,
