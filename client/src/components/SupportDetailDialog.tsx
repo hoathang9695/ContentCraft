@@ -36,8 +36,9 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
             title: "Thành công",
             description: "Đã cập nhật trạng thái yêu cầu sang 'Đang xử lý'",
           });
-          // Refresh support requests list
+          // Refresh support requests list and badge counts
           queryClient.invalidateQueries(['/api/support-requests']);
+          queryClient.invalidateQueries(['/api/badge-counts']);
         } else {
           throw new Error('Failed to update status');
         }
