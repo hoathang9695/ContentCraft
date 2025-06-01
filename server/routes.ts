@@ -1423,7 +1423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fakeUser) {
         return res.status(404).json({ message: "Fake user not found" });
       }
-      
+
       res.json(fakeUser);
 
     } catch (error) {
@@ -2140,7 +2140,7 @@ phoneNumber: groupsTable.phoneNumber,
     }
     res.status(401).json({ message: "Unauthorized" });
   };
-  
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -2230,6 +2230,72 @@ phoneNumber: groupsTable.phoneNumber,
     } catch (error) {
       console.error("Error testing SMTP:", error);
       res.status(500).json({ message: "SMTP test failed" });
+    }
+  });
+
+  // Support routes
+  const supportRouter = (await import('./routes/support.router')).default;
+  app.use("/api/support-requests", supportRouter);
+
+  // Support requests routes
+  app.get('/api/support-requests', isAuthenticated, supportController.getAllSupportRequests);
+  app.put('/api/support-requests/:id', isAuthenticated, supportController.updateSupportRequest);
+  app.put('/api/support-requests/:id/assign', isAuthenticated, supportController.assignSupportRequest);
+  app.post('/api/support-requests/:id/reply', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { to, subject, content, response_content } = req.body;
+      const user = req.user as Express.User;
+
+      // Get support request
+      const supportRequest = await db.query.supportRequests.findFirst({
+        where: eq(supportRequests.id, parseInt(id))
+      });
+
+      if (!supportRequest) {
+        return res.status(404).json({ message: 'Support request not found' });
+      }
+
+      if (user.role !== 'admin' && supportRequest.assigned_to_id !== user.id) {
+        return res.status(403).json({ message: 'Not authorized to reply to this request' });
+      }
+
+      // Send email
+      const emailSent = await emailService.sendReplyEmail({
+        to,
+        subject,
+        content,
+        originalRequest: {
+          id: supportRequest.id,
+          full_name: supportRequest.full_name,
+          subject: supportRequest.subject,
+          content: supportRequest.content
+        }
+      });
+
+      if (!emailSent) {
+        return res.status(500).json({ message: 'Failed to send email' });
+      }
+
+      // Update support request status
+      const result = await db.update(supportRequests)
+        .set({
+          status: 'completed' as any,
+          response_content,
+          responder_id: user.id,
+          response_time: new Date(),
+          updated_at: new Date()
+        })
+        .where(eq(supportRequests.id, parseInt(id)))
+        .returning();
+
+      return res.json({ message: 'Reply sent successfully', supportRequest: result[0] });
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      return res.status(500).json({ 
+        message: 'Error sending reply',
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

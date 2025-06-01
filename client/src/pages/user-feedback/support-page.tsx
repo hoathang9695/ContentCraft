@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { EmailReplyDialog } from "@/components/EmailReplyDialog";
 
 
 interface SupportRequest {
@@ -94,6 +95,7 @@ export default function SupportPage() {
   const [userFilter, setUserFilter] = useState<number | null>(null);
   const [searchResults, setSearchResults] = useState<SupportRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null); // Added selectedRequest state
+  const [replyRequest, setReplyRequest] = useState<SupportRequest | null>(null);
 
   const { data: supportRequests = [], isLoading, error } = useQuery<SupportRequest[]>({
     queryKey: ['/api/support-requests', startDate?.toISOString(), endDate?.toISOString(), userFilter],
@@ -436,7 +438,7 @@ export default function SupportPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setReplyRequest(row)}>
                           <Mail className="mr-2 h-4 w-4" />
                           <span>Gửi phản hồi</span>
                         </DropdownMenuItem>
@@ -488,6 +490,15 @@ export default function SupportPage() {
           isOpen={!!selectedRequest}
           onClose={() => setSelectedRequest(null)}
           request={selectedRequest}
+        />
+        <EmailReplyDialog
+          isOpen={!!replyRequest}
+          onClose={() => setReplyRequest(null)}
+          request={replyRequest}
+          onSuccess={() => {
+            // Refresh the support requests data
+            queryClient.invalidateQueries(['/api/support-requests']);
+          }}
         />
       </div>
     </DashboardLayout>
