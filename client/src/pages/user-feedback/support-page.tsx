@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { EmailReplyDialog } from "@/components/EmailReplyDialog";
+import { SupportDetailDialog } from "@/components/SupportDetailDialog";
 
 
 interface SupportRequest {
@@ -53,35 +54,7 @@ interface SupportRequest {
   updated_at: string;
 }
 
-function SupportDetailDialog({ isOpen, onClose, request }: { isOpen: boolean; onClose: () => void; request: SupportRequest | null }) {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-4">
-        <DialogHeader>
-          <DialogTitle>Chi tiết yêu cầu hỗ trợ</DialogTitle>
-          <DialogDescription>Xem thông tin chi tiết của yêu cầu hỗ trợ</DialogDescription>
-        </DialogHeader>
-        {request && (
-          <div>
-            <p><strong>Họ và tên:</strong> {request.full_name}</p>
-            <p><strong>Email:</strong> {request.email}</p>
-            <p><strong>Chủ đề:</strong> {request.subject}</p>
-            <p><strong>Nội dung:</strong> {request.content}</p>
-            {request.response_content && (
-              <>
-                <p><strong>Phản hồi:</strong> {request.response_content}</p>
-                <p><strong>Thời gian phản hồi:</strong> {request.response_time}</p>
-              </>
-            )}
-          </div>
-        )}
-      </DialogContent>
-      <DialogFooter>
-        <Button onClick={onClose}>Đóng</Button>
-      </DialogFooter>
-    </Dialog>
-  );
-}
+
 
 
 export default function SupportPage() {
