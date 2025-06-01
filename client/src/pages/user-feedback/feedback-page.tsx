@@ -318,17 +318,51 @@ export default function FeedbackPage() {
                 ),
               },
               {
-                key: 'subject',
-                header: 'Chủ đề',
+                key: 'feedback_type',
+                header: 'Loại đóng góp/báo lỗi',
                 render: (row: FeedbackRequest) => (
-                  <div className="font-medium">{row.subject}</div>
+                  <div className="font-medium">
+                    {row.feedback_type === 'bug_report' && 'Báo lỗi'}
+                    {row.feedback_type === 'feature_request' && 'Yêu cầu tính năng'}
+                    {row.feedback_type === 'complaint' && 'Khiếu nại'}
+                    {row.feedback_type === 'suggestion' && 'Đề xuất'}
+                    {row.feedback_type === 'other' && 'Khác'}
+                    {!row.feedback_type && 'Chưa phân loại'}
+                  </div>
                 ),
               },
               {
-                key: 'content',
-                header: 'Nội dung',
+                key: 'feature_type',
+                header: 'Loại tính năng',
                 render: (row: FeedbackRequest) => (
-                  <div className="truncate max-w-[200px]">{row.content}</div>
+                  <div className="font-medium">{row.feature_type || 'N/A'}</div>
+                ),
+              },
+              {
+                key: 'detailed_description',
+                header: 'Mô tả chi tiết',
+                render: (row: FeedbackRequest) => (
+                  <div className="truncate max-w-[200px]">{row.detailed_description || row.content}</div>
+                ),
+              },
+              {
+                key: 'attachment',
+                header: 'File đính kèm',
+                render: (row: FeedbackRequest) => (
+                  <div>
+                    {row.attachment_url ? (
+                      <a 
+                        href={row.attachment_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Xem file
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">Không có</span>
+                    )}
+                  </div>
                 ),
               },
               {
