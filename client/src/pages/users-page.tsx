@@ -245,7 +245,7 @@ export default function UsersPage() {
                       {row.can_send_email ? (
                         <Mail className="h-4 w-4 text-green-500" />
                       ) : (
-                        <MailOff className="h-4 w-4 text-gray-400" />
+                        <Mail className="h-4 w-4 text-gray-400" />
                       )}
                     </div>
                   </div>
