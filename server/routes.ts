@@ -4,19 +4,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import {
-  and,
-  desc,
-  eq,
-  gte,
-  lte,
-  like,
-  sql,
-  count,
-  isNotNull,
-  isNull,
-  or,
-} from "drizzle-orm";
+import { and, desc, eq, gte, lte, like, sql, count, isNotNull, isNull, or } from "drizzle-orm";
 import {
   insertContentSchema,
   insertCategorySchema,
@@ -138,15 +126,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pendingSupportRequests = await db
           .select({ count: sql`count(*)::int` })
           .from(supportRequests)
-          .where(
-            and(
-              eq(supportRequests.status, "pending"),
-              or(
-                eq(supportRequests.type, "support"),
-                isNull(supportRequests.type),
-              ),
-            ),
-          );
+          .where(and(
+            eq(supportRequests.status, "pending"),
+            or(
+              eq(supportRequests.type, "support"),
+              isNull(supportRequests.type)
+            )
+          ));
 
         // Đếm feedback requests có type = 'feedback' và status = 'pending'
         const pendingFeedbackRequests = await db
@@ -155,8 +141,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(
             and(
               eq(supportRequests.type, "feedback"),
-              eq(supportRequests.status, "pending"),
-            ),
+              eq(supportRequests.status, "pending")
+            )
           );
 
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
@@ -348,15 +334,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingSupportRequests = await db
         .select({ count: sql`count(*)::int` })
         .from(supportRequests)
-        .where(
-          and(
-            eq(supportRequests.status, "pending"),
-            or(
-              eq(supportRequests.type, "support"),
-              isNull(supportRequests.type),
-            ),
-          ),
-        );
+        .where(and(
+          eq(supportRequests.status, "pending"),
+          or(
+            eq(supportRequests.type, "support"),
+            isNull(supportRequests.type)
+          )
+        ));
 
       // Đếm feedback requests có type = 'feedback' và status = 'pending'
       const pendingFeedbackRequests = await db
@@ -365,8 +349,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             eq(supportRequests.type, "feedback"),
-            eq(supportRequests.status, "pending"),
-          ),
+            eq(supportRequests.status, "pending")
+          )
         );
 
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
@@ -398,7 +382,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? badgeCounts.feedbackRequests
             : undefined,
         totalRequests:
-          badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
+          badgeCounts.totalRequests > 0
+            ? badgeCounts.totalRequests
+            : undefined,
       };
 
       // Broadcast to all connected clients
@@ -515,32 +501,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cache for stats API with memory management
+  // Cache for stats API
   let statsCache = new Map();
-  const CACHE_DURATION = 300000; // 5 minutes cache
-  const MAX_CACHE_SIZE = 100; // Limit cache size
-
-  // Function to clean old cache entries
-  const cleanOldCacheEntries = (cache: Map<string, any>) => {
-    if (cache.size > MAX_CACHE_SIZE) {
-      const entries = Array.from(cache.entries());
-      const now = Date.now();
-      
-      // Remove expired entries first
-      for (const [key, value] of entries) {
-        if (value.timestamp && now - value.timestamp > CACHE_DURATION) {
-          cache.delete(key);
-        }
-      }
-      
-      // If still too large, remove oldest entries
-      if (cache.size > MAX_CACHE_SIZE) {
-        const sortedEntries = entries.sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
-        const entriesToRemove = sortedEntries.slice(0, cache.size - MAX_CACHE_SIZE);
-        entriesToRemove.forEach(([key]) => cache.delete(key));
-      }
-    }
-  };
+  const CACHE_DURATION = 300000; // 5 minutes cache (increased from 30 seconds)
 
   // Dashboard statistics
   app.get("/api/stats", isAuthenticated, async (req, res) => {
@@ -643,57 +606,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Real users stats với aggregation
       const { pages, groups } = await import("../shared/schema");
 
-      const [
-        realUsersStats,
-        pagesStats,
-        groupsStats,
-        supportRequestsStats,
-        feedbackRequestsStats,
-      ] = await Promise.all([
-        // Real users aggregation
-        db
-          .select({
-            total: sql<number>`count(distinct ${realUsers.id})`,
-            new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`,
-          })
-          .from(realUsers),
+      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats, feedbackRequestsStats] =
+        await Promise.all([
+          // Real users aggregation
+          db
+            .select({
+              total: sql<number>`count(distinct ${realUsers.id})`,
+              new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`,
+            })
+            .from(realUsers),
 
-        // Pages aggregation
-        db
-          .select({
-            total: sql<number>`count(*)`,
-            new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`,
-          })
-          .from(pages),
+          // Pages aggregation
+          db
+            .select({
+              total: sql<number>`count(*)`,
+              new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`,
+            })
+            .from(pages),
 
-        // Groups aggregation
-        db
-          .select({
-            total: sql<number>`count(*)`,
-            new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`,
-          })
-          .from(groups),
+          // Groups aggregation
+          db
+            .select({
+              total: sql<number>`count(*)`,
+              new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`,
+            })
+            .from(groups),
 
-        // Support requests aggregation (only type = 'support' or null for backward compatibility)
-        db
-          .select({
-            total: sql<number>`count(*) filter (where type = 'support' OR type IS NULL)`,
-            pending: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'pending')`,
-            processing: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'processing')`,
-            completed: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'completed')`,
-          })
-          .from(supportRequests),
+          // Support requests aggregation (only type = 'support' or null for backward compatibility)
+          db
+            .select({
+              total: sql<number>`count(*) filter (where type = 'support' OR type IS NULL)`,
+              pending: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'pending')`,
+              processing: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'processing')`,
+              completed: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'completed')`,
+            })
+            .from(supportRequests),
 
-        // Feedback requests aggregation (only type = 'feedback')
-        db
-          .select({
-            total: sql<number>`count(*) filter (where type = 'feedback')`,
-            pending: sql<number>`count(*) filter (where type = 'feedback' AND status = 'pending')`,
-            processing: sql<number>`count(*) filter (where type = 'feedback' AND status = 'processing')`,
-            completed: sql<number>`count(*) filter (where type = 'feedback' AND status = 'completed')`,
-          })
-          .from(supportRequests),
-      ]);
+          // Feedback requests aggregation (only type = 'feedback')
+          db
+            .select({
+              total: sql<number>`count(*) filter (where type = 'feedback')`,
+              pending: sql<number>`count(*) filter (where type = 'feedback' AND status = 'pending')`,
+              processing: sql<number>`count(*) filter (where type = 'feedback' AND status = 'processing')`,
+              completed: sql<number>`count(*) filter (where type = 'feedback' AND status = 'completed')`,
+            })
+            .from(supportRequests),
+        ]);
 
       const totalRealUsers = Number(realUsersStats[0]?.total || 0);
       const newRealUsers = Number(realUsersStats[0]?.new || 0);
@@ -711,9 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const completedSupportRequests = Number(
         supportRequestsStats[0]?.completed || 0,
       );
-      const totalFeedbackRequests = Number(
-        feedbackRequestsStats[0]?.total || 0,
-      );
+      const totalFeedbackRequests = Number(feedbackRequestsStats[0]?.total || 0);
       const pendingFeedbackRequests = Number(
         feedbackRequestsStats[0]?.pending || 0,
       );
@@ -793,7 +749,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Clean old cache entries
-      cleanOldCacheEntries(statsCache);
+      if (statsCache.size > 100) {
+        const oldestKey = statsCache.keys().next().value;
+        statsCache.delete(oldestKey);
+      }
 
       res.json(result);
     } catch (error) {
@@ -965,7 +924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       return res
         .status(500)
-
+```text
         .json({ success: false, message: "Error updating user details" });
     }
   });
@@ -1512,10 +1471,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Kiểm tra token của fake user
         if (!fakeUser.token) {
-          return res.status(400).json({
-            success: false,
-            message: "Fake user does not have a valid token",
-          });
+          return res
+            .status(400)
+            .json({
+              success: false,
+              message: "Fake user does not have a valid token",
+            });
         }
 
         // Tìm nội dung từ external ID
@@ -1523,10 +1484,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const content = contents.find((c) => c.externalId === externalId);
 
         if (!content) {
-          return res.status(404).json({
-            success: false,
-            message: "Content with this external ID not found",
-          });
+          return res
+            .status(404)
+            .json({
+              success: false,
+              message: "Content with this external ID not found",
+            });
         }
 
         try {
@@ -1958,7 +1921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { id } = req.params;
-
+```text
         const { classification } = req.body;
 
         // Validate classification value
@@ -2037,13 +2000,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           attachments: emailAttachments,
           userInfo: {
             id: realUser.id,
-            name: realUser.fullName
-              ? (typeof realUser.fullName === "object"
-                  ? realUser.fullName
-                  : JSON.parse(realUser.fullName as string)
-                )?.name || "Unknown"
-              : "Unknown",
-            email: realUser.email,
+            name: realUser.fullName ? (typeof realUser.fullName === 'object' ? realUser.fullName : JSON.parse(realUser.fullName as string))?.name || 'Unknown' : 'Unknown',
+            email: realUser.email
           },
         });
 
@@ -2057,18 +2015,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
 
-          res.json({
-            success: true,
+          res.json({ 
+            success: true, 
             message: "Email sent successfully",
             recipient: {
-              name: realUser.fullName
-                ? (typeof realUser.fullName === "object"
-                    ? realUser.fullName
-                    : JSON.parse(realUser.fullName as string)
-                  )?.name || "Unknown"
-                : "Unknown",
-              email: realUser.email,
-            },
+              name: realUser.fullName ? (typeof realUser.fullName === 'object' ? realUser.fullName : JSON.parse(realUser.fullName as string))?.name || 'Unknown' : 'Unknown',
+              email: realUser.email
+            }
           });
         } else {
           // Clean up uploaded files if email send failed
@@ -2289,8 +2242,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { feedbackRouter } = await import("./routes/feedback.router");
 
   app.use("/api/support-requests", supportRouter);
-  app.use("/api", supportRouter);
-  app.use("/api", feedbackRouter);
+  app.use('/api', supportRouter);
+  app.use('/api', feedbackRouter);
 
   // Support requests routes
   app.get(
@@ -2383,11 +2336,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.error(`Failed to delete file ${file.path}:`, error);
             }
           });
-          return res.status(500).json({
-            message:
-              "Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.",
-            details: "Email configuration or authentication failed",
-          });
+          return res
+            .status(500)
+            .json({
+              message:
+                "Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.",
+              details: "Email configuration or authentication failed",
+            });
         }
 
         // Update support request status
@@ -3003,7 +2958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/smtp-config", requireAuth, async (req, res) => {
     try {
       // Only admin can access SMTP config
-
+      ```text
       if ((req.user as Express.User).role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3070,9 +3025,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Test SMTP connection first
       const connectionOk = await emailService.testConnection();
       if (!connectionOk) {
-        return res.status(400).json({
-          message: "SMTP connection failed. Please check configuration.",
-        });
+        return res
+          .status(400)
+          .json({
+            message: "SMTP connection failed. Please check configuration.",
+          });
       }
 
       // Send test email
@@ -3091,22 +3048,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Caching mechanism using Map with memory management
+  // Caching mechanism using Map
   const cache = new Map();
-  
-  // Periodic cleanup for general cache
-  setInterval(() => {
-    cleanOldCacheEntries(cache);
-  }, 600000); // Clean every 10 minutes
 
-  // Content stats cache using Map with memory management
+  // Content stats cache using Map
   let contentStatsCache = new Map();
   const CONTENT_CACHE_DURATION = 300000; // 5 minutes (300 seconds)
-  
-  // Periodic cleanup for content stats cache
-  setInterval(() => {
-    cleanOldCacheEntries(contentStatsCache);
-  }, 600000); // Clean every 10 minutes
 
   // Get content stats
   app.get("/api/content-stats", requireAuth, async (req, res) => {
@@ -3140,13 +3087,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Cache for 5 minutes
-      contentStatsCache.set("content-stats", {
-        data: data,
-        timestamp: Date.now(),
-      });
-      
-      // Clean old entries
-      cleanOldCacheEntries(contentStatsCache);
+      contentStatsCache.set(
+        "content-stats",
+        {
+          data: data,
+          timestamp: Date.now(),
+        },
+        300,
+      );
 
       res.json(data);
     } catch (error) {
@@ -3162,9 +3110,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check cache first
       const cached = cache.get("dashboard-stats");
-      if (cached && cached.timestamp && Date.now() - cached.timestamp < CACHE_DURATION) {
+      if (cached) {
         console.log("Returning cached dashboard stats");
-        return res.json(cached.data);
+        return res.json(cached);
       }
 
       // Real users và groups
@@ -3257,13 +3205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Dashboard stats calculated:", stats);
 
       // Cache for 5 minutes
-      cache.set("dashboard-stats", {
-        data: stats,
-        timestamp: Date.now(),
-      });
-      
-      // Clean old entries
-      cleanOldCacheEntries(cache);
+      cache.set("dashboard-stats", stats, 300);
 
       res.json(stats);
     } catch (error) {
@@ -3277,8 +3219,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check cache first
       const cached = cache.get("badge-counts");
-      if (cached && cached.timestamp && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return res.json(cached.data);
+      if (cached) {
+        return res.json(cached);
       }
 
       const { pages, groups, supportRequests } = await import(
@@ -3315,32 +3257,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
 
       // Đếm support requests có status = 'pending' và type = 'support' (hoặc không có type - backward compatibility)
-      const pendingSupportRequests = await db
-        .select({ count: sql`count(*)::int` })
-        .from(supportRequests)
-        .where(
-          and(
+        const pendingSupportRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(and(
             eq(supportRequests.status, "pending"),
             or(
               eq(supportRequests.type, "support"),
-              isNull(supportRequests.type),
-            ),
-          ),
-        );
+              isNull(supportRequests.type)
+            )
+          ));
 
-      // Đếm feedback requests có type = 'feedback' và status = 'pending'
-      const pendingFeedbackRequests = await db
-        .select({ count: sql`count(*)::int` })
-        .from(supportRequests)
-        .where(
-          and(
-            eq(supportRequests.type, "feedback"),
-            eq(supportRequests.status, "pending"),
-          ),
-        );
+        // Đếm feedback requests có type = 'feedback' và status = 'pending'
+        const pendingFeedbackRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(
+            and(
+              eq(supportRequests.type, "feedback"),
+              eq(supportRequests.status, "pending")
+            )
+          );
 
-      const pendingSupport = pendingSupportRequests[0]?.count || 0;
-      const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+        const pendingSupport = pendingSupportRequests[0]?.count || 0;
+        const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
 
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
@@ -3360,20 +3300,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           badgeCounts.supportRequests > 0
             ? badgeCounts.supportRequests
             : undefined,
-        feedbackRequests:
+            feedbackRequests:
           badgeCounts.feedbackRequests > 0
             ? badgeCounts.feedbackRequests
             : undefined,
       };
 
       // Cache for 5 minutes để giảm tải database
-      cache.set("badge-counts", {
-        data: filteredBadgeCounts,
-        timestamp: Date.now(),
-      });
-      
-      // Clean old entries
-      cleanOldCacheEntries(cache);
+      cache.set("badge-counts", filteredBadgeCounts, 300);
 
       res.json(filteredBadgeCounts);
     } catch (error) {
