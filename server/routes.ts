@@ -27,6 +27,7 @@ import {
 } from "./kafka-simulator";
 import { log } from "./vite";
 import { emailService, SMTPConfig } from "./email";
+import { FileCleanupService } from "./file-cleanup";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -397,6 +398,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Make broadcastBadgeUpdate available globally
   (global as any).broadcastBadgeUpdate = broadcastBadgeUpdate;
   (global as any).broadcastFeedbackBadgeUpdate = broadcastFeedbackBadgeUpdate;
+
+  // Start automatic file cleanup service
+  const fileCleanupService = FileCleanupService.getInstance();
+  fileCleanupService.startAutoCleanup();
 
   // Set up authentication routes
   setupAuth(app);
@@ -1982,7 +1987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Clean up uploaded files after successful email send
           attachments.forEach((file) => {
             try {
-              require('fs').unlinkSync(file.path);
+              fs.unlinkSync(file.path);
             } catch (error) {
               console.error(`Error deleting file ${file.path}:`, error);
             }
@@ -2000,7 +2005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Clean up uploaded files if email send failed
           attachments.forEach((file) => {
             try {
-              require('fs').unlinkSync(file.path);
+              fs.unlinkSync(file.path);
             } catch (error) {
               console.error(`Error deleting file ${file.path}:`, error);
             }
