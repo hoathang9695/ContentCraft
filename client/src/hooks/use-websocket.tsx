@@ -16,6 +16,7 @@ export function useWebSocket() {
   const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({});
   const [isConnected, setIsConnected] = useState(false);
   const [hasInitialData, setHasInitialData] = useState(false);
+  const [cachedBadgeCounts, setCachedBadgeCounts] = useState<BadgeCounts>({});
 
   useEffect(() => {
     // Kết nối đến WebSocket server
@@ -44,6 +45,7 @@ export function useWebSocket() {
     newSocket.on('badge-update', (data: BadgeCounts) => {
       console.log('Received badge update via WebSocket:', data);
       setBadgeCounts(data);
+      setCachedBadgeCounts(data); // Cache để giữ data khi disconnect
       setHasInitialData(true);
     });
 
@@ -62,7 +64,7 @@ export function useWebSocket() {
 
   return {
     socket,
-    badgeCounts,
+    badgeCounts: isConnected ? badgeCounts : cachedBadgeCounts, // Dùng cached data khi disconnect
     isConnected,
     hasInitialData
   };
