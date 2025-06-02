@@ -1,3 +1,4 @@
+
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
@@ -36,8 +37,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { EmailReplyDialog } from "@/components/EmailReplyDialog";
 import { SupportDetailDialog } from "@/components/SupportDetailDialog";
 
-
-interface SupportRequest {
+interface FeedbackRequest {
   id: number;
   full_name: string;
   email: string;
@@ -54,25 +54,27 @@ interface SupportRequest {
   updated_at: string;
 }
 
-
-
-
-export default function SupportPage() {
+export default function FeedbackPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [userFilter, setUserFilter] = useState<number | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
-  const [replyRequest, setReplyRequest] = useState<SupportRequest | null>(null);
-
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [searchResults, setSearchResults] = useState<FeedbackRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<FeedbackRequest | null>(null);
+  const [replyRequest, setReplyRequest] = useState<FeedbackRequest | null>(null);
   const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const { data: supportRequestsResponse, isLoading, error } = useQuery({
-    queryKey: ['/api/support-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm],
+  const { data: feedbackData, isLoading, error } = useQuery<{
+    data: FeedbackRequest[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+  }>({
+    queryKey: ['/api/feedback-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (userFilter) params.append('userId', userFilter.toString());
@@ -81,9 +83,8 @@ export default function SupportPage() {
       params.append('page', currentPage.toString());
       params.append('limit', pageSize.toString());
       if (searchTerm) params.append('search', searchTerm);
-      
-      const response = await fetch(`/api/support-requests?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch support requests');
+      const response = await fetch(`/api/feedback-requests?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch feedback requests');
       return response.json();
     },
     refetchOnWindowFocus: false,
@@ -92,12 +93,30 @@ export default function SupportPage() {
     staleTime: Infinity
   });
 
-  const supportRequests = supportRequestsResponse?.data || [];
-  const totalPages = supportRequestsResponse?.totalPages || 1;
-  const total = supportRequestsResponse?.total || 0;
+  const feedbackRequests = feedbackData?.data || [];
+
+  // Reset to page 1 when filters change
+  const resetToFirstPage = () => {
+    setCurrentPage(1);
+  };
+
+  // Update query when filters change
+  const handleStatusFilterChange = (status: 'all' | 'completed' | 'pending') => {
+    setStatusFilter(status);
+    resetToFirstPage();
+  };
+
+  const handleUserFilterChange = (userId: number | null) => {
+    setUserFilter(userId);
+    resetToFirstPage();
+  };
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search);
+    resetToFirstPage();
+  };
 
   const handleDateFilter = () => {
-    setCurrentPage(1);
     toast({
       title: "Đã áp dụng bộ lọc",
       description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
@@ -125,30 +144,21 @@ export default function SupportPage() {
                   <Button 
                     variant={statusFilter === 'all' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => {
-                      setStatusFilter('all');
-                      setCurrentPage(1);
-                    }}
+                    onClick={() => handleStatusFilterChange('all')}
                   >
                     Tất cả
                   </Button>
                   <Button 
                     variant={statusFilter === 'completed' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => {
-                      setStatusFilter('completed');
-                      setCurrentPage(1);
-                    }}
+                    onClick={() => handleStatusFilterChange('completed')}
                   >
                     Đã xử lý
                   </Button>
                   <Button 
                     variant={statusFilter === 'pending' ? 'default' : 'ghost'} 
                     size="sm"
-                    onClick={() => {
-                      setStatusFilter('pending');
-                      setCurrentPage(1);
-                    }}
+                    onClick={() => handleStatusFilterChange('pending')}
                   >
                     Chưa xử lý
                   </Button>
@@ -157,10 +167,7 @@ export default function SupportPage() {
 
               <Select 
                 value={userFilter?.toString() || "all"} 
-                onValueChange={(value) => {
-                  setUserFilter(value === "all" ? null : parseInt(value));
-                  setCurrentPage(1);
-                }}
+                onValueChange={(value) => handleUserFilterChange(value === "all" ? null : parseInt(value))}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Tất cả" />
@@ -258,7 +265,6 @@ export default function SupportPage() {
                   onClick={() => {
                     setStartDate(undefined);
                     setEndDate(undefined);
-                    setCurrentPage(1);
                     toast({
                       title: "Đã đặt lại bộ lọc",
                       description: "Hiển thị tất cả dữ liệu",
@@ -274,73 +280,109 @@ export default function SupportPage() {
 
         <div className="flex items-center justify-start mb-4">
           <Input 
-            placeholder="Tìm kiếm yêu cầu..." 
+            placeholder="Tìm kiếm đóng góp ý kiến..." 
             className="max-w-[300px]"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
 
         <div className="bg-card rounded-lg shadow">
           <DataTable
-            data={supportRequests}
+            data={feedbackRequests}
             isLoading={isLoading}
-            pagination
-            pageSize={pageSize}
-            totalPages={totalPages}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            total={total}
+            pagination={{
+              currentPage: feedbackData?.currentPage || 1,
+              totalPages: feedbackData?.totalPages || 1,
+              total: feedbackData?.total || 0,
+              pageSize: pageSize,
+              onPageChange: setCurrentPage,
+              onPageSizeChange: (newSize) => {
+                setPageSize(newSize);
+                resetToFirstPage();
+              }
+            }}
             columns={[
               {
                 key: 'id',
                 header: 'ID',
-                render: (row: SupportRequest) => (
+                render: (row: FeedbackRequest) => (
                   <div className="font-medium">{row.id}</div>
                 ),
               },
               {
                 key: 'createdAt',
                 header: 'Ngày tạo',
-                render: (row: SupportRequest) => (
+                render: (row: FeedbackRequest) => (
                   <div>{format(new Date(row.created_at), 'dd/MM/yyyy HH:mm')}</div>
                 ),
               },
               {
                 key: 'full_name',
                 header: 'Họ và tên',
-                render: (row: SupportRequest) => (
+                render: (row: FeedbackRequest) => (
                   <div className="font-medium">{row.full_name}</div>
                 ),
               },
               {
                 key: 'email',
                 header: 'Email',
-                render: (row: SupportRequest) => (
+                render: (row: FeedbackRequest) => (
                   <div className="text-muted-foreground">{row.email}</div>
                 ),
               },
               {
-                key: 'subject',
-                header: 'Chủ đề',
-                render: (row: SupportRequest) => (
-                  <div className="font-medium">{row.subject}</div>
+                key: 'feedback_type',
+                header: 'Loại đóng góp/báo lỗi',
+                render: (row: FeedbackRequest) => (
+                  <div className="font-medium">
+                    {row.feedback_type === 'bug_report' && 'Báo lỗi'}
+                    {row.feedback_type === 'feature_request' && 'Yêu cầu tính năng'}
+                    {row.feedback_type === 'complaint' && 'Khiếu nại'}
+                    {row.feedback_type === 'suggestion' && 'Đề xuất'}
+                    {row.feedback_type === 'other' && 'Khác'}
+                    {!row.feedback_type && 'Chưa phân loại'}
+                  </div>
                 ),
               },
               {
-                key: 'content',
-                header: 'Nội dung',
-                render: (row: SupportRequest) => (
-                  <div className="truncate max-w-[200px]">{row.content}</div>
+                key: 'feature_type',
+                header: 'Loại tính năng',
+                render: (row: FeedbackRequest) => (
+                  <div className="font-medium">{row.feature_type || 'N/A'}</div>
+                ),
+              },
+              {
+                key: 'detailed_description',
+                header: 'Mô tả chi tiết',
+                render: (row: FeedbackRequest) => (
+                  <div className="truncate max-w-[200px]">{row.detailed_description || row.content}</div>
+                ),
+              },
+              {
+                key: 'attachment',
+                header: 'File đính kèm',
+                render: (row: FeedbackRequest) => (
+                  <div>
+                    {row.attachment_url ? (
+                      <a 
+                        href={row.attachment_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Xem file
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">Không có</span>
+                    )}
+                  </div>
                 ),
               },
               {
                 key: 'status',
                 header: 'Trạng thái',
-                render: (row: SupportRequest) => (
+                render: (row: FeedbackRequest) => (
                   <Badge variant={
                     row.status === 'completed' ? 'success' :
                     row.status === 'processing' ? 'warning' : 'secondary'
@@ -353,7 +395,7 @@ export default function SupportPage() {
               {
                 key: 'assigned',
                 header: 'Phân công',
-                render: (row: SupportRequest) => (
+                render: (row: FeedbackRequest) => (
                   <div>
                     {row.assigned_to_id ? (
                       <div className="text-sm">
@@ -371,7 +413,7 @@ export default function SupportPage() {
               {
                 key: 'response',
                 header: 'Phản hồi',
-                render: (row: SupportRequest) => (
+                render: (row: FeedbackRequest) => (
                   <div>
                     {row.response_content ? (
                       <div className="text-sm">
@@ -390,7 +432,7 @@ export default function SupportPage() {
                 key: 'actions',
                 header: 'Hành động',
                 className: 'text-right sticky right-0 bg-background',
-                render: (row: SupportRequest) => (
+                render: (row: FeedbackRequest) => (
                   <div className="flex justify-end">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -399,7 +441,7 @@ export default function SupportPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelectedRequest(row)}> {/* Updated onClick handler */}
+                        <DropdownMenuItem onClick={() => setSelectedRequest(row)}>
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
                         </DropdownMenuItem>
@@ -410,24 +452,23 @@ export default function SupportPage() {
                         {row.status !== 'completed' && (
                           <DropdownMenuItem onClick={async () => {
                             try {
-                              const response = await fetch(`/api/support-requests/${row.id}`, {
+                              const response = await fetch(`/api/feedback-requests/${row.id}`, {
                                 method: 'PUT',
                                 headers: {
                                   'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
                                   status: 'completed',
-                                  response_content: 'Đã xử lý yêu cầu'
+                                  response_content: 'Đã xử lý đóng góp ý kiến'
                                 })
                               });
                               
                               if (response.ok) {
                                 toast({
                                   title: "Thành công",
-                                  description: "Đã cập nhật trạng thái yêu cầu",
+                                  description: "Đã cập nhật trạng thái đóng góp ý kiến",
                                 });
-                                // Invalidate and refetch the support requests query and badge counts
-                                queryClient.invalidateQueries(['/api/support-requests']);
+                                queryClient.invalidateQueries(['/api/feedback-requests']);
                                 queryClient.invalidateQueries(['/api/badge-counts']);
                               } else {
                                 throw new Error('Failed to update status');
@@ -435,7 +476,7 @@ export default function SupportPage() {
                             } catch (error) {
                               toast({
                                 title: "Lỗi",
-                                description: "Không thể cập nhật trạng thái yêu cầu",
+                                description: "Không thể cập nhật trạng thái đóng góp ý kiến",
                                 variant: "destructive"
                               });
                             }
@@ -462,8 +503,7 @@ export default function SupportPage() {
           onClose={() => setReplyRequest(null)}
           request={replyRequest}
           onSuccess={() => {
-            // Refresh the support requests data
-            queryClient.invalidateQueries(['/api/support-requests']);
+            queryClient.invalidateQueries(['/api/feedback-requests']);
           }}
         />
       </div>

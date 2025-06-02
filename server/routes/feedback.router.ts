@@ -1,19 +1,13 @@
+import { Router } from 'express';
+import { db } from '../db.js';
+import { eq, and, gte, lte, desc, sql, ilike, or } from 'drizzle-orm';
+import { supportRequests, users } from '../../shared/schema.js';
 
-import express from "express";
-import { SupportController } from "../controllers/support.controller";
-import { isAuthenticated } from "../middleware/auth";
-import { db } from "../db";
-import { supportRequests, users } from "@shared/schema";
-import { desc, eq, and, gte, lte, sql, ilike, or } from 'drizzle-orm';
+const router = Router();
 
-const router = express.Router();
-const supportController = new SupportController();
-
-// Override support requests to filter by type = 'support' with server-side pagination
-router.get("/", isAuthenticated, async (req, res) => {
-  console.log('Fetching support requests (type=support only) with pagination');
+// Get all feedback requests with server-side pagination
+router.get('/feedback-requests', async (req, res) => {
   try {
-    const user = req.user as Express.User;
     const { 
       userId, 
       startDate, 
@@ -27,13 +21,8 @@ router.get("/", isAuthenticated, async (req, res) => {
     const limitNum = parseInt(limit as string);
     const offset = (pageNum - 1) * limitNum;
 
-    // Base condition for support type
-    const conditions = [eq(supportRequests.type, 'support')];
-
-    // Add role-based filtering
-    if (user.role !== 'admin') {
-      conditions.push(eq(supportRequests.assigned_to_id, user.id));
-    }
+    // Apply filters
+    const conditions = [eq(supportRequests.type, 'feedback')];
 
     if (userId) {
       conditions.push(eq(supportRequests.assigned_to_id, parseInt(userId as string)));
@@ -88,7 +77,10 @@ router.get("/", isAuthenticated, async (req, res) => {
       response_time: supportRequests.response_time,
       created_at: supportRequests.created_at,
       updated_at: supportRequests.updated_at,
-      type: supportRequests.type,
+      feedback_type: supportRequests.feedback_type,
+      feature_type: supportRequests.feature_type,
+      detailed_description: supportRequests.detailed_description,
+      attachment_url: supportRequests.attachment_url,
     })
     .from(supportRequests)
     .leftJoin(users, eq(supportRequests.assigned_to_id, users.id))
@@ -97,24 +89,47 @@ router.get("/", isAuthenticated, async (req, res) => {
     .limit(limitNum)
     .offset(offset);
 
-    console.log(`Found ${result.length}/${total} support requests (type=support)`);
-    
     res.json({
       data: result,
       total,
       totalPages,
       currentPage: pageNum
     });
-  } catch (err) {
-    console.error('Error fetching support requests:', err);
-    return res.status(500).json({ 
-      message: 'Error fetching support requests',
-      error: err instanceof Error ? err.message : String(err)
-    });
+  } catch (error) {
+    console.error('Error fetching feedback requests:', error);
+    res.status(500).json({ error: 'Failed to fetch feedback requests' });
   }
 });
 
-router.put("/:id", isAuthenticated, supportController.updateSupportRequest);
-router.put("/:id/assign", isAuthenticated, supportController.assignSupportRequest);
+// Update feedback request status
+router.put('/feedback-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, response_content } = req.body;
+    const userId = req.user?.id;
 
-export default router;
+    const updates: any = { status };
+
+    if (response_content) {
+      updates.response_content = response_content;
+      updates.responder_id = userId;
+      updates.response_time = new Date();
+    }
+
+    await db.update(supportRequests)
+      .set(updates)
+      .where(eq(supportRequests.id, parseInt(id)));
+
+    // Broadcast feedback badge update after status change
+    if ((global as any).broadcastFeedbackBadgeUpdate) {
+      await (global as any).broadcastFeedbackBadgeUpdate();
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating feedback request:', error);
+    res.status(500).json({ error: 'Failed to update feedback request' });
+  }
+});
+
+export { router as feedbackRouter };
