@@ -77,10 +77,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const isAdmin = user?.role === 'admin';
 
-  // Use WebSocket for real-time badge updates
-  const { badgeCounts: wsBadgeCounts, isConnected, hasInitialData } = useWebSocket();
+  // Use WebSocket for real-time badge updates with localStorage persistence
+  const { badgeCounts, isConnected, hasInitialData } = useWebSocket();
 
-  // Fallback to polling only when WebSocket has never received data
+  // Minimal fallback polling - chỉ khi thực sự cần thiết
   const { data: pollingBadgeCounts } = useQuery<BadgeCounts>({
     queryKey: ['/api/badge-counts'],
     queryFn: async () => {
@@ -88,15 +88,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (!response.ok) throw new Error('Failed to fetch badge counts');
       return response.json();
     },
-    enabled: !hasInitialData, // Chỉ polling khi chưa từng có data từ WebSocket
-    refetchInterval: 300000, // 5 phút polling interval cố định
-    staleTime: 240000,
+    enabled: !hasInitialData && Object.keys(badgeCounts).length === 0, // Chỉ polling khi thực sự không có data
+    refetchInterval: false, // Tắt auto polling
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
-    refetchOnMount: true
+    refetchOnMount: false
   });
 
-  // Ưu tiên WebSocket data (đã có caching), fallback to polling nếu chưa có data gì
-  const badgeCounts = hasInitialData ? wsBadgeCounts : pollingBadgeCounts;
+  // Use persistent badgeCounts hoặc fallback đến polling nếu thực sự cần
+  const finalBadgeCounts = Object.keys(badgeCounts).length > 0 ? badgeCounts : pollingBadgeCounts;
 
   const isActivePath = (path: string) => {
     if (path === '/') {
@@ -144,7 +144,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Users}
               isActive={isActivePath('/real-user')}
               onClick={handleItemClick}
-              badge={badgeCounts?.realUsers}
+              badge={finalBadgeCounts?.realUsers}
             >
               Người dùng thật
             </SidebarItem>
@@ -154,7 +154,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Folder}
               isActive={isActivePath('/page-management')}
               onClick={handleItemClick}
-              badge={badgeCounts?.pages}
+              badge={finalBadgeCounts?.pages}
             >
               Quản lý trang
             </SidebarItem>
@@ -164,7 +164,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={Users}
               isActive={isActivePath('/groups-management')}
               onClick={handleItemClick}
-              badge={badgeCounts?.groups}
+              badge={finalBadgeCounts?.groups}
             >
               Quản lý nhóm
             </SidebarItem>
@@ -179,7 +179,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     e.preventDefault();
                     setIsExpanded(!isExpanded);
                   }}
-                  badge={badgeCounts?.totalRequests}
+                  badge={finalBadgeCounts?.totalRequests}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span>Xử lý phản hồi</span>
@@ -195,7 +195,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   icon={HelpCircle}
                   isActive={isActivePath('/user-feedback/support')}
                   onClick={handleItemClick}
-                  badge={badgeCounts?.supportRequests}
+                  badge={finalBadgeCounts?.supportRequests}
                 >
                   Yêu cầu hỗ trợ
                 </SidebarItem>
@@ -223,7 +223,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   icon={HelpCircle}
                   isActive={isActivePath('/user-feedback/feedback')}
                   onClick={handleItemClick}
-                  badge={badgeCounts?.feedbackRequests}
+                  badge={finalBadgeCounts?.feedbackRequests}
                 >
                   Đóng góp ý kiến & báo lỗi
                 </SidebarItem>

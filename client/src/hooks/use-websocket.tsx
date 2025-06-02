@@ -13,10 +13,17 @@ interface BadgeCounts {
 
 export function useWebSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({});
+  const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>(() => {
+    // Load cached data from localStorage on mount
+    try {
+      const cached = localStorage.getItem('badgeCounts');
+      return cached ? JSON.parse(cached) : {};
+    } catch {
+      return {};
+    }
+  });
   const [isConnected, setIsConnected] = useState(false);
   const [hasInitialData, setHasInitialData] = useState(false);
-  const [cachedBadgeCounts, setCachedBadgeCounts] = useState<BadgeCounts>({});
 
   useEffect(() => {
     // Kết nối đến WebSocket server
@@ -45,8 +52,14 @@ export function useWebSocket() {
     newSocket.on('badge-update', (data: BadgeCounts) => {
       console.log('Received badge update via WebSocket:', data);
       setBadgeCounts(data);
-      setCachedBadgeCounts(data); // Cache để giữ data khi disconnect
       setHasInitialData(true);
+      
+      // Persist to localStorage
+      try {
+        localStorage.setItem('badgeCounts', JSON.stringify(data));
+      } catch (error) {
+        console.warn('Failed to cache badge counts to localStorage:', error);
+      }
     });
 
     newSocket.on('connect_error', (error) => {
@@ -64,7 +77,7 @@ export function useWebSocket() {
 
   return {
     socket,
-    badgeCounts: isConnected ? badgeCounts : cachedBadgeCounts, // Dùng cached data khi disconnect
+    badgeCounts, // Luôn return badgeCounts (đã có localStorage persistence)
     isConnected,
     hasInitialData
   };
