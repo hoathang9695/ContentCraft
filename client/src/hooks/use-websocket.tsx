@@ -36,7 +36,8 @@ export function useWebSocket() {
     newSocket.on('disconnect', () => {
       console.log('WebSocket disconnected');
       setIsConnected(false);
-      setHasInitialData(false);
+      // Không reset hasInitialData khi disconnect để giữ badge counts
+      // setHasInitialData(false);
     });
 
     // Lắng nghe badge updates
