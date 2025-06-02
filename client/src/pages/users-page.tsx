@@ -31,7 +31,7 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserWithEmailPermission | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [checkboxStates, setCheckboxStates] = useState<Record<number, boolean>>({});
+  const [updatingPermissions, setUpdatingPermissions] = useState<Set<number>>(new Set());
 
   // Redirect if not admin
   const shouldRedirect = user && user.role !== "admin";
@@ -87,27 +87,32 @@ export default function UsersPage() {
 
       return response.json();
     },
-    onSuccess: (_, { userId, canSendEmail }) => {
-      // Update local state immediately
-      setCheckboxStates(prev => ({ ...prev, [userId]: canSendEmail }));
-      
+    onMutate: ({ userId }) => {
+      setUpdatingPermissions(prev => new Set([...prev, userId]));
+    },
+    onSuccess: (_, { canSendEmail }) => {
       toast({
         title: "Thành công",
         description: `Đã ${canSendEmail ? "cấp" : "thu hồi"} quyền gửi email`,
       });
     },
-    onError: (error: Error, { userId }) => {
-      // Revert local state on error
-      const user = users?.find(u => u.id === userId);
-      if (user) {
-        setCheckboxStates(prev => ({ ...prev, [userId]: user.can_send_email }));
-      }
-      
+    onError: (error: Error) => {
       toast({
         title: "Lỗi",
         description: "Không thể cập nhật quyền gửi email",
         variant: "destructive",
       });
+    },
+    onSettled: (_, __, { userId }) => {
+      setUpdatingPermissions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+      // Refetch data after operation completes
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      }, 100);
     },
   });
 
@@ -134,12 +139,12 @@ export default function UsersPage() {
   };
 
   const handleToggleEmailPermission = (userId: number, currentValue: boolean) => {
+    // Prevent multiple clicks while updating
+    if (updatingPermissions.has(userId)) {
+      return;
+    }
+    
     const newValue = !currentValue;
-    
-    // Update local state immediately for instant UI feedback
-    setCheckboxStates(prev => ({ ...prev, [userId]: newValue }));
-    
-    // Then trigger the API call
     toggleEmailPermissionMutation.mutate({ userId, canSendEmail: newValue });
   };
 
@@ -248,10 +253,8 @@ export default function UsersPage() {
                 key: "can_send_email",
                 header: "Quyền gửi Email",
                 render: (row) => {
-                  // Use local state if available, otherwise use server data
-                  const isChecked = checkboxStates.hasOwnProperty(row.id) 
-                    ? checkboxStates[row.id] 
-                    : Boolean(row.can_send_email);
+                  const isUpdating = updatingPermissions.has(row.id);
+                  const isChecked = Boolean(row.can_send_email);
                   
                   return (
                     <div className="flex items-center space-x-2">
@@ -260,13 +263,16 @@ export default function UsersPage() {
                         onCheckedChange={() =>
                           handleToggleEmailPermission(row.id, isChecked)
                         }
-                        disabled={toggleEmailPermissionMutation.isPending}
+                        disabled={isUpdating}
                       />
                       <div className="flex items-center">
                         {isChecked ? (
                           <Mail className="h-4 w-4 text-green-500" />
                         ) : (
                           <Mail className="h-4 w-4 text-gray-400" />
+                        )}
+                        {isUpdating && (
+                          <Loader2 className="h-3 w-3 animate-spin ml-1 text-blue-500" />
                         )}
                       </div>
                     </div>
