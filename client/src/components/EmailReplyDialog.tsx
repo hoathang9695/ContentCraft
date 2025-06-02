@@ -57,6 +57,14 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     }
   };
 
+  // Check if content meets minimum character requirement (500 chars)
+  const getPlainTextLength = () => {
+    if (!editorRef.current) return 0;
+    return editorRef.current.innerText.trim().length;
+  };
+
+  const isContentValid = getPlainTextLength() >= 500;
+
   // Handle paste events to capture images
   const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -469,16 +477,22 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           {/* Content Editor - Scrollable area */}
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
             <div className="flex-1 p-4 overflow-y-auto">
+              <div className="mb-2">
+                <div className={`text-xs ${isContentValid ? 'text-green-600' : 'text-red-500'}`}>
+                  Số ký tự: {getPlainTextLength()}/500 (tối thiểu)
+                  {!isContentValid && <span className="ml-2">⚠️ Cần thêm {500 - getPlainTextLength()} ký tự</span>}
+                </div>
+              </div>
               <div
                 ref={editorRef}
                 contentEditable
-                className="w-full min-h-[150px] outline-none text-sm border-0 focus:ring-0 p-2 border rounded"
+                className={`w-full min-h-[150px] outline-none text-sm border-0 focus:ring-0 p-2 border rounded ${!isContentValid ? 'border-red-300' : 'border-gray-300'}`}
                 style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
                 onInput={handleEditorChange}
                 onBlur={handleEditorChange}
                 onPaste={handlePaste}
                 suppressContentEditableWarning={true}
-                data-placeholder="Nhập nội dung phản hồi..."
+                data-placeholder="Nhập nội dung phản hồi (tối thiểu 500 ký tự)..."
               />
               <style>{`
                 [contenteditable]:empty:before {
@@ -542,14 +556,21 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !isContentValid}
                 className="text-white"
                 style={{ 
-                  backgroundColor: '#7367e0',
-                  '&:hover': { backgroundColor: '#5a52cc' }
+                  backgroundColor: isContentValid ? '#7367e0' : '#9CA3AF',
+                  '&:hover': { backgroundColor: isContentValid ? '#5a52cc' : '#9CA3AF' }
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5a52cc'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#7367e0'}
+                onMouseEnter={(e) => {
+                  if (isContentValid) {
+                    e.currentTarget.style.backgroundColor = '#5a52cc';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isContentValid ? '#7367e0' : '#9CA3AF';
+                }}
+                title={!isContentValid ? `Cần thêm ${500 - getPlainTextLength()} ký tự nữa` : ''}
               >
                 {isLoading ? (
                   "Đang gửi..."
