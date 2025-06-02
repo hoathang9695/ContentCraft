@@ -1,5 +1,6 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
@@ -58,6 +59,7 @@ interface SupportRequest {
 
 
 export default function SupportPage() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -403,10 +405,12 @@ export default function SupportPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setReplyRequest(row)}>
-                          <Mail className="mr-2 h-4 w-4" />
-                          <span>Gửi phản hồi</span>
-                        </DropdownMenuItem>
+                        {user?.can_send_email && (
+                          <DropdownMenuItem onClick={() => setReplyRequest(row)}>
+                            <Mail className="mr-2 h-4 w-4" />
+                            <span>Gửi phản hồi</span>
+                          </DropdownMenuItem>
+                        )}
                         {row.status !== 'completed' && (
                           <DropdownMenuItem onClick={async () => {
                             try {

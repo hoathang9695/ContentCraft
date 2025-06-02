@@ -531,15 +531,17 @@ export default function RealUserPage() {
                         <Eye className="mr-2 h-4 w-4" />
                         Xem chi tiết
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setEmailUser(row);
-                          setEmailDialogOpen(true);
-                        }}
-                      >
-                        <Mail className="mr-2 h-4 w-4" />
-                        Gửi Email
-                      </DropdownMenuItem>
+                      {(user?.can_send_email === true || user?.role === 'admin') && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEmailUser(row);
+                            setEmailDialogOpen(true);
+                          }}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          Gửi Email
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         onClick={() => {
                           setPushFollowUser(row);

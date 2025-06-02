@@ -362,3 +362,4 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
     </Dialog>
   );
 }
+
