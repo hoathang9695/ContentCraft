@@ -9,6 +9,7 @@ import { setupKafkaConsumer, disconnectKafkaConsumer } from "./kafka-consumer";
 import { emailService, SMTPConfig } from "./email";
 import { simulateKafkaMessage } from "./kafka-simulator";
 import { FileCleanupService } from "./file-cleanup";
+import { MemoryMonitor } from "./memory-monitor";
 
 const app = express();
 app.use(express.json());
@@ -122,6 +123,11 @@ app.use((req, res, next) => {
   const fileCleanup = FileCleanupService.getInstance();
   fileCleanup.startAutoCleanup();
   log('File cleanup service started', 'express');
+
+  // Start memory monitoring
+  const memoryMonitor = MemoryMonitor.getInstance();
+  memoryMonitor.startMonitoring();
+  log('Memory monitoring started', 'express');
 
   if (process.env.KAFKA_ENABLED === 'true') {
   
