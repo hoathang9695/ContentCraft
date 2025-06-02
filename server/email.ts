@@ -223,6 +223,121 @@ export class EmailService {
     });
   }
 
+  async sendDirectEmail(data: {
+    to: string;
+    subject: string;
+    content: string;
+    attachments?: Array<{
+      filename: string;
+      path: string;
+      contentType?: string;
+      cid?: string;
+    }>;
+    userInfo: {
+      id: number;
+      name: string;
+      email: string;
+    };
+  }): Promise<boolean> {
+    if (!this.transporter) {
+      console.error('SMTP transporter not initialized');
+      return false;
+    }
+
+    try {
+      // Process content to handle embedded images
+      let processedContent = data.content;
+      const imageAttachments: Array<any> = [];
+      const fileAttachments: Array<any> = [];
+
+      // Extract data URLs from content and replace with CID references
+      const dataUrlRegex = /<img[^>]+src="data:([^;]+);base64,([^"]+)"[^>]*>/g;
+      let match;
+      let imageIndex = 0;
+
+      while ((match = dataUrlRegex.exec(data.content)) !== null) {
+        const mimeType = match[1];
+        const base64Data = match[2];
+        const cid = `embedded-image-${imageIndex}`;
+        
+        // Replace data URL with CID reference
+        processedContent = processedContent.replace(match[0], 
+          match[0].replace(`data:${mimeType};base64,${base64Data}`, `cid:${cid}`)
+        );
+
+        // Add to embedded attachments
+        imageAttachments.push({
+          filename: `embedded-image-${imageIndex}.${mimeType.split('/')[1]}`,
+          content: base64Data,
+          encoding: 'base64',
+          cid: cid,
+          contentType: mimeType
+        });
+        
+        imageIndex++;
+      }
+
+      // Prepare file attachments (from file uploads)
+      if (data.attachments && data.attachments.length > 0) {
+        data.attachments.forEach(attachment => {
+          fileAttachments.push({
+            filename: attachment.filename,
+            path: attachment.path,
+            contentType: attachment.contentType
+          });
+        });
+      }
+
+      const attachmentInfo = fileAttachments.length > 0 
+        ? `<div style="background-color: #e8f4fd; padding: 15px; border-radius: 6px; margin-top: 15px;">
+             <h4 style="color: #0066cc; margin: 0 0 10px 0; font-size: 14px;">📎 Tập tin đính kèm:</h4>
+             <ul style="margin: 0; padding-left: 20px; color: #495057;">
+               ${fileAttachments.map(att => `<li style="margin-bottom: 5px;">${att.filename}</li>`).join('')}
+             </ul>
+           </div>`
+        : '';
+
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #333; margin: 0 0 10px 0;">Thông báo từ EMSO System</h2>
+            <p style="margin: 0; color: #666;">Xin chào ${data.userInfo.name}, đây là thông báo từ hệ thống EMSO.</p>
+          </div>
+
+          <div style="background-color: #fff; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: #495057; margin: 0 0 15px 0;">Nội dung thông báo:</h3>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #007bff;">
+              ${processedContent}
+            </div>
+            ${attachmentInfo}
+          </div>
+
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; text-align: center;">
+            <p style="margin: 0; color: #6c757d; font-size: 12px;">
+              Email này được gửi từ hệ thống EMSO.<br>
+              Nếu bạn có thêm câu hỏi, vui lòng liên hệ lại với chúng tôi.
+            </p>
+          </div>
+        </div>
+      `;
+
+      const mailOptions: any = {
+        from: this.config ? `"${this.config.fromName}" <${this.config.fromEmail}>` : 'noreply@example.com',
+        to: data.to,
+        subject: data.subject,
+        html: htmlContent,
+        attachments: [...imageAttachments, ...fileAttachments]
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      console.log(`Direct email sent successfully to ${data.to} for user #${data.userInfo.id} with ${imageAttachments.length} embedded images and ${fileAttachments.length} file attachments`);
+      return true;
+    } catch (error) {
+      console.error('Error sending direct email:', error);
+      return false;
+    }
+  }
+
   async sendReplyEmailWithAttachments(data: {
     to: string;
     subject: string;

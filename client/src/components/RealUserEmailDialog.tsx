@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,23 +7,23 @@ import { Label } from "@/components/ui/label";
 import { X, Send, Bold, Italic, Underline, Link, Paperclip, Maximize2, Minimize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface SupportRequest {
+interface RealUser {
   id: number;
-  full_name: string;
+  fullName: {
+    id: string;
+    name: string;
+  };
   email: string;
-  subject: string;
-  content: string;
-  status: string;
 }
 
-interface EmailReplyDialogProps {
+interface RealUserEmailDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  request: SupportRequest | null;
+  user: RealUser | null;
   onSuccess?: () => void;
 }
 
-export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailReplyDialogProps) {
+export function RealUserEmailDialog({ isOpen, onClose, user, onSuccess }: RealUserEmailDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,25 +31,25 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     subject: "",
     content: ""
   });
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]); // State to manage attached files
-  const [isExpanded, setIsExpanded] = useState(false); // State to manage expanded dialog
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto fill form when request changes
+  // Auto fill form when user changes
   React.useEffect(() => {
-    if (request) {
+    if (user) {
       setFormData({
-        to: request.email,
-        subject: `Re: ${request.subject}`,
+        to: user.email,
+        subject: `Thông báo từ EMSO System`,
         content: ""
       });
       if (editorRef.current) {
         editorRef.current.innerHTML = "";
       }
     }
-  }, [request]);
+  }, [user]);
 
   // Update content when editor changes
   const handleEditorChange = () => {
@@ -131,7 +132,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!request) return;
+    if (!user) return;
 
     // Get HTML content to preserve formatting
     const htmlContent = editorRef.current?.innerHTML || "";
@@ -145,42 +146,23 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
       submitFormData.append('to', formData.to);
       submitFormData.append('subject', formData.subject);
       submitFormData.append('content', htmlContent);
-      submitFormData.append('response_content', plainTextContent);
+      submitFormData.append('plain_content', plainTextContent);
       
       // Add attached files
       attachedFiles.forEach((file, index) => {
         submitFormData.append('attachments', file);
       });
 
-      const response = await fetch(`/api/support-requests/${request.id}/reply`, {
+      const response = await fetch(`/api/real-users/${user.id}/send-email`, {
         method: 'POST',
-        body: submitFormData // Send FormData instead of JSON
+        body: submitFormData
       });
 
       if (response.ok) {
-        // Update support request status to completed
-        const updateResponse = await fetch(`/api/support-requests/${request.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            status: 'completed',
-            response_content: plainTextContent
-          })
+        toast({
+          title: "Thành công",
+          description: "Email đã được gửi thành công",
         });
-
-        if (updateResponse.ok) {
-          toast({
-            title: "Thành công",
-            description: "Email phản hồi đã được gửi và yêu cầu đã được đánh dấu hoàn thành",
-          });
-        } else {
-          toast({
-            title: "Thành công",
-            description: "Email đã gửi nhưng không thể cập nhật trạng thái yêu cầu",
-          });
-        }
 
         onSuccess?.();
         onClose();
@@ -196,7 +178,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         const errorData = await response.json();
         toast({
           title: "Lỗi",
-          description: errorData.message || "Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.",
+          description: errorData.message || "Không thể gửi email. Vui lòng kiểm tra cấu hình SMTP.",
           variant: "destructive"
         });
         console.error('Email send error:', errorData);
@@ -204,7 +186,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     } catch (error) {
       toast({
         title: "Lỗi",
-        description: "Không thể gửi email phản hồi",
+        description: "Không thể gửi email",
         variant: "destructive"
       });
     } finally {
@@ -241,7 +223,6 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         description: `Tối đa 3 file đính kèm. Hiện tại có ${attachedFiles.length} file, chỉ có thể thêm ${3 - attachedFiles.length} file nữa.`,
         variant: "destructive",
       });
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -262,7 +243,6 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
         description: `Tổng dung lượng file đính kèm không được vượt quá 25MB. Dung lượng hiện tại sẽ là ${totalSizeMB}MB.`,
         variant: "destructive",
       });
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -291,17 +271,17 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
     return document.queryCommandState(command);
   };
 
-  if (!request) return null;
+  if (!user) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className={`email-reply-dialog dialog-content ${isExpanded ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}
+        className={`real-user-email-dialog dialog-content ${isExpanded ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}
       >
         {/* Header */}
         <DialogHeader className="p-4 pb-0 flex-shrink-0">
           <div className="flex justify-between items-center">
-            <DialogTitle className="text-lg font-medium">Phản hồi khách hàng</DialogTitle>
+            <DialogTitle className="text-lg font-medium">Gửi Email cho {user.fullName.name}</DialogTitle>
             <div className="flex items-center space-x-2">
               <Button
                 variant="ghost"
@@ -349,11 +329,13 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
             </div>
           </div>
 
-          {/* Original Request */}
+          {/* User Info */}
           <div className="px-4 py-3 bg-gray-50 border-b flex-shrink-0">
-            <div className="text-sm text-gray-600 mb-2">Yêu cầu gốc từ {request.full_name}:</div>
-            <div className="bg-white p-3 rounded border text-sm max-h-20 overflow-y-auto">
-              {request.content}
+            <div className="text-sm text-gray-600 mb-2">Thông tin người nhận:</div>
+            <div className="bg-white p-3 rounded border text-sm">
+              <div className="font-medium">{user.fullName.name}</div>
+              <div className="text-gray-600">{user.email}</div>
+              <div className="text-xs text-gray-500 mt-1">ID: {user.fullName.id}</div>
             </div>
           </div>
 
@@ -492,7 +474,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 onBlur={handleEditorChange}
                 onPaste={handlePaste}
                 suppressContentEditableWarning={true}
-                data-placeholder="Nhập nội dung phản hồi (tối thiểu 500 ký tự)..."
+                data-placeholder="Nhập nội dung email (tối thiểu 500 ký tự)..."
               />
               <style>{`
                 [contenteditable]:empty:before {
@@ -516,11 +498,11 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                   color: #3B82F6;
                   text-decoration: underline;
                 }
-                /* Hide default dialog close button only for EmailReplyDialog */
-                .email-reply-dialog .dialog-content > button[data-radix-dialog-close],
-                .email-reply-dialog [data-radix-dialog-content] > button[data-radix-dialog-close],
-                .email-reply-dialog button[data-radix-dialog-close],
-                .email-reply-dialog [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"] {
+                /* Hide default dialog close button only for RealUserEmailDialog */
+                .real-user-email-dialog .dialog-content > button[data-radix-dialog-close],
+                .real-user-email-dialog [data-radix-dialog-content] > button[data-radix-dialog-close],
+                .real-user-email-dialog button[data-radix-dialog-close],
+                .real-user-email-dialog [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"] {
                   display: none !important;
                   visibility: hidden !important;
                   opacity: 0 !important;
@@ -543,7 +525,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
           {/* Footer - Always at bottom */}
           <div className="p-4 border-t bg-gray-50 flex justify-between items-center flex-shrink-0">
             <div className="text-xs text-gray-500">
-              Phản hồi sẽ được gửi từ hệ thống SMTP đã cấu hình
+              Email sẽ được gửi từ hệ thống SMTP đã cấu hình
             </div>
             <div className="flex space-x-2">
               <Button
@@ -577,7 +559,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Gửi phản hồi
+                    Gửi Email
                   </>
                 )}
               </Button>
