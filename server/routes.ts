@@ -1080,6 +1080,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (userData.length > 0) {
           const user = userData[0];
+          console.log('Auth check - user data from DB:', {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            can_send_email: user.can_send_email
+          });
+          
           res.json({ 
             user: {
               id: user.id,
