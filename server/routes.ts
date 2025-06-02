@@ -1931,7 +1931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedLabel);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400.json({
+        return res.status(400).json({
           message: "Validation error",
           errors: error.errors,
         });
