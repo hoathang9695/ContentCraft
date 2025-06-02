@@ -95,10 +95,10 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
 
     for (const topic of topics) {
       try {
-        await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false on production
-        log(`Subscribed to topic: ${topic}`, "kafka");
+        await consumer.subscribe({ topic, fromBeginning: true }); // Set fromBeginning true to process existing messages
+        log(`Resubscribed to topic: ${topic}`, "kafka");
       } catch (error) {
-        log(`Failed to subscribe to topic ${topic}: ${error}`, "kafka-error");
+        log(`Failed to resubscribe to topic ${topic}: ${error}`, "kafka-error");
       }
     }
   } catch (error) {
@@ -193,7 +193,11 @@ export async function setupKafkaConsumer() {
     await consumer.connect();
     log("Connected to Kafka", "kafka");
 
-    const topics = process.env.KAFKA_TOPICS?.split(",") || ["content_management", "real_users", "contact-messages", "page_management", "groups_management"];
+    // Ensure all required topics are explicitly defined
+    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management"];
+    const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
+    const topics = [...new Set([...requiredTopics, ...configuredTopics])];
+
     for (const topic of topics) {
       await consumer.subscribe({ topic, fromBeginning: true });
       log(`Subscribed to topic: ${topic}`, "kafka");
@@ -236,8 +240,8 @@ export async function setupKafkaConsumer() {
                       } else if ("full_name" in msg && "type" in msg && (msg as any).type === 'feedback') {
                         log(`🔄 Processing feedback message: ${JSON.stringify(msg)}`, "kafka");
                         await processFeedbackMessage(msg as FeedbackMessage, tx);
-                      } else if ("full_name" in msg) {
-                        log(`🔄 Processing support message: ${JSON.stringify(msg)}`, "kafka");
+                      } else if ("full_name" in msg && "email" in msg && "subject" in msg && "content" in msg) {
+                        log(`🔄 Processing contact/support message: ${JSON.stringify(msg)}`, "kafka");
                         await processSupportMessage(msg as SupportMessage, tx);
                       } else if ("name" in msg && "message" in msg) {
                         await processContactMessage(msg as ContactMessage, tx);
@@ -666,13 +670,11 @@ function parseMessage(
     if ("full_name" in message && "email" in message && "type" in message && message.type === 'feedback') {
       return message as FeedbackMessage;
     }
-    // Check for support message (has full_name, email but no type or type !== 'feedback')
-    else if ("full_name" in message && "email" in message) {
+    // Check for support/contact message (has full_name, email, subject, content)
+    else if ("full_name" in message && "email" in message && "subject" in message && "content" in message) {
       return message as SupportMessage;
     } else if ("externalId" in message) {
       return message as ContentMessage;
-    // } else if ("name" in message && "message" in message) {
-    //   return message as ContactMessage; 
     } else if ("fullName" in message && "id" in message&& "email" in message&& "verified" in message) {
       return message as RealUsersMessage; 
     } else if ("pageId" in message && "pageName" in message && "pageType" in message) {
