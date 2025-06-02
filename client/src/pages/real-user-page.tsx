@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Mail } from "lucide-react";
+import { MoreHorizontal, Mail, Eye, UserPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -528,6 +528,7 @@ export default function RealUserPage() {
                           }
                         }}
                       >
+                        <Eye className="mr-2 h-4 w-4" />
                         Xem chi tiết
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -545,6 +546,7 @@ export default function RealUserPage() {
                           setPushFollowOpen(true);
                         }}
                       >
+                        <UserPlus className="mr-2 h-4 w-4" />
                         Push Follow
                       </DropdownMenuItem>
                     </DropdownMenuContent>
