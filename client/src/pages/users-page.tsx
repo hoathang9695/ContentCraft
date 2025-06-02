@@ -8,17 +8,30 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, CheckCircle, XCircle, Clock, Edit, MoreHorizontal } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Edit, MoreHorizontal, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import { UserEditDialog } from "@/components/UserEditDialog";
+import { format } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface UserWithEmailPermission extends Omit<User, "password"> {
+  can_send_email: boolean;
+}
 
 export default function UsersPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUser, setSelectedUser] = useState<Omit<User, "password"> | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserWithEmailPermission | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [updatingPermissions, setUpdatingPermissions] = useState<Set<number>>(new Set());
 
   // Redirect if not admin
   const shouldRedirect = user && user.role !== "admin";
@@ -27,7 +40,7 @@ export default function UsersPage() {
   }
 
   // Fetch users
-  const { data: users, isLoading } = useQuery<Omit<User, "password">[]>({
+  const { data: users, isLoading } = useQuery<UserWithEmailPermission[]>({
     queryKey: ["/api/users"],
     queryFn: async () => {
       const res = await fetch("/api/users");
@@ -57,6 +70,52 @@ export default function UsersPage() {
     },
   });
 
+  // Toggle email permission mutation
+  const toggleEmailPermissionMutation = useMutation({
+    mutationFn: async ({ userId, canSendEmail }: { userId: number; canSendEmail: boolean }) => {
+      const response = await fetch(`/api/users/${userId}/email-permission`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ can_send_email: canSendEmail }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update email permission");
+      }
+
+      return response.json();
+    },
+    onMutate: ({ userId }) => {
+      setUpdatingPermissions(prev => new Set([...prev, userId]));
+    },
+    onSuccess: (_, { canSendEmail }) => {
+      toast({
+        title: "Thành công",
+        description: `Đã ${canSendEmail ? "cấp" : "thu hồi"} quyền gửi email`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật quyền gửi email",
+        variant: "destructive",
+      });
+    },
+    onSettled: (_, __, { userId }) => {
+      setUpdatingPermissions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+      // Refetch data after operation completes
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      }, 100);
+    },
+  });
+
   // Status badge component
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
@@ -79,6 +138,16 @@ export default function UsersPage() {
     updateStatusMutation.mutate({ userId, status: "blocked" });
   };
 
+  const handleToggleEmailPermission = (userId: number, currentValue: boolean) => {
+    // Prevent multiple clicks while updating
+    if (updatingPermissions.has(userId)) {
+      return;
+    }
+    
+    const newValue = !currentValue;
+    toggleEmailPermissionMutation.mutate({ userId, canSendEmail: newValue });
+  };
+
   // Filter users based on search query
   const filteredUsers = users?.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -92,9 +161,9 @@ export default function UsersPage() {
     <DashboardLayout onSearch={setSearchQuery}>
       <div className="container mx-auto p-4">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">User Management</h1>
+          <h1 className="text-3xl font-bold mb-2">Quản lý người dùng</h1>
           <p className="text-muted-foreground">
-            Manage user accounts and approve new registrations
+            Quản lý tài khoản người dùng và phân quyền gửi email
           </p>
         </div>
 
@@ -175,10 +244,44 @@ export default function UsersPage() {
                   </Badge>
                 )
               },
-              { key: "status", header: "Trạng thái", 
+              { 
+                key: "status", 
+                header: "Trạng thái", 
                 render: (row) => <StatusBadge status={row.status} /> 
               },
-              { key: "actions", header: "Actions", 
+              {
+                key: "can_send_email",
+                header: "Quyền gửi Email",
+                render: (row) => {
+                  const isUpdating = updatingPermissions.has(row.id);
+                  const isChecked = Boolean(row.can_send_email);
+                  
+                  return (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() =>
+                          handleToggleEmailPermission(row.id, isChecked)
+                        }
+                        disabled={isUpdating}
+                      />
+                      <div className="flex items-center">
+                        {isChecked ? (
+                          <Mail className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Mail className="h-4 w-4 text-gray-400" />
+                        )}
+                        {isUpdating && (
+                          <Loader2 className="h-3 w-3 animate-spin ml-1 text-blue-500" />
+                        )}
+                      </div>
+                    </div>
+                  );
+                },
+              },
+              { 
+                key: "actions", 
+                header: "Actions", 
                 render: (row) => (
                   <div className="flex items-center space-x-2">
                     {row.status === "pending" && (
@@ -254,7 +357,7 @@ export default function UsersPage() {
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
-                        
+
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950">
@@ -323,7 +426,7 @@ export default function UsersPage() {
             onSearch={setSearchQuery}
             searchValue={searchQuery}
           />
-          
+
           {/* Show empty state if no users */}
           {filteredUsers && filteredUsers.length === 0 && !isLoading && (
             <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -334,7 +437,7 @@ export default function UsersPage() {
               </p>
             </div>
           )}
-          
+
           {/* Show loading state */}
           {isLoading && (
             <div className="flex justify-center items-center h-40">
@@ -343,7 +446,7 @@ export default function UsersPage() {
           )}
         </div>
       </div>
-      
+
       {/* User edit dialog */}
       <UserEditDialog 
         open={editDialogOpen} 

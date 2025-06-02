@@ -795,14 +795,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Get all users (admin only)
-  app.get("/api/users", isAdmin, async (req, res) => {
+  app.get("/api/users", isAuthenticated, isAdmin, async (req, res) => {
+    console.log('GET /api/users - Auth check:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.isAuthenticated() ? { 
+        id: (req.user as Express.User)?.id,
+        username: (req.user as Express.User)?.username,
+        role: (req.user as Express.User)?.role
+      } : 'Not authenticated'
+    });
+
     try {
-      const users = await storage.getAllUsers();
-      // Remove password from response
-      const safeUsers = users.map(({ password, ...user }) => user);
-      res.json(safeUsers);
+      const allUsers = await db.select({
+        id: users.id,
+        username: users.username,
+        password: users.password,
+        name: users.name,
+        email: users.email,
+        department: users.department,
+        position: users.position,
+        role: users.role,
+        status: users.status,
+        avatarUrl: users.avatarUrl,
+        can_send_email: users.can_send_email,
+        createdAt: users.createdAt
+      }).from(users).orderBy(users.id);
+      
+      console.log('Fetched users with email permission:', allUsers.map(u => ({ 
+        id: u.id, 
+        username: u.username, 
+        can_send_email: u.can_send_email,
+        can_send_email_type: typeof u.can_send_email
+      })));
+      res.json(allUsers);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching users" });
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: 'Error fetching users' });
+    }
+  });
+
+  // Update user email permission
+  app.put("/api/users/:id/email-permission", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { can_send_email } = req.body;
+
+      console.log('Updating email permission for user:', userId, 'value:', can_send_email);
+      console.log('Request body:', req.body);
+
+      // Validate input
+      if (typeof can_send_email !== 'boolean') {
+        console.log('Invalid can_send_email value:', can_send_email, 'type:', typeof can_send_email);
+        return res.status(400).json({ message: 'can_send_email must be a boolean' });
+      }
+
+      // Check if user exists first
+      const existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (existingUser.length === 0) {
+        console.log('User not found:', userId);
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      console.log('User found:', existingUser[0].username, 'current can_send_email:', existingUser[0].can_send_email);
+
+      // Update the user
+      const result = await db
+        .update(users)
+        .set({ 
+          can_send_email: can_send_email,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      console.log('Update result:', result);
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: 'User not found after update' });
+      }
+
+      res.json({ 
+        message: 'Email permission updated successfully',
+        user: {
+          id: result[0].id,
+          username: result[0].username,
+          can_send_email: result[0].can_send_email
+        }
+      });
+    } catch (error) {
+      console.error('Error updating email permission:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        detail: error.detail
+      });
+      res.status(500).json({ 
+        message: 'Error updating email permission',
+        error: error.message
+      });
+    }
+  });
+
+  // Update user
+  app.put("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { username, name, role, status, can_send_email, password } = req.body;
+
+      const updateData: any = {
+        username,
+        name,
+        role,
+        status,
+        can_send_email,
+        updatedAt: new Date()
+      };
+
+      // Only update password if provided
+      if (password && password.trim()) {
+        const bcrypt = require('bcrypt');
+        updateData.password = await bcrypt.hash(password, 10);
+      }
+
+      await db.update(users)
+        .set(updateData)
+        .where(eq(users.id, userId));
+
+      res.json({ message: 'User updated successfully' });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: 'Error updating user' });
     }
   });
 
@@ -946,6 +1074,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res
         .status(500)
         .json({ success: false, message: "Error updating user details" });
+    }
+  });
+
+  app.get('/api/auth/check', async (req, res) => {
+    console.log('Auth check request:', {
+      isAuthenticated: req.isAuthenticated(),
+      sessionID: req.sessionID,
+      user: req.user ? {
+        id: (req.user as Express.User).id,
+        username: (req.user as Express.User).username,
+        role: (req.user as Express.User).role
+      } : null
+    });
+
+    if (req.isAuthenticated()) {
+      try {
+        // Get full user data including email permission
+        const userData = await db.select()
+          .from(users)
+          .where(eq(users.id, (req.user as Express.User).id))
+          .limit(1);
+
+        if (userData.length > 0) {
+          const user = userData[0];
+          console.log('Auth check - user data from DB:', {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            can_send_email: user.can_send_email
+          });
+
+          // Set can_send_email to true for admin role if it's null/undefined
+          const canSendEmail = user.can_send_email !== null && user.can_send_email !== undefined 
+            ? user.can_send_email 
+            : (user.role === 'admin' ? true : false);
+
+          res.json({ 
+            user: {
+              id: user.id,
+              username: user.username,
+              name: user.name,
+              role: user.role,
+              can_send_email: canSendEmail
+            }
+          });
+        } else {
+          res.status(401).json({ message: 'User not found' });
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        res.status(500).json({ message: 'Error fetching user data' });
+      }
+    } else {
+      res.status(401).json({ message: 'Not authenticated' });
     }
   });
 
@@ -1755,7 +1937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single label
-  app.get("/api/labels/:id", async (req, res) => {
+  app.get("/api/labels/:id", async (req, res) =>{
     try {
       const labelId = Number(req.params.id);
       const label = await storage.getLabel(labelId);
@@ -2780,7 +2962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({
             classification,
             updatedAt: new Date(),
-          })
+                    })
           .where(eq(groups.id, groupId))
           .returning();
 

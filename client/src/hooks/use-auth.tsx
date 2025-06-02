@@ -43,8 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     refetch: refetchUser
   } = useQuery<AuthResponse | undefined, Error>({
-    queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryKey: ["/api/auth/check"],
+    queryFn: async () => {
+      const response = await fetch("/api/auth/check", {
+        credentials: "include"
+      });
+      if (response.status === 401) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error("Failed to check auth");
+      }
+      const data = await response.json();
+      return data.user;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true, // Refetch when window gets focus
     refetchOnMount: true // Refetch when component mounts
@@ -59,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(credentials),
         credentials: "include"
       });
-      
+
       // Kiểm tra lỗi HTTP
       if (!res.ok) {
         let errorMessage = res.statusText;
@@ -73,23 +85,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         throw new Error(errorMessage);
       }
-      
+
       // Parse phản hồi JSON
       return await res.json() as AuthResponse;
     },
     onSuccess: (user: AuthResponse) => {
       // Xóa toàn bộ cache từ React Query trước để đảm bảo không còn dữ liệu cũ
       queryClient.clear();
-      
+
       // Cập nhật thông tin người dùng hiện tại
       queryClient.setQueryData(["/api/user"], user);
-      
+
       // Hiển thị thông báo thành công
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.name}!`,
       });
-      
+
       // Chuyển hướng tất cả người dùng đến trang dashboard
       navigate("/");
     },
@@ -97,14 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Error message is now handled directly by throwIfResNotOk
       let errorMessage = error.message || "An unknown error occurred";
       let errorTitle = "Login failed";
-      
+
       // Set appropriate title based on the error message
       if (errorMessage.includes("pending") || errorMessage.includes("approval")) {
         errorTitle = "Account pending approval";
       } else if (errorMessage.includes("blocked")) {
         errorTitle = "Account blocked";
       }
-      
+
       toast({
         title: errorTitle,
         description: errorMessage,
@@ -117,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (userData: InsertUser) => {
       // Validate data before sending
       registerUserSchema.parse(userData);
-      
+
       // Sử dụng fetch trực tiếp thay vì apiRequest
       const res = await fetch("/api/register", {
         method: "POST",
@@ -125,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(userData),
         credentials: "include"
       });
-      
+
       // Kiểm tra lỗi HTTP
       if (!res.ok) {
         let errorMessage = res.statusText;
@@ -139,14 +151,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         throw new Error(errorMessage);
       }
-      
+
       // Parse phản hồi JSON
       return await res.json() as AuthResponse;
     },
     onSuccess: (user: AuthResponse) => {
       // Xóa toàn bộ cache trước
       queryClient.clear();
-      
+
       // If the user has message and is pending, don't set them as logged in
       if (user.message) {
         // Clear any existing user data
@@ -155,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Set user data if they're immediately approved (admin account)
         queryClient.setQueryData(["/api/user"], user);
       }
-      
+
       // Show appropriate toast message
       toast({
         title: "Registration successful",
@@ -178,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         credentials: "include"
       });
-      
+
       // Kiểm tra lỗi HTTP
       if (!res.ok) {
         let errorMessage = res.statusText;
@@ -192,16 +204,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         throw new Error(errorMessage);
       }
-      
+
       return; // Không phân tích bất kỳ dữ liệu nào
     },
     onSuccess: () => {
       // Xóa cache của người dùng hiện tại
       queryClient.setQueryData(["/api/user"], null);
-      
+
       // Xóa toàn bộ cache từ React Query để tránh hiển thị dữ liệu của người dùng cũ
       queryClient.clear();
-      
+
       toast({
         title: "Logged out",
         description: "You've been successfully logged out.",
