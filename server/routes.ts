@@ -1087,13 +1087,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             can_send_email: user.can_send_email
           });
           
+          // Set can_send_email to true for admin role if it's null/undefined
+          const canSendEmail = user.can_send_email !== null && user.can_send_email !== undefined 
+            ? user.can_send_email 
+            : (user.role === 'admin' ? true : false);
+          
           res.json({ 
             user: {
               id: user.id,
               username: user.username,
               name: user.name,
               role: user.role,
-              can_send_email: user.can_send_email || false
+              can_send_email: canSendEmail
             }
           });
         } else {
