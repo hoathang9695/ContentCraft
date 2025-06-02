@@ -7,7 +7,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { insertUserSchema, User as SelectUser, InsertUser, LoginData } from "@shared/schema";
-import { getQueryFn } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useLocation } from "wouter";
@@ -47,7 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
   } = useQuery<AuthResponse | undefined, Error>({
     queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: async () => {
+      const res = await fetch("/api/user", {
+        credentials: "include",
+      });
+
+      if (res.status === 401) {
+        return undefined;
+      }
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch user");
+      }
+
+      return await res.json();
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
     refetchOnMount: true
