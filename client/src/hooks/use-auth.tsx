@@ -3,9 +3,10 @@ import {
   useQuery,
   useMutation,
   UseMutationResult,
+  useQueryClient,
 } from "@tanstack/react-query";
 import { insertUserSchema, User as SelectUser, InsertUser, LoginData } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
+import { getQueryFn, apiRequest } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useLocation } from "wouter";
@@ -36,6 +37,8 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  
   // Improved auth user state management for better auth persistence
   const {
     data: user,
