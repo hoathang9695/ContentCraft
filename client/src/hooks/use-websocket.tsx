@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
@@ -36,7 +35,7 @@ export function useWebSocket() {
     newSocket.on('connect', () => {
       console.log('WebSocket connected:', newSocket.id);
       setIsConnected(true);
-      
+
       // Request initial badge counts khi kết nối
       newSocket.emit('request-badge-counts');
     });
@@ -53,7 +52,7 @@ export function useWebSocket() {
       console.log('Received badge update via WebSocket:', data);
       setBadgeCounts(data);
       setHasInitialData(true);
-      
+
       // Persist to localStorage
       try {
         localStorage.setItem('badgeCounts', JSON.stringify(data));

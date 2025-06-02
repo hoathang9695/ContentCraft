@@ -515,9 +515,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cache for stats API
+  // Cache for stats API with memory management
   let statsCache = new Map();
-  const CACHE_DURATION = 300000; // 5 minutes cache (increased from 30 seconds)
+  const CACHE_DURATION = 300000; // 5 minutes cache
+  const MAX_CACHE_SIZE = 100; // Limit cache size
+
+  // Function to clean old cache entries
+  const cleanOldCacheEntries = (cache: Map<string, any>) => {
+    if (cache.size > MAX_CACHE_SIZE) {
+      const entries = Array.from(cache.entries());
+      const now = Date.now();
+      
+      // Remove expired entries first
+      for (const [key, value] of entries) {
+        if (value.timestamp && now - value.timestamp > CACHE_DURATION) {
+          cache.delete(key);
+        }
+      }
+      
+      // If still too large, remove oldest entries
+      if (cache.size > MAX_CACHE_SIZE) {
+        const sortedEntries = entries.sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+        const entriesToRemove = sortedEntries.slice(0, cache.size - MAX_CACHE_SIZE);
+        entriesToRemove.forEach(([key]) => cache.delete(key));
+      }
+    }
+  };
 
   // Dashboard statistics
   app.get("/api/stats", isAuthenticated, async (req, res) => {
@@ -770,10 +793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Clean old cache entries
-      if (statsCache.size > 100) {
-        const oldestKey = statsCache.keys().next().value;
-        statsCache.delete(oldestKey);
-      }
+      cleanOldCacheEntries(statsCache);
 
       res.json(result);
     } catch (error) {
@@ -3071,12 +3091,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Caching mechanism using Map
+  // Caching mechanism using Map with memory management
   const cache = new Map();
+  
+  // Periodic cleanup for general cache
+  setInterval(() => {
+    cleanOldCacheEntries(cache);
+  }, 600000); // Clean every 10 minutes
 
-  // Content stats cache using Map
+  // Content stats cache using Map with memory management
   let contentStatsCache = new Map();
   const CONTENT_CACHE_DURATION = 300000; // 5 minutes (300 seconds)
+  
+  // Periodic cleanup for content stats cache
+  setInterval(() => {
+    cleanOldCacheEntries(contentStatsCache);
+  }, 600000); // Clean every 10 minutes
 
   // Get content stats
   app.get("/api/content-stats", requireAuth, async (req, res) => {
@@ -3110,14 +3140,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Cache for 5 minutes
-      contentStatsCache.set(
-        "content-stats",
-        {
-          data: data,
-          timestamp: Date.now(),
-        },
-        300,
-      );
+      contentStatsCache.set("content-stats", {
+        data: data,
+        timestamp: Date.now(),
+      });
+      
+      // Clean old entries
+      cleanOldCacheEntries(contentStatsCache);
 
       res.json(data);
     } catch (error) {
@@ -3133,9 +3162,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check cache first
       const cached = cache.get("dashboard-stats");
-      if (cached) {
+      if (cached && cached.timestamp && Date.now() - cached.timestamp < CACHE_DURATION) {
         console.log("Returning cached dashboard stats");
-        return res.json(cached);
+        return res.json(cached.data);
       }
 
       // Real users và groups
@@ -3228,7 +3257,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Dashboard stats calculated:", stats);
 
       // Cache for 5 minutes
-      cache.set("dashboard-stats", stats, 300);
+      cache.set("dashboard-stats", {
+        data: stats,
+        timestamp: Date.now(),
+      });
+      
+      // Clean old entries
+      cleanOldCacheEntries(cache);
 
       res.json(stats);
     } catch (error) {
@@ -3242,8 +3277,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check cache first
       const cached = cache.get("badge-counts");
-      if (cached) {
-        return res.json(cached);
+      if (cached && cached.timestamp && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return res.json(cached.data);
       }
 
       const { pages, groups, supportRequests } = await import(
@@ -3332,7 +3367,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Cache for 5 minutes để giảm tải database
-      cache.set("badge-counts", filteredBadgeCounts, 300);
+      cache.set("badge-counts", {
+        data: filteredBadgeCounts,
+        timestamp: Date.now(),
+      });
+      
+      // Clean old entries
+      cleanOldCacheEntries(cache);
 
       res.json(filteredBadgeCounts);
     } catch (error) {
