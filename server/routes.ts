@@ -822,6 +822,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.id);
       const { can_send_email } = req.body;
 
+      console.log('Updating email permission for user:', userId, 'value:', can_send_email);
+      console.log('Request body:', req.body);
+
+      // Validate input
+      if (typeof can_send_email !== 'boolean') {
+        console.log('Invalid can_send_email value:', can_send_email, 'type:', typeof can_send_email);
+        return res.status(400).json({ message: 'can_send_email must be a boolean' });
+      }
+
+      // Check if user exists first
+      const existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (existingUser.length === 0) {
+        console.log('User not found:', userId);
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      console.log('User found:', existingUser[0].username, 'current can_send_email:', existingUser[0].can_send_email);
+
+      // Update the user
       const result = await db
         .update(users)
         .set({ 
@@ -831,14 +855,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(users.id, userId))
         .returning();
 
+      console.log('Update result:', result);
+
       if (result.length === 0) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: 'User not found after update' });
       }
 
-      res.json({ message: 'Email permission updated successfully' });
+      res.json({ 
+        message: 'Email permission updated successfully',
+        user: {
+          id: result[0].id,
+          username: result[0].username,
+          can_send_email: result[0].can_send_email
+        }
+      });
     } catch (error) {
       console.error('Error updating email permission:', error);
-      res.status(500).json({ message: 'Error updating email permission' });
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        detail: error.detail
+      });
+      res.status(500).json({ 
+        message: 'Error updating email permission',
+        error: error.message
+      });
     }
   });
 
