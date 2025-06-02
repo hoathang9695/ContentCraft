@@ -89,13 +89,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       return response.json();
     },
     enabled: !hasInitialData, // Chỉ polling khi chưa từng có data từ WebSocket
-    refetchInterval: isConnected ? false : 60000, // Giảm polling frequency khi WebSocket active
+    refetchInterval: 300000, // 5 phút polling interval cố định
     staleTime: 240000,
     refetchOnWindowFocus: false,
     refetchOnMount: true
   });
 
-  // Ưu tiên WebSocket data, fallback to polling nếu chưa có data gì
+  // Ưu tiên WebSocket data (đã có caching), fallback to polling nếu chưa có data gì
   const badgeCounts = hasInitialData ? wsBadgeCounts : pollingBadgeCounts;
 
   const isActivePath = (path: string) => {
