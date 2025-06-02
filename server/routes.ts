@@ -796,13 +796,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get all users (admin only)
   app.get("/api/users", isAdmin, async (req, res) => {
+    console.log('Session check for /api/users:', {
+      sessionID: req.sessionID,
+      hasSession: !!req.session,
+      isAuthenticated: req.isAuthenticated(),
+      user: req.isAuthenticated() ? { 
+        id: (req.user as Express.User)?.id,
+        username: (req.user as Express.User)?.username,
+        role: (req.user as Express.User)?.role
+      } : 'Not authenticated'
+    });
+
     try {
-      const users = await storage.getAllUsers();
-      // Remove password from response
-      const safeUsers = users.map(({ password, ...user }) => user);
-      res.json(safeUsers);
+      const allUsers = await db.select().from(users).orderBy(users.id);
+      res.json(allUsers);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching users" });
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: 'Error fetching users' });
+    }
+  });
+
+  // Update user email permission
+  app.put("/api/users/:id/email-permission", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { can_send_email } = req.body;
+
+      await db.update(users)
+        .set({ 
+          can_send_email: can_send_email,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      res.json({ message: 'Email permission updated successfully' });
+    } catch (error) {
+      console.error('Error updating email permission:', error);
+      res.status(500).json({ message: 'Error updating email permission' });
+    }
+  });
+
+  // Update user
+  app.put("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { username, name, role, status, can_send_email, password } = req.body;
+
+      const updateData: any = {
+        username,
+        name,
+        role,
+        status,
+        can_send_email,
+        updatedAt: new Date()
+      };
+
+      // Only update password if provided
+      if (password && password.trim()) {
+        const bcrypt = require('bcrypt');
+        updateData.password = await bcrypt.hash(password, 10);
+      }
+
+      await db.update(users)
+        .set(updateData)
+        .where(eq(users.id, userId));
+
+      res.json({ message: 'User updated successfully' });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: 'Error updating user' });
     }
   });
 
@@ -946,6 +1008,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res
         .status(500)
         .json({ success: false, message: "Error updating user details" });
+    }
+  });
+
+  app.get('/api/auth/check', async (req, res) => {
+    console.log('Auth check request:', {
+      isAuthenticated: req.isAuthenticated(),
+      sessionID: req.sessionID,
+      user: req.user ? {
+        id: (req.user as Express.User).id,
+        username: (req.user as Express.User).username,
+        role: (req.user as Express.User).role
+      } : null
+    });
+
+    if (req.isAuthenticated()) {
+      try {
+        // Get full user data including email permission
+        const userData = await db.select()
+          .from(users)
+          .where(eq(users.id, (req.user as Express.User).id))
+          .limit(1);
+
+        if (userData.length > 0) {
+          const user = userData[0];
+          res.json({ 
+            user: {
+              id: user.id,
+              username: user.username,
+              name: user.name,
+              role: user.role,
+              can_send_email: user.can_send_email
+            }
+          });
+        } else {
+          res.status(401).json({ message: 'User not found' });
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        res.status(500).json({ message: 'Error fetching user data' });
+      }
+    } else {
+      res.status(401).json({ message: 'Not authenticated' });
     }
   });
 
@@ -1827,7 +1931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedLabel);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({
+        return res.status(400.json({
           message: "Validation error",
           errors: error.errors,
         });
