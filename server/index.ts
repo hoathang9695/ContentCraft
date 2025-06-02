@@ -122,6 +122,15 @@ app.use((req, res, next) => {
   const fileCleanup = FileCleanupService.getInstance();
   fileCleanup.startAutoCleanup();
   log('File cleanup service started', 'express');
+
+  if (process.env.KAFKA_ENABLED === 'true') {
+  
+    setupKafkaConsumer()
+      .then(() => log('Kafka consumer started successfully', 'kafka'))
+      .catch(err => log(`Failed to start Kafka consumer: ${err}`, 'kafka-error'));
+  } else {
+    log('Kafka consumer disabled. Set KAFKA_ENABLED=true to enable.', 'kafka');
+  }
 });
 
   // Xử lý tắt ứng dụng
