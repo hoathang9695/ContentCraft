@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("editor"),
   status: text("status").notNull().default("pending"), // 'active', 'pending', 'inactive'
   avatarUrl: text("avatar_url"),
+  can_send_email: boolean("can_send_email").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -806,7 +806,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     try {
-      const allUsers = await db.select().from(users).orderBy(users.id);
+      const allUsers = await db.select({
+        id: users.id,
+        username: users.username,
+        password: users.password,
+        name: users.name,
+        email: users.email,
+        department: users.department,
+        position: users.position,
+        role: users.role,
+        status: users.status,
+        avatarUrl: users.avatarUrl,
+        can_send_email: users.can_send_email,
+        createdAt: users.createdAt
+      }).from(users).orderBy(users.id);
+      
       console.log('Fetched users with email permission:', allUsers.map(u => ({ 
         id: u.id, 
         username: u.username, 
