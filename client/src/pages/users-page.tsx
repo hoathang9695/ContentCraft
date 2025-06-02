@@ -86,19 +86,47 @@ export default function UsersPage() {
 
       return response.json();
     },
+    onMutate: async ({ userId, canSendEmail }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/users"] });
+
+      // Snapshot the previous value
+      const previousUsers = queryClient.getQueryData<UserWithEmailPermission[]>(["/api/users"]);
+
+      // Optimistically update to the new value
+      if (previousUsers) {
+        queryClient.setQueryData<UserWithEmailPermission[]>(["/api/users"], 
+          previousUsers.map(user => 
+            user.id === userId 
+              ? { ...user, can_send_email: canSendEmail }
+              : user
+          )
+        );
+      }
+
+      // Return a context object with the snapshotted value
+      return { previousUsers };
+    },
     onSuccess: (_, { canSendEmail }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "Thành công",
         description: `Đã ${canSendEmail ? "cấp" : "thu hồi"} quyền gửi email`,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      // Rollback on error
+      if (context?.previousUsers) {
+        queryClient.setQueryData(["/api/users"], context.previousUsers);
+      }
       toast({
         title: "Lỗi",
         description: "Không thể cập nhật quyền gửi email",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to sync with server
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
     },
   });
 
