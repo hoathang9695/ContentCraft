@@ -822,12 +822,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.id);
       const { can_send_email } = req.body;
 
-      await db.update(users)
+      const result = await db.update(users)
         .set({ 
           can_send_email: can_send_email,
           updatedAt: new Date()
         })
-        .where(eq(users.id, userId));
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
 
       res.json({ message: 'Email permission updated successfully' });
     } catch (error) {
