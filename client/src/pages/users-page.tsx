@@ -31,6 +31,7 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserWithEmailPermission | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [checkboxStates, setCheckboxStates] = useState<Record<number, boolean>>({});
 
   // Redirect if not admin
   const shouldRedirect = user && user.role !== "admin";
@@ -86,38 +87,22 @@ export default function UsersPage() {
 
       return response.json();
     },
-    onMutate: async ({ userId, canSendEmail }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["/api/users"] });
-
-      // Snapshot the previous value
-      const previousUsers = queryClient.getQueryData<UserWithEmailPermission[]>(["/api/users"]);
-
-      // Optimistically update to the new value
-      if (previousUsers) {
-        queryClient.setQueryData<UserWithEmailPermission[]>(["/api/users"], 
-          previousUsers.map(user => 
-            user.id === userId 
-              ? { ...user, can_send_email: canSendEmail }
-              : user
-          )
-        );
-      }
-
-      // Return a context object with the snapshotted value
-      return { previousUsers };
-    },
-    onSuccess: (_, { canSendEmail }) => {
+    onSuccess: (_, { userId, canSendEmail }) => {
+      // Update local state immediately
+      setCheckboxStates(prev => ({ ...prev, [userId]: canSendEmail }));
+      
       toast({
         title: "Thành công",
         description: `Đã ${canSendEmail ? "cấp" : "thu hồi"} quyền gửi email`,
       });
     },
-    onError: (error: Error, _, context) => {
-      // Rollback on error
-      if (context?.previousUsers) {
-        queryClient.setQueryData(["/api/users"], context.previousUsers);
+    onError: (error: Error, { userId }) => {
+      // Revert local state on error
+      const user = users?.find(u => u.id === userId);
+      if (user) {
+        setCheckboxStates(prev => ({ ...prev, [userId]: user.can_send_email }));
       }
+      
       toast({
         title: "Lỗi",
         description: "Không thể cập nhật quyền gửi email",
@@ -149,7 +134,13 @@ export default function UsersPage() {
   };
 
   const handleToggleEmailPermission = (userId: number, currentValue: boolean) => {
-    toggleEmailPermissionMutation.mutate({ userId, canSendEmail: !currentValue });
+    const newValue = !currentValue;
+    
+    // Update local state immediately for instant UI feedback
+    setCheckboxStates(prev => ({ ...prev, [userId]: newValue }));
+    
+    // Then trigger the API call
+    toggleEmailPermissionMutation.mutate({ userId, canSendEmail: newValue });
   };
 
   // Filter users based on search query
@@ -256,24 +247,31 @@ export default function UsersPage() {
               {
                 key: "can_send_email",
                 header: "Quyền gửi Email",
-                render: (row) => (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={Boolean(row.can_send_email)}
-                      onCheckedChange={() =>
-                        handleToggleEmailPermission(row.id, Boolean(row.can_send_email))
-                      }
-                      disabled={toggleEmailPermissionMutation.isPending}
-                    />
-                    <div className="flex items-center">
-                      {row.can_send_email ? (
-                        <Mail className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Mail className="h-4 w-4 text-gray-400" />
-                      )}
+                render: (row) => {
+                  // Use local state if available, otherwise use server data
+                  const isChecked = checkboxStates.hasOwnProperty(row.id) 
+                    ? checkboxStates[row.id] 
+                    : Boolean(row.can_send_email);
+                  
+                  return (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() =>
+                          handleToggleEmailPermission(row.id, isChecked)
+                        }
+                        disabled={toggleEmailPermissionMutation.isPending}
+                      />
+                      <div className="flex items-center">
+                        {isChecked ? (
+                          <Mail className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Mail className="h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ),
+                  );
+                },
               },
               { 
                 key: "actions", 
