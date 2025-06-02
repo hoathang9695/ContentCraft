@@ -124,10 +124,6 @@ export default function UsersPage() {
         variant: "destructive",
       });
     },
-    onSettled: () => {
-      // Always refetch after error or success to sync with server
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-    },
   });
 
   // Status badge component
