@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Mail } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { PushFollowDialog } from "@/components/PushFollowDialog";
+import { RealUserEmailDialog } from "@/components/RealUserEmailDialog";
 
 export default function RealUserPage() {
   const { user } = useAuth();
@@ -32,6 +33,8 @@ export default function RealUserPage() {
 
   const [pushFollowOpen, setPushFollowOpen] = useState(false);
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailUser, setEmailUser] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -529,6 +532,15 @@ export default function RealUserPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
+                          setEmailUser(row);
+                          setEmailDialogOpen(true);
+                        }}
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Gửi Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
                           setPushFollowUser(row);
                           setPushFollowOpen(true);
                         }}
@@ -548,6 +560,17 @@ export default function RealUserPage() {
           targetUserId={pushFollowUser?.fullName?.id}
           targetUserName={pushFollowUser?.fullName?.name}
           onPushFollow={handlePushFollow}
+        />
+        <RealUserEmailDialog
+          isOpen={emailDialogOpen}
+          onClose={() => setEmailDialogOpen(false)}
+          user={emailUser}
+          onSuccess={() => {
+            toast({
+              title: "Thành công",
+              description: "Email đã được gửi thành công",
+            });
+          }}
         />
       </div>
     </DashboardLayout>
