@@ -43,8 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     refetch: refetchUser
   } = useQuery<AuthResponse | undefined, Error>({
-    queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryKey: ["/api/auth/check"],
+    queryFn: async () => {
+      const response = await fetch("/api/auth/check", {
+        credentials: "include"
+      });
+      if (response.status === 401) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error("Failed to check auth");
+      }
+      const data = await response.json();
+      return data.user;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true, // Refetch when window gets focus
     refetchOnMount: true // Refetch when component mounts

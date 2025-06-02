@@ -1093,7 +1093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               username: user.username,
               name: user.name,
               role: user.role,
-              can_send_email: user.can_send_email
+              can_send_email: user.can_send_email || false
             }
           });
         } else {
