@@ -1908,7 +1908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update real user classification
+  // Real user classification route
   app.put(
     "/api/real-users/:id/classification",
     isAuthenticated,
@@ -1917,38 +1917,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { id } = req.params;
         const { classification } = req.body;
 
-        if (!["new", "potential", "non_potential"].includes(classification)) {
-          return res
-            .status(400)
-            .json({ message: "Invalid classification value" });
-        }
-
-        const updatedUser = await db
+        const result = await db
           .update(realUsers)
           .set({
             classification,
             updatedAt: new Date(),
-          })
+                    })
           .where(eq(realUsers.id, parseInt(id)))
           .returning();
 
-        if (updatedUser.length === 0) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        res.json({
-          message: "Classification updated successfully",
-          user: updatedUser[0],
-        });
-
-        // Broadcast badge update to all clients
-        if ((global as any).broadcastBadgeUpdate) {
-          (global as any).broadcastBadgeUpdate();
-        }
+        res.json(result[0]);
       } catch (error) {
         console.error("Error updating classification:", error);
         res.status(500).json({
           message: "Error updating classification",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+  );
+
+  // Send email to real user
+  app.post(
+    "/api/real-users/:id/send-email",
+    isAuthenticated,
+    upload.array("attachments", 10),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { to, subject, content, plain_content } = req.body;
+        const user = req.user as Express.User;
+        const attachments = (req.files as Express.Multer.File[]) || [];
+
+        // Get real user
+        const realUser = await db.query.realUsers.findFirst({
+          where: eq(realUsers.id, parseInt(id)),
+        });
+
+        if (!realUser) {
+          return res.status(404).json({ message: "Real user not found" });
+        }
+
+        // Process attachments for email
+        const emailAttachments = attachments.map((file) => ({
+          filename: file.originalname,
+          path: file.path,
+          contentType: file.mimetype,
+        }));
+
+        // Send email with attachments
+        const emailSent = await emailService.sendDirectEmail({
+          to,
+          subject,
+          content,
+          attachments: emailAttachments,
+          userInfo: {
+            id: realUser.id,
+            name: realUser.fullName ? (typeof realUser.fullName === 'object' ? realUser.fullName : JSON.parse(realUser.fullName as string))?.name || 'Unknown' : 'Unknown',
+            email: realUser.email
+          },
+        });
+
+        if (emailSent) {
+          // Clean up uploaded files after successful email send
+          attachments.forEach((file) => {
+            try {
+              require('fs').unlinkSync(file.path);
+            } catch (error) {
+              console.error(`Error deleting file ${file.path}:`, error);
+            }
+          });
+
+          res.json({ 
+            success: true, 
+            message: "Email sent successfully",
+            recipient: {
+              name: realUser.fullName ? (typeof realUser.fullName === 'object' ? realUser.fullName : JSON.parse(realUser.fullName as string))?.name || 'Unknown' : 'Unknown',
+              email: realUser.email
+            }
+          });
+        } else {
+          // Clean up uploaded files if email send failed
+          attachments.forEach((file) => {
+            try {
+              require('fs').unlinkSync(file.path);
+            } catch (error) {
+              console.error(`Error deleting file ${file.path}:`, error);
+            }
+          });
+
+          res.status(500).json({
+            message: "Failed to send email. Please check SMTP configuration.",
+          });
+        }
+      } catch (error) {
+        console.error("Error sending email to real user:", error);
+        res.status(500).json({
+          message: "Error sending email",
           error: error instanceof Error ? error.message : String(error),
         });
       }
