@@ -362,3 +362,194 @@ export function UserEditDialog({ open, user, onOpenChange }: UserEditDialogProps
     </Dialog>
   );
 }
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+
+interface User {
+  id: number;
+  username: string;
+  name: string;
+  role: string;
+  status: string;
+  can_send_email: boolean;
+}
+
+interface UserEditDialogProps {
+  user: User | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export function UserEditDialog({ user, isOpen, onClose, onSuccess }: UserEditDialogProps) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    username: "",
+    name: "",
+    role: "",
+    status: "",
+    can_send_email: false,
+    password: "",
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        can_send_email: user.can_send_email,
+        password: "",
+      });
+    }
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const updateData: any = {
+        username: formData.username,
+        name: formData.name,
+        role: formData.role,
+        status: formData.status,
+        can_send_email: formData.can_send_email,
+      };
+
+      // Only include password if it's provided
+      if (formData.password.trim()) {
+        updateData.password = formData.password;
+      }
+
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Thành công",
+          description: "Đã cập nhật thông tin người dùng",
+        });
+        onSuccess();
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Lỗi",
+          description: errorData.message || "Không thể cập nhật thông tin người dùng",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật thông tin người dùng",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!user) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Chỉnh sửa người dùng</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="username">Tên đăng nhập</Label>
+            <Input
+              id="username"
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="name">Họ và tên</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Mật khẩu mới (để trống nếu không đổi)</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="Nhập mật khẩu mới..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Vai trò</Label>
+            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn vai trò" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Quản trị viên</SelectItem>
+                <SelectItem value="editor">Biên tập viên</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Trạng thái</Label>
+            <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Hoạt động</SelectItem>
+                <SelectItem value="inactive">Không hoạt động</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="can_send_email"
+              checked={formData.can_send_email}
+              onCheckedChange={(checked) => setFormData({ ...formData, can_send_email: checked })}
+            />
+            <Label htmlFor="can_send_email">Quyền gửi Email</Label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              Hủy
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Đang cập nhật..." : "Cập nhật"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
