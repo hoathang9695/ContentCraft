@@ -932,16 +932,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
-    }
-    }
+      }
 
-    // Remove password from response
-    const { password, ...safeUser } = updatedUser;
-    res.json(safeUser);
-  } catch (error) {
-    res.status(500).json({ message: "Error updating user status" });
-  }
-});
+      // Remove password from response
+      const { password, ...safeUser } = updatedUser;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating user status" });
+    }
+  });
 
 // Delete user (admin only)
 app.delete("/api/users/:id", isAdmin, async (req, res) => {
