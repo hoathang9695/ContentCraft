@@ -937,7 +937,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  // Keep the old endpoint for backward compatibility
+  // Keep the old endpoint<replit_final_file>
+ for backward compatibility
   app.patch("/api/user/avatar", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as Express.User).id;
@@ -2972,8 +2973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         300,
       );
 
-      res.json(data);
-    } catch (error) {
+      res.json(data);    } catch (error) {
       console.error("Error fetching content stats:", error);
       res.status(500).json({ error: "Failed to fetch content stats" });
     }
