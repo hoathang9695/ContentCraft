@@ -795,10 +795,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Get all users (admin only)
-  app.get("/api/users", isAdmin, async (req, res) => {
-    console.log('Session check for /api/users:', {
-      sessionID: req.sessionID,
-      hasSession: !!req.session,
+  app.get("/api/users", isAuthenticated, isAdmin, async (req, res) => {
+    console.log('GET /api/users - Auth check:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.isAuthenticated() ? { 
         id: (req.user as Express.User)?.id,
@@ -809,6 +807,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const allUsers = await db.select().from(users).orderBy(users.id);
+      console.log('Fetched users with email permission:', allUsers.map(u => ({ 
+        id: u.id, 
+        username: u.username, 
+        can_send_email: u.can_send_email,
+        can_send_email_type: typeof u.can_send_email
+      })));
       res.json(allUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -1086,12 +1090,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             role: user.role,
             can_send_email: user.can_send_email
           });
-          
+
           // Set can_send_email to true for admin role if it's null/undefined
           const canSendEmail = user.can_send_email !== null && user.can_send_email !== undefined 
             ? user.can_send_email 
             : (user.role === 'admin' ? true : false);
-          
+
           res.json({ 
             user: {
               id: user.id,
@@ -1919,7 +1923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single label
-  app.get("/api/labels/:id", async (req, res) => {
+  app.get("/api/labels/:id", async (req, res) =>{
     try {
       const labelId = Number(req.params.id);
       const label = await storage.getLabel(labelId);
@@ -2944,7 +2948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({
             classification,
             updatedAt: new Date(),
-          })
+                    })
           .where(eq(groups.id, groupId))
           .returning();
 

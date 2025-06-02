@@ -235,9 +235,9 @@ export default function UsersPage() {
                 render: (row) => (
                   <div className="flex items-center space-x-2">
                     <Switch
-                      checked={row.can_send_email}
+                      checked={Boolean(row.can_send_email)}
                       onCheckedChange={() =>
-                        handleToggleEmailPermission(row.id, row.can_send_email)
+                        handleToggleEmailPermission(row.id, Boolean(row.can_send_email))
                       }
                       disabled={toggleEmailPermissionMutation.isPending}
                     />
