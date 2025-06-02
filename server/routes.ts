@@ -601,7 +601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Real users stats với aggregation
       const { pages, groups } = await import("../shared/schema");
 
-      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats] =
+      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats, feedbackRequestsStats] =
         await Promise.all([
           // Real users aggregation
           db
@@ -627,13 +627,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
             .from(groups),
 
-          // Support requests aggregation
+          // Support requests aggregation (only type = 'support' or null for backward compatibility)
           db
             .select({
-              total: sql<number>`count(*)`,
-              pending: sql<number>`count(*) filter (where status = 'pending')`,
-              processing: sql<number>`count(*) filter (where status = 'processing')`,
-              completed: sql<number>`count(*) filter (where status = 'completed')`,
+              total: sql<number>`count(*) filter (where type = 'support' OR type IS NULL)`,
+              pending: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'pending')`,
+              processing: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'processing')`,
+              completed: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'completed')`,
+            })
+            .from(supportRequests),
+
+          // Feedback requests aggregation (only type = 'feedback')
+          db
+            .select({
+              total: sql<number>`count(*) filter (where type = 'feedback')`,
+              pending: sql<number>`count(*) filter (where type = 'feedback' AND status = 'pending')`,
+              processing: sql<number>`count(*) filter (where type = 'feedback' AND status = 'processing')`,
+              completed: sql<number>`count(*) filter (where type = 'feedback' AND status = 'completed')`,
             })
             .from(supportRequests),
         ]);
@@ -654,6 +664,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const completedSupportRequests = Number(
         supportRequestsStats[0]?.completed || 0,
       );
+      const totalFeedbackRequests = Number(feedbackRequestsStats[0]?.total || 0);
+      const pendingFeedbackRequests = Number(
+        feedbackRequestsStats[0]?.pending || 0,
+      );
+      const processingFeedbackRequests = Number(
+        feedbackRequestsStats[0]?.processing || 0,
+      );
+      const completedFeedbackRequests = Number(
+        feedbackRequestsStats[0]?.completed || 0,
+      );
 
       console.log("Optimized stats:", {
         realUsers: { total: totalRealUsers, new: newRealUsers },
@@ -664,6 +684,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pending: pendingSupportRequests,
           processing: processingSupportRequests,
           completed: completedSupportRequests,
+        },
+        feedbackRequests: {
+          total: totalFeedbackRequests,
+          pending: pendingFeedbackRequests,
+          processing: processingFeedbackRequests,
+          completed: completedFeedbackRequests,
         },
       });
 
@@ -696,6 +722,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pendingSupportRequests,
         processingSupportRequests,
         completedSupportRequests,
+        // Thống kê feedback requests
+        totalFeedbackRequests,
+        pendingFeedbackRequests,
+        processingFeedbackRequests,
+        completedFeedbackRequests,
         // Thông tin khoảng thời gian nếu có lọc
         period:
           startDate && endDate
