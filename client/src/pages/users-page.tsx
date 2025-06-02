@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface UserWithEmailPermission extends Omit<User, "password"> {
   can_send_email: boolean;
@@ -234,7 +234,7 @@ export default function UsersPage() {
                 header: "Quyền gửi Email",
                 render: (row) => (
                   <div className="flex items-center space-x-2">
-                    <Switch
+                    <Checkbox
                       checked={Boolean(row.can_send_email)}
                       onCheckedChange={() =>
                         handleToggleEmailPermission(row.id, Boolean(row.can_send_email))
