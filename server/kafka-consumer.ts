@@ -233,7 +233,11 @@ export async function setupKafkaConsumer() {
                       if ("externalId" in msg) {
                         log(`🔄 Processing content message: ${JSON.stringify(msg)}`, "kafka");
                         await processContentMessage(msg as ContentMessage, tx);
+                      } else if ("full_name" in msg && "type" in msg && (msg as any).type === 'feedback') {
+                        log(`🔄 Processing feedback message: ${JSON.stringify(msg)}`, "kafka");
+                        await processFeedbackMessage(msg as FeedbackMessage, tx);
                       } else if ("full_name" in msg) {
+                        log(`🔄 Processing support message: ${JSON.stringify(msg)}`, "kafka");
                         await processSupportMessage(msg as SupportMessage, tx);
                       } else if ("name" in msg && "message" in msg) {
                         await processContactMessage(msg as ContactMessage, tx);
@@ -637,16 +641,33 @@ async function sendToDeadLetterQueue(message: any) {
   }
 }
 
+export interface FeedbackMessage {
+  full_name: string;
+  email: string;
+  subject: string;
+  content: string;
+  type: 'feedback';
+  feedback_type?: 'bug_report' | 'feature_request' | 'complaint' | 'suggestion' | 'other';
+  feature_type?: string;
+  detailed_description?: string;
+  attachment_url?: string;
+}
+
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage {
+): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage {
   if (!messageValue) return null;
 
   try {
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
-    if ("full_name" in message && "email" in message) {
+    // Check for feedback message first (has type: 'feedback')
+    if ("full_name" in message && "email" in message && "type" in message && message.type === 'feedback') {
+      return message as FeedbackMessage;
+    }
+    // Check for support message (has full_name, email but no type or type !== 'feedback')
+    else if ("full_name" in message && "email" in message) {
       return message as SupportMessage;
     } else if ("externalId" in message) {
       return message as ContentMessage;
@@ -778,8 +799,9 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
     }
     log(`Found ${activeUsers.length} active users for assignment`, "kafka");
 
-    // Find last assigned SUPPORT REQUEST for round-robin (specific to supportRequests table)
+    // Find last assigned SUPPORT REQUEST for round-robin (specific to type='support')
     const lastAssignedSupportRequest = await tx.query.supportRequests.findFirst({
+      where: eq(supportRequests.type, 'support'),
       orderBy: (supportRequests, { desc }) => [
         desc(supportRequests.assigned_at),
       ],
@@ -789,7 +811,7 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
       "kafka",
     );
 
-    // Calculate next assignee (round-robin) based on supportRequests table
+    // Calculate next assignee (round-robin) based on support requests only
     let nextAssigneeIndex = 0;
     if (lastAssignedSupportRequest && lastAssignedSupportRequest.assigned_to_id) {
       const lastAssigneeIndex = activeUsers.findIndex(
@@ -803,13 +825,14 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
     const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
-    // Prepare insert data
+    // Prepare insert data with type='support'
     const insertData = {
       full_name: message.full_name,
       email: message.email,
       subject: message.subject,
       content: message.content,
       status: "pending",
+      type: "support", // Explicitly set type
       assigned_to_id,
       assigned_at: now,
       created_at: now,
@@ -825,6 +848,12 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
       log(`✅ Support request created with ID ${newRequest[0].id}`, "kafka");
       log(`👤 Support request assigned to user ID ${assigned_to_id} (${activeUsers.find(u => u.id === assigned_to_id)?.name})`, "kafka");
       log(`📧 Email: ${message.email}, Subject: ${message.subject}`, "kafka");
+
+      // Broadcast support badge update
+      if ((global as any).broadcastSupportBadgeUpdate) {
+        await (global as any).broadcastSupportBadgeUpdate();
+      }
+
       return newRequest[0];
     } catch (dbError) {
       log(
@@ -835,6 +864,106 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
     }
   } catch (error) {
     log(`Error processing support message: ${error}`, "kafka-error");
+    throw error;
+  }
+}
+
+async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
+  try {
+    // Validate required fields
+    if (
+      !message.full_name ||
+      !message.email ||
+      !message.subject ||
+      !message.content
+    ) {
+      log(`Invalid feedback message: ${JSON.stringify(message)}`, "kafka-error");
+      return;
+    }
+
+    log(`Processing feedback message: ${JSON.stringify(message)}`, "kafka");
+
+    // Get active users
+    const activeUsers = await tx
+      .select()
+      .from(users)
+      .where(eq(users.status, "active"));
+
+    if (!activeUsers || activeUsers.length === 0) {
+      log("No active users found to assign feedback.", "kafka");
+      return;
+    }
+    log(`Found ${activeUsers.length} active users for feedback assignment`, "kafka");
+
+    // Find last assigned FEEDBACK REQUEST for round-robin (specific to type='feedback')
+    const lastAssignedFeedbackRequest = await tx.query.supportRequests.findFirst({
+      where: eq(supportRequests.type, 'feedback'),
+      orderBy: (supportRequests, { desc }) => [
+        desc(supportRequests.assigned_at),
+      ],
+    });
+    log(
+      `Last assigned feedback request: ${JSON.stringify(lastAssignedFeedbackRequest)}`,
+      "kafka",
+    );
+
+    // Calculate next assignee (round-robin) based on feedback requests only
+    let nextAssigneeIndex = 0;
+    if (lastAssignedFeedbackRequest && lastAssignedFeedbackRequest.assigned_to_id) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        (user) => user.id === lastAssignedFeedbackRequest.assigned_to_id,
+      );
+      if (lastAssigneeIndex !== -1) {
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+      }
+    }
+
+    const assigned_to_id = activeUsers[nextAssigneeIndex].id;
+    const now = new Date();
+
+    // Prepare insert data with type='feedback' and feedback-specific fields
+    const insertData = {
+      full_name: message.full_name,
+      email: message.email,
+      subject: message.subject,
+      content: message.content,
+      status: "pending",
+      type: "feedback", // Explicitly set type
+      feedback_type: message.feedback_type || null,
+      feature_type: message.feature_type || null,
+      detailed_description: message.detailed_description || null,
+      attachment_url: message.attachment_url || null,
+      assigned_to_id,
+      assigned_at: now,
+      created_at: now,
+      updated_at: now,
+    };
+
+    try {
+      // Insert into DB
+      const newRequest = await tx
+        .insert(supportRequests)
+        .values(insertData)
+        .returning();
+      log(`✅ Feedback request created with ID ${newRequest[0].id}`, "kafka");
+      log(`👤 Feedback request assigned to user ID ${assigned_to_id} (${activeUsers.find(u => u.id === assigned_to_id)?.name})`, "kafka");
+      log(`📧 Email: ${message.email}, Subject: ${message.subject}, Type: ${message.feedback_type}`, "kafka");
+
+      // Broadcast feedback badge update
+      if ((global as any).broadcastFeedbackBadgeUpdate) {
+        await (global as any).broadcastFeedbackBadgeUpdate();
+      }
+
+      return newRequest[0];
+    } catch (dbError) {
+      log(
+        `Database error while inserting feedback request: ${dbError}`,
+        "kafka-error",
+      );
+      throw dbError;
+    }
+  } catch (error) {
+    log(`Error processing feedback message: ${error}`, "kafka-error");
     throw error;
   }
 }
