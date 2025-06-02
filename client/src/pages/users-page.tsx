@@ -8,16 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, CheckCircle, XCircle, Clock, Edit, MoreHorizontal } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Edit, MoreHorizontal, Mail, MailOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import { UserEditDialog } from "@/components/UserEditDialog";
+import { format } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+
+interface UserWithEmailPermission extends Omit<User, "password"> {
+  can_send_email: boolean;
+}
 
 export default function UsersPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUser, setSelectedUser] = useState<Omit<User, "password"> | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserWithEmailPermission | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Redirect if not admin
@@ -27,7 +39,7 @@ export default function UsersPage() {
   }
 
   // Fetch users
-  const { data: users, isLoading } = useQuery<Omit<User, "password">[]>({
+  const { data: users, isLoading } = useQuery<UserWithEmailPermission[]>({
     queryKey: ["/api/users"],
     queryFn: async () => {
       const res = await fetch("/api/users");
@@ -57,6 +69,39 @@ export default function UsersPage() {
     },
   });
 
+  // Toggle email permission mutation
+  const toggleEmailPermissionMutation = useMutation({
+    mutationFn: async ({ userId, canSendEmail }: { userId: number; canSendEmail: boolean }) => {
+      const response = await fetch(`/api/users/${userId}/email-permission`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ can_send_email: canSendEmail }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update email permission");
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, { canSendEmail }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Thành công",
+        description: `Đã ${canSendEmail ? "cấp" : "thu hồi"} quyền gửi email`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật quyền gửi email",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Status badge component
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
@@ -79,6 +124,10 @@ export default function UsersPage() {
     updateStatusMutation.mutate({ userId, status: "blocked" });
   };
 
+  const handleToggleEmailPermission = (userId: number, currentValue: boolean) => {
+    toggleEmailPermissionMutation.mutate({ userId, canSendEmail: !currentValue });
+  };
+
   // Filter users based on search query
   const filteredUsers = users?.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -92,9 +141,9 @@ export default function UsersPage() {
     <DashboardLayout onSearch={setSearchQuery}>
       <div className="container mx-auto p-4">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">User Management</h1>
+          <h1 className="text-3xl font-bold mb-2">Quản lý người dùng</h1>
           <p className="text-muted-foreground">
-            Manage user accounts and approve new registrations
+            Quản lý tài khoản người dùng và phân quyền gửi email
           </p>
         </div>
 
@@ -175,10 +224,36 @@ export default function UsersPage() {
                   </Badge>
                 )
               },
-              { key: "status", header: "Trạng thái", 
+              { 
+                key: "status", 
+                header: "Trạng thái", 
                 render: (row) => <StatusBadge status={row.status} /> 
               },
-              { key: "actions", header: "Actions", 
+              {
+                key: "can_send_email",
+                header: "Quyền gửi Email",
+                render: (row) => (
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={row.can_send_email}
+                      onCheckedChange={() =>
+                        handleToggleEmailPermission(row.id, row.can_send_email)
+                      }
+                      disabled={toggleEmailPermissionMutation.isPending}
+                    />
+                    <div className="flex items-center">
+                      {row.can_send_email ? (
+                        <Mail className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <MailOff className="h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+                ),
+              },
+              { 
+                key: "actions", 
+                header: "Actions", 
                 render: (row) => (
                   <div className="flex items-center space-x-2">
                     {row.status === "pending" && (
@@ -254,7 +329,7 @@ export default function UsersPage() {
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
-                        
+
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950">
@@ -323,7 +398,7 @@ export default function UsersPage() {
             onSearch={setSearchQuery}
             searchValue={searchQuery}
           />
-          
+
           {/* Show empty state if no users */}
           {filteredUsers && filteredUsers.length === 0 && !isLoading && (
             <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -334,7 +409,7 @@ export default function UsersPage() {
               </p>
             </div>
           )}
-          
+
           {/* Show loading state */}
           {isLoading && (
             <div className="flex justify-center items-center h-40">
@@ -343,250 +418,13 @@ export default function UsersPage() {
           )}
         </div>
       </div>
-      
+
       {/* User edit dialog */}
       <UserEditDialog 
         open={editDialogOpen} 
         user={selectedUser} 
         onOpenChange={setEditDialogOpen} 
       />
-    </DashboardLayout>
-  );
-}
-import { useState } from "react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DataTable } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Edit, Mail, MailOff } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
-import { UserEditDialog } from "@/components/UserEditDialog";
-
-interface User {
-  id: number;
-  username: string;
-  name: string;
-  role: string;
-  status: string;
-  can_send_email: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export default function UsersPage() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [editUser, setEditUser] = useState<User | null>(null);
-
-  // Redirect if not admin
-  if (user && user.role !== "admin") {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Không có quyền truy cập</h1>
-            <p className="text-gray-600">Bạn không có quyền truy cập vào trang này.</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  // Fetch users
-  const { data: users = [], isLoading } = useQuery<User[]>({
-    queryKey: ["/api/users"],
-    queryFn: async () => {
-      const response = await fetch("/api/users");
-      if (!response.ok) throw new Error("Failed to fetch users");
-      return response.json();
-    },
-  });
-
-  const handleToggleEmailPermission = async (userId: number, currentValue: boolean) => {
-    try {
-      const response = await fetch(`/api/users/${userId}/email-permission`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ can_send_email: !currentValue }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update email permission");
-      }
-
-      toast({
-        title: "Thành công",
-        description: `Đã ${!currentValue ? "cấp" : "thu hồi"} quyền gửi email`,
-      });
-
-      queryClient.invalidateQueries(["/api/users"]);
-    } catch (error) {
-      console.error("Error updating email permission:", error);
-      toast({
-        title: "Lỗi",
-        description: "Không thể cập nhật quyền gửi email",
-        variant: "destructive",
-      });
-    }
-  };
-
-  return (
-    <DashboardLayout>
-      <div className="container mx-auto p-4">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Quản lý người dùng</h1>
-          <p className="text-gray-600">
-            Quản lý tài khoản người dùng và phân quyền gửi email
-          </p>
-        </div>
-
-        <div className="bg-card rounded-lg shadow">
-          <DataTable
-            data={users}
-            isLoading={isLoading}
-            columns={[
-              {
-                key: "id",
-                header: "ID",
-                render: (row: User) => (
-                  <div className="font-medium">{row.id}</div>
-                ),
-              },
-              {
-                key: "username",
-                header: "Tên đăng nhập",
-                render: (row: User) => (
-                  <div className="font-medium">{row.username}</div>
-                ),
-              },
-              {
-                key: "name",
-                header: "Họ và tên",
-                render: (row: User) => (
-                  <div className="font-medium">{row.name}</div>
-                ),
-              },
-              {
-                key: "role",
-                header: "Vai trò",
-                render: (row: User) => (
-                  <Badge
-                    variant={
-                      row.role === "admin"
-                        ? "destructive"
-                        : row.role === "editor"
-                        ? "default"
-                        : "secondary"
-                    }
-                  >
-                    {row.role === "admin"
-                      ? "Quản trị viên"
-                      : row.role === "editor"
-                      ? "Biên tập viên"
-                      : row.role}
-                  </Badge>
-                ),
-              },
-              {
-                key: "status",
-                header: "Trạng thái",
-                render: (row: User) => (
-                  <Badge
-                    variant={row.status === "active" ? "success" : "secondary"}
-                  >
-                    {row.status === "active" ? "Hoạt động" : "Không hoạt động"}
-                  </Badge>
-                ),
-              },
-              {
-                key: "can_send_email",
-                header: "Quyền gửi Email",
-                render: (row: User) => (
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={row.can_send_email}
-                      onCheckedChange={() =>
-                        handleToggleEmailPermission(row.id, row.can_send_email)
-                      }
-                    />
-                    <div className="flex items-center">
-                      {row.can_send_email ? (
-                        <Mail className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <MailOff className="h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                key: "createdAt",
-                header: "Ngày tạo",
-                render: (row: User) => (
-                  <div className="text-muted-foreground">
-                    {format(new Date(row.createdAt), "dd/MM/yyyy HH:mm")}
-                  </div>
-                ),
-              },
-              {
-                key: "actions",
-                header: "Hành động",
-                className: "text-right",
-                render: (row: User) => (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditUser(row)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Chỉnh sửa
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          handleToggleEmailPermission(row.id, row.can_send_email)
-                        }
-                      >
-                        {row.can_send_email ? (
-                          <MailOff className="mr-2 h-4 w-4" />
-                        ) : (
-                          <Mail className="mr-2 h-4 w-4" />
-                        )}
-                        {row.can_send_email ? "Thu hồi quyền Email" : "Cấp quyền Email"}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ),
-              },
-            ]}
-          />
-        </div>
-
-        <UserEditDialog
-          user={editUser}
-          isOpen={!!editUser}
-          onClose={() => setEditUser(null)}
-          onSuccess={() => {
-            queryClient.invalidateQueries(["/api/users"]);
-            setEditUser(null);
-          }}
-        />
-      </div>
     </DashboardLayout>
   );
 }
