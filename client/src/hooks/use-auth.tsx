@@ -1,3 +1,4 @@
+
 import { createContext, ReactNode, useContext } from "react";
 import {
   useQuery,
@@ -76,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json() as AuthResponse;
     },
     onSuccess: (user: AuthResponse) => {
-      queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
 
       toast({
         title: "Login successful",
@@ -130,8 +131,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json() as AuthResponse;
     },
     onSuccess: (user: AuthResponse) => {
-      queryClient.clear();
-
       if (user.message) {
         queryClient.setQueryData(["/api/user"], null);
       } else {
@@ -175,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
-      queryClient.clear();
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
 
       toast({
         title: "Logged out",
