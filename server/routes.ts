@@ -4,7 +4,19 @@ import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { ZodError } from "zod";
-import { and, desc, eq, gte, lte, like, sql, count, isNotNull, isNull, or } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  lte,
+  like,
+  sql,
+  count,
+  isNotNull,
+  isNull,
+  or,
+} from "drizzle-orm";
 import {
   insertContentSchema,
   insertCategorySchema,
@@ -126,13 +138,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pendingSupportRequests = await db
           .select({ count: sql`count(*)::int` })
           .from(supportRequests)
-          .where(and(
-            eq(supportRequests.status, "pending"),
-            or(
-              eq(supportRequests.type, "support"),
-              isNull(supportRequests.type)
-            )
-          ));
+          .where(
+            and(
+              eq(supportRequests.status, "pending"),
+              or(
+                eq(supportRequests.type, "support"),
+                isNull(supportRequests.type),
+              ),
+            ),
+          );
 
         // Đếm feedback requests có type = 'feedback' và status = 'pending'
         const pendingFeedbackRequests = await db
@@ -141,8 +155,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(
             and(
               eq(supportRequests.type, "feedback"),
-              eq(supportRequests.status, "pending")
-            )
+              eq(supportRequests.status, "pending"),
+            ),
           );
 
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
@@ -334,13 +348,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingSupportRequests = await db
         .select({ count: sql`count(*)::int` })
         .from(supportRequests)
-        .where(and(
-          eq(supportRequests.status, "pending"),
-          or(
-            eq(supportRequests.type, "support"),
-            isNull(supportRequests.type)
-          )
-        ));
+        .where(
+          and(
+            eq(supportRequests.status, "pending"),
+            or(
+              eq(supportRequests.type, "support"),
+              isNull(supportRequests.type),
+            ),
+          ),
+        );
 
       // Đếm feedback requests có type = 'feedback' và status = 'pending'
       const pendingFeedbackRequests = await db
@@ -349,8 +365,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             eq(supportRequests.type, "feedback"),
-            eq(supportRequests.status, "pending")
-          )
+            eq(supportRequests.status, "pending"),
+          ),
         );
 
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
@@ -382,9 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? badgeCounts.feedbackRequests
             : undefined,
         totalRequests:
-          badgeCounts.totalRequests > 0
-            ? badgeCounts.totalRequests
-            : undefined,
+          badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
       };
 
       // Broadcast to all connected clients
@@ -606,52 +620,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Real users stats với aggregation
       const { pages, groups } = await import("../shared/schema");
 
-      const [realUsersStats, pagesStats, groupsStats, supportRequestsStats, feedbackRequestsStats] =
-        await Promise.all([
-          // Real users aggregation
-          db
-            .select({
-              total: sql<number>`count(distinct ${realUsers.id})`,
-              new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`,
-            })
-            .from(realUsers),
+      const [
+        realUsersStats,
+        pagesStats,
+        groupsStats,
+        supportRequestsStats,
+        feedbackRequestsStats,
+      ] = await Promise.all([
+        // Real users aggregation
+        db
+          .select({
+            total: sql<number>`count(distinct ${realUsers.id})`,
+            new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`,
+          })
+          .from(realUsers),
 
-          // Pages aggregation
-          db
-            .select({
-              total: sql<number>`count(*)`,
-              new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`,
-            })
-            .from(pages),
+        // Pages aggregation
+        db
+          .select({
+            total: sql<number>`count(*)`,
+            new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`,
+          })
+          .from(pages),
 
-          // Groups aggregation
-          db
-            .select({
-              total: sql<number>`count(*)`,
-              new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`,
-            })
-            .from(groups),
+        // Groups aggregation
+        db
+          .select({
+            total: sql<number>`count(*)`,
+            new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`,
+          })
+          .from(groups),
 
-          // Support requests aggregation (only type = 'support' or null for backward compatibility)
-          db
-            .select({
-              total: sql<number>`count(*) filter (where type = 'support' OR type IS NULL)`,
-              pending: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'pending')`,
-              processing: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'processing')`,
-              completed: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'completed')`,
-            })
-            .from(supportRequests),
+        // Support requests aggregation (only type = 'support' or null for backward compatibility)
+        db
+          .select({
+            total: sql<number>`count(*) filter (where type = 'support' OR type IS NULL)`,
+            pending: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'pending')`,
+            processing: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'processing')`,
+            completed: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'completed')`,
+          })
+          .from(supportRequests),
 
-          // Feedback requests aggregation (only type = 'feedback')
-          db
-            .select({
-              total: sql<number>`count(*) filter (where type = 'feedback')`,
-              pending: sql<number>`count(*) filter (where type = 'feedback' AND status = 'pending')`,
-              processing: sql<number>`count(*) filter (where type = 'feedback' AND status = 'processing')`,
-              completed: sql<number>`count(*) filter (where type = 'feedback' AND status = 'completed')`,
-            })
-            .from(supportRequests),
-        ]);
+        // Feedback requests aggregation (only type = 'feedback')
+        db
+          .select({
+            total: sql<number>`count(*) filter (where type = 'feedback')`,
+            pending: sql<number>`count(*) filter (where type = 'feedback' AND status = 'pending')`,
+            processing: sql<number>`count(*) filter (where type = 'feedback' AND status = 'processing')`,
+            completed: sql<number>`count(*) filter (where type = 'feedback' AND status = 'completed')`,
+          })
+          .from(supportRequests),
+      ]);
 
       const totalRealUsers = Number(realUsersStats[0]?.total || 0);
       const newRealUsers = Number(realUsersStats[0]?.new || 0);
@@ -669,7 +688,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const completedSupportRequests = Number(
         supportRequestsStats[0]?.completed || 0,
       );
-      const totalFeedbackRequests = Number(feedbackRequestsStats[0]?.total || 0);
+      const totalFeedbackRequests = Number(
+        feedbackRequestsStats[0]?.total || 0,
+      );
       const pendingFeedbackRequests = Number(
         feedbackRequestsStats[0]?.pending || 0,
       );
@@ -924,7 +945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       return res
         .status(500)
-```text
+
         .json({ success: false, message: "Error updating user details" });
     }
   });
@@ -1471,12 +1492,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Kiểm tra token của fake user
         if (!fakeUser.token) {
-          return res
-            .status(400)
-            .json({
-              success: false,
-              message: "Fake user does not have a valid token",
-            });
+          return res.status(400).json({
+            success: false,
+            message: "Fake user does not have a valid token",
+          });
         }
 
         // Tìm nội dung từ external ID
@@ -1484,12 +1503,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const content = contents.find((c) => c.externalId === externalId);
 
         if (!content) {
-          return res
-            .status(404)
-            .json({
-              success: false,
-              message: "Content with this external ID not found",
-            });
+          return res.status(404).json({
+            success: false,
+            message: "Content with this external ID not found",
+          });
         }
 
         try {
@@ -1921,7 +1938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { id } = req.params;
-```text
+
         const { classification } = req.body;
 
         // Validate classification value
@@ -2000,8 +2017,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           attachments: emailAttachments,
           userInfo: {
             id: realUser.id,
-            name: realUser.fullName ? (typeof realUser.fullName === 'object' ? realUser.fullName : JSON.parse(realUser.fullName as string))?.name || 'Unknown' : 'Unknown',
-            email: realUser.email
+            name: realUser.fullName
+              ? (typeof realUser.fullName === "object"
+                  ? realUser.fullName
+                  : JSON.parse(realUser.fullName as string)
+                )?.name || "Unknown"
+              : "Unknown",
+            email: realUser.email,
           },
         });
 
@@ -2015,13 +2037,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
 
-          res.json({ 
-            success: true, 
+          res.json({
+            success: true,
             message: "Email sent successfully",
             recipient: {
-              name: realUser.fullName ? (typeof realUser.fullName === 'object' ? realUser.fullName : JSON.parse(realUser.fullName as string))?.name || 'Unknown' : 'Unknown',
-              email: realUser.email
-            }
+              name: realUser.fullName
+                ? (typeof realUser.fullName === "object"
+                    ? realUser.fullName
+                    : JSON.parse(realUser.fullName as string)
+                  )?.name || "Unknown"
+                : "Unknown",
+              email: realUser.email,
+            },
           });
         } else {
           // Clean up uploaded files if email send failed
@@ -2242,8 +2269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { feedbackRouter } = await import("./routes/feedback.router");
 
   app.use("/api/support-requests", supportRouter);
-  app.use('/api', supportRouter);
-  app.use('/api', feedbackRouter);
+  app.use("/api", supportRouter);
+  app.use("/api", feedbackRouter);
 
   // Support requests routes
   app.get(
@@ -2336,13 +2363,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.error(`Failed to delete file ${file.path}:`, error);
             }
           });
-          return res
-            .status(500)
-            .json({
-              message:
-                "Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.",
-              details: "Email configuration or authentication failed",
-            });
+          return res.status(500).json({
+            message:
+              "Không thể gửi email phản hồi. Vui lòng kiểm tra cấu hình SMTP.",
+            details: "Email configuration or authentication failed",
+          });
         }
 
         // Update support request status
@@ -2958,7 +2983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/smtp-config", requireAuth, async (req, res) => {
     try {
       // Only admin can access SMTP config
-      ```text
+
       if ((req.user as Express.User).role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3025,11 +3050,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Test SMTP connection first
       const connectionOk = await emailService.testConnection();
       if (!connectionOk) {
-        return res
-          .status(400)
-          .json({
-            message: "SMTP connection failed. Please check configuration.",
-          });
+        return res.status(400).json({
+          message: "SMTP connection failed. Please check configuration.",
+        });
       }
 
       // Send test email
@@ -3257,30 +3280,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
 
       // Đếm support requests có status = 'pending' và type = 'support' (hoặc không có type - backward compatibility)
-        const pendingSupportRequests = await db
-          .select({ count: sql`count(*)::int` })
-          .from(supportRequests)
-          .where(and(
+      const pendingSupportRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(
+          and(
             eq(supportRequests.status, "pending"),
             or(
               eq(supportRequests.type, "support"),
-              isNull(supportRequests.type)
-            )
-          ));
+              isNull(supportRequests.type),
+            ),
+          ),
+        );
 
-        // Đếm feedback requests có type = 'feedback' và status = 'pending'
-        const pendingFeedbackRequests = await db
-          .select({ count: sql`count(*)::int` })
-          .from(supportRequests)
-          .where(
-            and(
-              eq(supportRequests.type, "feedback"),
-              eq(supportRequests.status, "pending")
-            )
-          );
+      // Đếm feedback requests có type = 'feedback' và status = 'pending'
+      const pendingFeedbackRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(
+          and(
+            eq(supportRequests.type, "feedback"),
+            eq(supportRequests.status, "pending"),
+          ),
+        );
 
-        const pendingSupport = pendingSupportRequests[0]?.count || 0;
-        const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+      const pendingSupport = pendingSupportRequests[0]?.count || 0;
+      const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
 
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
@@ -3300,7 +3325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           badgeCounts.supportRequests > 0
             ? badgeCounts.supportRequests
             : undefined,
-            feedbackRequests:
+        feedbackRequests:
           badgeCounts.feedbackRequests > 0
             ? badgeCounts.feedbackRequests
             : undefined,
