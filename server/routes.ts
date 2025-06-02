@@ -924,6 +924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       return res
         .status(500)
+```text
         .json({ success: false, message: "Error updating user details" });
     }
   });
@@ -1920,18 +1921,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { id } = req.params;
+```text
         const { classification } = req.body;
+
+        // Validate classification value
+        if (!["new", "potential", "non_potential"].includes(classification)) {
+          return res.status(400).json({
+            message: "Invalid classification value",
+            validValues: ["new", "potential", "non_potential"],
+          });
+        }
 
         const result = await db
           .update(realUsers)
           .set({
             classification,
             updatedAt: new Date(),
-                    })
+          })
           .where(eq(realUsers.id, parseInt(id)))
           .returning();
 
-        res.json(result[0]);
+        if (result.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({
+          message: "Classification updated successfully",
+          user: result[0],
+        });
+
+        // Broadcast badge update to all clients
+        if ((global as any).broadcastBadgeUpdate) {
+          (global as any).broadcastBadgeUpdate();
+        }
       } catch (error) {
         console.error("Error updating classification:", error);
         res.status(500).json({
@@ -2936,6 +2958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/smtp-config", requireAuth, async (req, res) => {
     try {
       // Only admin can access SMTP config
+      ```text
       if ((req.user as Express.User).role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
