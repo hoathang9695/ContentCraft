@@ -531,7 +531,7 @@ export default function RealUserPage() {
                         <Eye className="mr-2 h-4 w-4" />
                         Xem chi tiết
                       </DropdownMenuItem>
-                      {user?.can_send_email && (
+                      {(user?.can_send_email === true || user?.role === 'admin') && (
                         <DropdownMenuItem
                           onClick={() => {
                             setEmailUser(row);
