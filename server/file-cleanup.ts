@@ -1,3 +1,4 @@
+
 import fs from 'fs';
 import path from 'path';
 
@@ -18,30 +19,25 @@ export class FileCleanupService {
     if (this.cleanupInterval) return;
 
     console.log('Starting automatic file cleanup service (daily at midnight)...');
-
+    
     // Run cleanup immediately
     this.cleanupOldFiles();
-
+    
     // Calculate time until next midnight
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-
+    
     const timeUntilMidnight = tomorrow.getTime() - now.getTime();
-
+    
     // Set timeout for first midnight, then interval for daily
     setTimeout(() => {
       this.cleanupOldFiles();
-
+      
       // Then run every 24 hours
       this.cleanupInterval = setInterval(() => {
         this.cleanupOldFiles();
-
-        // Force garbage collection if available
-        if (global.gc) {
-          global.gc();
-        }
       }, 24 * 60 * 60 * 1000); // 24 hours
     }, timeUntilMidnight);
   }
@@ -68,11 +64,11 @@ export class FileCleanupService {
 
       files.forEach(filename => {
         const filePath = path.join(this.uploadDir, filename);
-
+        
         try {
           const stats = fs.statSync(filePath);
           const fileAge = now - stats.mtime.getTime();
-
+          
           if (fileAge > maxAge) {
             fs.unlinkSync(filePath);
             deletedCount++;

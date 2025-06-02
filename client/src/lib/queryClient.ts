@@ -3,7 +3,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage: string;
-
+    
     try {
       // Try to parse as JSON first
       const errorData = await res.json();
@@ -13,7 +13,7 @@ async function throwIfResNotOk(res: Response) {
       const text = await res.text();
       errorMessage = text || res.statusText;
     }
-
+    
     const error = new Error(errorMessage);
     (error as any).status = res.status;
     (error as any).response = res;
@@ -34,12 +34,12 @@ export async function apiRequest<T = any>(
   });
 
   await throwIfResNotOk(res);
-
+  
   // Nếu mã status 204 No Content, không cần parse JSON
   if (res.status === 204) {
     return {} as T;
   }
-
+  
   return await res.json() as T;
 }
 
@@ -51,7 +51,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     // Debug console logs
     console.log("Fetching from queryKey:", queryKey[0]);
-
+    
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
     });
@@ -63,16 +63,14 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-
+    
     // Nếu mã status 204 No Content, không cần parse JSON
     if (res.status === 204) {
       return {} as T;
     }
-
+    
     return await res.json();
   };
-
-import { QueryClient } from '@tanstack/react-query'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,22 +78,11 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: true, // Cập nhật khi cửa sổ có focus
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 60000, // 1 phút thay vì Infinity để đảm bảo dữ liệu fresh
       retry: 1, // Thử lại 1 lần nếu thất bại
-      gcTime: 1000 * 60 * 10, // 10 minutes (was cacheTime)
     },
     mutations: {
       retry: 1, // Thử lại 1 lần nếu thất bại
     },
   },
-  queryCache: {
-    onError: (error) => {
-      console.error('Query error:', error);
-    },
-  },
-})
-
-// Periodic cleanup of React Query cache
-setInterval(() => {
-  queryClient.getQueryCache().clear();
-}, 1000 * 60 * 30); // Clear cache every 30 minutes
+});
