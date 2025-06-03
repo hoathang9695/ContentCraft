@@ -178,19 +178,68 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
+    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
+    if (!externalId) {
+      commentMutation.mutate({ id: contentId, count: uniqueComments.length });
+      onOpenChange(false);
+      setCommentText('');
+      return;
+    }
+
+    // Kiểm tra xem có queue nào đang xử lý cho externalId này không
+    const queueKey = `comment_queue_${externalId}`;
+    const existingQueue = (() => {
+      try {
+        const stored = localStorage.getItem(queueKey);
+        return stored ? JSON.parse(stored) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    // Nếu có queue đang xử lý, cho phép thêm comment vào queue
+    if (existingQueue && existingQueue.status === 'processing') {
+      const progress = existingQueue.processedCount || 0;
+      const total = existingQueue.totalComments || 0;
+      const remaining = total - progress;
+      
+      // Thêm comment mới vào queue hiện tại
+      const updatedComments = [...existingQueue.comments, ...uniqueComments];
+      const updatedQueue = {
+        ...existingQueue,
+        comments: updatedComments,
+        totalComments: updatedComments.length
+      };
+
+      try {
+        localStorage.setItem(queueKey, JSON.stringify(updatedQueue));
+        
+        toast({
+          title: 'Đã thêm comment vào queue',
+          description: `Đã thêm ${uniqueComments.length} comment vào queue đang chạy. Queue hiện có ${updatedComments.length} comment (${progress} đã xử lý, còn ${updatedComments.length - progress} chưa xử lý).`,
+        });
+        
+        // Đóng dialog và reset form
+        onOpenChange(false);
+        setCommentText('');
+        return;
+      } catch (error) {
+        console.warn('Không thể cập nhật queue:', error);
+        toast({
+          title: 'Lỗi',
+          description: 'Không thể thêm comment vào queue đang chạy. Vui lòng thử lại.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     // Đóng dialog ngay lập tức
     onOpenChange(false);
     setCommentText('');
 
-    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
-    if (!externalId) {
-      commentMutation.mutate({ id: contentId, count: uniqueComments.length });
-      return;
-    }
-
     // Tạo unique session ID cho việc track
     const sessionId = `comment_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const queueKey = `comment_queue_${externalId}`;
     
     // Lưu queue vào localStorage để persist
     const commentQueue = {
