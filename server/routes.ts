@@ -1970,7 +1970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single label
-  app.get("/api/labels/:id", async (req, res) =>{
+  app.get("/api/labels/:id", async (req, res) => {
     try {
       const labelId = Number(req.params.id);
       const label = await storage.getLabel(labelId);
