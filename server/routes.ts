@@ -246,13 +246,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return result[0]?.count || 0;
   }
 
-  // Function to broadcast badge updates
   const broadcastBadgeUpdate = async () => {
     try {
-      const { groups, supportRequests } = await import("../shared/schema");
-      const { pages } = await import("../shared/schema");
-      const { users } = await import("../shared/schema");
-      const { realUsers } = await import("../shared/schema");
+      const { groups, supportRequests, realUsers, pages } = await import("../shared/schema");
+
+      // Clear cache trước khi đếm lại
+      cache.del("badge-counts");
 
       const [realUsersNewCount, pagesNewCount, groupsNewCount] =
         await Promise.all([
@@ -282,16 +281,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingSupportRequests = await db
         .select({ count: sql`count(*)::int` })
         .from(supportRequests)
-        .where(eq(supportRequests.status, "pending"));
+        .where(
+          and(
+            eq(supportRequests.status, "pending"),
+            or(
+              eq(supportRequests.type, "support"),
+              isNull(supportRequests.type),
+            ),
+          ),
+        );
+
+      // Đếm feedback requests có type = 'feedback' và status = 'pending'
+      const pendingFeedbackRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(
+          and(
+            eq(supportRequests.type, "feedback"),
+            eq(supportRequests.status, "pending"),
+          ),
+        );
 
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
+      const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+      const totalPendingRequests = pendingSupport + pendingFeedback;
 
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
         pages: pagesNewCount[0]?.count || 0,
         groups: groupsNewCount[0]?.count || 0,
         supportRequests: pendingSupport,
+        feedbackRequests: pendingFeedback,
+        totalRequests: totalPendingRequests,
       };
+
+      console.log("Raw badge counts:", badgeCounts);
 
       const filteredBadgeCounts = {
         realUsers:
@@ -302,7 +326,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           badgeCounts.supportRequests > 0
             ? badgeCounts.supportRequests
             : undefined,
+        feedbackRequests:
+          badgeCounts.feedbackRequests > 0
+            ? badgeCounts.feedbackRequests
+            : undefined,
+        totalRequests:
+          badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
       };
+
+      // Cache kết quả mới
+      cache.set("badge-counts", filteredBadgeCounts, 300);
 
       // Broadcast to all connected clients
       io.emit("badge-update", filteredBadgeCounts);
@@ -820,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         can_send_email: users.can_send_email,
         createdAt: users.createdAt
       }).from(users).orderBy(users.id);
-      
+
       console.log('Fetched users with email permission:', allUsers.map(u => ({ 
         id: u.id, 
         username: u.username, 
@@ -903,7 +936,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update user
-  app.put("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.put("/api/users/:id", isAuthenticated, isAdmin,```text
+async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       const { username, name, role, status, can_send_email, password } = req.body;
@@ -1894,8 +1928,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(204).send();
       } else {
         res.status(500).json({ message: "Error deleting category" });
-      }
-    } catch (error) {
+      }```text
+      } catch (error) {
       res.status(500).json({
         message: "Error deleting category",
         error: error instanceof Error ? error.message : String(error),
@@ -2935,60 +2969,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update group classification
-  app.put(
-    "/api/groups/:id/classification",
-    isAuthenticated,
-    async (req, res) => {
-      try {
-        const groupId = parseInt(req.params.id);
-        const { classification } = req.body;
+  app.put("/api/groups/:id/classification", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { classification } = req.body;
 
-        // Validate classification value
-        const validClassifications = ["new", "potential", "non_potential"];
-        if (!validClassifications.includes(classification)) {
-          return res.status(400).json({
-            message: "Invalid classification value",
-            validValues: validClassifications,
-          });
-        }
-
-        // Import groups from schema
-        const { groups } = await import("../shared/schema");
-
-        // Update the group classification
-        const updatedGroup = await db
-          .update(groups)
-          .set({
-            classification,
-            updatedAt: new Date(),
-                    })
-          .where(eq(groups.id, groupId))
-          .returning();
-
-        if (!updatedGroup.length) {
-          return res.status(404).json({ message: "Group not found" });
-        }
-
-        res.json({
-          success: true,
-          message: "Classification updated successfully",
-          data: updatedGroup[0],
-        });
-
-        // Broadcast badge update to all clients
-        if ((global as any).broadcastBadgeUpdate) {
-          (global as any).broadcastBadgeUpdate();
-        }
-      } catch (error) {
-        console.error("Error updating group classification:", error);
-        res.status(500).json({
-          message: "Error updating group classification",
-          error: error instanceof Error ? error.message : String(error),
-        });
+      if (!["new", "potential", "non_potential"].includes(classification)) {
+        return res.status(400).json({ error: "Invalid classification" });
       }
-    },
-  );
+
+      const { groups } = await import("../shared/schema");
+
+      await db
+        .update(groups)
+        .set({ 
+          classification,
+          updatedAt: new Date()
+        })
+        .where(eq(groups.id, parseInt(id)));
+
+      // Clear cache và broadcast update
+      cache.delete("badge-counts");
+
+      // Broadcast badge update sau khi cập nhật
+      if (typeof (global as any).broadcastBadgeUpdate === 'function') {
+        await (global as any).broadcastBadgeUpdate();
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Classification updated successfully" 
+      });
+    } catch (error) {
+      console.error("Error updating group classification:", error);
+      res.status(500).json({ error: "Failed to update classification" });
+    }
+  });
 
   // Get all real users
   app.get("/api/real-users", isAuthenticated, async (req, res) => {
@@ -3432,18 +3448,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check cache first
       const cached = cache.get("badge-counts");
       if (cached) {
+        console.log("Returning cached badge counts:", cached);
         return res.json(cached);
       }
 
-      const { pages, groups, supportRequests } = await import(
-        "../shared/schema"
-      );
-      const { users } = await import("../shared/schema");
-      const { realUsers } = await import("../shared/schema");
+      const { groups, supportRequests, realUsers, pages } = await import("../shared/schema");
 
       const [realUsersNewCount, pagesNewCount, groupsNewCount] =
         await Promise.all([
-          // Real users with "new" classification
           db
             .select({
               count: sql<number>`count(*)`,
@@ -3451,7 +3463,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .from(realUsers)
             .where(eq(realUsers.classification, "new")),
 
-          // Pages with "new" classification
           db
             .select({
               count: sql<number>`count(*)`,
@@ -3459,7 +3470,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .from(pages)
             .where(eq(pages.classification, "new")),
 
-          // Groups with "new" classification
           db
             .select({
               count: sql<number>`count(*)`,
@@ -3468,7 +3478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(eq(groups.classification, "new")),
         ]);
 
-      // Đếm support requests có status = 'pending' và type = 'support' (hoặc không có type - backward compatibility)
+      // Đếm support requests có type = 'support' hoặc null và status = 'pending'
       const pendingSupportRequests = await db
         .select({ count: sql`count(*)::int` })
         .from(supportRequests)
@@ -3495,6 +3505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
       const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+      const totalPendingRequests = pendingSupport + pendingFeedback;
 
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
@@ -3502,7 +3513,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         groups: groupsNewCount[0]?.count || 0,
         supportRequests: pendingSupport,
         feedbackRequests: pendingFeedback,
+        totalRequests: totalPendingRequests,
       };
+
+      console.log("Fresh badge counts calculated:", badgeCounts);
 
       // Chỉ trả về các badge có giá trị > 0
       const filteredBadgeCounts = {
@@ -3518,11 +3532,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           badgeCounts.feedbackRequests > 0
             ? badgeCounts.feedbackRequests
             : undefined,
+        totalRequests:
+          badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
       };
 
-      // Cache for 5 minutes để giảm tải database
+      // Cache for 5 minutes
       cache.set("badge-counts", filteredBadgeCounts, 300);
 
+      console.log("Returning filtered badge counts:", filteredBadgeCounts);
       res.json(filteredBadgeCounts);
     } catch (error) {
       console.error("Error fetching badge counts:", error);
