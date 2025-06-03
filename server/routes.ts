@@ -3167,6 +3167,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
+      // Add no-cache headers to prevent caching
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+
       // Get SMTP config from emailService
       const smtpConfig: SMTPConfig = emailService.getConfig();
 
@@ -3204,6 +3211,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update email service configuration
       await emailService.updateConfig(smtpConfig);
+
+      // Force reload config from database to ensure fresh data
+      await emailService.loadConfigFromDB();
 
       res.json({
         message: "SMTP configuration updated successfully",
