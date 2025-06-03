@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
@@ -36,7 +35,7 @@ export function useWebSocket() {
     newSocket.on('connect', () => {
       console.log('WebSocket connected:', newSocket.id);
       setIsConnected(true);
-      
+
       // Request initial badge counts khi kết nối
       newSocket.emit('request-badge-counts');
     });
@@ -49,18 +48,24 @@ export function useWebSocket() {
     });
 
     // Lắng nghe badge updates
-    newSocket.on('badge-update', (data: BadgeCounts) => {
-      console.log('Received badge update via WebSocket:', data);
-      setBadgeCounts(data);
-      setHasInitialData(true);
-      
-      // Persist to localStorage
-      try {
-        localStorage.setItem('badgeCounts', JSON.stringify(data));
-      } catch (error) {
-        console.warn('Failed to cache badge counts to localStorage:', error);
-      }
-    });
+    newSocket.on('badge-update', (newBadgeCounts: BadgeCounts) => {
+        console.log('Received badge update via WebSocket:', newBadgeCounts);
+
+        // Update state immediately
+        setBadgeCounts(prev => ({ ...prev, ...newBadgeCounts }));
+
+        // Persist to localStorage for immediate availability on page load
+        if (typeof window !== 'undefined') {
+          const updatedCounts = { ...badgeCounts, ...newBadgeCounts };
+          localStorage.setItem('badgeCounts', JSON.stringify(updatedCounts));
+          localStorage.setItem('badgeCountsTimestamp', Date.now().toString());
+        }
+
+        // Force re-render by triggering a small state change
+        setTimeout(() => {
+          setBadgeCounts(current => ({ ...current }));
+        }, 50);
+      });
 
     newSocket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error);
