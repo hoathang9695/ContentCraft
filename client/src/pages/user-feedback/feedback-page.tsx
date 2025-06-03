@@ -470,6 +470,9 @@ export default function FeedbackPage() {
                                 });
                                 queryClient.invalidateQueries(['/api/feedback-requests']);
                                 queryClient.invalidateQueries(['/api/badge-counts']);
+                                
+                                // Force refresh badge counts immediately
+                                queryClient.refetchQueries(['/api/badge-counts'], { active: true });
                               } else {
                                 throw new Error('Failed to update status');
                               }
