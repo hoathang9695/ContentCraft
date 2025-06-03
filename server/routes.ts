@@ -3161,14 +3161,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // EmailService is already initialized as singleton in email.ts
 
-  // Check if user is authenticated middleware
-  const requireAuth = (req: Request, res: Response, next: Function) => {
-    if (req.isAuthenticated()) {
-      return next();
-    }
-    res.status(401).json({ message: "Unauthorized" });
-  };
-
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -3329,6 +3321,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch content stats" });
     }
   });
+
+  // Check if user is authenticated middleware
+  const requireAuth = (req: Request, res: Response, next: Function) => {
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    res.status(401).json({ message: "Unauthorized" });
+  };
 
   // Support requests aggregation
   app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
