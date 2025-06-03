@@ -83,7 +83,7 @@ export class EmailService {
     }
   }
 
-  private async loadConfigFromDB(): Promise<void> {
+  public async loadConfigFromDB(): Promise<void> {
     try {
       // Get the most recent active config (sorted by createdAt DESC)
       const result = await db.select().from(smtpConfig)
