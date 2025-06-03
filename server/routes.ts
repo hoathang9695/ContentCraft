@@ -1928,9 +1928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Error deleting category" });
       }
-    }```text
-
-      } catch (error) {
+    } catch (error) {
       res.status(500).json({
         message: "Error deleting category",
         error: error instanceof Error ? error.message : String(error),
