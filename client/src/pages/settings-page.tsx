@@ -89,12 +89,21 @@ export default function SettingsPage() {
   const { data: smtpData, isLoading: isLoadingSMTP } = useQuery<SMTPConfig>({
     queryKey: ["/api/smtp-config"],
     queryFn: async () => {
-      const res = await fetch("/api/smtp-config");
+      const res = await fetch("/api/smtp-config", {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!res.ok) throw new Error("Failed to fetch SMTP config");
       const data = await res.json();
       setSMTPConfig(data);
       return data;
     },
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true // Always refetch on component mount
   });
 
   // Update SMTP configuration mutation
@@ -113,7 +122,11 @@ export default function SettingsPage() {
         title: "Thành công",
         description: "Cấu hình SMTP đã được cập nhật",
       });
+      // Force refresh SMTP config from server
       queryClient.invalidateQueries({ queryKey: ["/api/smtp-config"] });
+      queryClient.refetchQueries({ queryKey: ["/api/smtp-config"] });
+      // Clear all cache to ensure fresh data
+      queryClient.removeQueries({ queryKey: ["/api/smtp-config"] });
     },
     onError: () => {
       toast({

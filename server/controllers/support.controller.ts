@@ -80,7 +80,10 @@ export class SupportController {
 
       // Broadcast badge update after status change
       if ((global as any).broadcastBadgeUpdate) {
-        await (global as any).broadcastBadgeUpdate();
+        // Add small delay to ensure DB transaction is fully committed
+        setTimeout(async () => {
+          await (global as any).broadcastBadgeUpdate();
+        }, 100);
       }
 
       return res.json(result[0]);
@@ -113,9 +116,12 @@ export class SupportController {
         .where(eq(supportRequests.id, parseInt(id)))
         .returning();
 
-      // Broadcast badge update after assignment
+      // Broadcast badge update after assignment  
       if ((global as any).broadcastBadgeUpdate) {
-        await (global as any).broadcastBadgeUpdate();
+        // Add small delay to ensure DB transaction is fully committed
+        setTimeout(async () => {
+          await (global as any).broadcastBadgeUpdate();
+        }, 100);
       }
 
       return res.json(result[0]);

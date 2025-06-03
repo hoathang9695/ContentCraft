@@ -433,6 +433,9 @@ export default function SupportPage() {
                                 // Invalidate and refetch the support requests query and badge counts
                                 queryClient.invalidateQueries(['/api/support-requests']);
                                 queryClient.invalidateQueries(['/api/badge-counts']);
+                                
+                                // Force refresh badge counts immediately
+                                queryClient.refetchQueries(['/api/badge-counts'], { active: true });
                               } else {
                                 throw new Error('Failed to update status');
                               }
