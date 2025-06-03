@@ -936,7 +936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update user
-  app.put("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.put("/api/users/:id", isAuthenticated, isAdmin,async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       const { username, name, role, status, can_send_email, password } = req.body;
@@ -1927,7 +1927,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(204).send();
       } else {
         res.status(500).json({ message: "Error deleting category" });
-      }```text
+      }
+    }```text
+
       } catch (error) {
       res.status(500).json({
         message: "Error deleting category",
