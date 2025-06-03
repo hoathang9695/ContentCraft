@@ -787,22 +787,15 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
       return;
     }
 
-    // Check for duplicate support request
+    // Check for duplicate support request based on content only
     const existingRequest = await tx
       .select()
       .from(supportRequests)
-      .where(
-        and(
-          eq(supportRequests.email, message.email),
-          eq(supportRequests.subject, message.subject),
-          eq(supportRequests.content, message.content),
-          eq(supportRequests.full_name, message.full_name)
-        )
-      )
+      .where(eq(supportRequests.content, message.content))
       .limit(1);
 
     if (existingRequest.length > 0) {
-      log(`Support request already exists for ${message.email} with subject: ${message.subject}, skipping...`, "kafka");
+      log(`Support request with same content already exists, skipping...`, "kafka");
       return existingRequest[0];
     }
 
@@ -902,23 +895,20 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
       return;
     }
 
-    // Check for duplicate feedback request
+    // Check for duplicate feedback request based on content only
     const existingRequest = await tx
       .select()
       .from(supportRequests)
       .where(
         and(
-          eq(supportRequests.email, message.email),
-          eq(supportRequests.subject, message.subject),
           eq(supportRequests.content, message.content),
-          eq(supportRequests.full_name, message.full_name),
           eq(supportRequests.type, "feedback")
         )
       )
       .limit(1);
 
     if (existingRequest.length > 0) {
-      log(`Feedback request already exists for ${message.email} with subject: ${message.subject}, skipping...`, "kafka");
+      log(`Feedback request with same content already exists, skipping...`, "kafka");
       return existingRequest[0];
     }
 
