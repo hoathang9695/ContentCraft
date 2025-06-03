@@ -178,19 +178,45 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
+    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
+    if (!externalId) {
+      commentMutation.mutate({ id: contentId, count: uniqueComments.length });
+      onOpenChange(false);
+      setCommentText('');
+      return;
+    }
+
+    // Kiểm tra xem có queue nào đang xử lý cho externalId này không
+    const queueKey = `comment_queue_${externalId}`;
+    const existingQueue = (() => {
+      try {
+        const stored = localStorage.getItem(queueKey);
+        return stored ? JSON.parse(stored) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    // Nếu có queue đang xử lý, không cho phép tạo queue mới
+    if (existingQueue && existingQueue.status === 'processing') {
+      const progress = existingQueue.processedCount || 0;
+      const total = existingQueue.totalComments || 0;
+      const remaining = total - progress;
+      
+      toast({
+        title: 'Queue đang xử lý',
+        description: `Có một phiên gửi comment đang chạy cho nội dung này (${progress}/${total} hoàn thành, còn ${remaining} comment). Vui lòng đợi hoàn thành trước khi gửi comment mới.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Đóng dialog ngay lập tức
     onOpenChange(false);
     setCommentText('');
 
-    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
-    if (!externalId) {
-      commentMutation.mutate({ id: contentId, count: uniqueComments.length });
-      return;
-    }
-
     // Tạo unique session ID cho việc track
     const sessionId = `comment_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const queueKey = `comment_queue_${externalId}`;
     
     // Lưu queue vào localStorage để persist
     const commentQueue = {
