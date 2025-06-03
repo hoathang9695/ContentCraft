@@ -95,7 +95,7 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
 
     for (const topic of topics) {
       try {
-        await consumer.subscribe({ topic, fromBeginning: true }); // Set fromBeginning true to process existing messages
+        await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false to avoid processing old messages
         log(`Resubscribed to topic: ${topic}`, "kafka");
       } catch (error) {
         log(`Failed to resubscribe to topic ${topic}: ${error}`, "kafka-error");
@@ -199,7 +199,7 @@ export async function setupKafkaConsumer() {
     const topics = [...new Set([...requiredTopics, ...configuredTopics])];
 
     for (const topic of topics) {
-      await consumer.subscribe({ topic, fromBeginning: true });
+      await consumer.subscribe({ topic, fromBeginning: false });
       log(`Subscribed to topic: ${topic}`, "kafka");
     }
 
@@ -787,6 +787,25 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
       return;
     }
 
+    // Check for duplicate support request
+    const existingRequest = await tx
+      .select()
+      .from(supportRequests)
+      .where(
+        and(
+          eq(supportRequests.email, message.email),
+          eq(supportRequests.subject, message.subject),
+          eq(supportRequests.content, message.content),
+          eq(supportRequests.full_name, message.full_name)
+        )
+      )
+      .limit(1);
+
+    if (existingRequest.length > 0) {
+      log(`Support request already exists for ${message.email} with subject: ${message.subject}, skipping...`, "kafka");
+      return existingRequest[0];
+    }
+
     log(`Processing support message: ${JSON.stringify(message)}`, "kafka");
 
     // Get active users
@@ -881,6 +900,26 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
     ) {
       log(`Invalid feedback message: ${JSON.stringify(message)}`, "kafka-error");
       return;
+    }
+
+    // Check for duplicate feedback request
+    const existingRequest = await tx
+      .select()
+      .from(supportRequests)
+      .where(
+        and(
+          eq(supportRequests.email, message.email),
+          eq(supportRequests.subject, message.subject),
+          eq(supportRequests.content, message.content),
+          eq(supportRequests.full_name, message.full_name),
+          eq(supportRequests.type, "feedback")
+        )
+      )
+      .limit(1);
+
+    if (existingRequest.length > 0) {
+      log(`Feedback request already exists for ${message.email} with subject: ${message.subject}, skipping...`, "kafka");
+      return existingRequest[0];
     }
 
     log(`Processing feedback message: ${JSON.stringify(message)}`, "kafka");
