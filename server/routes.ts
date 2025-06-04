@@ -1707,8 +1707,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
 
           // Kiểm tra kết quả từ API
+          console.log(`[${externalId}] API Response Status: ${response.status}`);
+          
           if (response.ok) {
             const apiResponse = await response.json();
+            console.log(`[${externalId}] ✅ External API SUCCESS:`, {
+              fakeUserId,
+              comment: comment.substring(0, 50) + '...',
+              apiResponse
+            });
 
             // Tăng số lượng comment trong database
             const currentCount = content.comments || 0;
@@ -1716,17 +1723,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
               comments: currentCount + 1,
             });
 
+            console.log(`[${externalId}] Database updated: comments ${currentCount} -> ${currentCount + 1}`);
+
             return res.json({
               success: true,
               message: "Comment sent successfully",
               data: {
                 externalId,
                 contentId: content.id,
+                fakeUserId,
+                comment,
                 apiResponse,
+                timestamp: new Date().toISOString(),
               },
             });
           } else {
             const errorData = await response.json();
+            console.error(`[${externalId}] ❌ External API FAILED:`, {
+              status: response.status,
+              fakeUserId,
+              comment: comment.substring(0, 50) + '...',
+              errorData
+            });
+            
             return res.status(response.status).json({
               success: false,
               message: "Failed to send comment to external API",
