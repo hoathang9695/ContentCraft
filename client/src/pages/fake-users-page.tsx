@@ -515,14 +515,60 @@ export default function FakeUsersPage() {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
+        // Kiểm tra và xử lý header
+        const headers = jsonData[0] as string[];
+        console.log("Excel headers:", headers);
+
+        // Tìm vị trí các cột
+        const nameIndex = headers.findIndex(h => 
+          h && (h.toLowerCase().includes('name') || h.toLowerCase().includes('tên') || h.toLowerCase().includes('họ tên'))
+        );
+        const tokenIndex = headers.findIndex(h => 
+          h && h.toLowerCase().includes('token')
+        );
+        const emailIndex = headers.findIndex(h => 
+          h && h.toLowerCase().includes('email')
+        );
+        const passwordIndex = headers.findIndex(h => 
+          h && (h.toLowerCase().includes('password') || h.toLowerCase().includes('mật khẩu'))
+        );
+
+        console.log("Column indexes:", { nameIndex, tokenIndex, emailIndex, passwordIndex });
+
+        if (nameIndex === -1 || tokenIndex === -1) {
+          toast({
+            title: "Lỗi định dạng file",
+            description: "File Excel phải có ít nhất 2 cột: Name/Tên và Token",
+            variant: "destructive",
+          });
+          setIsUploading(false);
+          return;
+        }
+
         // Bỏ qua dòng header và xử lý dữ liệu
         const users = (jsonData as any[][])
           .slice(1) // Bỏ dòng đầu (header)
-          .filter(row => row[0] && row[1]) // Chỉ lấy dòng có đủ 2 cột
-          .map(row => ({
-            name: String(row[0]).trim(),
-            token: String(row[1]).trim(),
-          }));
+          .filter(row => row[nameIndex] && row[tokenIndex]) // Chỉ lấy dòng có đủ name và token
+          .map(row => {
+            const userData: any = {
+              name: String(row[nameIndex]).trim(),
+              token: String(row[tokenIndex]).trim(),
+            };
+
+            // Thêm email nếu có
+            if (emailIndex !== -1 && row[emailIndex]) {
+              userData.email = String(row[emailIndex]).trim();
+            }
+
+            // Thêm password nếu có
+            if (passwordIndex !== -1 && row[passwordIndex]) {
+              userData.password = String(row[passwordIndex]).trim();
+            }
+
+            return userData;
+          });
+
+        console.log("Processed users:", users.slice(0, 3)); // Log 3 users đầu tiên để kiểm tra
 
         if (users.length === 0) {
           toast({
@@ -580,6 +626,10 @@ export default function FakeUsersPage() {
             <CardTitle>Quản lý Người dùng ảo (Fake Users)</CardTitle>
             <CardDescription>
               Quản lý danh sách người dùng ảo để sử dụng cho việc gửi bình luận đến hệ thống bên ngoài
+              <br />
+              <small className="text-muted-foreground">
+                File Excel cần có các cột: Name/Tên (bắt buộc), Token (bắt buộc), Email (tùy chọn), Password/Mật khẩu (tùy chọn)
+              </small>
             </CardDescription>
           </div>
           <div className="flex gap-2">

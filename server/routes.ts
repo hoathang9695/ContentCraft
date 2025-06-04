@@ -2327,12 +2327,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const userData of users) {
         try {
-          // Validate data
-          const validatedData = insertFakeUserSchema.parse({
+          // Prepare data for validation
+          const dataToValidate: any = {
             name: userData.name,
             token: userData.token,
             status: "active",
-          });
+          };
+
+          // Add email if provided
+          if (userData.email && userData.email.trim()) {
+            dataToValidate.email = userData.email.trim();
+          }
+
+          // Add password if provided
+          if (userData.password && userData.password.trim()) {
+            dataToValidate.password = userData.password.trim();
+          }
+
+          // Validate data
+          const validatedData = insertFakeUserSchema.parse(dataToValidate);
 
           // Kiểm tra token đã tồn tại chưa
           const existingFakeUser = await storage.getFakeUserByToken(
@@ -2347,20 +2360,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Tạo người dùng ảo mới
           await storage.createFakeUser(validatedData);
           successCount++;
+          
+          console.log(`✅ Created fake user: ${validatedData.name} with email: ${validatedData.email || 'N/A'}`);
         } catch (error) {
           const errorMsg =
             error instanceof Error ? error.message : String(error);
           errors.push(`Lỗi với "${userData.name}": ${errorMsg}`);
           failedCount++;
+          console.error(`❌ Failed to create fake user ${userData.name}:`, errorMsg);
         }
       }
 
+      console.log(`Bulk upload completed: ${successCount} success, ${failedCount} failed`);
+      
       res.json({
         success: successCount,
         failed: failedCount,
         errors: errors,
       });
     } catch (error) {
+      console.error("Error in bulk upload:", error);
       res.status(500).json({
         message: "Error bulk uploading fake users",
         error: error instanceof Error ? error.message : String(error),
