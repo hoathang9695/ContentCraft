@@ -586,21 +586,35 @@ export class DatabaseStorage implements IStorage {
 
     // Search query - handle both text and JSON source columns
     if (searchQuery) {
-      const searchTerm = searchQuery.trim().toLowerCase();
+      const searchTerm = searchQuery.trim();
+      const searchTermLower = searchTerm.toLowerCase();
+      
       whereConditions.push(
         or(
-          like(contents.externalId, `%${searchQuery}%`),
-          like(contents.categories, `%${searchQuery}%`),
-          like(contents.labels, `%${searchQuery}%`),
+          // Exact match for external ID
+          eq(contents.externalId, searchTerm),
+          // Partial match for external ID
+          like(contents.externalId, `%${searchTerm}%`),
+          // Search in categories and labels
+          like(contents.categories, `%${searchTerm}%`),
+          like(contents.labels, `%${searchTerm}%`),
           // Basic text search in source field (works for both text and JSON)
-          sql`LOWER(${contents.source}::text) LIKE ${`%${searchTerm}%`}`,
+          sql`LOWER(${contents.source}::text) LIKE ${`%${searchTermLower}%`}`,
           // Try to extract 'name' from JSON if source is valid JSON
           sql`
             CASE 
               WHEN ${contents.source} ~ '^{.*}$' 
               THEN LOWER((${contents.source}::jsonb)->>'name') 
               ELSE LOWER(${contents.source}::text) 
-            END LIKE ${`%${searchTerm}%`}
+            END LIKE ${`%${searchTermLower}%`}
+          `,
+          // Search in JSON source id field
+          sql`
+            CASE 
+              WHEN ${contents.source} ~ '^{.*}$' 
+              THEN (${contents.source}::jsonb)->>'id'
+              ELSE NULL
+            END = ${searchTerm}
           `,
           // Fuzzy search removing spaces
           sql`
@@ -608,7 +622,7 @@ export class DatabaseStorage implements IStorage {
               WHEN ${contents.source} ~ '^{.*}$' 
               THEN REPLACE(LOWER((${contents.source}::jsonb)->>'name'), ' ', '') 
               ELSE REPLACE(LOWER(${contents.source}::text), ' ', '') 
-            END LIKE ${`%${searchTerm.replace(/\s+/g, '')}%`}
+            END LIKE ${`%${searchTermLower.replace(/\s+/g, '')}%`}
           `
         )
       );
