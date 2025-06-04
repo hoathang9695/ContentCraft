@@ -360,7 +360,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       };
 
       // Atomic localStorage operations với retry
-      const atomicUpdateQueue = (updates: Partial<typeof commentQueue>, maxRetries = 3): boolean => {
+      const atomicUpdateQueue = async (updates: Partial<typeof commentQueue>, maxRetries = 3): Promise<boolean> => {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
             const currentQueue = loadQueueFromStorage();
@@ -454,7 +454,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               console.log(`[${sessionId}][${index + 1}] API Response:`, apiResult);
 
               // Update success với atomic operation
-              const updateSuccess = atomicUpdateQueue({
+              const updateSuccess = await atomicUpdateQueue({
                 processedCount: index + 1,
                 successCount: currentQueue.successCount + 1
               });
@@ -512,7 +512,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
                 console.log(`[${sessionId}] Đã xóa user ${randomUser.name} (ID: ${randomUser.id}) khỏi danh sách đã sử dụng do comment thất bại`);
               }
 
-              const updateSuccess = atomicUpdateQueue({
+              const updateSuccess = await atomicUpdateQueue({
                 processedCount: index + 1,
                 failureCount: currentQueue.failureCount + 1
               });
