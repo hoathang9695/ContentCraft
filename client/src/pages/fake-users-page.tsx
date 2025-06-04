@@ -366,17 +366,40 @@ export default function FakeUsersPage() {
 
   // Xử lý click vào tên user để login
   const handleUserLogin = (token: string) => {
-    // Tạo URL với token để auto-login
-    const loginUrl = `https://emso.vn/?auto_login_token=${encodeURIComponent(token)}`;
-    
-    // Mở tab mới
-    window.open(loginUrl, '_blank', 'noopener,noreferrer');
-    
-    // Hiển thị thông báo
-    toast({
-      title: "Đang chuyển hướng",
-      description: "Đã mở tab mới đến emso.vn với token đăng nhập",
-    });
+    try {
+      // Tạo URL với token để auto-login (emso.vn cần xử lý parameter này)
+      const loginUrl = `https://emso.vn/login?auto_token=${encodeURIComponent(token)}`;
+      
+      // Mở tab mới
+      const newTab = window.open(loginUrl, '_blank', 'noopener,noreferrer');
+      
+      if (!newTab) {
+        toast({
+          title: "Lỗi",
+          description: "Không thể mở tab mới. Vui lòng kiểm tra popup blocker.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Copy token to clipboard như backup
+      navigator.clipboard.writeText(token).catch(() => {
+        console.log('Could not copy token to clipboard');
+      });
+
+      // Hiển thị thông báo
+      toast({
+        title: "Đang chuyển hướng",
+        description: "Đã mở tab mới đến emso.vn với token auto-login",
+      });
+    } catch (error) {
+      console.error('Error in handleUserLogin:', error);
+      toast({
+        title: "Lỗi",
+        description: "Đã xảy ra lỗi khi mở tab mới",
+        variant: "destructive",
+      });
+    }
   };
 
   // Xử lý upload file Excel
