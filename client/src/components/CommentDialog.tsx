@@ -313,22 +313,24 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
-    // Kiểm tra xem có queue nào đang xử lý cho externalId này không
-    const queueKey = `comment_queue_${externalId}`;
-    const existingQueue = (() => {
+    // Utility function để load queue từ localStorage một cách an toàn
+    const loadQueueFromStorage = (queueKey: string) => {
       try {
         const stored = localStorage.getItem(queueKey);
         return stored ? JSON.parse(stored) : null;
-      } catch {
+      } catch (error) {
+        console.warn('Failed to load queue from localStorage:', error);
         return null;
       }
-    })();
+    };
+
+    // Kiểm tra xem có queue nào đang xử lý cho externalId này không
+    const queueKey = `comment_queue_${externalId}`;
+    const existingQueue = loadQueueFromStorage(queueKey);
 
     // Nếu có queue đang xử lý, cho phép thêm comment vào queue
     if (existingQueue && existingQueue.status === 'processing') {
       const progress = existingQueue.processedCount || 0;
-      const total = existingQueue.totalComments || 0;
-      const remaining = total - progress;
       
       // Thêm comment mới vào queue hiện tại
       const updatedComments = [...existingQueue.comments, ...uniqueComments];
@@ -346,6 +348,8 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           description: `Đã thêm ${uniqueComments.length} comment vào queue đang chạy. Queue hiện có ${updatedComments.length} comment (${progress} đã xử lý, còn ${updatedComments.length - progress} chưa xử lý).`,
         });
         
+        console.log(`[${existingQueue.sessionId}] Đã thêm ${uniqueComments.length} comment mới vào queue. Worker sẽ tiếp tục xử lý...`);
+        
         // Đóng dialog và reset form
         onOpenChange(false);
         setCommentText('');
@@ -361,59 +365,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       }
     }
 
-    // Đóng dialog ngay lập tức
+    // Đóng dialog ngay lập tức nếu không có queue đang chạy
     onOpenChange(false);
     setCommentText('');
 
     // Tạo unique session ID cho việc track
     const sessionId = `comment_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    // const queueKey = `comment_queue_${externalId}`;
-
-    // Kiểm tra xem queue đã tồn tại hay chưa
-    // const existingQueueString = localStorage.getItem(queueKey);
-    // const existingQueue = existingQueueString ? JSON.parse(existingQueueString) : null;
-
-    // Nếu có queue đang xử lý, cho phép thêm comment vào queue
-    if (existingQueue && existingQueue.status === 'processing') {
-      const progress = existingQueue.processedCount || 0;
-      const total = existingQueue.totalComments || 0;
-      const remaining = total - progress;
-
-      // Thêm comment mới vào queue hiện tại
-      const updatedComments = [...existingQueue.comments, ...uniqueComments];
-      const updatedQueue = {
-        ...existingQueue,
-        comments: updatedComments,
-        totalComments: updatedComments.length
-      };
-
-      try {
-        localStorage.setItem(queueKey, JSON.stringify(updatedQueue));
-
-        toast({
-          title: 'Đã thêm comment vào queue',
-          description: `Đã thêm ${uniqueComments.length} comment vào queue đang chạy. Queue hiện có ${updatedComments.length} comment (${progress} đã xử lý, còn ${updatedComments.length - progress} chưa xử lý).`,
-        });
-
-        // Đóng dialog và reset form
-        onOpenChange(false);
-        setCommentText('');
-
-        // ✅ QUAN TRỌNG: Không return ở đây, để worker tiếp tục chạy với data mới
-        console.log(`[${existingQueue.sessionId}] Đã thêm ${uniqueComments.length} comment mới vào queue. Worker sẽ tiếp tục xử lý...`);
-
-        // Worker sẽ tự động nhận diện comment mới khi load từ localStorage trong vòng lặp
-        return;
-      } catch (error) {
-        console.warn('Không thể cập nhật queue:', error);
-        toast({
-          title: 'Lỗi',
-          description: 'Không thể thêm comment vào queue đang chạy. Vui lòng thử lại.',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
 
     // Lưu queue vào localStorage để persist
     const commentQueue = {
@@ -457,12 +414,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       // Track used users for this session to prevent duplicates
       const usedUserIds = new Set<number>();
 
-      // Recovery function để load từ localStorage
+      // Recovery function để load từ localStorage (optimized)
       const loadQueueFromStorage = (): typeof commentQueue | null => {
         try {
           const stored = localStorage.getItem(queueKey);
           return stored ? JSON.parse(stored) : null;
-        } catch {
+        } catch (error) {
+          console.warn(`[${sessionId}] Failed to load queue from localStorage:`, error);
           return null;
         }
       };
