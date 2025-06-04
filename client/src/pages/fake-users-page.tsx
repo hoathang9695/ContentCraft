@@ -364,6 +364,21 @@ export default function FakeUsersPage() {
     }
   };
 
+  // Xử lý click vào tên user để login
+  const handleUserLogin = (token: string) => {
+    // Tạo URL với token để auto-login
+    const loginUrl = `https://emso.vn/?auto_login_token=${encodeURIComponent(token)}`;
+    
+    // Mở tab mới
+    window.open(loginUrl, '_blank', 'noopener,noreferrer');
+    
+    // Hiển thị thông báo
+    toast({
+      title: "Đang chuyển hướng",
+      description: "Đã mở tab mới đến emso.vn với token đăng nhập",
+    });
+  };
+
   // Xử lý upload file Excel
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -533,7 +548,15 @@ export default function FakeUsersPage() {
                   {fakeUsers && fakeUsers.length > 0 ? (
                     fakeUsers.map((user: FakeUser) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            onClick={() => handleUserLogin(user.token)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+                            title={`Click để đăng nhập với token: ${user.token}`}
+                          >
+                            {user.name}
+                          </button>
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {user.token}
                         </TableCell>
