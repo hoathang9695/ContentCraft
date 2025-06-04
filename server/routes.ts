@@ -2351,9 +2351,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const existingFakeUser = await storage.getFakeUserByToken(
             validatedData.token,
           );
+          
           if (existingFakeUser) {
-            errors.push(`Token "${validatedData.token}" đã tồn tại`);
-            failedCount++;
+            // Nếu user đã tồn tại, kiểm tra xem có thông tin mới để cập nhật không
+            const updateData: any = {};
+            let hasNewData = false;
+            
+            // Kiểm tra email mới
+            if (validatedData.email && (!existingFakeUser.email || existingFakeUser.email !== validatedData.email)) {
+              updateData.email = validatedData.email;
+              hasNewData = true;
+            }
+            
+            // Kiểm tra password mới
+            if (validatedData.password && (!existingFakeUser.password || existingFakeUser.password !== validatedData.password)) {
+              updateData.password = validatedData.password;
+              hasNewData = true;
+            }
+            
+            // Kiểm tra name mới (trường hợp name khác)
+            if (validatedData.name && existingFakeUser.name !== validatedData.name) {
+              updateData.name = validatedData.name;
+              hasNewData = true;
+            }
+            
+            if (hasNewData) {
+              // Cập nhật thông tin mới
+              await storage.updateFakeUser(existingFakeUser.id, updateData);
+              successCount++;
+              console.log(`✅ Updated existing fake user: ${validatedData.name} (token: ${validatedData.token}) with new data:`, updateData);
+            } else {
+              // Không có thông tin mới để cập nhật
+              errors.push(`Token "${validatedData.token}" đã tồn tại và không có thông tin mới để cập nhật`);
+              failedCount++;
+            }
             continue;
           }
 
