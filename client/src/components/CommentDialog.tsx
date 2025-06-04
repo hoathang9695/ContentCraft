@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -11,9 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface CommentDialogProps {
   open: boolean;
@@ -35,6 +37,8 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   const [commentText, setCommentText] = useState<string>('');
   const [extractedComments, setExtractedComments] = useState<string[]>([]);
   const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female' | 'other'>('all');
+  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch fake users
   const { data: allFakeUsers = [] } = useQuery<FakeUser[]>({
@@ -89,11 +93,33 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     setExtractedComments(comments);
   }, [commentText]);
 
+  // Handle emoji click
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const currentText = commentText;
+      const newText = currentText.substring(0, start) + emojiData.emoji + currentText.substring(end);
+      
+      setCommentText(newText);
+      setShowEmojiPicker(false);
+      
+      // Focus back to textarea and set cursor position after emoji
+      setTimeout(() => {
+        textarea.focus();
+        const newCursorPosition = start + emojiData.emoji.length;
+        textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      }, 0);
+    }
+  };
+
   // Reset form khi đóng dialog
   useEffect(() => {
     if (!open) {
       setCommentText('');
       setSelectedGender('all');
+      setShowEmojiPicker(false);
     }
   }, [open]);
 
@@ -589,12 +615,41 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             </div>
           )}
 
-          <Textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Nhập nội dung comment hoặc nhiều comment cách nhau bởi dấu ngoặc nhọn {comment1} {comment2}"
-            className="min-h-[200px]"
-          />
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Nhập nội dung comment hoặc nhiều comment cách nhau bởi dấu ngoặc nhọn {comment1} {comment2}"
+              className="min-h-[200px] pr-12"
+            />
+            <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-gray-100"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                >
+                  😀
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  width={350}
+                  height={400}
+                  searchDisabled={false}
+                  skinTonesDisabled={false}
+                  previewConfig={{
+                    defaultCaption: "Chọn emoji để thêm vào comment",
+                    defaultEmoji: "1f60a"
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
           <div className="text-sm text-muted-foreground">
             Số comments sẽ được thêm: {extractedComments.length}
