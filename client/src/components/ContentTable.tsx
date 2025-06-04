@@ -72,6 +72,7 @@ export function ContentTable({
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<number | null>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
@@ -99,7 +100,7 @@ export function ContentTable({
   // Build query parameters for pagination
   const queryParams = new URLSearchParams({
     page: currentPage.toString(),
-    limit: '10',
+    limit: pageSize.toString(),
     ...(statusFilter && { statusFilter }),
     ...(sourceVerification && { sourceVerification }),
     ...(assignedUserId && { assignedUserId: assignedUserId.toString() }),
@@ -391,6 +392,11 @@ export function ContentTable({
       deleteMutation.mutate(contentToDelete);
     }
   };
+
+    const handlePageSizeChange = (size: number) => {
+        setPageSize(size);
+        setCurrentPage(1); // Reset to first page when page size changes
+    };
 
   // Data is already paginated by backend
   const memoizedPaginatedContents = paginatedContents;
@@ -767,6 +773,9 @@ export function ContentTable({
                   currentPage,
                   totalPages: memoizedTotalPages,
                   onPageChange: setCurrentPage,
+                  pageSize,
+                  onPageSizeChange: handlePageSizeChange,
+                  isServerPagination: true,
                 }
               : undefined
           }

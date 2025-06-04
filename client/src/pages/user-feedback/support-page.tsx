@@ -290,12 +290,17 @@ export default function SupportPage() {
           <DataTable
             data={supportRequests}
             isLoading={isLoading}
-            pagination
-            pageSize={pageSize}
-            totalPages={totalPages}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            total={total}
+            pagination={{
+              currentPage: currentPage,
+              totalPages: totalPages,
+              total: total,
+              pageSize: pageSize,
+              onPageChange: setCurrentPage,
+              onPageSizeChange: (newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }
+            }}
             columns={[
               {
                 key: 'id',

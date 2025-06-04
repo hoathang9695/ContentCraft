@@ -137,7 +137,7 @@ export default function RealUserPage() {
 
   // State for pagination
   const [page, setPage] = useState(1);
-  const [limit] = useState(10);
+  const [limit, setLimit] = useState(10);
 
   // Fetch real users with server-side filtering
   const { data, isLoading } = useQuery({
@@ -381,10 +381,15 @@ export default function RealUserPage() {
             searchValue={searchQuery} 
             onSearch={setSearchQuery}
             pagination={{
-              itemsPerPage: limit,
               currentPage: page,
               totalPages: data?.pagination?.totalPages || Math.ceil((data?.pagination?.total || 0) / limit),
-              onPageChange: setPage
+              total: data?.pagination?.total || 0,
+              pageSize: limit,
+              onPageChange: setPage,
+              onPageSizeChange: (newSize) => {
+                setLimit(newSize);
+                setPage(1);
+              }
             }}
             columns={[
               {

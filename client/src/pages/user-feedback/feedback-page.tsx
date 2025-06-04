@@ -299,7 +299,7 @@ export default function FeedbackPage() {
               onPageChange: setCurrentPage,
               onPageSizeChange: (newSize) => {
                 setPageSize(newSize);
-                resetToFirstPage();
+                setCurrentPage(1);
               }
             }}
             columns={[
