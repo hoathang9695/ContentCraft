@@ -396,6 +396,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const maxRetries = 3;
       const baseDelay = 2; // 2 phút base delay
       const maxDelay = 5; // 5 phút max delay
+      
+      // Progressive timeout strategy
+      const getProgressiveTimeout = (retryCount: number): number => {
+        // Start với 30 giây, tăng dần mỗi retry
+        const timeouts = [30000, 60000, 120000]; // 30s, 1m, 2m
+        return timeouts[Math.min(retryCount, timeouts.length - 1)];
+      };
 
       // Track used users for this session to prevent duplicates
       const usedUserIds = new Set<number>();
@@ -464,13 +471,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const atomicUpdateQueue = async (updates: Partial<typeof commentQueue>, maxRetries = 3): Promise<boolean> => {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
-            const currentQueue = loadQueueFromStorage();
-            if (!currentQueue || currentQueue.sessionId !== sessionId) {
+            let currentQueueState = loadQueueFromStorage();
+            if (!currentQueueState || currentQueueState.sessionId !== sessionId) {
               console.warn(`[${sessionId}] Queue session mismatch, skipping update`);
               return false;
             }
             
-            const updatedQueue = { ...currentQueue, ...updates };
+            const updatedQueue = { ...currentQueueState, ...updates };
             localStorage.setItem(queueKey, JSON.stringify(updatedQueue));
             
             // Verify write success
@@ -535,9 +542,10 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
             console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Gửi comment (thử lần ${retryCount + 1}) với user ${randomUser.name} (ID: ${randomUser.id})...`);
 
-            // Gửi comment với enhanced timeout
+            // Gửi comment với progressive timeout
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8 * 60 * 1000); // 8 phút timeout
+            const timeoutMs = getProgressiveTimeout(retryCount);
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
             try {
               console.log(`[${sessionId}][${index + 1}] Bắt đầu gửi comment: "${comment.substring(0, 50)}..." với user ${randomUser.name}`);
@@ -590,8 +598,9 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             retryCount++;
             const isTimeout = error instanceof Error && error.message.includes('timeout');
             const isAbort = error instanceof Error && error.name === 'AbortError';
+            const timeoutUsed = getProgressiveTimeout(retryCount - 1);
 
-            console.error(`[${sessionId}][${index + 1}] Lỗi lần thử ${retryCount}:`, error);
+            console.error(`[${sessionId}][${index + 1}] Lỗi lần thử ${retryCount} (timeout: ${timeoutUsed/1000}s):`, error);
 
             if (retryCount < maxRetries) {
               const retryDelayMs = getAdaptiveDelay(retryCount, true);
