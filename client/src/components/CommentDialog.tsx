@@ -359,6 +359,36 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         });
       };
 
+      // Atomic localStorage operations với retry
+      const atomicUpdateQueue = (updates: Partial<typeof commentQueue>, maxRetries = 3): boolean => {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            const currentQueue = loadQueueFromStorage();
+            if (!currentQueue || currentQueue.sessionId !== sessionId) {
+              console.warn(`[${sessionId}] Queue session mismatch, skipping update`);
+              return false;
+            }
+            
+            const updatedQueue = { ...currentQueue, ...updates };
+            localStorage.setItem(queueKey, JSON.stringify(updatedQueue));
+            
+            // Verify write success
+            const verifyQueue = loadQueueFromStorage();
+            if (verifyQueue && verifyQueue.sessionId === sessionId) {
+              currentQueue = updatedQueue;
+              return true;
+            }
+          } catch (error) {
+            console.warn(`[${sessionId}] Attempt ${attempt + 1} failed to update queue:`, error);
+            if (attempt < maxRetries - 1) {
+              // Exponential backoff
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 100));
+            }
+          }
+        }
+        return false;
+      };
+
       console.log(`[${sessionId}] Bắt đầu gửi ${currentQueue.totalComments} comment...`);
 
       // Process comments with enhanced error handling
@@ -409,7 +439,9 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             const timeoutId = setTimeout(() => controller.abort(), 8 * 60 * 1000); // 8 phút timeout
 
             try {
-              await sendExternalCommentMutation.mutateAsync({
+              console.log(`[${sessionId}][${index + 1}] Bắt đầu gửi comment: "${comment.substring(0, 50)}..." với user ${randomUser.name}`);
+              
+              const apiResult = await sendExternalCommentMutation.mutateAsync({
                 externalId,
                 fakeUserId: randomUser.id,
                 comment
@@ -418,13 +450,20 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               clearTimeout(timeoutId);
               success = true;
 
-              // Update success
-              updateQueue({
+              // Log API response để debug
+              console.log(`[${sessionId}][${index + 1}] API Response:`, apiResult);
+
+              // Update success với atomic operation
+              const updateSuccess = atomicUpdateQueue({
                 processedCount: index + 1,
                 successCount: currentQueue.successCount + 1
               });
 
-              console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Thành công với user ${randomUser.name} (ID: ${randomUser.id}). Đã sử dụng ${usedUserIds.size}/${fakeUsers.length} user.`);
+              if (!updateSuccess) {
+                console.warn(`[${sessionId}][${index + 1}] Failed to update queue after successful API call`);
+              }
+
+              console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] ✅ API THÀNH CÔNG với user ${randomUser.name} (ID: ${randomUser.id}). Response: ${JSON.stringify(apiResult).substring(0, 100)}...`);
 
               toast({
                 title: 'Thành công',
@@ -433,6 +472,16 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
             } catch (apiError) {
               clearTimeout(timeoutId);
+              
+              // Enhanced error logging
+              console.error(`[${sessionId}][${index + 1}] ❌ API ERROR:`, {
+                error: apiError,
+                user: randomUser,
+                comment: comment.substring(0, 100),
+                externalId,
+                timestamp: new Date().toISOString()
+              });
+              
               throw apiError;
             }
 
@@ -463,10 +512,14 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
                 console.log(`[${sessionId}] Đã xóa user ${randomUser.name} (ID: ${randomUser.id}) khỏi danh sách đã sử dụng do comment thất bại`);
               }
 
-              updateQueue({
+              const updateSuccess = atomicUpdateQueue({
                 processedCount: index + 1,
                 failureCount: currentQueue.failureCount + 1
               });
+
+              if (!updateSuccess) {
+                console.error(`[${sessionId}][${index + 1}] ❌ CRITICAL: Failed to update queue after comment failure`);
+              }
 
               toast({
                 title: 'Comment thất bại',
