@@ -93,7 +93,7 @@ export default function FakeUsersPage() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<FakeUser | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(isUploading);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -124,17 +124,17 @@ export default function FakeUsersPage() {
         pageSize: pageSize.toString(),
         ...(debouncedSearchQuery && { search: debouncedSearchQuery })
       });
-      
+
       console.log("Fetching fake users with params:", params.toString());
-      
+
       const response = await fetch(`/api/fake-users?${params}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log("Fake users API response:", data);
-      
+
       return data;
     },
     enabled: isAdmin, // Chỉ kích hoạt truy vấn nếu là admin
@@ -164,12 +164,12 @@ export default function FakeUsersPage() {
       setCurrentPage(currentPage + 1);
     }
   };
-  
+
   // Debug - In thông tin về user và API URL
   console.log("User info:", user);
   console.log("Is admin:", isAdmin);
   console.log("API URL:", window.location.origin + "/api/fake-users");
-  
+
   // Xử lý lỗi từ truy vấn
   useEffect(() => {
     if (error) {
@@ -264,9 +264,9 @@ export default function FakeUsersPage() {
     mutationFn: async ({ id, gender }: { id: number; gender: "male" | "female" | "other" }) => {
       const user = fakeUsers?.find(u => u.id === id);
       if (!user) throw new Error("User not found");
-      
+
       setUpdatingUserId(id);
-      
+
       return await apiRequest<FakeUser>("PUT", `/api/fake-users/${id}`, {
         ...user,
         gender
@@ -364,15 +364,12 @@ export default function FakeUsersPage() {
     }
   };
 
-  // Xử lý click vào tên user để login
-  const handleUserLogin = (token: string) => {
+  // Xử lý click vào tên user để login với email/password auto-fill
+  const handleUserLogin = (token: string, userName: string) => {
     try {
-      // Tạo URL với token để auto-login (emso.vn cần xử lý parameter này)
-      const loginUrl = `https://emso.vn/login?auto_token=${encodeURIComponent(token)}`;
-      
-      // Mở tab mới
-      const newTab = window.open(loginUrl, '_blank', 'noopener,noreferrer');
-      
+      // Mở tab mới đến emso.vn
+      const newTab = window.open('https://emso.vn/', '_blank', 'noopener,noreferrer');
+
       if (!newTab) {
         toast({
           title: "Lỗi",
@@ -382,15 +379,95 @@ export default function FakeUsersPage() {
         return;
       }
 
-      // Copy token to clipboard như backup
-      navigator.clipboard.writeText(token).catch(() => {
-        console.log('Could not copy token to clipboard');
+      // Đợi tab load và thực hiện auto-login
+      let attempts = 0;
+      const maxAttempts = 30; // 30 giây
+
+      const autoLoginInterval = setInterval(() => {
+        attempts++;
+
+        if (newTab.closed || attempts > maxAttempts) {
+          clearInterval(autoLoginInterval);
+          return;
+        }
+
+        try {
+          // Gửi thông tin đăng nhập đến tab mới
+          newTab.postMessage({
+            type: 'AUTO_LOGIN_CREDENTIALS',
+            email: 'vuquangbao121@emso.vn', // Email cố định theo ví dụ
+            password: 'emso1604!@#', // Password cố định theo ví dụ
+            token: token,
+            userName: userName
+          }, 'https://emso.vn');
+
+          // Thử inject script để auto-fill form
+          const script = `
+            (function() {
+              // Tìm form đăng nhập
+              const emailInput = document.querySelector('input[type="email"], input[name="email"], input[name="username"], #email, #username');
+              const passwordInput = document.querySelector('input[type="password"], input[name="password"], #password');
+              const loginForm = document.querySelector('form[action*="login"], form.login-form, .login-form, #login-form');
+              const submitButton = document.querySelector('button[type="submit"], input[type="submit"], .login-button, .btn-login');
+
+              if (emailInput && passwordInput) {
+                // Fill thông tin đăng nhập
+                emailInput.value = 'vuquangbao121@emso.vn';
+                passwordInput.value = 'emso1604!@#';
+
+                // Trigger events để form nhận biết
+                emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+                emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+                passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+                passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+                // Highlight các field đã fill
+                emailInput.style.backgroundColor = '#e8f5e8';
+                passwordInput.style.backgroundColor = '#e8f5e8';
+
+                // Thử submit form sau 2 giây
+                setTimeout(() => {
+                  if (submitButton) {
+                    submitButton.click();
+                  } else if (loginForm) {
+                    loginForm.submit();
+                  }
+                }, 2000);
+
+                console.log('Auto-login credentials filled successfully');
+                return true;
+              }
+              return false;
+            })();
+          `;
+
+          // Thử execute script trong tab mới (có thể bị block bởi CORS)
+          try {
+            newTab.eval?.(script);
+          } catch (e) {
+            console.log('Cannot execute script in new tab due to CORS policy');
+          }
+
+        } catch (error) {
+          console.log('Trying to auto-login...', attempts);
+        }
+      }, 1000);
+
+      // Copy thông tin vào clipboard làm backup
+      const loginInfo = `Email: vuquangbao121@emso.vn\nPassword: emso1604!@#\nToken: ${token}`;
+      navigator.clipboard.writeText(loginInfo).then(() => {
+        toast({
+          title: "Thông tin đăng nhập đã được copy",
+          description: "Email, password và token đã được copy vào clipboard để bạn có thể paste thủ công nếu cần.",
+        });
+      }).catch(() => {
+        console.log('Could not copy login info to clipboard');
       });
 
       // Hiển thị thông báo
       toast({
-        title: "Đang chuyển hướng",
-        description: "Đã mở tab mới đến emso.vn với token auto-login",
+        title: "Đã mở emso.vn",
+        description: "Đang thử auto-login với email: vuquangbao121@emso.vn. Thông tin đăng nhập đã được copy vào clipboard.",
       });
     } catch (error) {
       console.error('Error in handleUserLogin:', error);
@@ -461,7 +538,7 @@ export default function FakeUsersPage() {
     };
 
     reader.readAsArrayBuffer(file);
-    
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -573,7 +650,7 @@ export default function FakeUsersPage() {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
                           <button
-                            onClick={() => handleUserLogin(user.token)}
+                            onClick={() => handleUserLogin(user.token, user.name)}
                             className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
                             title={`Click để đăng nhập với token: ${user.token}`}
                           >
@@ -671,7 +748,7 @@ export default function FakeUsersPage() {
                   <ChevronLeft className="h-4 w-4" />
                   Trước
                 </Button>
-                
+
                 <div className="flex items-center space-x-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNumber;
@@ -684,7 +761,7 @@ export default function FakeUsersPage() {
                     } else {
                       pageNumber = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <Button
                         key={pageNumber}
