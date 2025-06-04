@@ -35,6 +35,12 @@ interface DataTableProps<T> {
         pageSize: number;
         onPageChange: (page: number) => void;
         onPageSizeChange: (size: number) => void;
+      }
+    | {
+        itemsPerPage: number;
+        currentPage: number;
+        totalPages: number;
+        onPageChange: (page: number) => void;
       };
   pageSize?: number;
 }
@@ -57,13 +63,26 @@ export function DataTable<T>({
   // Check if server-side pagination is being used
   const isServerPagination = typeof pagination === 'object';
 
+  // Handle different pagination object structures
+  const paginationObj = isServerPagination ? pagination : null;
+  const hasPageSizeControl = paginationObj && 'pageSize' in paginationObj;
+  const hasItemsPerPage = paginationObj && 'itemsPerPage' in paginationObj;
+
   const totalPages = isServerPagination
-    ? pagination.totalPages
+    ? paginationObj.totalPages
     : Math.ceil(data.length / currentPageSize);
 
-  const currentPageNum = isServerPagination ? pagination.currentPage : currentPage;
+  const currentPageNum = isServerPagination ? paginationObj.currentPage : currentPage;
 
-  const total = isServerPagination ? pagination.total : data.length;
+  const total = isServerPagination 
+    ? (hasPageSizeControl ? paginationObj.total : data.length)
+    : data.length;
+
+  const currentPageSizeForDisplay = hasPageSizeControl 
+    ? paginationObj.pageSize 
+    : hasItemsPerPage 
+    ? paginationObj.itemsPerPage 
+    : currentPageSize;
 
   const paginatedData = isServerPagination
     ? data
@@ -73,15 +92,15 @@ export function DataTable<T>({
 
   const handlePageChange = (page: number) => {
     if (isServerPagination) {
-      pagination.onPageChange(page);
+      paginationObj.onPageChange(page);
     } else {
       setCurrentPage(page);
     }
   };
 
   const handlePageSizeChange = (size: number) => {
-    if (isServerPagination) {
-      pagination.onPageSizeChange(size);
+    if (isServerPagination && hasPageSizeControl) {
+      paginationObj.onPageSizeChange(size);
     } else {
       setCurrentPageSize(size);
       setCurrentPage(1);
@@ -158,9 +177,9 @@ export function DataTable<T>({
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">
               Hiển thị{' '}
-              {isServerPagination ? (currentPageNum - 1) * pagination.pageSize + 1 : startIndex + 1} -{' '}
+              {isServerPagination ? (currentPageNum - 1) * currentPageSizeForDisplay + 1 : startIndex + 1} -{' '}
               {isServerPagination
-                ? Math.min(currentPageNum * pagination.pageSize, total)
+                ? Math.min(currentPageNum * currentPageSizeForDisplay, total)
                 : Math.min(startIndex + currentPageSize, data.length)}{' '}
               của {total} kết quả
             </span>
@@ -169,9 +188,10 @@ export function DataTable<T>({
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Số dòng mỗi trang:</span>
             <select
-              value={isServerPagination ? pagination.pageSize : currentPageSize}
+              value={currentPageSizeForDisplay}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
               className="border border-gray-300 rounded px-2 py-1 text-sm"
+              disabled={!hasPageSizeControl && isServerPagination}
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
