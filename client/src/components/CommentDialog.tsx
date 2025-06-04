@@ -175,8 +175,109 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     },
   });
 
+  // Queue cleanup utilities
+  const cleanupOldQueues = () => {
+    const MAX_QUEUE_AGE = 24 * 60 * 60 * 1000; // 24 giờ
+    const MAX_FAILED_QUEUE_AGE = 2 * 60 * 60 * 1000; // 2 giờ cho failed queue
+    const MAX_TOTAL_QUEUES = 50; // Tối đa 50 queue trong localStorage
+    
+    try {
+      const allKeys = Object.keys(localStorage);
+      const queueKeys = allKeys.filter(key => key.startsWith('comment_queue_'));
+      
+      console.log(`[CLEANUP] Tìm thấy ${queueKeys.length} queue trong localStorage`);
+      
+      let cleanedCount = 0;
+      const now = Date.now();
+      
+      // Cleanup theo age và status
+      queueKeys.forEach(key => {
+        try {
+          const queueData = JSON.parse(localStorage.getItem(key) || '{}');
+          const age = now - (queueData.startTime || 0);
+          
+          let shouldClean = false;
+          let reason = '';
+          
+          // Rule 1: Queue quá cũ
+          if (age > MAX_QUEUE_AGE) {
+            shouldClean = true;
+            reason = `quá cũ (${Math.round(age / (60 * 60 * 1000))} giờ)`;
+          }
+          
+          // Rule 2: Failed queue quá 2 giờ
+          if (queueData.status === 'failed' && age > MAX_FAILED_QUEUE_AGE) {
+            shouldClean = true;
+            reason = `failed quá lâu (${Math.round(age / (60 * 60 * 1000))} giờ)`;
+          }
+          
+          // Rule 3: Completed queue quá 1 giờ
+          if (queueData.status === 'completed' && age > (60 * 60 * 1000)) {
+            shouldClean = true;
+            reason = `completed quá 1 giờ`;
+          }
+          
+          // Rule 4: Queue không có sessionId (corrupted)
+          if (!queueData.sessionId) {
+            shouldClean = true;
+            reason = 'không có sessionId (corrupted)';
+          }
+          
+          if (shouldClean) {
+            localStorage.removeItem(key);
+            cleanedCount++;
+            console.log(`[CLEANUP] Xóa queue ${key} - ${reason}`);
+          }
+        } catch (error) {
+          // Corrupted queue data
+          localStorage.removeItem(key);
+          cleanedCount++;
+          console.log(`[CLEANUP] Xóa queue corrupted: ${key}`);
+        }
+      });
+      
+      // Rule 5: Nếu vẫn còn quá nhiều queue, xóa những cái cũ nhất
+      const remainingKeys = Object.keys(localStorage).filter(key => key.startsWith('comment_queue_'));
+      if (remainingKeys.length > MAX_TOTAL_QUEUES) {
+        const queuesByAge = remainingKeys.map(key => {
+          try {
+            const data = JSON.parse(localStorage.getItem(key) || '{}');
+            return { key, startTime: data.startTime || 0 };
+          } catch {
+            return { key, startTime: 0 };
+          }
+        }).sort((a, b) => a.startTime - b.startTime);
+        
+        const toDelete = queuesByAge.slice(0, remainingKeys.length - MAX_TOTAL_QUEUES);
+        toDelete.forEach(({ key }) => {
+          localStorage.removeItem(key);
+          cleanedCount++;
+          console.log(`[CLEANUP] Xóa queue để giảm tổng số: ${key}`);
+        });
+      }
+      
+      if (cleanedCount > 0) {
+        console.log(`[CLEANUP] ✅ Đã dọn dẹp ${cleanedCount} queue cũ/failed`);
+        toast({
+          title: 'Dọn dẹp hoàn tất',
+          description: `Đã xóa ${cleanedCount} queue cũ/thất bại để tối ưu hóa hiệu suất`,
+        });
+      } else {
+        console.log(`[CLEANUP] ✅ Không có queue nào cần dọn dẹp`);
+      }
+      
+      return cleanedCount;
+    } catch (error) {
+      console.error('[CLEANUP] Lỗi khi dọn dẹp queue:', error);
+      return 0;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!contentId) return;
+
+    // 🧹 Dọn dẹp queue cũ trước khi tạo queue mới
+    cleanupOldQueues();
 
     // Loại bỏ các comment trùng lặp
     const uniqueComments = Array.from(new Set(extractedComments));
@@ -545,9 +646,19 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         variant: currentQueue.successCount > 0 ? 'default' : 'destructive'
       });
 
-      // Cleanup localStorage after completion
+      // Enhanced cleanup sau khi completion
       try {
         localStorage.removeItem(queueKey);
+        console.log(`[${sessionId}] ✅ Đã xóa queue khỏi localStorage`);
+        
+        // Trigger cleanup cho các queue khác nếu cần
+        setTimeout(() => {
+          const remainingQueues = Object.keys(localStorage).filter(k => k.startsWith('comment_queue_')).length;
+          if (remainingQueues > 10) {
+            console.log(`[CLEANUP] Phát hiện ${remainingQueues} queue, trigger cleanup...`);
+            cleanupOldQueues();
+          }
+        }, 1000);
       } catch (error) {
         console.warn('Không thể xóa queue khỏi localStorage:', error);
       }
@@ -557,11 +668,14 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     sendCommentsInBackground().catch((error) => {
       console.error(`[${sessionId}] Critical error in background sender:`, error);
 
-      // Update queue status
+      // Update queue status với timestamp
       try {
         const currentQueue = JSON.parse(localStorage.getItem(queueKey) || '{}');
         currentQueue.status = 'failed';
+        currentQueue.failedAt = Date.now();
+        currentQueue.errorInfo = error instanceof Error ? error.message : 'Unknown error';
         localStorage.setItem(queueKey, JSON.stringify(currentQueue));
+        console.log(`[${sessionId}] ❌ Queue marked as failed và sẽ được cleanup sau 2 giờ`);
       } catch (e) {
         console.warn('Không thể cập nhật trạng thái lỗi:', e);
       }
