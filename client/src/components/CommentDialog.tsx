@@ -472,19 +472,32 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
             let currentQueueState = loadQueueFromStorage();
-            if (!currentQueueState || currentQueueState.sessionId !== sessionId) {
-              console.warn(`[${sessionId}] Queue session mismatch, skipping update`);
-              return false;
+            
+            // Nếu không có queue, tạo mới từ currentQueue hiện tại
+            if (!currentQueueState) {
+              console.warn(`[${sessionId}] No queue in storage, using current state`);
+              currentQueueState = currentQueue;
+            }
+            
+            // Relaxed session check - chỉ cảnh báo chứ không fail
+            if (currentQueueState.sessionId !== sessionId) {
+              console.warn(`[${sessionId}] Session mismatch but continuing: ${currentQueueState.sessionId} vs ${sessionId}`);
             }
             
             const updatedQueue = { ...currentQueueState, ...updates };
             localStorage.setItem(queueKey, JSON.stringify(updatedQueue));
             
-            // Verify write success
+            // Verify write success với fallback
             const verifyQueue = loadQueueFromStorage();
-            if (verifyQueue && verifyQueue.sessionId === sessionId) {
+            if (verifyQueue) {
               currentQueue = updatedQueue;
+              console.log(`[${sessionId}] Queue updated successfully (attempt ${attempt + 1})`);
               return true;
+            } else {
+              // Fallback: Update in-memory queue even if localStorage fails
+              currentQueue = updatedQueue;
+              console.warn(`[${sessionId}] localStorage verify failed but in-memory updated (attempt ${attempt + 1})`);
+              return true; // Accept this as success to prevent blocking
             }
           } catch (error) {
             console.warn(`[${sessionId}] Attempt ${attempt + 1} failed to update queue:`, error);
@@ -562,14 +575,17 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               // Log API response để debug
               console.log(`[${sessionId}][${index + 1}] API Response:`, apiResult);
 
-              // Update success với atomic operation
+              // Update success với atomic operation (non-blocking)
               const updateSuccess = await atomicUpdateQueue({
                 processedCount: index + 1,
                 successCount: currentQueue.successCount + 1
               });
 
               if (!updateSuccess) {
-                console.warn(`[${sessionId}][${index + 1}] Failed to update queue after successful API call`);
+                console.warn(`[${sessionId}][${index + 1}] Failed to update queue after successful API call - continuing anyway`);
+                // Manual update để đảm bảo progress tracking
+                currentQueue.processedCount = index + 1;
+                currentQueue.successCount = currentQueue.successCount + 1;
               }
 
               console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] ✅ API THÀNH CÔNG với user ${randomUser.name} (ID: ${randomUser.id}). Response: ${JSON.stringify(apiResult).substring(0, 100)}...`);
@@ -628,7 +644,10 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               });
 
               if (!updateSuccess) {
-                console.error(`[${sessionId}][${index + 1}] ❌ CRITICAL: Failed to update queue after comment failure`);
+                console.error(`[${sessionId}][${index + 1}] ❌ Failed to update queue after comment failure - manual fallback`);
+                // Manual update để đảm bảo tracking
+                currentQueue.processedCount = index + 1;
+                currentQueue.failureCount = currentQueue.failureCount + 1;
               }
 
               toast({
