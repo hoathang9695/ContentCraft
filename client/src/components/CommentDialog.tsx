@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -11,9 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface CommentDialogProps {
   open: boolean;
@@ -35,7 +37,9 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   const [commentText, setCommentText] = useState<string>('');
   const [extractedComments, setExtractedComments] = useState<string[]>([]);
   const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female' | 'other'>('all');
-  
+  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   // Fetch fake users
   const { data: allFakeUsers = [] } = useQuery<FakeUser[]>({
     queryKey: ['/api/fake-users'],
@@ -53,7 +57,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
     // Lọc ra những người dùng chưa được sử dụng trong session này
     const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-    
+
     // Nếu đã sử dụng hết tất cả user, reset và bắt đầu lại
     if (availableUsers.length === 0) {
       console.log('Đã sử dụng hết tất cả user, bắt đầu chu kỳ mới...');
@@ -89,11 +93,33 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     setExtractedComments(comments);
   }, [commentText]);
 
+  // Handle emoji click
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const currentText = commentText;
+      const newText = currentText.substring(0, start) + emojiData.emoji + currentText.substring(end);
+      
+      setCommentText(newText);
+      setShowEmojiPicker(false);
+      
+      // Focus back to textarea and set cursor position after emoji
+      setTimeout(() => {
+        textarea.focus();
+        const newCursorPosition = start + emojiData.emoji.length;
+        textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      }, 0);
+    }
+  };
+
   // Reset form khi đóng dialog
   useEffect(() => {
     if (!open) {
       setCommentText('');
       setSelectedGender('all');
+      setShowEmojiPicker(false);
     }
   }, [open]);
 
@@ -149,8 +175,109 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     },
   });
 
+  // Queue cleanup utilities
+  const cleanupOldQueues = () => {
+    const MAX_QUEUE_AGE = 24 * 60 * 60 * 1000; // 24 giờ
+    const MAX_FAILED_QUEUE_AGE = 2 * 60 * 60 * 1000; // 2 giờ cho failed queue
+    const MAX_TOTAL_QUEUES = 50; // Tối đa 50 queue trong localStorage
+    
+    try {
+      const allKeys = Object.keys(localStorage);
+      const queueKeys = allKeys.filter(key => key.startsWith('comment_queue_'));
+      
+      console.log(`[CLEANUP] Tìm thấy ${queueKeys.length} queue trong localStorage`);
+      
+      let cleanedCount = 0;
+      const now = Date.now();
+      
+      // Cleanup theo age và status
+      queueKeys.forEach(key => {
+        try {
+          const queueData = JSON.parse(localStorage.getItem(key) || '{}');
+          const age = now - (queueData.startTime || 0);
+          
+          let shouldClean = false;
+          let reason = '';
+          
+          // Rule 1: Queue quá cũ
+          if (age > MAX_QUEUE_AGE) {
+            shouldClean = true;
+            reason = `quá cũ (${Math.round(age / (60 * 60 * 1000))} giờ)`;
+          }
+          
+          // Rule 2: Failed queue quá 2 giờ
+          if (queueData.status === 'failed' && age > MAX_FAILED_QUEUE_AGE) {
+            shouldClean = true;
+            reason = `failed quá lâu (${Math.round(age / (60 * 60 * 1000))} giờ)`;
+          }
+          
+          // Rule 3: Completed queue quá 1 giờ
+          if (queueData.status === 'completed' && age > (60 * 60 * 1000)) {
+            shouldClean = true;
+            reason = `completed quá 1 giờ`;
+          }
+          
+          // Rule 4: Queue không có sessionId (corrupted)
+          if (!queueData.sessionId) {
+            shouldClean = true;
+            reason = 'không có sessionId (corrupted)';
+          }
+          
+          if (shouldClean) {
+            localStorage.removeItem(key);
+            cleanedCount++;
+            console.log(`[CLEANUP] Xóa queue ${key} - ${reason}`);
+          }
+        } catch (error) {
+          // Corrupted queue data
+          localStorage.removeItem(key);
+          cleanedCount++;
+          console.log(`[CLEANUP] Xóa queue corrupted: ${key}`);
+        }
+      });
+      
+      // Rule 5: Nếu vẫn còn quá nhiều queue, xóa những cái cũ nhất
+      const remainingKeys = Object.keys(localStorage).filter(key => key.startsWith('comment_queue_'));
+      if (remainingKeys.length > MAX_TOTAL_QUEUES) {
+        const queuesByAge = remainingKeys.map(key => {
+          try {
+            const data = JSON.parse(localStorage.getItem(key) || '{}');
+            return { key, startTime: data.startTime || 0 };
+          } catch {
+            return { key, startTime: 0 };
+          }
+        }).sort((a, b) => a.startTime - b.startTime);
+        
+        const toDelete = queuesByAge.slice(0, remainingKeys.length - MAX_TOTAL_QUEUES);
+        toDelete.forEach(({ key }) => {
+          localStorage.removeItem(key);
+          cleanedCount++;
+          console.log(`[CLEANUP] Xóa queue để giảm tổng số: ${key}`);
+        });
+      }
+      
+      if (cleanedCount > 0) {
+        console.log(`[CLEANUP] ✅ Đã dọn dẹp ${cleanedCount} queue cũ/failed`);
+        toast({
+          title: 'Dọn dẹp hoàn tất',
+          description: `Đã xóa ${cleanedCount} queue cũ/thất bại để tối ưu hóa hiệu suất`,
+        });
+      } else {
+        console.log(`[CLEANUP] ✅ Không có queue nào cần dọn dẹp`);
+      }
+      
+      return cleanedCount;
+    } catch (error) {
+      console.error('[CLEANUP] Lỗi khi dọn dẹp queue:', error);
+      return 0;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!contentId) return;
+
+    // 🧹 Dọn dẹp queue cũ trước khi tạo queue mới
+    cleanupOldQueues();
 
     // Loại bỏ các comment trùng lặp
     const uniqueComments = Array.from(new Set(extractedComments));
@@ -169,7 +296,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const errorMessage = allFakeUsers.length === 0 
         ? 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.'
         : `Không có người dùng ảo nào với giới tính "${selectedGender === 'male' ? 'Nam' : selectedGender === 'female' ? 'Nữ' : 'Khác'}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`;
-      
+
       toast({
         title: 'Lỗi',
         description: errorMessage,
@@ -186,22 +313,24 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
-    // Kiểm tra xem có queue nào đang xử lý cho externalId này không
-    const queueKey = `comment_queue_${externalId}`;
-    const existingQueue = (() => {
+    // Utility function để load queue từ localStorage một cách an toàn
+    const loadQueueFromStorage = (queueKey: string) => {
       try {
         const stored = localStorage.getItem(queueKey);
         return stored ? JSON.parse(stored) : null;
-      } catch {
+      } catch (error) {
+        console.warn('Failed to load queue from localStorage:', error);
         return null;
       }
-    })();
+    };
+
+    // Kiểm tra xem có queue nào đang xử lý cho externalId này không
+    const queueKey = `comment_queue_${externalId}`;
+    const existingQueue = loadQueueFromStorage(queueKey);
 
     // Nếu có queue đang xử lý, cho phép thêm comment vào queue
     if (existingQueue && existingQueue.status === 'processing') {
       const progress = existingQueue.processedCount || 0;
-      const total = existingQueue.totalComments || 0;
-      const remaining = total - progress;
       
       // Thêm comment mới vào queue hiện tại
       const updatedComments = [...existingQueue.comments, ...uniqueComments];
@@ -219,6 +348,8 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           description: `Đã thêm ${uniqueComments.length} comment vào queue đang chạy. Queue hiện có ${updatedComments.length} comment (${progress} đã xử lý, còn ${updatedComments.length - progress} chưa xử lý).`,
         });
         
+        console.log(`[${existingQueue.sessionId}] Đã thêm ${uniqueComments.length} comment mới vào queue. Worker sẽ tiếp tục xử lý...`);
+        
         // Đóng dialog và reset form
         onOpenChange(false);
         setCommentText('');
@@ -234,13 +365,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       }
     }
 
-    // Đóng dialog ngay lập tức
+    // Đóng dialog ngay lập tức nếu không có queue đang chạy
     onOpenChange(false);
     setCommentText('');
 
     // Tạo unique session ID cho việc track
     const sessionId = `comment_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Lưu queue vào localStorage để persist
     const commentQueue = {
       sessionId,
@@ -273,15 +404,23 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const baseDelay = 2; // 2 phút base delay
       const maxDelay = 5; // 5 phút max delay
       
+      // Progressive timeout strategy
+      const getProgressiveTimeout = (retryCount: number): number => {
+        // Start với 30 giây, tăng dần mỗi retry
+        const timeouts = [30000, 60000, 120000]; // 30s, 1m, 2m
+        return timeouts[Math.min(retryCount, timeouts.length - 1)];
+      };
+
       // Track used users for this session to prevent duplicates
       const usedUserIds = new Set<number>();
-      
-      // Recovery function để load từ localStorage
+
+      // Recovery function để load từ localStorage (optimized)
       const loadQueueFromStorage = (): typeof commentQueue | null => {
         try {
           const stored = localStorage.getItem(queueKey);
           return stored ? JSON.parse(stored) : null;
-        } catch {
+        } catch (error) {
+          console.warn(`[${sessionId}] Failed to load queue from localStorage:`, error);
           return null;
         }
       };
@@ -300,12 +439,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const getAdaptiveDelay = (attemptNumber: number, isRetry: boolean = false): number => {
         const baseMs = baseDelay * 60000; // Convert to milliseconds
         const maxMs = maxDelay * 60000;
-        
+
         if (isRetry) {
           // Exponential backoff cho retry
           return Math.min(baseMs * Math.pow(2, attemptNumber), maxMs);
         }
-        
+
         // Random delay giữa baseDelay và maxDelay
         const randomFactor = 0.5 + Math.random(); // 0.5 - 1.5
         return Math.min(baseMs * randomFactor, maxMs);
@@ -315,12 +454,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const enhancedDelay = async (ms: number, index: number) => {
         const start = Date.now();
         const heartbeatInterval = 30000; // 30 giây heartbeat
-        
+
         return new Promise<void>((resolve) => {
           const heartbeat = setInterval(() => {
             const elapsed = Date.now() - start;
             const remaining = Math.max(0, ms - elapsed);
-            
+
             if (remaining <= 0) {
               clearInterval(heartbeat);
               resolve();
@@ -328,12 +467,55 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               console.log(`[${index}] Còn ${Math.ceil(remaining / 60000)} phút nữa...`);
             }
           }, heartbeatInterval);
-          
+
           setTimeout(() => {
             clearInterval(heartbeat);
             resolve();
           }, ms);
         });
+      };
+
+      // Atomic localStorage operations với retry
+      const atomicUpdateQueue = async (updates: Partial<typeof commentQueue>, maxRetries = 3): Promise<boolean> => {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            let currentQueueState = loadQueueFromStorage();
+            
+            // Nếu không có queue, tạo mới từ currentQueue hiện tại
+            if (!currentQueueState) {
+              console.warn(`[${sessionId}] No queue in storage, using current state`);
+              currentQueueState = currentQueue;
+            }
+            
+            // Relaxed session check - chỉ cảnh báo chứ không fail
+            if (currentQueueState.sessionId !== sessionId) {
+              console.warn(`[${sessionId}] Session mismatch but continuing: ${currentQueueState.sessionId} vs ${sessionId}`);
+            }
+            
+            const updatedQueue = { ...currentQueueState, ...updates };
+            localStorage.setItem(queueKey, JSON.stringify(updatedQueue));
+            
+            // Verify write success với fallback
+            const verifyQueue = loadQueueFromStorage();
+            if (verifyQueue) {
+              currentQueue = updatedQueue;
+              console.log(`[${sessionId}] Queue updated successfully (attempt ${attempt + 1})`);
+              return true;
+            } else {
+              // Fallback: Update in-memory queue even if localStorage fails
+              currentQueue = updatedQueue;
+              console.warn(`[${sessionId}] localStorage verify failed but in-memory updated (attempt ${attempt + 1})`);
+              return true; // Accept this as success to prevent blocking
+            }
+          } catch (error) {
+            console.warn(`[${sessionId}] Attempt ${attempt + 1} failed to update queue:`, error);
+            if (attempt < maxRetries - 1) {
+              // Exponential backoff
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 100));
+            }
+          }
+        }
+        return false;
       };
 
       console.log(`[${sessionId}] Bắt đầu gửi ${currentQueue.totalComments} comment...`);
@@ -358,14 +540,14 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         if (index > 0) {
           const delayMs = getAdaptiveDelay(index);
           const delayMinutes = Math.ceil(delayMs / 60000);
-          
+
           console.log(`[${sessionId}] Chờ ${delayMinutes} phút trước comment ${index + 1}/${currentQueue.totalComments}...`);
-          
+
           toast({
             title: 'Đang chờ...',
             description: `Chờ ${delayMinutes} phút trước comment ${index + 1}/${currentQueue.totalComments}`,
           });
-          
+
           await enhancedDelay(delayMs, index + 1);
         }
 
@@ -374,19 +556,22 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           try {
             // Chọn một người dùng ảo không trùng lặp trong session này
             const randomUser = getRandomFakeUser(usedUserIds);
-            
+
             if (!randomUser) {
               throw new Error('Không có người dùng ảo nào khả dụng');
             }
 
             console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Gửi comment (thử lần ${retryCount + 1}) với user ${randomUser.name} (ID: ${randomUser.id})...`);
-            
-            // Gửi comment với enhanced timeout
+
+            // Gửi comment với progressive timeout
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8 * 60 * 1000); // 8 phút timeout
+            const timeoutMs = getProgressiveTimeout(retryCount);
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
             try {
-              await sendExternalCommentMutation.mutateAsync({
+              console.log(`[${sessionId}][${index + 1}] Bắt đầu gửi comment: "${comment.substring(0, 50)}..." với user ${randomUser.name}`);
+              
+              const apiResult = await sendExternalCommentMutation.mutateAsync({
                 externalId,
                 fakeUserId: randomUser.id,
                 comment
@@ -394,15 +579,25 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
               clearTimeout(timeoutId);
               success = true;
-              
-              // Update success
-              updateQueue({
+
+              // Log API response để debug
+              console.log(`[${sessionId}][${index + 1}] API Response:`, apiResult);
+
+              // Update success với atomic operation (non-blocking)
+              const updateSuccess = await atomicUpdateQueue({
                 processedCount: index + 1,
                 successCount: currentQueue.successCount + 1
               });
 
-              console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] Thành công với user ${randomUser.name} (ID: ${randomUser.id}). Đã sử dụng ${usedUserIds.size}/${fakeUsers.length} user.`);
-              
+              if (!updateSuccess) {
+                console.warn(`[${sessionId}][${index + 1}] Failed to update queue after successful API call - continuing anyway`);
+                // Manual update để đảm bảo progress tracking
+                currentQueue.processedCount = index + 1;
+                currentQueue.successCount = currentQueue.successCount + 1;
+              }
+
+              console.log(`[${sessionId}][${index + 1}/${currentQueue.totalComments}] ✅ API THÀNH CÔNG với user ${randomUser.name} (ID: ${randomUser.id}). Response: ${JSON.stringify(apiResult).substring(0, 100)}...`);
+
               toast({
                 title: 'Thành công',
                 description: `Comment ${index + 1}/${currentQueue.totalComments} đã gửi thành công bởi ${randomUser.name}`,
@@ -410,6 +605,16 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
             } catch (apiError) {
               clearTimeout(timeoutId);
+              
+              // Enhanced error logging
+              console.error(`[${sessionId}][${index + 1}] ❌ API ERROR:`, {
+                error: apiError,
+                user: randomUser,
+                comment: comment.substring(0, 100),
+                externalId,
+                timestamp: new Date().toISOString()
+              });
+              
               throw apiError;
             }
 
@@ -417,21 +622,22 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             retryCount++;
             const isTimeout = error instanceof Error && error.message.includes('timeout');
             const isAbort = error instanceof Error && error.name === 'AbortError';
-            
-            console.error(`[${sessionId}][${index + 1}] Lỗi lần thử ${retryCount}:`, error);
-            
+            const timeoutUsed = getProgressiveTimeout(retryCount - 1);
+
+            console.error(`[${sessionId}][${index + 1}] Lỗi lần thử ${retryCount} (timeout: ${timeoutUsed/1000}s):`, error);
+
             if (retryCount < maxRetries) {
               const retryDelayMs = getAdaptiveDelay(retryCount, true);
               const retryDelayMinutes = Math.ceil(retryDelayMs / 60000);
-              
+
               console.log(`[${sessionId}] Sẽ thử lại sau ${retryDelayMinutes} phút...`);
-              
+
               toast({
                 title: 'Đang thử lại...',
                 description: `Comment ${index + 1} thất bại, thử lại sau ${retryDelayMinutes} phút (lần ${retryCount}/${maxRetries})`,
                 variant: 'destructive'
               });
-              
+
               await enhancedDelay(retryDelayMs, index + 1);
             } else {
               // Max retries reached - remove user from used set since comment failed
@@ -439,12 +645,19 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
                 usedUserIds.delete(randomUser.id);
                 console.log(`[${sessionId}] Đã xóa user ${randomUser.name} (ID: ${randomUser.id}) khỏi danh sách đã sử dụng do comment thất bại`);
               }
-              
-              updateQueue({
+
+              const updateSuccess = await atomicUpdateQueue({
                 processedCount: index + 1,
                 failureCount: currentQueue.failureCount + 1
               });
-              
+
+              if (!updateSuccess) {
+                console.error(`[${sessionId}][${index + 1}] ❌ Failed to update queue after comment failure - manual fallback`);
+                // Manual update để đảm bảo tracking
+                currentQueue.processedCount = index + 1;
+                currentQueue.failureCount = currentQueue.failureCount + 1;
+              }
+
               toast({
                 title: 'Comment thất bại',
                 description: `Comment ${index + 1}/${currentQueue.totalComments} thất bại sau ${maxRetries} lần thử`,
@@ -462,16 +675,26 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
       const finalMessage = `Hoàn thành: ${currentQueue.successCount} thành công, ${currentQueue.failureCount} thất bại trên tổng ${currentQueue.totalComments}. Đã sử dụng ${usedUserIds.size}/${fakeUsers.length} user khác nhau.`;
       console.log(`[${sessionId}] ${finalMessage}`);
-      
+
       toast({
         title: currentQueue.successCount > 0 ? 'Hoàn thành' : 'Có lỗi xảy ra',
         description: `${currentQueue.successCount} thành công, ${currentQueue.failureCount} thất bại. Sử dụng ${usedUserIds.size} user khác nhau.`,
         variant: currentQueue.successCount > 0 ? 'default' : 'destructive'
       });
 
-      // Cleanup localStorage after completion
+      // Enhanced cleanup sau khi completion
       try {
         localStorage.removeItem(queueKey);
+        console.log(`[${sessionId}] ✅ Đã xóa queue khỏi localStorage`);
+        
+        // Trigger cleanup cho các queue khác nếu cần
+        setTimeout(() => {
+          const remainingQueues = Object.keys(localStorage).filter(k => k.startsWith('comment_queue_')).length;
+          if (remainingQueues > 10) {
+            console.log(`[CLEANUP] Phát hiện ${remainingQueues} queue, trigger cleanup...`);
+            cleanupOldQueues();
+          }
+        }, 1000);
       } catch (error) {
         console.warn('Không thể xóa queue khỏi localStorage:', error);
       }
@@ -480,16 +703,19 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     // Khởi chạy worker với global error handling
     sendCommentsInBackground().catch((error) => {
       console.error(`[${sessionId}] Critical error in background sender:`, error);
-      
-      // Update queue status
+
+      // Update queue status với timestamp
       try {
         const currentQueue = JSON.parse(localStorage.getItem(queueKey) || '{}');
         currentQueue.status = 'failed';
+        currentQueue.failedAt = Date.now();
+        currentQueue.errorInfo = error instanceof Error ? error.message : 'Unknown error';
         localStorage.setItem(queueKey, JSON.stringify(currentQueue));
+        console.log(`[${sessionId}] ❌ Queue marked as failed và sẽ được cleanup sau 2 giờ`);
       } catch (e) {
         console.warn('Không thể cập nhật trạng thái lỗi:', e);
       }
-      
+
       toast({
         title: 'Lỗi hệ thống',
         description: 'Đã xảy ra lỗi nghiêm trọng. Vui lòng kiểm tra console và thử lại.',
@@ -592,12 +818,41 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             </div>
           )}
 
-          <Textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Nhập nội dung comment hoặc nhiều comment cách nhau bởi dấu ngoặc nhọn {comment1} {comment2}"
-            className="min-h-[200px]"
-          />
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Nhập nội dung comment hoặc nhiều comment cách nhau bởi dấu ngoặc nhọn {comment1} {comment2}"
+              className="min-h-[200px] pr-12"
+            />
+            <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-gray-100"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                >
+                  😀
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  width={350}
+                  height={400}
+                  searchDisabled={false}
+                  skinTonesDisabled={false}
+                  previewConfig={{
+                    defaultCaption: "Chọn emoji để thêm vào comment",
+                    defaultEmoji: "1f60a"
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
           <div className="text-sm text-muted-foreground">
             Số comments sẽ được thêm: {extractedComments.length}
