@@ -72,6 +72,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 const fakeUserSchema = z.object({
   name: z.string().min(1, "Tên người dùng là bắt buộc"),
   token: z.string().min(1, "Token là bắt buộc"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
+  password: z.string().min(1, "Password là bắt buộc").optional().or(z.literal("")),
   gender: z.enum(["male", "female", "other"]).default("male"),
   status: z.enum(["active", "inactive"]).default("active"),
   description: z.string().optional(),
@@ -81,6 +83,8 @@ type FakeUser = {
   id: number;
   name: string;
   token: string;
+  email?: string;
+  password?: string;
   gender: "male" | "female" | "other";
   status: "active" | "inactive";
   description?: string;
@@ -321,6 +325,8 @@ export default function FakeUsersPage() {
     defaultValues: {
       name: "",
       token: "",
+      email: "",
+      password: "",
       gender: "male",
       status: "active",
       description: "",
@@ -334,6 +340,8 @@ export default function FakeUsersPage() {
       form.reset({
         name: user.name,
         token: user.token,
+        email: user.email || "",
+        password: user.password || "",
         gender: user.gender as "male" | "female" | "other",
         status: user.status as "active" | "inactive",
         description: user.description || "",
@@ -344,6 +352,8 @@ export default function FakeUsersPage() {
       form.reset({
         name: "",
         token: "",
+        email: "",
+        password: "",
         gender: "male",
         status: "active",
         description: "",
@@ -365,7 +375,7 @@ export default function FakeUsersPage() {
   };
 
   // Xử lý click vào tên user để login với email/password auto-fill
-  const handleUserLogin = (token: string, userName: string) => {
+  const handleUserLogin = (token: string, userName: string, email?: string, password?: string) => {
     try {
       // Mở tab mới đến emso.vn
       const newTab = window.open('https://emso.vn/', '_blank', 'noopener,noreferrer');
@@ -395,8 +405,8 @@ export default function FakeUsersPage() {
           // Gửi thông tin đăng nhập đến tab mới
           newTab.postMessage({
             type: 'AUTO_LOGIN_CREDENTIALS',
-            email: 'vuquangbao121@emso.vn', // Email cố định theo ví dụ
-            password: 'emso1604!@#', // Password cố định theo ví dụ
+            email: email || 'vuquangbao121@emso.vn', // Sử dụng email từ fake user hoặc fallback
+            password: password || 'emso1604!@#', // Sử dụng password từ fake user hoặc fallback
             token: token,
             userName: userName
           }, 'https://emso.vn');
@@ -412,8 +422,8 @@ export default function FakeUsersPage() {
 
               if (emailInput && passwordInput) {
                 // Fill thông tin đăng nhập
-                emailInput.value = 'vuquangbao121@emso.vn';
-                passwordInput.value = 'emso1604!@#';
+                emailInput.value = '${email || 'vuquangbao121@emso.vn'}';
+                passwordInput.value = '${password || 'emso1604!@#'}';
 
                 // Trigger events để form nhận biết
                 emailInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -454,7 +464,7 @@ export default function FakeUsersPage() {
       }, 1000);
 
       // Copy thông tin vào clipboard làm backup
-      const loginInfo = `Email: vuquangbao121@emso.vn\nPassword: emso1604!@#\nToken: ${token}`;
+      const loginInfo = `Email: ${email || 'vuquangbao121@emso.vn'}\nPassword: ${password || 'emso1604!@#'}\nToken: ${token}`;
       navigator.clipboard.writeText(loginInfo).then(() => {
         toast({
           title: "Thông tin đăng nhập đã được copy",
@@ -467,7 +477,7 @@ export default function FakeUsersPage() {
       // Hiển thị thông báo
       toast({
         title: "Đã mở emso.vn",
-        description: "Đang thử auto-login với email: vuquangbao121@emso.vn. Thông tin đăng nhập đã được copy vào clipboard.",
+        description: `Đang thử auto-login với email: ${email || 'vuquangbao121@emso.vn'}. Thông tin đăng nhập đã được copy vào clipboard.`,
       });
     } catch (error) {
       console.error('Error in handleUserLogin:', error);
@@ -639,6 +649,8 @@ export default function FakeUsersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tên</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Password</TableHead>
                     <TableHead>Token</TableHead>
                     <TableHead>Giới tính</TableHead>
                     <TableHead>Thao tác</TableHead>
@@ -650,12 +662,18 @@ export default function FakeUsersPage() {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
                           <button
-                            onClick={() => handleUserLogin(user.token, user.name)}
+                            onClick={() => handleUserLogin(user.token, user.name, user.email, user.password)}
                             className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
-                            title={`Click để đăng nhập với token: ${user.token}`}
+                            title={`Click để đăng nhập với email: ${user.email || 'N/A'} và password: ${user.password || 'N/A'}`}
                           >
                             {user.name}
                           </button>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {user.email || <span className="text-gray-400">Chưa có</span>}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {user.password ? '••••••••' : <span className="text-gray-400">Chưa có</span>}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {user.token}
@@ -716,7 +734,7 @@ export default function FakeUsersPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center text-sm text-muted-foreground">
                           <AlertTriangle className="mb-2 h-6 w-6" />
                           {debouncedSearchQuery ? 
@@ -816,6 +834,40 @@ export default function FakeUsersPage() {
                     </FormControl>
                     <FormDescription>
                       Tên này sẽ được hiển thị khi gửi bình luận.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Nhập email đăng nhập" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Email dùng để đăng nhập vào hệ thống bên ngoài.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Nhập mật khẩu đăng nhập" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Mật khẩu dùng để đăng nhập vào hệ thống bên ngoài.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
