@@ -250,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const broadcastBadgeUpdate = async () => {
     try {
       const { groups, supportRequests } = await import("../shared/schema");
-      const { pages } = await import("../shared/schema");
+      const { pages } } from await import("../shared/schema");
       const { users } = await import("../shared/schema");
       const { realUsers } = await import("../shared/schema");
 
@@ -820,7 +820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         can_send_email: users.can_send_email,
         createdAt: users.createdAt
       }).from(users).orderBy(users.id);
-      
+
       console.log('Fetched users with email permission:', allUsers.map(u => ({ 
         id: u.id, 
         username: u.username, 
@@ -1708,7 +1708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Kiểm tra kết quả từ API
           console.log(`[${externalId}] API Response Status: ${response.status}`);
-          
+
           if (response.ok) {
             const apiResponse = await response.json();
             console.log(`[${externalId}] ✅ External API SUCCESS:`, {
@@ -1745,7 +1745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               comment: comment.substring(0, 50) + '...',
               errorData
             });
-            
+
             return res.status(response.status).json({
               success: false,
               message: "Failed to send comment to external API",
@@ -2351,30 +2351,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const existingFakeUser = await storage.getFakeUserByToken(
             validatedData.token,
           );
-          
+
           if (existingFakeUser) {
             // Nếu user đã tồn tại, kiểm tra xem có thông tin mới để cập nhật không
             const updateData: any = {};
             let hasNewData = false;
-            
+
             // Kiểm tra email mới
             if (validatedData.email && (!existingFakeUser.email || existingFakeUser.email !== validatedData.email)) {
               updateData.email = validatedData.email;
               hasNewData = true;
             }
-            
+
             // Kiểm tra password mới
             if (validatedData.password && (!existingFakeUser.password || existingFakeUser.password !== validatedData.password)) {
               updateData.password = validatedData.password;
               hasNewData = true;
             }
-            
+
             // Kiểm tra name mới (trường hợp name khác)
             if (validatedData.name && existingFakeUser.name !== validatedData.name) {
               updateData.name = validatedData.name;
               hasNewData = true;
             }
-            
+
             if (hasNewData) {
               // Cập nhật thông tin mới
               await storage.updateFakeUser(existingFakeUser.id, updateData);
@@ -2391,7 +2391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Tạo người dùng ảo mới
           await storage.createFakeUser(validatedData);
           successCount++;
-          
+
           console.log(`✅ Created fake user: ${validatedData.name} with email: ${validatedData.email || 'N/A'}`);
         } catch (error) {
           const errorMsg =
@@ -2403,7 +2403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Bulk upload completed: ${successCount} success, ${failedCount} failed`);
-      
+
       res.json({
         success: successCount,
         failed: failedCount,
@@ -2514,7 +2514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/email-templates", isAuthenticated, async (req, res) => {
     try {
       const { emailTemplates } = await import("../shared/schema.js");
-      
+
       const templates = await db
         .select()
         .from(emailTemplates)
@@ -2541,7 +2541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const templateId = parseInt(req.params.id);
       const { emailTemplates } = await import("../shared/schema.js");
-      
+
       const [template] = await db
         .select()
         .from(emailTemplates)
@@ -2706,11 +2706,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "./controllers/support.controller"
   );
   const supportController = new SupportController();
-  const { feedbackRouter } = await import("./routes/feedback.router");
+  import { feedbackRouter } from "./routes/feedback.router.js";
+import { supportRouter } from "./routes/support.router.js";
+import { infringingContentRouter } from "./routes/infringing-content.router.js";
 
   app.use("/api/support-requests", supportRouter);
   app.use("/api", supportRouter);
   app.use("/api", feedbackRouter);
+
+  // Infringing content routes
+  app.use("/api/infringing-content", infringingContentRouter);
 
   // Support requests routes
   app.get(
@@ -2914,7 +2919,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           or(
             sql`LOWER(${pagesTable.pageName}::jsonb->>'page_name') LIKE ${searchPattern}`,
             sql`LOWER(${pagesTable.pageName}::jsonb->>'name') LIKE ${searchPattern}`,
-            sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`,
+            ```text
+sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`,
           ),
         );
       }
