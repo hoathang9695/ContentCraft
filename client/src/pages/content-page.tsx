@@ -83,13 +83,194 @@ export default function ContentPage() {
 
   return (
     <DashboardLayout onSearch={handleSearch}>
-      <div className="mb-4 flex items-center justify-between"> {/* Modified to align filters */}
-        <div className="flex items-center gap-4">
+      {/* Responsive filters layout - horizontal on desktop, vertical on mobile */}
+      <div className="mb-4">
+        {/* Mobile layout (< md) - vertical stack */}
+        <div className="md:hidden space-y-4">
+          {/* Status and verification filters - mobile */}
+          <div className="flex flex-col gap-3">
+            <div className="bg-background border rounded-md p-1">
+              <div className="flex space-x-1">
+                <Button 
+                  variant={activeTab === 'all' ? 'default' : 'ghost'} 
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => setActiveTab('all')}
+                >
+                  Tất cả
+                </Button>
+                <Button 
+                  variant={activeTab === 'processed' ? 'default' : 'ghost'} 
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => setActiveTab('processed')}
+                >
+                  Đã xử lý
+                </Button>
+                <Button 
+                  variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => setActiveTab('unprocessed')}
+                >
+                  Chưa xử lý
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="bg-background border rounded-md p-1 flex-1">
+                <Button
+                  variant={sourceStatus === 'verified' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={toggleSourceStatus}
+                >
+                  {sourceStatus === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
+                </Button>
+              </div>
+
+              {user?.role === 'admin' && (
+                <Select 
+                  value={selectedUser?.toString() || "all"} 
+                  onValueChange={(value) => setSelectedUser(value === "all" ? null : parseInt(value))}
+                >
+                  <SelectTrigger className="flex-1 h-9">
+                    <SelectValue placeholder="Tất cả" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    {editorUsers?.map(user => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+
+          {/* Date filters - mobile */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
+              <div>
+                <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-9 w-full justify-start text-left font-normal text-xs",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-3 w-3" />
+                      {startDate ? format(startDate, 'dd/MM/yyyy') : "Tất cả"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setStartDate(date);
+                          if (date > endDate) {
+                            setEndDate(date);
+                          }
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-9 w-full justify-start text-left font-normal text-xs",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-3 w-3" />
+                      {endDate ? format(endDate, 'dd/MM/yyyy') : "Tất cả"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setEndDate(date);
+                          if (date < startDate) {
+                            setStartDate(date);
+                          }
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="default" 
+                className="h-9 flex-1 bg-green-600 hover:bg-green-700 text-white text-xs px-3" 
+                onClick={() => {
+                  if (startDate && endDate) {
+                    handleDateFilter();
+                    toast({
+                      title: "Đã áp dụng bộ lọc",
+                      description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+                    });
+                  } else {
+                    toast({
+                      title: "Vui lòng chọn ngày",
+                      description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Áp dụng
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="h-9 flex-1 text-xs px-3" 
+                onClick={() => {
+                  setStartDate(undefined);
+                  setEndDate(undefined);
+                  toast({
+                    title: "Đã đặt lại bộ lọc",
+                    description: "Hiển thị tất cả dữ liệu",
+                  });
+                }}
+              >
+                Xóa bộ lọc
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop layout (>= md) - single row horizontal */}
+        <div className="hidden md:flex md:items-end md:gap-4">
+          {/* Status tabs */}
           <div className="bg-background border rounded-md p-1">
             <div className="flex space-x-1">
               <Button 
                 variant={activeTab === 'all' ? 'default' : 'ghost'} 
                 size="sm"
+                className="text-sm"
                 onClick={() => setActiveTab('all')}
               >
                 Tất cả
@@ -97,6 +278,7 @@ export default function ContentPage() {
               <Button 
                 variant={activeTab === 'processed' ? 'default' : 'ghost'} 
                 size="sm"
+                className="text-sm"
                 onClick={() => setActiveTab('processed')}
               >
                 Đã xử lý
@@ -104,6 +286,7 @@ export default function ContentPage() {
               <Button 
                 variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
                 size="sm"
+                className="text-sm"
                 onClick={() => setActiveTab('unprocessed')}
               >
                 Chưa xử lý
@@ -111,22 +294,25 @@ export default function ContentPage() {
             </div>
           </div>
 
+          {/* Verification filter */}
           <div className="bg-background border rounded-md p-1">
             <Button
               variant={sourceStatus === 'verified' ? 'default' : 'ghost'}
               size="sm"
+              className="text-sm"
               onClick={toggleSourceStatus}
             >
               {sourceStatus === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
             </Button>
           </div>
 
+          {/* User filter for admin */}
           {user?.role === 'admin' && (
             <Select 
               value={selectedUser?.toString() || "all"} 
               onValueChange={(value) => setSelectedUser(value === "all" ? null : parseInt(value))}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[180px] h-9">
                 <SelectValue placeholder="Tất cả" />
               </SelectTrigger>
               <SelectContent>
@@ -139,17 +325,16 @@ export default function ContentPage() {
               </SelectContent>
             </Select>
           )}
-        </div>
 
-        <div className="flex items-center gap-2">
+          {/* Start date */}
           <div>
-            <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+            <Label htmlFor="startDate" className="text-sm mb-1 block">Ngày bắt đầu</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
-                    "h-10 justify-start text-left font-normal",
+                    "h-9 w-[150px] justify-start text-left font-normal text-sm",
                     !startDate && "text-muted-foreground"
                   )}
                 >
@@ -175,14 +360,15 @@ export default function ContentPage() {
             </Popover>
           </div>
 
+          {/* End date */}
           <div>
-            <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+            <Label htmlFor="endDate" className="text-sm mb-1 block">Ngày kết thúc</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
-                    "h-10 justify-start text-left font-normal",
+                    "h-9 w-[150px] justify-start text-left font-normal text-sm",
                     !endDate && "text-muted-foreground"
                   )}
                 >
@@ -208,10 +394,11 @@ export default function ContentPage() {
             </Popover>
           </div>
 
-          <div className="flex items-end gap-2 h-[74px]">
+          {/* Action buttons */}
+          <div className="flex gap-2">
             <Button 
               variant="default" 
-              className="h-10 bg-green-600 hover:bg-green-700 text-white" 
+              className="h-9 bg-green-600 hover:bg-green-700 text-white text-sm px-4" 
               onClick={() => {
                 if (startDate && endDate) {
                   handleDateFilter();
@@ -233,7 +420,7 @@ export default function ContentPage() {
 
             <Button 
               variant="outline" 
-              className="h-10" 
+              className="h-9 text-sm px-4" 
               onClick={() => {
                 setStartDate(undefined);
                 setEndDate(undefined);

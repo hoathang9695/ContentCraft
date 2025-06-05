@@ -137,7 +137,8 @@ export default function FeedbackPage() {
     <DashboardLayout>
       <div className="container mx-auto p-4">
         <div className="mb-4">
-          <div className="flex items-center justify-between">
+          {/* Desktop layout (md and up) - single horizontal row */}
+          <div className="hidden md:flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="bg-background border rounded-md p-1">
                 <div className="flex space-x-1">
@@ -262,6 +263,152 @@ export default function FeedbackPage() {
                 <Button 
                   variant="outline" 
                   className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800" 
+                  onClick={() => {
+                    setStartDate(undefined);
+                    setEndDate(undefined);
+                    toast({
+                      title: "Đã đặt lại bộ lọc",
+                      description: "Hiển thị tất cả dữ liệu",
+                    });
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile layout (< md) - vertical stack */}
+          <div className="md:hidden space-y-4">
+            {/* Status filters - mobile */}
+            <div className="bg-background border rounded-md p-1">
+              <div className="flex space-x-1">
+                <Button 
+                  variant={statusFilter === 'all' ? 'default' : 'ghost'} 
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => handleStatusFilterChange('all')}
+                >
+                  Tất cả
+                </Button>
+                <Button 
+                  variant={statusFilter === 'completed' ? 'default' : 'ghost'} 
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => handleStatusFilterChange('completed')}
+                >
+                  Đã xử lý
+                </Button>
+                <Button 
+                  variant={statusFilter === 'pending' ? 'default' : 'ghost'} 
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => handleStatusFilterChange('pending')}
+                >
+                  Chưa xử lý
+                </Button>
+              </div>
+            </div>
+
+            {/* User filter - mobile */}
+            <Select 
+              value={userFilter?.toString() || "all"} 
+              onValueChange={(value) => handleUserFilterChange(value === "all" ? null : parseInt(value))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Tất cả" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                {users.map(user => (
+                  <SelectItem key={user.id} value={user.id.toString()}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Date filters - mobile */}
+            <div className="flex flex-col gap-3">
+              <div>
+                <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-9 w-full justify-start text-left font-normal text-xs",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-3 w-3" />
+                      {startDate ? format(startDate, 'dd/MM/yyyy') : "Tất cả"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setStartDate(date);
+                          if (date > endDate) {
+                            setEndDate(date);
+                          }
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-9 w-full justify-start text-left font-normal text-xs",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-3 w-3" />
+                      {endDate ? format(endDate, 'dd/MM/yyyy') : "Tất cả"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setEndDate(date);
+                          if (date < startDate) {
+                            setStartDate(date);
+                          }
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Action buttons - mobile */}
+              <div className="flex gap-2">
+                <Button 
+                  variant="default" 
+                  className="flex-1 h-9 bg-green-600 hover:bg-green-700 text-white text-xs" 
+                  onClick={handleDateFilter}
+                >
+                  Áp dụng
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-9 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800 text-xs" 
                   onClick={() => {
                     setStartDate(undefined);
                     setEndDate(undefined);
