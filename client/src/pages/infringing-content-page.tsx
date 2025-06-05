@@ -74,7 +74,7 @@ function getStatusBadge(status: string) {
   );
 }
 
-export function InfringingContentPage() {
+export default function InfringingContentPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
