@@ -226,26 +226,42 @@ export class InfringingContentController {
   // Search and process infringing content
   async searchAndProcessInfringingContent(req: Request, res: Response) {
     try {
+      console.log("🔍 [STEP 1] Starting infringing content processing request");
+      
       if (!req.user) {
+        console.log("❌ [STEP 1] Unauthorized - No user in request");
         return res.status(401).json({ message: "Unauthorized" });
       }
 
       const user = req.user as Express.User;
       const { externalId, violationDescription } = req.body;
 
+      console.log("✅ [STEP 1] User authenticated:", {
+        userId: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role
+      });
+
       if (!externalId || !violationDescription) {
+        console.log("❌ [STEP 1] Missing required fields:", {
+          externalId: !!externalId,
+          violationDescription: !!violationDescription
+        });
         return res.status(400).json({ 
           message: "External ID và mô tả vi phạm là bắt buộc" 
         });
       }
 
-      console.log("Processing infringing content:", {
+      console.log("✅ [STEP 2] Request validation passed:", {
         externalId,
         violationDescription,
-        user: { id: user.id, name: user.name }
+        descriptionLength: violationDescription.length
       });
 
       // Create infringing content record with pending status
+      console.log("🔍 [STEP 3] Creating infringing content record in database...");
+      
       const newContent = await storage.createInfringingContent({
         externalId: externalId,
         assigned_to_id: user.id,
@@ -254,9 +270,21 @@ export class InfringingContentController {
         status: "pending"
       });
 
+      console.log("✅ [STEP 3] Database record created successfully:", {
+        recordId: newContent.id,
+        externalId: newContent.externalId,
+        assignedTo: newContent.assigned_to_id,
+        status: newContent.status,
+        createdAt: newContent.createdAt
+      });
+
       // Try to connect to Redis and delete the key
       let redisDeleteSuccess = false;
       let redisError = null;
+      let deletedKeysCount = 0;
+      let foundKeysCount = 0;
+
+      console.log("🔍 [STEP 4] Starting Redis connection and key deletion process...");
 
       try {
         // Check for Redis connection configuration in environment
@@ -264,10 +292,18 @@ export class InfringingContentController {
         const redisPort = process.env.REDISEARCH_PORT;
         const redisPassword = process.env.REDISEARCH_PASSWORD;
         
+        console.log("🔍 [STEP 4.1] Checking Redis environment variables:", {
+          redisHost: redisHost ? `${redisHost}` : "NOT_FOUND",
+          redisPort: redisPort ? `${redisPort}` : "NOT_FOUND",
+          redisPassword: redisPassword ? "***CONFIGURED***" : "NOT_FOUND"
+        });
+        
         if (!redisHost || !redisPort || !redisPassword) {
-          console.warn("Redis configuration not found in environment variables");
+          console.warn("❌ [STEP 4.1] Redis configuration incomplete");
           redisError = "Redis configuration not complete";
         } else {
+          console.log("✅ [STEP 4.1] Redis configuration found, creating connection...");
+          
           const redis = new Redis({
             host: redisHost,
             port: parseInt(redisPort),
@@ -278,56 +314,96 @@ export class InfringingContentController {
             maxRetriesPerRequest: 1
           });
           
+          console.log("🔍 [STEP 4.2] Attempting Redis connection...");
           // Try to connect with timeout
           await redis.connect();
+          console.log("✅ [STEP 4.2] Redis connection established successfully");
           
           // Search for the key pattern
           const searchPattern = `*${externalId}*`;
-          const keys = await redis.keys(searchPattern);
+          console.log("🔍 [STEP 4.3] Searching for keys with pattern:", searchPattern);
           
-          console.log(`Found ${keys.length} keys matching pattern: ${searchPattern}`);
+          const keys = await redis.keys(searchPattern);
+          foundKeysCount = keys.length;
+          
+          console.log(`✅ [STEP 4.3] Found ${foundKeysCount} keys matching pattern`);
           
           if (keys.length > 0) {
+            console.log("🔍 [STEP 4.4] Deleting found keys...");
+            console.log("Keys to delete:", keys.slice(0, 5).join(", ") + (keys.length > 5 ? ` ... and ${keys.length - 5} more` : ""));
+            
             // Delete all matching keys
             const deleteResult = await redis.del(...keys);
-            console.log(`Deleted ${deleteResult} keys from Redis`);
+            deletedKeysCount = deleteResult;
+            console.log(`✅ [STEP 4.4] Successfully deleted ${deleteResult} keys from Redis`);
             redisDeleteSuccess = deleteResult > 0;
           } else {
-            console.log(`No keys found matching External ID: ${externalId}`);
+            console.log(`✅ [STEP 4.4] No keys found - considering as success (nothing to delete)`);
             redisDeleteSuccess = true; // Consider as success if no keys found
           }
           
+          console.log("🔍 [STEP 4.5] Closing Redis connection...");
           await redis.disconnect();
+          console.log("✅ [STEP 4.5] Redis connection closed successfully");
         }
       } catch (error) {
-        console.error("Redis operation failed:", error);
+        console.error("❌ [STEP 4] Redis operation failed:", error);
         redisError = error instanceof Error ? error.message : String(error);
       }
 
       // Update status based on Redis operation result
+      console.log("🔍 [STEP 5] Updating database record status based on Redis result...");
+      
       const finalStatus = redisDeleteSuccess ? "completed" : "processing";
       const processingTime = redisDeleteSuccess ? new Date() : null;
+
+      console.log("🔍 [STEP 5.1] Status update details:", {
+        finalStatus,
+        processingTime,
+        redisDeleteSuccess,
+        foundKeysCount,
+        deletedKeysCount
+      });
 
       const updatedContent = await storage.updateInfringingContent(newContent.id, {
         status: finalStatus,
         processing_time: processingTime
       });
 
-      return res.json({
+      console.log("✅ [STEP 5] Database record updated successfully:", {
+        recordId: updatedContent.id,
+        finalStatus: updatedContent.status,
+        processingTime: updatedContent.processing_time,
+        updatedAt: updatedContent.updated_at
+      });
+
+      const responseData = {
         success: true,
         data: updatedContent,
         redis: {
           success: redisDeleteSuccess,
-          error: redisError
+          error: redisError,
+          foundKeys: foundKeysCount,
+          deletedKeys: deletedKeysCount
         },
         message: redisDeleteSuccess 
-          ? "Đã xử lý thành công và xóa nội dung vi phạm từ Redis"
+          ? `Đã xử lý thành công và xóa ${deletedKeysCount} nội dung vi phạm từ Redis`
           : "Đã tạo yêu cầu xử lý, nhưng không thể kết nối Redis"
+      };
+
+      console.log("✅ [STEP 6] Sending successful response:", {
+        success: responseData.success,
+        recordId: responseData.data.id,
+        redisSuccess: responseData.redis.success,
+        message: responseData.message
       });
 
+      return res.json(responseData);
+
     } catch (error) {
-      console.error("Error in searchAndProcessInfringingContent:", error);
+      console.error("❌ [ERROR] Error in searchAndProcessInfringingContent:", error);
       if (error instanceof ZodError) {
+        console.error("❌ [ERROR] Validation error details:", error.errors);
         return res.status(400).json({
           success: false,
           message: "Validation error",
