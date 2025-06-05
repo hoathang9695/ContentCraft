@@ -75,7 +75,7 @@ async function addNewTemplate() {
 
             <!-- Call to Action -->
             <div style="text-align: center; margin-bottom: 30px;">
-                <div style="background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%); border-radius: 8px; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #7165e0 0%, #5a4fcf 100%); border-radius: 8px; padding: 20px;">
                     <p style="color: white; margin: 0 0 15px 0; font-size: 16px; font-weight: 500;">
                         🚀 Hãy cùng chúng tôi xây dựng cộng đồng tốt đẹp hơn!
                     </p>
