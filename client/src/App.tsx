@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
 import ContentPage from "@/pages/content-page";
+import InfringingContentPage from "@/pages/infringing-content-page";
 import ContentEditor from "@/pages/content-editor";
 import UsersPage from "@/pages/users-page";
 import ProfilePage from "@/pages/profile-page";
@@ -30,6 +31,7 @@ function Router() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={DashboardPage} adminOnly={false} />
+      <ProtectedRoute path="/infringing-content" component={InfringingContentPage} />
       <ProtectedRoute path="/contents" component={ContentPage} />
       <ProtectedRoute path="/contents/new" component={ContentEditor} adminOnly={false} />
       <ProtectedRoute path="/contents/:id/edit" component={ContentEditor} adminOnly={true} />
