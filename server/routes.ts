@@ -2619,6 +2619,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const templateId = parseInt(req.params.id);
       const { name, type, subject, htmlContent, variables, description, isActive } = req.body;
       const { emailTemplates } = await import("../shared/schema.js");
+      const { eq } = await import("drizzle-orm");
+
+      console.log("Updating template:", templateId, req.body);
 
       // Check if template exists
       const [existingTemplate] = await db
@@ -2631,7 +2634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      // Convert variables array to JSON string
+      // Convertt variabvariables array to JSON string
       const variablesJson = JSON.stringify(variables || []);
 
       const [updatedTemplate] = await db
@@ -2655,6 +2658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         variables: JSON.parse(updatedTemplate.variables || '[]')
       };
 
+      console.log("Template updated successfully:", templateWithParsedVariables);
       res.json(templateWithParsedVariables);
     } catch (error) {
       console.error("Error updating email template:", error);
