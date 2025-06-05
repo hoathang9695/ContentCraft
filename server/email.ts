@@ -486,12 +486,35 @@ export class EmailService {
   }): Promise<boolean> {
     try {
       const { EmailTemplateService } = await import('./email-templates.js');
-      const emailTemplate = EmailTemplateService.getFeedbackConfirmationTemplate({
-        fullName: data.fullName,
-        subject: data.subject,
-        feedbackType: data.feedbackType,
-        requestId: data.requestId
-      });
+      
+      // First try to get template from database
+      let emailTemplate = await EmailTemplateService.getTemplateFromDatabase('feedback_confirmation');
+      
+      if (emailTemplate) {
+        // Use database template and render variables
+        const variables = {
+          fullName: data.fullName,
+          subject: data.subject,
+          feedbackType: data.feedbackType,
+          requestId: data.requestId,
+          companyName: 'EMSO'
+        };
+        
+        emailTemplate.html = EmailTemplateService.renderTemplate(emailTemplate.html, variables);
+        emailTemplate.subject = EmailTemplateService.renderTemplate(emailTemplate.subject, variables);
+        
+        console.log(`📧 Using database template for feedback confirmation to ${data.to}`);
+      } else {
+        // Fallback to hardcoded template
+        emailTemplate = EmailTemplateService.getFeedbackConfirmationTemplate({
+          fullName: data.fullName,
+          subject: data.subject,
+          feedbackType: data.feedbackType,
+          requestId: data.requestId
+        });
+        
+        console.log(`📧 Using fallback template for feedback confirmation to ${data.to}`);
+      }
 
       return await this.sendEmail(data.to, emailTemplate.subject, emailTemplate.html);
     } catch (error) {
@@ -508,11 +531,33 @@ export class EmailService {
   }): Promise<boolean> {
     try {
       const { EmailTemplateService } = await import('./email-templates.js');
-      const emailTemplate = EmailTemplateService.getSupportConfirmationTemplate({
-        fullName: data.fullName,
-        subject: data.subject,
-        requestId: data.requestId
-      });
+      
+      // First try to get template from database
+      let emailTemplate = await EmailTemplateService.getTemplateFromDatabase('support_confirmation');
+      
+      if (emailTemplate) {
+        // Use database template and render variables
+        const variables = {
+          fullName: data.fullName,
+          subject: data.subject,
+          requestId: data.requestId,
+          companyName: 'EMSO'
+        };
+        
+        emailTemplate.html = EmailTemplateService.renderTemplate(emailTemplate.html, variables);
+        emailTemplate.subject = EmailTemplateService.renderTemplate(emailTemplate.subject, variables);
+        
+        console.log(`📧 Using database template for support confirmation to ${data.to}`);
+      } else {
+        // Fallback to hardcoded template
+        emailTemplate = EmailTemplateService.getSupportConfirmationTemplate({
+          fullName: data.fullName,
+          subject: data.subject,
+          requestId: data.requestId
+        });
+        
+        console.log(`📧 Using fallback template for support confirmation to ${data.to}`);
+      }
 
       return await this.sendEmail(data.to, emailTemplate.subject, emailTemplate.html);
     } catch (error) {
