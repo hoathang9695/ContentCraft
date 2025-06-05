@@ -568,14 +568,15 @@ export default function EmailTemplatesPage() {
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl h-[80vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Xem trước Template: {previewTemplate?.name}</DialogTitle>
           </DialogHeader>
 
           {previewTemplate && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col space-y-4 h-full">
+              {/* Header Info */}
+              <div className="grid grid-cols-4 gap-4 flex-shrink-0">
                 <div>
                   <Label className="text-sm font-medium">Loại:</Label>
                   <div className="text-sm text-gray-600">
@@ -588,16 +589,15 @@ export default function EmailTemplatesPage() {
                     {previewTemplate.isActive ? 'Kích hoạt' : 'Tạm dừng'}
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium">Chủ đề:</Label>
-                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                  {previewTemplate.subject}
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium">Chủ đề:</Label>
+                  <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                    {previewTemplate.subject}
+                  </div>
                 </div>
               </div>
 
-              <div>
+              <div className="flex-shrink-0">
                 <Label className="text-sm font-medium">Biến sử dụng:</Label>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {previewTemplate.variables.map((variable, index) => (
@@ -608,19 +608,24 @@ export default function EmailTemplatesPage() {
                 </div>
               </div>
 
-              <div>
-                <Label className="text-sm font-medium">Nội dung HTML:</Label>
-                <div className="border rounded-md p-4 bg-gray-50 max-h-96 overflow-y-auto">
-                  <pre className="text-sm whitespace-pre-wrap font-mono">
-                    {previewTemplate.htmlContent}
-                  </pre>
+              {/* Main Content - Split View */}
+              <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
+                {/* HTML Content */}
+                <div className="flex flex-col">
+                  <Label className="text-sm font-medium mb-2">Nội dung HTML:</Label>
+                  <div className="border rounded-md p-4 bg-gray-50 flex-1 overflow-y-auto">
+                    <pre className="text-sm whitespace-pre-wrap font-mono">
+                      {previewTemplate.htmlContent}
+                    </pre>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <Label className="text-sm font-medium">Render Preview:</Label>
-                <div className="border rounded-md p-4 bg-white max-h-96 overflow-y-auto">
-                  <div dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }} />
+                {/* Render Preview */}
+                <div className="flex flex-col">
+                  <Label className="text-sm font-medium mb-2">Render Preview:</Label>
+                  <div className="border rounded-md p-4 bg-white flex-1 overflow-y-auto">
+                    <div dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }} />
+                  </div>
                 </div>
               </div>
             </div>
