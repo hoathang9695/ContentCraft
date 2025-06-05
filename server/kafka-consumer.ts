@@ -984,6 +984,9 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
       try {
         const { emailService } = await import('./email.js');
         
+        // Ensure SMTP is properly initialized before sending
+        await emailService.loadConfigFromDB();
+        
         const emailSent = await emailService.sendFeedbackConfirmation({
           to: message.email,
           fullName: message.full_name,
