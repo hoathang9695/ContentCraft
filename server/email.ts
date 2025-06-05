@@ -639,8 +639,5 @@ export class EmailService {
 // Export singleton instance
 export const emailService = new EmailService();
 
-// Export class for creating fresh instances
-export { EmailService };
-
 // Export interface for use in other files
 export type { SMTPConfig };
