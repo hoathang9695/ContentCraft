@@ -4,7 +4,8 @@ import {
   userActivities, type UserActivity, type InsertUserActivity,
   categories, type Category, type InsertCategory,
   labels, type Label, type InsertLabel,
-  fakeUsers, type FakeUser, type InsertFakeUser
+  fakeUsers, type FakeUser, type InsertFakeUser,
+  infringingContents, type InfringingContent, type InsertInfringingContent
 } from "@shared/schema";
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -29,8 +30,6 @@ import type {
   Group,
   InsertSMTPConfig,
   SMTPConfig,
-  InsertInfringingContent,
-  InfringingContent,
 } from "@shared/schema";
 
 // Create a PostgreSQL session store with proper types for ESM
@@ -954,7 +953,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(labels.id, id))
       .returning();
 
-    return result.length > 0 ? result[0] : undefined;
+    return result.length >0 ? result[0] : undefined;
   }
 
   async deleteLabel(id: number): Promise<boolean> {
