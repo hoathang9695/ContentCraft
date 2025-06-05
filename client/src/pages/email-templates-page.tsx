@@ -613,7 +613,7 @@ export default function EmailTemplatesPage() {
                 {/* HTML Content */}
                 <div className="flex flex-col">
                   <Label className="text-sm font-medium mb-2">Nội dung HTML:</Label>
-                  <div className="border rounded-md p-4 bg-gray-50 flex-1 overflow-y-auto">
+                  <div className="border rounded-md p-4 bg-gray-50 flex-1 overflow-y-auto max-h-96">
                     <pre className="text-sm whitespace-pre-wrap font-mono">
                       {previewTemplate.htmlContent}
                     </pre>
@@ -623,7 +623,7 @@ export default function EmailTemplatesPage() {
                 {/* Render Preview */}
                 <div className="flex flex-col">
                   <Label className="text-sm font-medium mb-2">Render Preview:</Label>
-                  <div className="border rounded-md p-4 bg-white flex-1 overflow-y-auto">
+                  <div className="border rounded-md p-4 bg-white flex-1 overflow-y-auto max-h-96">
                     <div dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }} />
                   </div>
                 </div>
