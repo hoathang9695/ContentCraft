@@ -374,122 +374,40 @@ export default function FakeUsersPage() {
     }
   };
 
-  // Xử lý click vào tên user để login với email/password auto-fill
+  // Xử lý click vào tên user để mở tab mới đến trang login
   const handleUserLogin = (token: string, userName: string, email?: string, password?: string) => {
     try {
-      // Copy thông tin vào clipboard trước
-      const loginInfo = `Email: ${email || 'vuquangbao121@emso.vn'}\nPassword: ${password || 'emso1604!@#'}\nToken: ${token}`;
+      // Copy thông tin đăng nhập vào clipboard
+      const loginInfo = `Email: ${email || 'N/A'}\nPassword: ${password || 'N/A'}\nToken: ${token}`;
       navigator.clipboard.writeText(loginInfo).then(() => {
         console.log('Login info copied to clipboard');
       }).catch(() => {
         console.log('Could not copy login info to clipboard');
       });
 
-      // Mở tab mới đến emso.vn
-      const newTab = window.open('https://emso.vn/', '_blank', 'noopener,noreferrer');
+      // Mở tab mới đến trang login của emso.vn
+      const newTab = window.open('https://emso.vn/login', '_blank', 'noopener,noreferrer');
 
       if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
-        // Popup bị chặn - hiển thị thông tin để user copy thủ công
+        // Popup bị chặn
         toast({
-          title: "Thông tin đăng nhập đã được copy",
-          description: `Popup bị chặn. Hãy mở emso.vn thủ công và paste thông tin đăng nhập.\n\nEmail: ${email || 'vuquangbao121@emso.vn'}\nPassword: ${password || 'emso1604!@#'}`,
-          variant: "default",
+          title: "Popup bị chặn",
+          description: "Vui lòng cho phép popup và thử lại, hoặc mở https://emso.vn/login thủ công.",
+          variant: "destructive",
         });
-        
-        // Fallback: mở trong cùng tab nếu user muốn
-        setTimeout(() => {
-          const confirmOpen = confirm(`Popup bị chặn. Bạn có muốn mở emso.vn trong tab hiện tại không?\n\nThông tin đăng nhập:\nEmail: ${email || 'vuquangbao121@emso.vn'}\nPassword: ${password || 'emso1604!@#'}`);
-          if (confirmOpen) {
-            window.location.href = 'https://emso.vn/';
-          }
-        }, 1000);
         return;
       }
 
-      // Đợi tab load và thực hiện auto-login
-      let attempts = 0;
-      const maxAttempts = 30; // 30 giây
-
-      const autoLoginInterval = setInterval(() => {
-        attempts++;
-
-        if (newTab.closed || attempts > maxAttempts) {
-          clearInterval(autoLoginInterval);
-          return;
-        }
-
-        try {
-          // Gửi thông tin đăng nhập đến tab mới
-          newTab.postMessage({
-            type: 'AUTO_LOGIN_CREDENTIALS',
-            email: email || 'vuquangbao121@emso.vn', // Sử dụng email từ fake user hoặc fallback
-            password: password || 'emso1604!@#', // Sử dụng password từ fake user hoặc fallback
-            token: token,
-            userName: userName
-          }, 'https://emso.vn');
-
-          // Thử inject script để auto-fill form
-          const script = `
-            (function() {
-              // Tìm form đăng nhập
-              const emailInput = document.querySelector('input[type="email"], input[name="email"], input[name="username"], #email, #username');
-              const passwordInput = document.querySelector('input[type="password"], input[name="password"], #password');
-              const loginForm = document.querySelector('form[action*="login"], form.login-form, .login-form, #login-form');
-              const submitButton = document.querySelector('button[type="submit"], input[type="submit"], .login-button, .btn-login');
-
-              if (emailInput && passwordInput) {
-                // Fill thông tin đăng nhập
-                emailInput.value = '${email || 'vuquangbao121@emso.vn'}';
-                passwordInput.value = '${password || 'emso1604!@#'}';
-
-                // Trigger events để form nhận biết
-                emailInput.dispatchEvent(new Event('input', { bubbles: true }));
-                emailInput.dispatchEvent(new Event('change', { bubbles: true }));
-                passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
-                passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-                // Highlight các field đã fill
-                emailInput.style.backgroundColor = '#e8f5e8';
-                passwordInput.style.backgroundColor = '#e8f5e8';
-
-                // Thử submit form sau 2 giây
-                setTimeout(() => {
-                  if (submitButton) {
-                    submitButton.click();
-                  } else if (loginForm) {
-                    loginForm.submit();
-                  }
-                }, 2000);
-
-                console.log('Auto-login credentials filled successfully');
-                return true;
-              }
-              return false;
-            })();
-          `;
-
-          // Thử execute script trong tab mới (có thể bị block bởi CORS)
-          try {
-            newTab.eval?.(script);
-          } catch (e) {
-            console.log('Cannot execute script in new tab due to CORS policy');
-          }
-
-        } catch (error) {
-          console.log('Trying to auto-login...', attempts);
-        }
-      }, 1000);
-
       // Hiển thị thông báo thành công
       toast({
-        title: "Đã mở emso.vn thành công",
-        description: `Đang thử auto-login với email: ${email || 'vuquangbao121@emso.vn'}. Thông tin đăng nhập đã được copy vào clipboard.`,
+        title: "Đã mở trang đăng nhập",
+        description: `Thông tin đăng nhập đã được copy vào clipboard: ${email || 'N/A'}`,
       });
     } catch (error) {
       console.error('Error in handleUserLogin:', error);
       toast({
         title: "Lỗi",
-        description: "Đã xảy ra lỗi khi mở tab mới",
+        description: "Không thể mở tab mới. Vui lòng kiểm tra popup blocker.",
         variant: "destructive",
       });
     }
