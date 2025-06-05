@@ -4,18 +4,28 @@ import Redis from 'ioredis';
 async function testRedisConnection() {
   console.log('🔍 Testing Redis connection...');
   
-  const redisUrl = process.env.REDIS_URL || process.env.REDIS_SEARCH_URL;
+  // Load environment variables
+  const redisHost = process.env.REDISEARCH_HOST;
+  const redisPort = process.env.REDISEARCH_PORT;
+  const redisPassword = process.env.REDISEARCH_PASSWORD;
   
-  if (!redisUrl) {
-    console.error('❌ Redis URL not found in environment variables');
-    console.log('Available env vars:', Object.keys(process.env).filter(key => key.includes('REDIS')));
+  if (!redisHost || !redisPort || !redisPassword) {
+    console.error('❌ Redis configuration not found in environment variables');
+    console.log('Required variables:');
+    console.log('- REDISEARCH_HOST:', redisHost || 'NOT FOUND');
+    console.log('- REDISEARCH_PORT:', redisPort || 'NOT FOUND');
+    console.log('- REDISEARCH_PASSWORD:', redisPassword ? '***HIDDEN***' : 'NOT FOUND');
     return;
   }
   
-  console.log('🔗 Connecting to Redis:', redisUrl.replace(/\/\/.*@/, '//***:***@'));
+  console.log(`🔗 Connecting to Redis: ${redisHost}:${redisPort}`);
   
   try {
-    const redis = new Redis(redisUrl);
+    const redis = new Redis({
+      host: redisHost,
+      port: parseInt(redisPort),
+      password: redisPassword
+    });
     
     // Test connection
     await redis.ping();

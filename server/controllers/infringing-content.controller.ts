@@ -259,14 +259,20 @@ export class InfringingContentController {
       let redisError = null;
 
       try {
-        // Check for Redis connection URL in environment
-        const redisUrl = process.env.REDIS_URL || process.env.REDIS_SEARCH_URL;
+        // Check for Redis connection configuration in environment
+        const redisHost = process.env.REDISEARCH_HOST;
+        const redisPort = process.env.REDISEARCH_PORT;
+        const redisPassword = process.env.REDISEARCH_PASSWORD;
         
-        if (!redisUrl) {
-          console.warn("Redis URL not found in environment variables");
-          redisError = "Redis URL not configured";
+        if (!redisHost || !redisPort || !redisPassword) {
+          console.warn("Redis configuration not found in environment variables");
+          redisError = "Redis configuration not complete";
         } else {
-          const redis = new Redis(redisUrl);
+          const redis = new Redis({
+            host: redisHost,
+            port: parseInt(redisPort),
+            password: redisPassword
+          });
           
           // Search for the key pattern
           const searchPattern = `*${externalId}*`;
