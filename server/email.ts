@@ -112,7 +112,7 @@ export class EmailService {
     }
   }
 
-  private initializeTransporter() {
+  public initializeTransporter() {
     if (!this.config.user || !this.config.password) {
       console.log("SMTP not configured - email functionality disabled");
       return;
@@ -485,21 +485,10 @@ export class EmailService {
     requestId: number;
   }): Promise<boolean> {
     try {
-      // Always ensure fresh SMTP config and transporter
-      console.log('🔄 Initializing SMTP for feedback confirmation...');
-      await this.loadConfigFromDB();
-      this.initializeTransporter();
-      
-      if (!this.transporter) {
-        console.error('❌ Failed to initialize SMTP transporter after config load');
-        return false;
-      }
-      
-      console.log('✅ SMTP transporter ready for email sending');
-      
       const { EmailTemplateService } = await import('./email-templates.js');
       
-      // First try to get template from database
+      // ALWAYS try to get template from database first
+      console.log('🔍 Searching for feedback_confirmation template in database...');
       let emailTemplate = await EmailTemplateService.getTemplateFromDatabase('feedback_confirmation');
       
       if (emailTemplate) {
@@ -512,13 +501,15 @@ export class EmailService {
           companyName: 'EMSO'
         };
         
+        console.log(`🎯 Found database template, rendering with variables:`, variables);
         emailTemplate.html = EmailTemplateService.renderTemplate(emailTemplate.html, variables);
         emailTemplate.subject = EmailTemplateService.renderTemplate(emailTemplate.subject, variables);
         
-        console.log(`📧 Using database template for feedback confirmation to ${data.to}`);
-        console.log(`📝 Template name: ${emailTemplate.subject}`);
+        console.log(`📧 Using DATABASE template for feedback confirmation to ${data.to}`);
+        console.log(`📋 Template subject: ${emailTemplate.subject}`);
       } else {
-        // Fallback to hardcoded template
+        // Fallback to hardcoded template only if database template not found
+        console.log(`⚠️ No database template found, using fallback template`);
         emailTemplate = EmailTemplateService.getFeedbackConfirmationTemplate({
           fullName: data.fullName,
           subject: data.subject,
@@ -526,9 +517,20 @@ export class EmailService {
           requestId: data.requestId
         });
         
-        console.log(`📧 Using fallback template for feedback confirmation to ${data.to}`);
+        console.log(`📧 Using FALLBACK template for feedback confirmation to ${data.to}`);
       }
 
+      // Now ensure SMTP is ready AFTER template is prepared
+      console.log('🔄 Ensuring SMTP configuration is ready...');
+      await this.loadConfigFromDB();
+      this.initializeTransporter();
+      
+      if (!this.transporter) {
+        console.error('❌ Failed to initialize SMTP transporter');
+        return false;
+      }
+      
+      console.log('✅ SMTP transporter ready, sending email...');
       return await this.sendEmail(data.to, emailTemplate.subject, emailTemplate.html);
     } catch (error) {
       console.error('Error sending feedback confirmation email:', error);
