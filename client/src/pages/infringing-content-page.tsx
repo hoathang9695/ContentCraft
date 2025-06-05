@@ -467,7 +467,10 @@ export default function InfringingContentPage() {
         <div className="flex justify-end">
           <Button
             onClick={handleSearchDialogOpen}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="text-white"
+            style={{ backgroundColor: "#7165e0" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#5f56c7"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#7165e0"}
           >
             <Plus className="mr-2 h-4 w-4" />
             Tìm kiếm và xử lý
