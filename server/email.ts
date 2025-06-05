@@ -485,17 +485,17 @@ export class EmailService {
     requestId: number;
   }): Promise<boolean> {
     try {
-      // Ensure SMTP config is loaded before sending
+      // Always ensure fresh SMTP config and transporter
+      console.log('🔄 Initializing SMTP for feedback confirmation...');
+      await this.loadConfigFromDB();
+      this.initializeTransporter();
+      
       if (!this.transporter) {
-        console.log('🔄 SMTP transporter not ready, loading config...');
-        await this.loadConfigFromDB();
-        this.initializeTransporter();
-        
-        if (!this.transporter) {
-          console.error('❌ Failed to initialize SMTP transporter');
-          return false;
-        }
+        console.error('❌ Failed to initialize SMTP transporter after config load');
+        return false;
       }
+      
+      console.log('✅ SMTP transporter ready for email sending');
       
       const { EmailTemplateService } = await import('./email-templates.js');
       
@@ -516,6 +516,7 @@ export class EmailService {
         emailTemplate.subject = EmailTemplateService.renderTemplate(emailTemplate.subject, variables);
         
         console.log(`📧 Using database template for feedback confirmation to ${data.to}`);
+        console.log(`📝 Template name: ${emailTemplate.subject}`);
       } else {
         // Fallback to hardcoded template
         emailTemplate = EmailTemplateService.getFeedbackConfirmationTemplate({
@@ -542,17 +543,17 @@ export class EmailService {
     requestId: number;
   }): Promise<boolean> {
     try {
-      // Ensure SMTP config is loaded before sending
+      // Always ensure fresh SMTP config and transporter
+      console.log('🔄 Initializing SMTP for support confirmation...');
+      await this.loadConfigFromDB();
+      this.initializeTransporter();
+      
       if (!this.transporter) {
-        console.log('🔄 SMTP transporter not ready, loading config...');
-        await this.loadConfigFromDB();
-        this.initializeTransporter();
-        
-        if (!this.transporter) {
-          console.error('❌ Failed to initialize SMTP transporter');
-          return false;
-        }
+        console.error('❌ Failed to initialize SMTP transporter after config load');
+        return false;
       }
+      
+      console.log('✅ SMTP transporter ready for email sending');
       
       const { EmailTemplateService } = await import('./email-templates.js');
       
@@ -572,6 +573,7 @@ export class EmailService {
         emailTemplate.subject = EmailTemplateService.renderTemplate(emailTemplate.subject, variables);
         
         console.log(`📧 Using database template for support confirmation to ${data.to}`);
+        console.log(`📝 Template name: ${emailTemplate.subject}`);
       } else {
         // Fallback to hardcoded template
         emailTemplate = EmailTemplateService.getSupportConfirmationTemplate({
