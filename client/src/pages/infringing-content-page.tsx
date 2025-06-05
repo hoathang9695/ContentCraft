@@ -483,160 +483,146 @@ export default function InfringingContentPage() {
         </div>
 
         {/* Content Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Danh sách nội dung vi phạm
-              {infringingContentsData && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({infringingContentsData.total} kết quả)
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>External ID</TableHead>
-                    <TableHead>Người xử lý</TableHead>
-                    <TableHead>Thời gian xử lý</TableHead>
-                    <TableHead>Mô tả vi phạm</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        <div className="flex justify-center items-center">
-                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-2"></div>
-                          <span>Đang tải dữ liệu...</span>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>External ID</TableHead>
+                <TableHead>Người xử lý</TableHead>
+                <TableHead>Thời gian xử lý</TableHead>
+                <TableHead>Mô tả vi phạm</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead>Ngày tạo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-2"></div>
+                      <span>Đang tải dữ liệu...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : infringingContentsData?.data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    Không có dữ liệu nào được tìm thấy
+                  </TableCell>
+                </TableRow>
+              ) : (
+                infringingContentsData?.data.map((content) => (
+                  <TableRow key={content.id}>
+                    <TableCell className="font-mono text-sm">
+                      {content.externalId}
+                    </TableCell>
+                    <TableCell>
+                      {content.processor ? (
+                        <div>
+                          <div className="font-medium">
+                            {content.processor.name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            @{content.processor.username}
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : infringingContentsData?.data.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                        Không có dữ liệu nào được tìm thấy
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    infringingContentsData?.data.map((content) => (
-                      <TableRow key={content.id}>
-                        <TableCell className="font-mono text-sm">
-                          {content.externalId}
-                        </TableCell>
-                        <TableCell>
-                          {content.processor ? (
-                            <div>
-                              <div className="font-medium">
-                                {content.processor.name}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                @{content.processor.username}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Chưa phân công
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {content.processing_time ? (
-                            format(
-                              new Date(content.processing_time),
-                              "dd/MM/yyyy HH:mm",
-                              { locale: vi }
-                            )
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Chưa xử lý
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {content.violation_description ? (
-                            <div className="max-w-xs truncate" title={content.violation_description}>
-                              {content.violation_description}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Chưa có mô tả
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(content.status)}
-                        </TableCell>
-                        <TableCell>
-                          {format(
-                            new Date(content.created_at),
-                            "dd/MM/yyyy HH:mm",
-                            { locale: vi }
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Chưa phân công
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {content.processing_time ? (
+                        format(
+                          new Date(content.processing_time),
+                          "dd/MM/yyyy HH:mm",
+                          { locale: vi }
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Chưa xử lý
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {content.violation_description ? (
+                        <div className="max-w-xs truncate" title={content.violation_description}>
+                          {content.violation_description}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Chưa có mô tả
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(content.status)}
+                    </TableCell>
+                    <TableCell>
+                      {format(
+                        new Date(content.created_at),
+                        "dd/MM/yyyy HH:mm",
+                        { locale: vi }
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-            {/* Pagination */}
-            {!isLoading && infringingContentsData && infringingContentsData.totalPages > 1 && (
-              <div className="mt-4 flex justify-center">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                        className={
-                          currentPage === 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
+        {/* Pagination */}
+        {!isLoading && infringingContentsData && infringingContentsData.totalPages > 1 && (
+          <div className="mt-4 flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    className={
+                      currentPage === 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
 
-                    {Array.from(
-                      { length: infringingContentsData.totalPages },
-                      (_, i) => i + 1
-                    ).map((page) => (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          onClick={() => handlePageChange(page)}
-                          isActive={currentPage === page}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
+                {Array.from(
+                  { length: infringingContentsData.totalPages },
+                  (_, i) => i + 1
+                ).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => handlePageChange(page)}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
 
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() =>
-                          handlePageChange(
-                            Math.min(infringingContentsData.totalPages, currentPage + 1)
-                          )
-                        }
-                        className={
-                          currentPage === infringingContentsData.totalPages
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() =>
+                      handlePageChange(
+                        Math.min(infringingContentsData.totalPages, currentPage + 1)
+                      )
+                    }
+                    className={
+                      currentPage === infringingContentsData.totalPages
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
 
         {/* Search and Process Dialog */}
         <Dialog open={isSearchDialogOpen} onOpenChange={setIsSearchDialogOpen}>
