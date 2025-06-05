@@ -29,12 +29,12 @@ export class EmailService {
     if (!password) return '';
     try {
       const iv = randomBytes(16);
-      
+
       // Ensure key is exactly 32 bytes for aes-256-cbc
       const keyBuffer = Buffer.alloc(32);
       const sourceKey = Buffer.from(this.encryptionKey);
       sourceKey.copy(keyBuffer, 0, 0, Math.min(sourceKey.length, 32));
-      
+
       const cipher = createCipheriv(this.algorithm, keyBuffer, iv);
       let encrypted = cipher.update(password);
       encrypted = Buffer.concat([encrypted, cipher.final()]);
@@ -55,12 +55,12 @@ export class EmailService {
       }
       const iv = Buffer.from(textParts.shift()!, 'hex');
       const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-      
+
       // Ensure key is exactly 32 bytes for aes-256-cbc
       const keyBuffer = Buffer.alloc(32);
       const sourceKey = Buffer.from(this.encryptionKey);
       sourceKey.copy(keyBuffer, 0, 0, Math.min(sourceKey.length, 32));
-      
+
       const decipher = createDecipheriv(this.algorithm, keyBuffer, iv);
       let decrypted = decipher.update(encryptedText);
       decrypted = Buffer.concat([decrypted, decipher.final()]);
@@ -259,7 +259,7 @@ export class EmailService {
         const mimeType = match[1];
         const base64Data = match[2];
         const cid = `embedded-image-${imageIndex}`;
-        
+
         // Replace data URL with CID reference
         processedContent = processedContent.replace(match[0], 
           match[0].replace(`data:${mimeType};base64,${base64Data}`, `cid:${cid}`)
@@ -273,7 +273,7 @@ export class EmailService {
           cid: cid,
           contentType: mimeType
         });
-        
+
         imageIndex++;
       }
 
@@ -297,6 +297,20 @@ export class EmailService {
            </div>`
         : '';
 
+      const footerHtml = `
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888;">
+            <p>Email này được gửi từ EMSO - Mạng xã hội vì người Việt.</p>
+            <p>Rất hy vọng nhận được nhiều sự góp ý, chung tay xây dựng mạng xã hội của Việt Nam bạn nhé!</p>
+            <p style="margin-top: 15px;">
+              <a href="https://emso.vn/about_us/mission" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Về chúng tôi</a>
+              <a href="https://policies.emso.vn/community-standards" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Tiêu chuẩn cộng đồng</a>
+              <a href="https://policies.emso.vn/money-making-policy" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Chính sách kiếm tiền</a>
+              <a href="https://policies.emso.vn/ipr" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Chính sách nội dung</a>
+              <a href="https://policies.emso.vn/advertising-marketing" style="color: #3B82F6; text-decoration: none;">Chính sách quảng cáo</a>
+            </p>
+          </div>
+        `;
+
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -312,12 +326,7 @@ export class EmailService {
             ${attachmentInfo}
           </div>
 
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; text-align: center;">
-            <p style="margin: 0; color: #6c757d; font-size: 12px;">
-              Email này được gửi từ hệ thống EMSO.<br>
-              Nếu bạn có thêm câu hỏi, vui lòng liên hệ lại với chúng tôi.
-            </p>
-          </div>
+          ${footerHtml}
         </div>
       `;
 
@@ -375,7 +384,7 @@ export class EmailService {
         const mimeType = match[1];
         const base64Data = match[2];
         const cid = `embedded-image-${imageIndex}`;
-        
+
         // Replace data URL with CID reference
         processedContent = processedContent.replace(match[0], 
           match[0].replace(`data:${mimeType};base64,${base64Data}`, `cid:${cid}`)
@@ -389,7 +398,7 @@ export class EmailService {
           cid: cid,
           contentType: mimeType
         });
-        
+
         imageIndex++;
       }
 
@@ -412,6 +421,20 @@ export class EmailService {
              </ul>
            </div>`
         : '';
+
+      const footerHtml = `
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888;">
+            <p>Email này được gửi từ EMSO - Mạng xã hội vì người Việt.</p>
+            <p>Rất hy vọng nhận được nhiều sự góp ý, chung tay xây dựng mạng xã hội của Việt Nam bạn nhé!</p>
+            <p style="margin-top: 15px;">
+              <a href="https://emso.vn/about_us/mission" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Về chúng tôi</a>
+              <a href="https://policies.emso.vn/community-standards" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Tiêu chuẩn cộng đồng</a>
+              <a href="https://policies.emso.vn/money-making-policy" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Chính sách kiếm tiền</a>
+              <a href="https://policies.emso.vn/ipr" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Chính sách nội dung</a>
+              <a href="https://policies.emso.vn/advertising-marketing" style="color: #3B82F6; text-decoration: none;">Chính sách quảng cáo</a>
+            </p>
+          </div>
+        `;
 
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -436,12 +459,7 @@ export class EmailService {
             </p>
           </div>
 
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; text-align: center;">
-            <p style="margin: 0; color: #6c757d; font-size: 12px;">
-              Email này được gửi tự động từ hệ thống hỗ trợ khách hàng.<br>
-              Nếu bạn có thêm câu hỏi, vui lòng liên hệ lại với chúng tôi.
-            </p>
-          </div>
+          ${footerHtml}
         </div>
       `;
 
