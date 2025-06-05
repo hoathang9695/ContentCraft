@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { storage } from "../storage";
 import { insertInfringingContentSchema } from "@shared/schema";
 import { ZodError } from "zod";
+import Redis from "ioredis";
 
 export class InfringingContentController {
   // Get paginated infringing contents with date filters
@@ -217,6 +218,112 @@ export class InfringingContentController {
       return res.status(500).json({
         success: false,
         message: "Error updating infringing content",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // Search and process infringing content
+  async searchAndProcessInfringingContent(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = req.user as Express.User;
+      const { externalId, violationDescription } = req.body;
+
+      if (!externalId || !violationDescription) {
+        return res.status(400).json({ 
+          message: "External ID và mô tả vi phạm là bắt buộc" 
+        });
+      }
+
+      console.log("Processing infringing content:", {
+        externalId,
+        violationDescription,
+        user: { id: user.id, name: user.name }
+      });
+
+      // Create infringing content record with pending status
+      const newContent = await storage.createInfringingContent({
+        externalId: externalId,
+        assigned_to_id: user.id,
+        processing_time: null, // Will be set when completed
+        violation_description: violationDescription,
+        status: "pending"
+      });
+
+      // Try to connect to Redis and delete the key
+      let redisDeleteSuccess = false;
+      let redisError = null;
+
+      try {
+        // Check for Redis connection URL in environment
+        const redisUrl = process.env.REDIS_URL || process.env.REDIS_SEARCH_URL;
+        
+        if (!redisUrl) {
+          console.warn("Redis URL not found in environment variables");
+          redisError = "Redis URL not configured";
+        } else {
+          const redis = new Redis(redisUrl);
+          
+          // Search for the key pattern
+          const searchPattern = `*${externalId}*`;
+          const keys = await redis.keys(searchPattern);
+          
+          console.log(`Found ${keys.length} keys matching pattern: ${searchPattern}`);
+          
+          if (keys.length > 0) {
+            // Delete all matching keys
+            const deleteResult = await redis.del(...keys);
+            console.log(`Deleted ${deleteResult} keys from Redis`);
+            redisDeleteSuccess = deleteResult > 0;
+          } else {
+            console.log(`No keys found matching External ID: ${externalId}`);
+            redisDeleteSuccess = true; // Consider as success if no keys found
+          }
+          
+          await redis.disconnect();
+        }
+      } catch (error) {
+        console.error("Redis operation failed:", error);
+        redisError = error instanceof Error ? error.message : String(error);
+      }
+
+      // Update status based on Redis operation result
+      const finalStatus = redisDeleteSuccess ? "completed" : "processing";
+      const processingTime = redisDeleteSuccess ? new Date() : null;
+
+      const updatedContent = await storage.updateInfringingContent(newContent.id, {
+        status: finalStatus,
+        processing_time: processingTime
+      });
+
+      return res.json({
+        success: true,
+        data: updatedContent,
+        redis: {
+          success: redisDeleteSuccess,
+          error: redisError
+        },
+        message: redisDeleteSuccess 
+          ? "Đã xử lý thành công và xóa nội dung vi phạm từ Redis"
+          : "Đã tạo yêu cầu xử lý, nhưng không thể kết nối Redis"
+      });
+
+    } catch (error) {
+      console.error("Error in searchAndProcessInfringingContent:", error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: "Validation error",
+          errors: error.errors,
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        message: "Error processing infringing content",
         error: error instanceof Error ? error.message : String(error),
       });
     }
