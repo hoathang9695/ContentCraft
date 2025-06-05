@@ -983,17 +983,33 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
       // Send confirmation email to user - AFTER transaction completes successfully
       setTimeout(async () => {
         try {
-          const { emailService } = await import('./email.js');
+          log(`📧 Starting email confirmation process for feedback #${newRequest[0].id}`, "kafka");
           
-          // Force reload SMTP config from database
-          console.log('🔄 Reloading SMTP config for feedback confirmation...');
+          // Import EmailService class instead of singleton instance
+          const { EmailService } = await import('./email.js');
+          
+          // Create a fresh instance with proper initialization
+          const emailService = new EmailService();
+          
+          // Force reload SMTP config and wait for it to complete
+          log('🔄 Loading SMTP config from database...', "kafka");
           await emailService.loadConfigFromDB();
           
-          // Reinitialize transporter with fresh config
-          emailService['initializeTransporter']();
+          // Initialize transporter with loaded config
+          log('🔧 Initializing SMTP transporter...', "kafka");
+          emailService.initializeTransporter();
           
-          // Wait a moment for transporter to be ready
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Wait longer for transporter to be fully ready
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Test if transporter is ready before sending
+          const testResult = await emailService.testConnection();
+          if (!testResult) {
+            log(`❌ SMTP connection test failed for feedback #${newRequest[0].id}`, "kafka-error");
+            return;
+          }
+          
+          log(`✅ SMTP ready, sending confirmation email for feedback #${newRequest[0].id}`, "kafka");
           
           const emailSent = await emailService.sendFeedbackConfirmation({
             to: message.email,
@@ -1011,7 +1027,7 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
         } catch (emailError) {
           log(`❌ Error sending confirmation email: ${emailError}`, "kafka-error");
         }
-      }, 2000); // Delay 2 seconds to ensure transaction is committed
+      }, 3000); // Increase delay to 3 seconds
 
       // Broadcast feedback badge update
       if ((global as any).broadcastFeedbackBadgeUpdate) {
