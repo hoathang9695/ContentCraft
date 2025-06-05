@@ -11,6 +11,45 @@ export interface EmailTemplate {
 export class EmailTemplateService {
   private static readonly COMPANY_NAME = "EMSO";
   private static readonly COMPANY_TAGLINE = "Mạng xã hội vì người Việt";
+
+  // Load template from database by type
+  static async getTemplateFromDatabase(type: string): Promise<EmailTemplate | null> {
+    try {
+      const { db } = await import('./db.js');
+      const { emailTemplates } = await import('../shared/schema.js');
+      const { eq } = await import('drizzle-orm');
+      
+      const [template] = await db
+        .select()
+        .from(emailTemplates)
+        .where(eq(emailTemplates.type, type))
+        .where(eq(emailTemplates.isActive, true))
+        .limit(1);
+      
+      if (template) {
+        const variables = JSON.parse(template.variables || '[]');
+        return {
+          subject: template.subject,
+          html: template.htmlContent
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error loading template from database:', error);
+      return null;
+    }
+  }
+
+  // Render template with variables
+  static renderTemplate(template: string, variables: Record<string, any>): string {
+    let rendered = template;
+    for (const [key, value] of Object.entries(variables)) {
+      const placeholder = `{{${key}}}`;
+      rendered = rendered.replace(new RegExp(placeholder, 'g'), String(value || ''));
+    }
+    return rendered;
+  }
   
   private static readonly FOOTER_LINKS = [
     { text: "Về chúng tôi", url: "https://emso.vn/about_us/mission" },

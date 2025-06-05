@@ -48,14 +48,14 @@ async function testConnection(retryCount = 0) {
   try {
     const res = await pool.query("SELECT NOW()");
     console.log("Database connection test successful:", res.rows[0]);
-    
+
     // Reset retry count on success
     if (retryCount > 0) {
       console.log(`✅ Database reconnected after ${retryCount} retries`);
     }
   } catch (err) {
     console.error(`Database connection test failed (attempt ${retryCount + 1}):`, err);
-    
+
     // Max retry limit to prevent infinite loops
     if (retryCount < 10) {
       const delay = Math.min(5000 * Math.pow(1.5, retryCount), 30000); // Exponential backoff
@@ -74,3 +74,12 @@ await pool.query('CREATE EXTENSION IF NOT EXISTS unaccent');
 
 // Create Drizzle ORM instance
 export const db = drizzle(pool, { schema });
+import {
+  users,
+  supportRequests,
+  groups,
+  pages,
+  feedbackRequests,
+  smtpConfig,
+  emailTemplates,
+} from "../shared/schema.js";
