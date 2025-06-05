@@ -144,12 +144,17 @@ export default function EmailTemplatesPage() {
   // Update template mutation
   const updateTemplateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Omit<TemplateFormData, 'variables'> & { variables: string[] } }) => {
+      console.log('Updating template with data:', data);
       const response = await fetch(`/api/email-templates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Failed to update template');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Update template error:', errorText);
+        throw new Error(`Failed to update template: ${response.status}`);
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -158,7 +163,8 @@ export default function EmailTemplatesPage() {
       setIsEditDialogOpen(false);
       resetForm();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Update template mutation error:', error);
       toast({ title: 'Lỗi', description: 'Không thể cập nhật template', variant: 'destructive' });
     }
   });
@@ -226,11 +232,13 @@ export default function EmailTemplatesPage() {
       .map(v => v.trim())
       .filter(v => v.length > 0);
 
+    const { variables: _, ...restFormData } = formData;
     const submitData = {
-      ...formData,
+      ...restFormData,
       variables
     };
-    delete (submitData as any).variables;
+
+    console.log('Submitting data:', submitData);
 
     if (editingTemplate) {
       updateTemplateMutation.mutate({ id: editingTemplate.id, data: submitData });
