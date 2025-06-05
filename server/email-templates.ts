@@ -19,6 +19,8 @@ export class EmailTemplateService {
       const { emailTemplates } = await import('../shared/schema.js');
       const { eq, and, desc } = await import('drizzle-orm');
       
+      console.log(`🔍 Looking for template with type: ${type}`);
+      
       const [template] = await db
         .select()
         .from(emailTemplates)
@@ -29,14 +31,23 @@ export class EmailTemplateService {
         .orderBy(desc(emailTemplates.createdAt))
         .limit(1);
       
+      console.log(`📋 Found template:`, template ? {
+        id: template.id,
+        name: template.name,
+        type: template.type,
+        isActive: template.isActive
+      } : 'No template found');
+      
       if (template) {
         const variables = JSON.parse(template.variables || '[]');
+        console.log(`✅ Returning database template: ${template.name}`);
         return {
           subject: template.subject,
           html: template.htmlContent
         };
       }
       
+      console.log(`❌ No active template found for type: ${type}`);
       return null;
     } catch (error) {
       console.error('Error loading template from database:', error);
