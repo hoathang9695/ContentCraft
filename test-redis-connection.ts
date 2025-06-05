@@ -28,10 +28,17 @@ async function testRedisConnection() {
     const redis = new Redis({
       host: redisHost,
       port: parseInt(redisPort),
-      password: redisPassword
+      password: redisPassword,
+      connectTimeout: 5000, // 5 seconds timeout
+      lazyConnect: true, // Don't connect immediately
+      retryDelayOnFailover: 100,
+      maxRetriesPerRequest: 1
     });
     
-    // Test connection
+    // Test connection with timeout
+    console.log('⏱️ Attempting to connect...');
+    await redis.connect();
+    console.log('🔌 Connected successfully, testing ping...');
     await redis.ping();
     console.log('✅ Redis connection successful');
     
