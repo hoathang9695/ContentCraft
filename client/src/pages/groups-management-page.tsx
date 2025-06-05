@@ -231,7 +231,7 @@ export default function GroupsManagementPage() {
               </Select>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <div>
                 <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
                 <Popover>

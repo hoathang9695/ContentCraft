@@ -190,193 +190,185 @@ export default function RealUserPage() {
     <DashboardLayout>
       <div className="container mx-auto p-4">
         <div className="mb-4">
-          {/* Desktop layout (md and up) */}
-          <div className="hidden md:block">
-            <div className="space-y-4">
-              {/* First row - Status tabs */}
-              <div className="flex items-center justify-start">
-                <div className="bg-background border rounded-md p-1">
-                  <div className="flex space-x-1">
-                    <Button 
-                      variant={activeTab === 'all' ? 'default' : 'ghost'} 
-                      size="sm"
-                      onClick={() => setActiveTab('all')}
-                    >
-                      Tất cả
-                    </Button>
-                    <Button 
-                      variant={activeTab === 'processed' ? 'default' : 'ghost'} 
-                      size="sm"
-                      onClick={() => setActiveTab('processed')}
-                    >
-                      Đã xử lý
-                    </Button>
-                    <Button 
-                      variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
-                      size="sm"
-                      onClick={() => setActiveTab('unprocessed')}
-                    >
-                      Chưa xử lý
-                    </Button>
-                  </div>
+          {/* Desktop layout (md and up) - single horizontal row */}
+          <div className="hidden md:flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-background border rounded-md p-1">
+                <div className="flex space-x-1">
+                  <Button 
+                    variant={activeTab === 'all' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setActiveTab('all')}
+                  >
+                    Tất cả
+                  </Button>
+                  <Button 
+                    variant={activeTab === 'processed' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setActiveTab('processed')}
+                  >
+                    Đã xử lý
+                  </Button>
+                  <Button 
+                    variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setActiveTab('unprocessed')}
+                  >
+                    Chưa xử lý
+                  </Button>
                 </div>
               </div>
 
-              {/* Second row - Filters and date pickers */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  {user?.role === 'admin' && (
-                    <Select value={selectedUserId?.toString() || "all"} onValueChange={(value) => setSelectedUserId(value === "all" ? null : parseInt(value))}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue>
-                          {selectedUserId ? (editorUsers?.find(user => user.id === selectedUserId)?.name || "Chọn người dùng") : "Tất cả"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tất cả</SelectItem>
-                        {editorUsers?.map(user => (
-                          <SelectItem key={user.id} value={user.id.toString()}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+              {user?.role === 'admin' && (
+                <Select value={selectedUserId?.toString() || "all"} onValueChange={(value) => setSelectedUserId(value === "all" ? null : parseInt(value))}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue>
+                      {selectedUserId ? (editorUsers?.find(user => user.id === selectedUserId)?.name || "Chọn người dùng") : "Tất cả"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    {editorUsers?.map(user => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
-                  <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue>
-                        {classificationFilter === 'all' ? 'Tất cả phân loại' : 
-                         classificationFilter === 'new' ? 'Mới' :
-                         classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả phân loại</SelectItem>
-                      <SelectItem value="new">Mới</SelectItem>
-                      <SelectItem value="potential">Tiềm năng</SelectItem>
-                      <SelectItem value="non_potential">Không tiềm năng</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue>
+                    {classificationFilter === 'all' ? 'Tất cả phân loại' : 
+                     classificationFilter === 'new' ? 'Mới' :
+                     classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả phân loại</SelectItem>
+                  <SelectItem value="new">Mới</SelectItem>
+                  <SelectItem value="potential">Tiềm năng</SelectItem>
+                  <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                </SelectContent>
+              </Select>
 
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "whitespace-nowrap min-w-[120px]",
-                      verificationStatus === 'unverified' ? "bg-muted" : ""
-                    )}
-                    onClick={() => setVerificationStatus(prev => prev === 'unverified' ? 'verified' : 'unverified')}
-                  >
-                    {verificationStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
-                  </Button>
-                </div>
+              <Button
+                variant="outline"
+                className={cn(
+                  "whitespace-nowrap",
+                  verificationStatus === 'unverified' ? "bg-muted" : ""
+                )}
+                onClick={() => setVerificationStatus(prev => prev === 'unverified' ? 'verified' : 'unverified')}
+              >
+                {verificationStatus === 'unverified' ? "Chưa xác minh" : "Đã xác minh"}
+              </Button>
+            </div>
 
-                <div className="flex items-center gap-4">
-                  <div>
-                    <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "h-10 justify-start text-left font-normal",
-                            !startDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {startDate ? format(startDate, "dd/MM/yyyy") : "Tất cả"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={startDate}
-                          onSelect={(date) => {
-                            setStartDate(date);
-                            if (date && endDate && date > endDate) {
-                              setEndDate(date);
-                            }
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "h-10 justify-start text-left font-normal",
-                            !endDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {endDate ? format(endDate, "dd/MM/yyyy") : "Tất cả"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={endDate}
-                          onSelect={(date) => {
-                            setEndDate(date);
-                            if (date && startDate && date < startDate) {
-                              setStartDate(date);
-                            }
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="flex items-end gap-2 h-[74px]">
-                    <Button 
-                      variant="default" 
-                      className="h-10 bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => {
-                        if (startDate && endDate) {
-                          toast({
-                            title: "Đã áp dụng bộ lọc",
-                            description: `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`,
-                          });
-                        } else {
-                          toast({
-                            title: "Vui lòng chọn ngày",
-                            description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
-                            variant: "destructive",
-                          });
+            <div className="flex items-center gap-2">
+              <div>
+                <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-10 justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "dd/MM/yyyy") : "Tất cả"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        setStartDate(date);
+                        if (date && endDate && date > endDate) {
+                          setEndDate(date);
                         }
                       }}
-                    >
-                      Áp dụng
-                    </Button>
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-                    <Button 
-                      variant="outline" 
-                      className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800"
-                      onClick={() => {
-                        setStartDate(undefined);
-                        setEndDate(undefined);
-                        setSelectedUserId(null);
-                        setVerificationStatus('unverified');
-                        setClassificationFilter('all');
-                        setActiveTab('all');
-                        setSearchQuery('');
-                        toast({
-                          title: "Đã đặt lại bộ lọc",
-                          description: "Hiển thị tất cả dữ liệu",
-                        });
-                      }}
+              <div>
+                <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-10 justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
                     >
-                      Xóa bộ lọc
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "dd/MM/yyyy") : "Tất cả"}
                     </Button>
-                  </div>
-                </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        setEndDate(date);
+                        if (date && startDate && date < startDate) {
+                          setStartDate(date);
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="flex items-end gap-2 h-[74px]">
+                <Button 
+                  variant="default" 
+                  className="h-10 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    if (startDate && endDate) {
+                      toast({
+                        title: "Đã áp dụng bộ lọc",
+                        description: `Hiển thị dữ liệu từ ${format(startDate, "dd/MM/yyyy")} đến ${format(endDate, "dd/MM/yyyy")}`,
+                      });
+                    } else {
+                      toast({
+                        title: "Vui lòng chọn ngày",
+                        description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  Áp dụng
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="h-10 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800"
+                  onClick={() => {
+                    setStartDate(undefined);
+                    setEndDate(undefined);
+                    setSelectedUserId(null);
+                    setVerificationStatus('unverified');
+                    setClassificationFilter('all');
+                    setActiveTab('all');
+                    setSearchQuery('');
+                    toast({
+                      title: "Đã đặt lại bộ lọc",
+                      description: "Hiển thị tất cả dữ liệu",
+                    });
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
               </div>
             </div>
           </div>

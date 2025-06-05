@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -232,7 +233,7 @@ export default function PageManagementPage() {
               </Select>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <div>
                 <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
                 <Popover>
@@ -572,7 +573,7 @@ export default function PageManagementPage() {
                   const pageData = row.pageName;
                   const pageId = pageData?.id;
                   const pageName = pageData?.page_name || pageData?.name || "Không có tên";
-
+                  
                   return (
                     <div className="font-medium">
                       {pageId ? (
@@ -631,7 +632,7 @@ export default function PageManagementPage() {
                 header: "Admin",
                 render: (row) => {
                   console.log('Row adminData in render:', row.adminData, typeof row.adminData);
-
+                  
                   // Parse adminData JSON data
                   let adminData = null;
                   try {
