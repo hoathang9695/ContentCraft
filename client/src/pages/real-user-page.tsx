@@ -191,8 +191,8 @@ export default function RealUserPage() {
       <div className="container mx-auto p-4">
         <div className="mb-4">
           {/* Desktop layout (md and up) - single horizontal row */}
-          <div className="hidden md:flex items-center justify-between">
-            <div className="flex items-center gap-6">
+          <div className="hidden md:flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="bg-background border rounded-md p-1">
                 <div className="flex space-x-1">
                   <Button 
@@ -256,7 +256,7 @@ export default function RealUserPage() {
               <Button
                 variant="outline"
                 className={cn(
-                  "whitespace-nowrap",
+                  "whitespace-nowrap min-w-[120px]",
                   verificationStatus === 'unverified' ? "bg-muted" : ""
                 )}
                 onClick={() => setVerificationStatus(prev => prev === 'unverified' ? 'verified' : 'unverified')}
@@ -265,7 +265,7 @@ export default function RealUserPage() {
               </Button>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div>
                 <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
                 <Popover>
