@@ -485,6 +485,18 @@ export class EmailService {
     requestId: number;
   }): Promise<boolean> {
     try {
+      // Ensure SMTP config is loaded before sending
+      if (!this.transporter) {
+        console.log('🔄 SMTP transporter not ready, loading config...');
+        await this.loadConfigFromDB();
+        this.initializeTransporter();
+        
+        if (!this.transporter) {
+          console.error('❌ Failed to initialize SMTP transporter');
+          return false;
+        }
+      }
+      
       const { EmailTemplateService } = await import('./email-templates.js');
       
       // First try to get template from database
@@ -530,6 +542,18 @@ export class EmailService {
     requestId: number;
   }): Promise<boolean> {
     try {
+      // Ensure SMTP config is loaded before sending
+      if (!this.transporter) {
+        console.log('🔄 SMTP transporter not ready, loading config...');
+        await this.loadConfigFromDB();
+        this.initializeTransporter();
+        
+        if (!this.transporter) {
+          console.error('❌ Failed to initialize SMTP transporter');
+          return false;
+        }
+      }
+      
       const { EmailTemplateService } = await import('./email-templates.js');
       
       // First try to get template from database
