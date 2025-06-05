@@ -175,8 +175,14 @@ export default function EmailTemplatesPage() {
       const response = await fetch(`/api/email-templates/${id}`, {
         method: 'DELETE'
       });
-      if (!response.ok) throw new Error('Failed to delete template');
-      return response.json();
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Template already deleted, treat as success
+          return { success: true, message: 'Template already deleted' };
+        }
+        throw new Error('Failed to delete template');
+      }
+      return response.status === 204 ? { success: true } : response.json();
     },
     onSuccess: () => {
       toast({ title: 'Thành công', description: 'Template đã được xóa' });
@@ -386,12 +392,7 @@ export default function EmailTemplatesPage() {
                       Hủy
                     </AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (!deleteTemplateMutation.isPending) {
-                          deleteTemplateMutation.mutate(template.id);
-                        }
-                      }}
+                      onClick={() => deleteTemplateMutation.mutate(template.id)}
                       disabled={deleteTemplateMutation.isPending}
                       className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
                     >
