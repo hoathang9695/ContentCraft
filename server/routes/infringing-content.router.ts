@@ -13,6 +13,7 @@ router.use(requireAuth);
 router.get("/paginated", controller.getPaginatedInfringingContents.bind(controller));
 router.get("/:id", controller.getInfringingContentById.bind(controller));
 router.post("/", controller.createInfringingContent.bind(controller));
+router.post("/search-and-process", controller.searchAndProcessInfringingContent.bind(controller));
 router.put("/:id", controller.updateInfringingContent.bind(controller));
 router.delete("/:id", controller.deleteInfringingContent.bind(controller));
 

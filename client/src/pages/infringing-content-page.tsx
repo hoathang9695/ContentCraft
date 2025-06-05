@@ -184,17 +184,61 @@ export default function InfringingContentPage() {
     setViolationDescriptionInput("");
   };
 
-  const handleSearchDialogConfirm = () => {
-    // TODO: Implement search and process logic here
-    console.log("Processing External ID:", externalIdInput);
-    console.log("Violation Description:", violationDescriptionInput);
-    setIsSearchDialogOpen(false);
-    setExternalIdInput("");
-    setViolationDescriptionInput("");
-    toast({
-      title: "Đang xử lý",
-      description: `Tìm kiếm và xử lý External ID: ${externalIdInput}`,
-    });
+  const handleSearchDialogConfirm = async () => {
+    if (!externalIdInput.trim() || !violationDescriptionInput.trim()) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập đầy đủ External ID và mô tả vi phạm",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log("Processing External ID:", externalIdInput);
+      console.log("Violation Description:", violationDescriptionInput);
+
+      const response = await fetch("/api/infringing-content/search-and-process", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          externalId: externalIdInput.trim(),
+          violationDescription: violationDescriptionInput.trim(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setIsSearchDialogOpen(false);
+        setExternalIdInput("");
+        setViolationDescriptionInput("");
+        
+        // Refresh the table data
+        refetch();
+        
+        toast({
+          title: "Thành công",
+          description: result.message || "Đã xử lý thành công nội dung vi phạm",
+        });
+      } else {
+        toast({
+          title: "Lỗi",
+          description: result.message || "Có lỗi xảy ra khi xử lý",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error processing infringing content:", error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể kết nối đến server",
+        variant: "destructive",
+      });
+    }
   };
 
   if (error) {
