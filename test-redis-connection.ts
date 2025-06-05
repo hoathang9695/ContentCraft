@@ -1,5 +1,9 @@
 
+import dotenv from 'dotenv';
 import Redis from 'ioredis';
+
+// Load environment variables from .env file
+dotenv.config();
 
 async function testRedisConnection() {
   console.log('🔍 Testing Redis connection...');
