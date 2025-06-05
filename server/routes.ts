@@ -250,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const broadcastBadgeUpdate = async () => {
     try {
       const { groups, supportRequests } = await import("../shared/schema");
-      const { pages } } from await import("../shared/schema");
+      const { pages } = await import("../shared/schema");
       const { users } = await import("../shared/schema");
       const { realUsers } = await import("../shared/schema");
 
