@@ -1,0 +1,71 @@
+      // Send confirmation email to user
+      try {
+        const { emailService } = await import('./email.js');
+        const confirmationSubject = "Cảm ơn bạn đã gửi Đóng góp ý kiến & Báo lỗi - EMSO";
+        const confirmationContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h2 style="color: #333; margin: 0 0 10px 0;">Cảm ơn bạn đã gửi Đóng góp ý kiến & Báo lỗi</h2>
+              <p style="margin: 0; color: #666;">Xin chào ${message.full_name},</p>
+            </div>
+
+            <div style="background-color: #fff; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px;">
+              <div style="background-color: #e8f5e8; padding: 15px; border-radius: 6px; border-left: 4px solid #28a745; margin-bottom: 15px;">
+                <p style="margin: 0; color: #155724; font-weight: 500;">
+                  Cảm ơn bạn đã gửi Đóng góp ý kiến & Báo lỗi. Chúng tôi vô cùng trân trọng những đóng góp quý báu của bạn. 
+                  Chúng tôi sẽ sớm phản hồi về Đóng góp của bạn qua email bạn đã đăng ký nhé.
+                </p>
+              </div>
+              
+              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px;">
+                <h4 style="color: #495057; margin: 0 0 10px 0;">Thông tin đóng góp của bạn:</h4>
+                <p style="margin: 5px 0; color: #6c757d;"><strong>Chủ đề:</strong> ${message.subject}</p>
+                <p style="margin: 5px 0; color: #6c757d;"><strong>Loại đóng góp:</strong> ${
+                  message.feedback_type === 'bug_report' ? 'Báo lỗi' :
+                  message.feedback_type === 'feature_request' ? 'Yêu cầu tính năng' :
+                  message.feedback_type === 'complaint' ? 'Khiếu nại' :
+                  message.feedback_type === 'suggestion' ? 'Đề xuất' :
+                  message.feedback_type === 'other' ? 'Khác' : 'Chưa phân loại'
+                }</p>
+                <p style="margin: 5px 0; color: #6c757d;"><strong>Mã yêu cầu:</strong> #${newRequest[0].id}</p>
+              </div>
+
+              <div style="margin-top: 20px; padding: 15px; background-color: #e3f2fd; border-radius: 6px; border-left: 4px solid #2196f3;">
+                <p style="margin: 0; color: #0d47a1; font-weight: 500;">
+                  Hãy cùng chúng tôi chung tay xây dựng Mạng xã hội vì người Việt.
+                </p>
+                <p style="margin: 10px 0 0 0; color: #0d47a1; font-weight: 600;">
+                  Trân trọng cảm ơn!
+                </p>
+              </div>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888;">
+              <p>Email này được gửi từ EMSO - Mạng xã hội vì người Việt.</p>
+              <p>Nếu bạn có thắc mắc, vui lòng liên hệ với chúng tôi.</p>
+              <p style="margin-top: 15px;">
+                <a href="https://emso.vn/about_us/mission" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Về chúng tôi</a>
+                <a href="https://policies.emso.vn/community-standards" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Tiêu chuẩn cộng đồng</a>
+                <a href="https://policies.emso.vn/money-making-policy" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Chính sách kiếm tiền</a>
+                <a href="https://policies.emso.vn/ipr" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Chính sách nội dung</a>
+                <a href="https://policies.emso.vn/advertising-marketing" style="color: #3B82F6; text-decoration: none;">Chính sách quảng cáo</a>
+              </p>
+            </div>
+          </div>
+        `;
+
+        const emailSent = await emailService.sendEmail(
+          message.email,
+          confirmationSubject,
+          confirmationContent
+        );
+
+        if (emailSent) {
+          log(`📨 Confirmation email sent successfully to ${message.email} for feedback #${newRequest[0].id}`, "kafka");
+        } else {
+          log(`⚠️ Failed to send confirmation email to ${message.email} for feedback #${newRequest[0].id}`, "kafka-error");
+        }
+      } catch (emailError) {
+        log(`❌ Error sending confirmation email: ${emailError}`, "kafka-error");
+        // Don't throw error - we don't want to fail the feedback processing if email fails
+      }
