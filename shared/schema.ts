@@ -116,6 +116,8 @@ export const fakeUsers = pgTable("fake_users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(), // Tên người dùng ảo
   token: text("token").notNull().unique(), // Token/ID đại diện cho người dùng
+  email: text("email"), // Email của người dùng ảo
+  password: text("password"), // Password của người dùng ảo
   description: text("description"), // Mô tả về người dùng ảo
   avatarUrl: text("avatar_url"), // URL avatar (tùy chọn)
   gender: text("gender").notNull().default("male"), // male, female, other
@@ -129,6 +131,9 @@ export const insertFakeUserSchema = createInsertSchema(fakeUsers).omit({
   id: true, 
   createdAt: true,
   updatedAt: true
+}).extend({
+  email: z.string().email("Email không hợp lệ").optional(),
+  password: z.string().min(1, "Password là bắt buộc").optional(),
 });
 
 export type InsertFakeUser = z.infer<typeof insertFakeUserSchema>;

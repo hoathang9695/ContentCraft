@@ -72,6 +72,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 const fakeUserSchema = z.object({
   name: z.string().min(1, "Tên người dùng là bắt buộc"),
   token: z.string().min(1, "Token là bắt buộc"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
+  password: z.string().min(1, "Password là bắt buộc").optional().or(z.literal("")),
   gender: z.enum(["male", "female", "other"]).default("male"),
   status: z.enum(["active", "inactive"]).default("active"),
   description: z.string().optional(),
@@ -81,6 +83,8 @@ type FakeUser = {
   id: number;
   name: string;
   token: string;
+  email?: string;
+  password?: string;
   gender: "male" | "female" | "other";
   status: "active" | "inactive";
   description?: string;
@@ -124,17 +128,17 @@ export default function FakeUsersPage() {
         pageSize: pageSize.toString(),
         ...(debouncedSearchQuery && { search: debouncedSearchQuery })
       });
-      
+
       console.log("Fetching fake users with params:", params.toString());
-      
+
       const response = await fetch(`/api/fake-users?${params}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log("Fake users API response:", data);
-      
+
       return data;
     },
     enabled: isAdmin, // Chỉ kích hoạt truy vấn nếu là admin
@@ -164,12 +168,12 @@ export default function FakeUsersPage() {
       setCurrentPage(currentPage + 1);
     }
   };
-  
+
   // Debug - In thông tin về user và API URL
   console.log("User info:", user);
   console.log("Is admin:", isAdmin);
   console.log("API URL:", window.location.origin + "/api/fake-users");
-  
+
   // Xử lý lỗi từ truy vấn
   useEffect(() => {
     if (error) {
@@ -264,9 +268,9 @@ export default function FakeUsersPage() {
     mutationFn: async ({ id, gender }: { id: number; gender: "male" | "female" | "other" }) => {
       const user = fakeUsers?.find(u => u.id === id);
       if (!user) throw new Error("User not found");
-      
+
       setUpdatingUserId(id);
-      
+
       return await apiRequest<FakeUser>("PUT", `/api/fake-users/${id}`, {
         ...user,
         gender
@@ -321,6 +325,8 @@ export default function FakeUsersPage() {
     defaultValues: {
       name: "",
       token: "",
+      email: "",
+      password: "",
       gender: "male",
       status: "active",
       description: "",
@@ -334,6 +340,8 @@ export default function FakeUsersPage() {
       form.reset({
         name: user.name,
         token: user.token,
+        email: user.email || "",
+        password: user.password || "",
         gender: user.gender as "male" | "female" | "other",
         status: user.status as "active" | "inactive",
         description: user.description || "",
@@ -344,6 +352,8 @@ export default function FakeUsersPage() {
       form.reset({
         name: "",
         token: "",
+        email: "",
+        password: "",
         gender: "male",
         status: "active",
         description: "",
@@ -361,6 +371,45 @@ export default function FakeUsersPage() {
     } else {
       // Create mode
       createFakeUser.mutate(values);
+    }
+  };
+
+  // Xử lý click vào tên user để mở tab mới đến trang login
+  const handleUserLogin = (token: string, userName: string, email?: string, password?: string) => {
+    try {
+      // Copy thông tin đăng nhập vào clipboard
+      const loginInfo = `Email: ${email || 'N/A'}\nPassword: ${password || 'N/A'}\nToken: ${token}`;
+      navigator.clipboard.writeText(loginInfo).then(() => {
+        console.log('Login info copied to clipboard');
+      }).catch(() => {
+        console.log('Could not copy login info to clipboard');
+      });
+
+      // Mở tab mới đến trang login của emso.vn
+      const newTab = window.open('https://emso.vn/login', '_blank', 'noopener,noreferrer');
+
+      if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
+        // Popup bị chặn
+        toast({
+          title: "Popup bị chặn",
+          description: "Vui lòng cho phép popup và thử lại, hoặc mở https://emso.vn/login thủ công.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Hiển thị thông báo thành công
+      toast({
+        title: "Đã mở trang đăng nhập",
+        description: `Thông tin đăng nhập đã được copy vào clipboard: ${email || 'N/A'}`,
+      });
+    } catch (error) {
+      console.error('Error in handleUserLogin:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể mở tab mới. Vui lòng kiểm tra popup blocker.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -390,14 +439,60 @@ export default function FakeUsersPage() {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
+        // Kiểm tra và xử lý header
+        const headers = jsonData[0] as string[];
+        console.log("Excel headers:", headers);
+
+        // Tìm vị trí các cột
+        const nameIndex = headers.findIndex(h => 
+          h && (h.toLowerCase().includes('name') || h.toLowerCase().includes('tên') || h.toLowerCase().includes('họ tên'))
+        );
+        const tokenIndex = headers.findIndex(h => 
+          h && h.toLowerCase().includes('token')
+        );
+        const emailIndex = headers.findIndex(h => 
+          h && h.toLowerCase().includes('email')
+        );
+        const passwordIndex = headers.findIndex(h => 
+          h && (h.toLowerCase().includes('password') || h.toLowerCase().includes('mật khẩu'))
+        );
+
+        console.log("Column indexes:", { nameIndex, tokenIndex, emailIndex, passwordIndex });
+
+        if (nameIndex === -1 || tokenIndex === -1) {
+          toast({
+            title: "Lỗi định dạng file",
+            description: "File Excel phải có ít nhất 2 cột: Name/Tên và Token",
+            variant: "destructive",
+          });
+          setIsUploading(false);
+          return;
+        }
+
         // Bỏ qua dòng header và xử lý dữ liệu
         const users = (jsonData as any[][])
           .slice(1) // Bỏ dòng đầu (header)
-          .filter(row => row[0] && row[1]) // Chỉ lấy dòng có đủ 2 cột
-          .map(row => ({
-            name: String(row[0]).trim(),
-            token: String(row[1]).trim(),
-          }));
+          .filter(row => row[nameIndex] && row[tokenIndex]) // Chỉ lấy dòng có đủ name và token
+          .map(row => {
+            const userData: any = {
+              name: String(row[nameIndex]).trim(),
+              token: String(row[tokenIndex]).trim(),
+            };
+
+            // Thêm email nếu có
+            if (emailIndex !== -1 && row[emailIndex]) {
+              userData.email = String(row[emailIndex]).trim();
+            }
+
+            // Thêm password nếu có
+            if (passwordIndex !== -1 && row[passwordIndex]) {
+              userData.password = String(row[passwordIndex]).trim();
+            }
+
+            return userData;
+          });
+
+        console.log("Processed users:", users.slice(0, 3)); // Log 3 users đầu tiên để kiểm tra
 
         if (users.length === 0) {
           toast({
@@ -423,7 +518,7 @@ export default function FakeUsersPage() {
     };
 
     reader.readAsArrayBuffer(file);
-    
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -455,6 +550,10 @@ export default function FakeUsersPage() {
             <CardTitle>Quản lý Người dùng ảo (Fake Users)</CardTitle>
             <CardDescription>
               Quản lý danh sách người dùng ảo để sử dụng cho việc gửi bình luận đến hệ thống bên ngoài
+              <br />
+              <small className="text-muted-foreground">
+                File Excel cần có các cột: Name/Tên (bắt buộc), Token (bắt buộc), Email (tùy chọn), Password/Mật khẩu (tùy chọn)
+              </small>
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -524,6 +623,8 @@ export default function FakeUsersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tên</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Password</TableHead>
                     <TableHead>Token</TableHead>
                     <TableHead>Giới tính</TableHead>
                     <TableHead>Thao tác</TableHead>
@@ -533,7 +634,67 @@ export default function FakeUsersPage() {
                   {fakeUsers && fakeUsers.length > 0 ? (
                     fakeUsers.map((user: FakeUser) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            onClick={() => handleUserLogin(user.token, user.name, user.email, user.password)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+                            title={`Click để đăng nhập với email: ${user.email || 'N/A'} và password: ${user.password || 'N/A'}`}
+                          >
+                            {user.name}
+                          </button>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <div className="flex items-center gap-2">
+                            {user.email ? (
+                              <>
+                                <span className="flex-1">{user.email}</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(user.email || '');
+                                    toast({
+                                      title: "Đã copy email",
+                                      description: "Email đã được copy vào clipboard",
+                                    });
+                                  }}
+                                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                  title="Copy email"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                  </svg>
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">Chưa có</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          <div className="flex items-center gap-2">
+                            {user.password ? (
+                              <>
+                                <span className="flex-1">••••••••</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(user.password || '');
+                                    toast({
+                                      title: "Đã copy password",
+                                      description: "Password đã được copy vào clipboard",
+                                    });
+                                  }}
+                                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                  title="Copy password"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002 2h2a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                  </svg>
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">Chưa có</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {user.token}
                         </TableCell>
@@ -593,7 +754,7 @@ export default function FakeUsersPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center text-sm text-muted-foreground">
                           <AlertTriangle className="mb-2 h-6 w-6" />
                           {debouncedSearchQuery ? 
@@ -625,7 +786,7 @@ export default function FakeUsersPage() {
                   <ChevronLeft className="h-4 w-4" />
                   Trước
                 </Button>
-                
+
                 <div className="flex items-center space-x-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNumber;
@@ -638,7 +799,7 @@ export default function FakeUsersPage() {
                     } else {
                       pageNumber = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <Button
                         key={pageNumber}
@@ -693,6 +854,40 @@ export default function FakeUsersPage() {
                     </FormControl>
                     <FormDescription>
                       Tên này sẽ được hiển thị khi gửi bình luận.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Nhập email đăng nhập" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Email dùng để đăng nhập vào hệ thống bên ngoài.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Nhập mật khẩu đăng nhập" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Mật khẩu dùng để đăng nhập vào hệ thống bên ngoài.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

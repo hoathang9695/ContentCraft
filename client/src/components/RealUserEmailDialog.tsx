@@ -135,7 +135,15 @@ export function RealUserEmailDialog({ isOpen, onClose, user, onSuccess }: RealUs
     if (!user) return;
 
     // Get HTML content to preserve formatting
-    const htmlContent = editorRef.current?.innerHTML || "";
+    let htmlContent = editorRef.current?.innerHTML || "";
+    // Clean up HTML content to prevent layout issues
+    htmlContent = htmlContent
+      .replace(/<div><br><\/div>/g, '<br>')
+      .replace(/<div>/g, '<p>')
+      .replace(/<\/div>/g, '</p>')
+      .replace(/(<p><\/p>){2,}/g, '<p></p>')
+      .trim();
+
     // Get plain text as fallback
     const plainTextContent = editorRef.current?.innerText || "";
 
@@ -276,7 +284,7 @@ export function RealUserEmailDialog({ isOpen, onClose, user, onSuccess }: RealUs
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className={`real-user-email-dialog dialog-content ${isExpanded ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' : 'max-w-[800px] max-h-[90vh]'} p-0 gap-0 flex flex-col`}
+        className={`real-user-email-dialog dialog-content ${isExpanded ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' : 'max-w-[900px] max-h-[85vh] w-[90vw]'} p-0 gap-0 flex flex-col overflow-hidden`}
       >
         {/* Header */}
         <DialogHeader className="p-4 pb-0 flex-shrink-0">
@@ -468,8 +476,13 @@ export function RealUserEmailDialog({ isOpen, onClose, user, onSuccess }: RealUs
               <div
                 ref={editorRef}
                 contentEditable
-                className={`w-full min-h-[150px] outline-none text-sm border-0 focus:ring-0 p-2 border rounded ${!isContentValid ? 'border-red-300' : 'border-gray-300'}`}
-                style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                className={`w-full min-h-[200px] max-h-[400px] outline-none text-sm border focus:ring-2 focus:ring-blue-500 p-3 rounded-md ${!isContentValid ? 'border-red-300' : 'border-gray-300'} bg-white overflow-y-auto`}
+                style={{ 
+                  wordWrap: 'break-word', 
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: '1.6'
+                }}
                 onInput={handleEditorChange}
                 onBlur={handleEditorChange}
                 onPaste={handlePaste}
@@ -481,9 +494,12 @@ export function RealUserEmailDialog({ isOpen, onClose, user, onSuccess }: RealUs
                   content: attr(data-placeholder);
                   color: #9CA3AF;
                   pointer-events: none;
+                  font-style: italic;
                 }
                 [contenteditable] {
-                  line-height: 1.5;
+                  line-height: 1.6;
+                  word-break: break-word;
+                  overflow-wrap: break-word;
                 }
                 [contenteditable] b, [contenteditable] strong {
                   font-weight: bold;
@@ -497,6 +513,20 @@ export function RealUserEmailDialog({ isOpen, onClose, user, onSuccess }: RealUs
                 [contenteditable] a {
                   color: #3B82F6;
                   text-decoration: underline;
+                }
+                [contenteditable] img {
+                  max-width: 100%;
+                  height: auto;
+                  display: block;
+                  margin: 10px 0;
+                  border: 1px solid #e5e7eb;
+                  border-radius: 4px;
+                }
+                [contenteditable] p {
+                  margin: 0 0 10px 0;
+                }
+                [contenteditable] div {
+                  margin: 5px 0;
                 }
                 /* Hide default dialog close button only for RealUserEmailDialog */
                 .real-user-email-dialog .dialog-content > button[data-radix-dialog-close],
@@ -517,6 +547,18 @@ export function RealUserEmailDialog({ isOpen, onClose, user, onSuccess }: RealUs
                 /* Additional specific selector for the exact button structure */
                 .dialog-content button.absolute.right-4.top-4 {
                   display: none !important;
+                }
+
+                /* Email content formatting */
+                .email-content {
+                  max-width: 100%;
+                  word-wrap: break-word;
+                  overflow-wrap: break-word;
+                }
+                
+                .email-content * {
+                  max-width: 100% !important;
+                  box-sizing: border-box;
                 }
               `}</style>
             </div>
