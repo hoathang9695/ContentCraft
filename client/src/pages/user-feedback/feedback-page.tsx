@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
@@ -184,7 +183,7 @@ export default function FeedbackPage() {
               </Select>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <div>
                 <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
                 <Popover>
@@ -609,7 +608,7 @@ export default function FeedbackPage() {
                                   response_content: 'Đã xử lý đóng góp ý kiến'
                                 })
                               });
-                              
+
                               if (response.ok) {
                                 toast({
                                   title: "Thành công",
@@ -617,7 +616,7 @@ export default function FeedbackPage() {
                                 });
                                 queryClient.invalidateQueries(['/api/feedback-requests']);
                                 queryClient.invalidateQueries(['/api/badge-counts']);
-                                
+
                                 // Force refresh badge counts immediately
                                 queryClient.refetchQueries(['/api/badge-counts'], { active: true });
                               } else {
