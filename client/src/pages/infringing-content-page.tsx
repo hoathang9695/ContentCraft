@@ -12,6 +12,7 @@ import { vi } from "date-fns/locale";
 import { cn } from "../lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Calendar as CalendarComponent } from "../components/ui/calendar";
+import { Label } from "../components/ui/label";
 import { 
   Table, 
   TableBody, 
@@ -30,6 +31,7 @@ import {
   PaginationPrevious,
 } from "../components/ui/pagination";
 import { useDebounce } from "../hooks/use-debounce";
+import { useToast } from "../hooks/use-toast";
 
 interface InfringingContent {
   id: number;
@@ -75,6 +77,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function InfringingContentPage() {
+  const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
@@ -128,13 +131,6 @@ export default function InfringingContentPage() {
     },
   });
 
-  const resetFilters = () => {
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setSearchQuery("");
-    setCurrentPage(1);
-  };
-
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
     setCurrentPage(1);
@@ -143,6 +139,26 @@ export default function InfringingContentPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleDateFilter = () => {
+    console.log('Filtering by date range:', {
+      startDate: startDate?.toISOString(),
+      endDate: endDate?.toISOString()
+    });
+    // Force refetch with new date range
+    refetch();
+  };
+
+  const resetFilters = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setSearchQuery("");
+    setCurrentPage(1);
+    toast({
+      title: "Đã đặt lại bộ lọc",
+      description: "Hiển thị tất cả dữ liệu",
+    });
   };
 
   if (error) {
@@ -167,114 +183,254 @@ export default function InfringingContentPage() {
   return (
     <DashboardLayout>
       <div className="container mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Xử lý nội dung vi phạm</h1>
-            <p className="text-muted-foreground">
-              Quản lý và xử lý các nội dung vi phạm quy định
-            </p>
-          </div>
-        </div>
+        {/* Responsive filters layout - horizontal on desktop, vertical on mobile */}
+        <div className="mb-4">
+          {/* Mobile layout (< md) - vertical stack */}
+          <div className="md:hidden space-y-4">
+            {/* Search - mobile */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-sm font-medium mb-2 block">
+                Tìm kiếm
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Tìm kiếm theo External ID, mô tả vi phạm..."
+                  value={searchQuery}
+                  onChange={handleSearch}
+                  className="pl-10"
+                />
+              </div>
+            </div>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Bộ lọc</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4 items-end">
-              {/* Search */}
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-sm font-medium mb-2 block">
-                  Tìm kiếm
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Tìm kiếm theo External ID, mô tả vi phạm..."
-                    value={searchQuery}
-                    onChange={handleSearch}
-                    className="pl-10"
-                  />
+            {/* Date filters - mobile */}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start text-left font-normal text-xs",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-3 w-3" />
+                        {startDate ? format(startDate, 'dd/MM/yyyy') : "Chọn ngày"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <CalendarComponent
+                        mode="single"
+                        selected={startDate}
+                        onSelect={(date) => {
+                          if (date) {
+                            setStartDate(date);
+                            if (date > endDate) {
+                              setEndDate(date);
+                            }
+                          }
+                        }}
+                        locale={vi}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start text-left font-normal text-xs",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-3 w-3" />
+                        {endDate ? format(endDate, 'dd/MM/yyyy') : "Chọn ngày"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <CalendarComponent
+                        mode="single"
+                        selected={endDate}
+                        onSelect={(date) => {
+                          if (date) {
+                            setEndDate(date);
+                            if (date < startDate) {
+                              setStartDate(date);
+                            }
+                          }
+                        }}
+                        locale={vi}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
-              {/* Start Date */}
-              <div className="min-w-[140px]">
-                <label className="text-sm font-medium mb-2 block">
-                  Ngày bắt đầu
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? (
-                        format(startDate, "dd/MM/yyyy", { locale: vi })
-                      ) : (
-                        <span>Chọn ngày</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={startDate}
-                      onSelect={setStartDate}
-                      locale={vi}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="default" 
+                  className="h-9 flex-1 bg-green-600 hover:bg-green-700 text-white text-xs px-3" 
+                  onClick={() => {
+                    if (startDate && endDate) {
+                      handleDateFilter();
+                      toast({
+                        title: "Đã áp dụng bộ lọc",
+                        description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+                      });
+                    } else {
+                      toast({
+                        title: "Vui lòng chọn ngày",
+                        description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  Áp dụng
+                </Button>
 
-              {/* End Date */}
-              <div className="min-w-[140px]">
-                <label className="text-sm font-medium mb-2 block">
-                  Ngày kết thúc
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? (
-                        format(endDate, "dd/MM/yyyy", { locale: vi })
-                      ) : (
-                        <span>Chọn ngày</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={endDate}
-                      onSelect={setEndDate}
-                      locale={vi}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Button 
+                  variant="outline" 
+                  className="h-9 flex-1 text-xs px-3" 
+                  onClick={resetFilters}
+                >
+                  Đặt lại bộ lọc
+                </Button>
               </div>
+            </div>
+          </div>
 
-              {/* Reset Button */}
-              <Button variant="outline" onClick={resetFilters}>
+          {/* Desktop layout (>= md) - single row horizontal */}
+          <div className="hidden md:flex md:items-end md:gap-4">
+            {/* Search */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-sm font-medium mb-2 block">
+                Tìm kiếm
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Tìm kiếm theo External ID, mô tả vi phạm..."
+                  value={searchQuery}
+                  onChange={handleSearch}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Start date */}
+            <div>
+              <Label htmlFor="startDate" className="text-sm mb-1 block">Ngày bắt đầu</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 w-[150px] justify-start text-left font-normal text-sm",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, 'dd/MM/yyyy') : "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setStartDate(date);
+                        if (date > endDate) {
+                          setEndDate(date);
+                        }
+                      }
+                    }}
+                    locale={vi}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* End date */}
+            <div>
+              <Label htmlFor="endDate" className="text-sm mb-1 block">Ngày kết thúc</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 w-[150px] justify-start text-left font-normal text-sm",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, 'dd/MM/yyyy') : "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setEndDate(date);
+                        if (date < startDate) {
+                          setStartDate(date);
+                        }
+                      }
+                    }}
+                    locale={vi}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <Button 
+                variant="default" 
+                className="h-9 bg-green-600 hover:bg-green-700 text-white text-sm px-4" 
+                onClick={() => {
+                  if (startDate && endDate) {
+                    handleDateFilter();
+                    toast({
+                      title: "Đã áp dụng bộ lọc",
+                      description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+                    });
+                  } else {
+                    toast({
+                      title: "Vui lòng chọn ngày",
+                      description: "Hãy chọn cả ngày bắt đầu và ngày kết thúc trước khi áp dụng bộ lọc",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Áp dụng
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="h-9 text-sm px-4" 
+                onClick={resetFilters}
+              >
                 Đặt lại bộ lọc
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Content Table */}
         <Card>
