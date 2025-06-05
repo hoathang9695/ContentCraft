@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -221,12 +220,12 @@ export default function EmailTemplatesPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const variables = formData.variables
       .split(',')
       .map(v => v.trim())
       .filter(v => v.length > 0);
-    
+
     const submitData = {
       ...formData,
       variables
@@ -261,7 +260,7 @@ export default function EmailTemplatesPage() {
       const end = textarea.selectionEnd;
       const newContent = formData.htmlContent.substring(0, start) + variable + formData.htmlContent.substring(end);
       setFormData({ ...formData, htmlContent: newContent });
-      
+
       // Restore cursor position
       setTimeout(() => {
         textarea.selectionStart = textarea.selectionEnd = start + variable.length;
@@ -376,10 +375,15 @@ export default function EmailTemplatesPage() {
               <AlertDialogFooter>
                 <AlertDialogCancel>Hủy</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => deleteTemplateMutation.mutate(template.id)}
-                  className="bg-red-500 hover:bg-red-600"
+                  onClick={() => {
+                    if (!deleteTemplateMutation.isPending) {
+                      deleteTemplateMutation.mutate(template.id);
+                    }
+                  }}
+                  disabled={deleteTemplateMutation.isPending}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
                 >
-                  Xóa
+                  {deleteTemplateMutation.isPending ? 'Đang xóa...' : 'Xóa'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -429,7 +433,7 @@ export default function EmailTemplatesPage() {
               {editingTemplate ? 'Chỉnh sửa Template' : 'Tạo Template mới'}
             </DialogTitle>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -568,7 +572,7 @@ export default function EmailTemplatesPage() {
           <DialogHeader>
             <DialogTitle>Xem trước Template: {previewTemplate?.name}</DialogTitle>
           </DialogHeader>
-          
+
           {previewTemplate && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
