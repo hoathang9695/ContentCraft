@@ -40,6 +40,9 @@ import {
 import { log } from "./vite";
 import { emailService, SMTPConfig } from "./email";
 import { FileCleanupService } from "./file-cleanup";
+import { feedbackRouter } from "./routes/feedback.router.js";
+import { supportRouter } from "./routes/support.router.js";
+import { infringingContentRouter } from "./routes/infringing-content.router.js";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -2701,17 +2704,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Support routes
-  const supportRouter = (await import("./routes/support.router")).default;
+  const supportRouterModule = (await import("./routes/support.router")).default;
   const { SupportController } = await import(
     "./controllers/support.controller"
   );
   const supportController = new SupportController();
-  import { feedbackRouter } from "./routes/feedback.router.js";
-import { supportRouter } from "./routes/support.router.js";
-import { infringingContentRouter } from "./routes/infringing-content.router.js";
 
-  app.use("/api/support-requests", supportRouter);
-  app.use("/api", supportRouter);
+  app.use("/api/support-requests", supportRouterModule);
+  app.use("/api", supportRouterModule);
   app.use("/api", feedbackRouter);
 
   // Infringing content routes
@@ -3797,7 +3797,7 @@ sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`,
   });
 
   // Support routes
-  app.use("/api/support-requests", supportRouter);
+  app.use("/api/support-requests", supportRouterModule);
 
   // Support requests routes
   app.get(
