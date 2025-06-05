@@ -112,7 +112,7 @@ export class EmailService {
     }
   }
 
-  private initializeTransporter() {
+  public initializeTransporter() {
     if (!this.config.user || !this.config.password) {
       console.log("SMTP not configured - email functionality disabled");
       return;
@@ -370,6 +370,8 @@ export class EmailService {
     }
 
     try {
+      const { EmailTemplateService } = await import('./email-templates.js');
+      
       // Process content to handle embedded images
       let processedContent = data.content;
       const imageAttachments: Array<any> = [];
@@ -422,52 +424,19 @@ export class EmailService {
            </div>`
         : '';
 
-      const footerHtml = `
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888;">
-            <p>Email này được gửi từ EMSO - Mạng xã hội vì người Việt.</p>
-            <p>Rất hy vọng nhận được nhiều sự góp ý, chung tay xây dựng mạng xã hội của Việt Nam bạn nhé!</p>
-            <p style="margin-top: 15px;">
-              <a href="https://emso.vn/about_us/mission" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Về chúng tôi</a>
-              <a href="https://policies.emso.vn/community-standards" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Tiêu chuẩn cộng đồng</a>
-              <a href="https://policies.emso.vn/money-making-policy" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Chính sách kiếm tiền</a>
-              <a href="https://policies.emso.vn/ipr" style="color: #3B82F6; text-decoration: none; margin-right: 10px;">Chính sách nội dung</a>
-              <a href="https://policies.emso.vn/advertising-marketing" style="color: #3B82F6; text-decoration: none;">Chính sách quảng cáo</a>
-            </p>
-          </div>
-        `;
-
-      const htmlContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h2 style="color: #333; margin: 0 0 10px 0;">Phản hồi từ hệ thống hỗ trợ</h2>
-            <p style="margin: 0; color: #666;">Cảm ơn bạn đã liên hệ với chúng tôi. Dưới đây là phản hồi cho yêu cầu hỗ trợ của bạn.</p>
-          </div>
-
-          <div style="background-color: #fff; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="color: #495057; margin: 0 0 15px 0;">Nội dung phản hồi:</h3>
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #007bff;">
-              ${processedContent}
-            </div>
-            ${attachmentInfo}
-          </div>
-
-          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
-            <h4 style="color: #6c757d; margin: 0 0 10px 0;">Yêu cầu gốc của bạn:</h4>
-            <p style="margin: 0 0 5px 0; color: #495057;"><strong>Chủ đề:</strong> ${data.originalRequest.subject}</p>
-            <p style="margin: 0; color: #6c757d; font-size: 14px; padding: 10px; background-color: #fff; border-radius: 4px;">
-              ${data.originalRequest.content.replace(/\n/g, '<br>')}
-            </p>
-          </div>
-
-          ${footerHtml}
-        </div>
-      `;
+      // Use email template service for admin reply
+      const emailTemplate = EmailTemplateService.getAdminReplyTemplate({
+        userName: data.originalRequest.full_name,
+        adminMessage: processedContent,
+        originalRequest: data.originalRequest,
+        attachmentInfo
+      });
 
       const mailOptions: any = {
         from: this.config ? `"${this.config.fromName}" <${this.config.fromEmail}>` : 'noreply@example.com',
         to: data.to,
-        subject: data.subject,
-        html: htmlContent,
+        subject: emailTemplate.subject,
+        html: emailTemplate.html,
         attachments: [...imageAttachments, ...fileAttachments]
       };
 
@@ -503,9 +472,167 @@ export class EmailService {
       <p>Thời gian gửi: ${new Date().toLocaleString('vi-VN')}</p>
       <p>Cấu hình SMTP đang hoạt động bình thường.</p>
     `;
-    const text = `Test Email thành công! Đây là email test từ EMSO System. Thời gian gửi: ${new Date().toLocaleString('vi-VN')}`;
 
-    return await this.sendEmail(testEmail, subject, html, text);
+    return await this.sendEmail(testEmail, subject, html);
+  }
+
+  // Template-based email methods
+  public async sendFeedbackConfirmation(data: {
+    to: string;
+    fullName: string;
+    subject: string;
+    feedbackType?: string;
+    requestId: number;
+  }): Promise<boolean> {
+    try {
+      const { EmailTemplateService } = await import('./email-templates.js');
+      
+      // ALWAYS try to get template from database first
+      console.log('🔍 Searching for feedback_confirmation template in database...');
+      let emailTemplate = await EmailTemplateService.getTemplateFromDatabase('feedback_confirmation');
+      
+      if (emailTemplate) {
+        // Use database template and render variables
+        const variables = {
+          fullName: data.fullName,
+          subject: data.subject,
+          feedbackType: data.feedbackType,
+          requestId: data.requestId,
+          companyName: 'EMSO'
+        };
+        
+        console.log(`🎯 Found database template, rendering with variables:`, variables);
+        emailTemplate.html = EmailTemplateService.renderTemplate(emailTemplate.html, variables);
+        emailTemplate.subject = EmailTemplateService.renderTemplate(emailTemplate.subject, variables);
+        
+        console.log(`📧 Using DATABASE template for feedback confirmation to ${data.to}`);
+        console.log(`📋 Template subject: ${emailTemplate.subject}`);
+      } else {
+        // Fallback to hardcoded template only if database template not found
+        console.log(`⚠️ No database template found, using fallback template`);
+        emailTemplate = EmailTemplateService.getFeedbackConfirmationTemplate({
+          fullName: data.fullName,
+          subject: data.subject,
+          feedbackType: data.feedbackType,
+          requestId: data.requestId
+        });
+        
+        console.log(`📧 Using FALLBACK template for feedback confirmation to ${data.to}`);
+      }
+
+      // Now ensure SMTP is ready AFTER template is prepared
+      console.log('🔄 Ensuring SMTP configuration is ready...');
+      await this.loadConfigFromDB();
+      this.initializeTransporter();
+      
+      if (!this.transporter) {
+        console.error('❌ Failed to initialize SMTP transporter');
+        return false;
+      }
+      
+      console.log('✅ SMTP transporter ready, sending email...');
+      return await this.sendEmail(data.to, emailTemplate.subject, emailTemplate.html);
+    } catch (error) {
+      console.error('Error sending feedback confirmation email:', error);
+      return false;
+    }
+  }
+
+  public async sendSupportConfirmation(data: {
+    to: string;
+    fullName: string;
+    subject: string;
+    requestId: number;
+  }): Promise<boolean> {
+    try {
+      // Always ensure fresh SMTP config and transporter
+      console.log('🔄 Initializing SMTP for support confirmation...');
+      await this.loadConfigFromDB();
+      this.initializeTransporter();
+      
+      if (!this.transporter) {
+        console.error('❌ Failed to initialize SMTP transporter after config load');
+        return false;
+      }
+      
+      console.log('✅ SMTP transporter ready for email sending');
+      
+      const { EmailTemplateService } = await import('./email-templates.js');
+      
+      // First try to get template from database
+      let emailTemplate = await EmailTemplateService.getTemplateFromDatabase('support_confirmation');
+      
+      if (emailTemplate) {
+        // Use database template and render variables
+        const variables = {
+          fullName: data.fullName,
+          subject: data.subject,
+          requestId: data.requestId,
+          companyName: 'EMSO'
+        };
+        
+        emailTemplate.html = EmailTemplateService.renderTemplate(emailTemplate.html, variables);
+        emailTemplate.subject = EmailTemplateService.renderTemplate(emailTemplate.subject, variables);
+        
+        console.log(`📧 Using database template for support confirmation to ${data.to}`);
+        console.log(`📝 Template name: ${emailTemplate.subject}`);
+      } else {
+        // Fallback to hardcoded template
+        emailTemplate = EmailTemplateService.getSupportConfirmationTemplate({
+          fullName: data.fullName,
+          subject: data.subject,
+          requestId: data.requestId
+        });
+        
+        console.log(`📧 Using fallback template for support confirmation to ${data.to}`);
+      }
+
+      return await this.sendEmail(data.to, emailTemplate.subject, emailTemplate.html);
+    } catch (error) {
+      console.error('Error sending support confirmation email:', error);
+      return false;
+    }
+  }
+
+  public async sendWelcomeEmail(data: {
+    to: string;
+    fullName: string;
+  }): Promise<boolean> {
+    try {
+      const { EmailTemplateService } = await import('./email-templates.js');
+      const emailTemplate = EmailTemplateService.getWelcomeTemplate({
+        fullName: data.fullName,
+        email: data.to
+      });
+
+      return await this.sendEmail(data.to, emailTemplate.subject, emailTemplate.html);
+    } catch (error) {
+      console.error('Error sending welcome email:', error);
+      return false;
+    }
+  }
+
+  public async sendSystemNotification(data: {
+    to: string;
+    userName: string;
+    title: string;
+    message: string;
+    isImportant?: boolean;
+  }): Promise<boolean> {
+    try {
+      const { EmailTemplateService } = await import('./email-templates.js');
+      const emailTemplate = EmailTemplateService.getSystemNotificationTemplate({
+        userName: data.userName,
+        title: data.title,
+        message: data.message,
+        isImportant: data.isImportant
+      });
+
+      return await this.sendEmail(data.to, emailTemplate.subject, emailTemplate.html);
+    } catch (error) {
+      console.error('Error sending system notification email:', error);
+      return false;
+    }
   }
 }
 

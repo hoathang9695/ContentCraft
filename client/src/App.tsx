@@ -23,6 +23,7 @@ import VerificationPage from "@/pages/user-feedback/verification-page";
 import TickPage from "@/pages/user-feedback/tick-page";
 import RealUserPage from "@/pages/real-user-page";
 import SettingsPage from "@/pages/settings-page";
+import EmailTemplatesPage from "./pages/email-templates-page";
 import FeedbackPage from "@/pages/user-feedback/feedback-page";
 
 function Router() {
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/user-feedback/feedback" component={FeedbackPage} />
       <Route path="/real-user" component={RealUserPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} adminOnly={true} />
+      <ProtectedRoute path="/email-templates" component={EmailTemplatesPage} adminOnly={true} />
       <Route component={NotFound} />
     </Switch>
   );
