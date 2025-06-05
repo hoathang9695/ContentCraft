@@ -364,38 +364,42 @@ export default function EmailTemplatesPage() {
             <Copy className="h-4 w-4" />
           </Button>
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                title="Xóa"
-              >
-                <Trash2 className="h-4 w-4 text-red-500" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Bạn có chắc chắn muốn xóa template "{template.name}"? Hành động này không thể hoàn tác.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Hủy</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    if (!deleteTemplateMutation.isPending) {
-                      deleteTemplateMutation.mutate(template.id);
-                    }
-                  }}
-                  disabled={deleteTemplateMutation.isPending}
-                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                >
-                  {deleteTemplateMutation.isPending ? 'Đang xóa...' : 'Xóa'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Xóa"
+                    disabled={deleteTemplateMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Bạn có chắc chắn muốn xóa template "{template.name}"? Hành động này không thể hoàn tác.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deleteTemplateMutation.isPending}>
+                      Hủy
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (!deleteTemplateMutation.isPending) {
+                          deleteTemplateMutation.mutate(template.id);
+                        }
+                      }}
+                      disabled={deleteTemplateMutation.isPending}
+                      className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {deleteTemplateMutation.isPending ? 'Đang xóa...' : 'Xóa'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
         </div>
       )
     }
