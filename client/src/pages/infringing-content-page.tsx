@@ -93,6 +93,7 @@ export default function InfringingContentPage() {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   const [externalIdInput, setExternalIdInput] = useState("");
+  const [violationDescriptionInput, setViolationDescriptionInput] = useState("");
 
   // Fetch infringing contents data
   const {
@@ -174,18 +175,22 @@ export default function InfringingContentPage() {
   const handleSearchDialogOpen = () => {
     setIsSearchDialogOpen(true);
     setExternalIdInput("");
+    setViolationDescriptionInput("");
   };
 
   const handleSearchDialogCancel = () => {
     setIsSearchDialogOpen(false);
     setExternalIdInput("");
+    setViolationDescriptionInput("");
   };
 
   const handleSearchDialogConfirm = () => {
     // TODO: Implement search and process logic here
     console.log("Processing External ID:", externalIdInput);
+    console.log("Violation Description:", violationDescriptionInput);
     setIsSearchDialogOpen(false);
     setExternalIdInput("");
+    setViolationDescriptionInput("");
     toast({
       title: "Đang xử lý",
       description: `Tìm kiếm và xử lý External ID: ${externalIdInput}`,
@@ -635,34 +640,48 @@ export default function InfringingContentPage() {
 
         {/* Search and Process Dialog */}
         <Dialog open={isSearchDialogOpen} onOpenChange={setIsSearchDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Tìm kiếm và xử lý nội dung vi phạm</DialogTitle>
               <DialogDescription>
-                Nhập External ID để tìm kiếm và xử lý nội dung vi phạm.
+                Nhập External ID và mô tả vi phạm để tìm kiếm và xử lý nội dung vi phạm.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="externalId" className="text-right">
-                  External ID
+            <div className="grid gap-6 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="externalId" className="text-sm font-medium">
+                  External ID <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="externalId"
                   value={externalIdInput}
                   onChange={(e) => setExternalIdInput(e.target.value)}
-                  className="col-span-3"
                   placeholder="Nhập External ID..."
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="violationDescription" className="text-sm font-medium">
+                  Mô tả vi phạm <span className="text-red-500">*</span>
+                </Label>
+                <textarea
+                  id="violationDescription"
+                  value={violationDescriptionInput}
+                  onChange={(e) => setViolationDescriptionInput(e.target.value)}
+                  placeholder="Nhập mô tả chi tiết về vi phạm..."
+                  className="w-full min-h-[100px] px-3 py-2 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md resize-y"
+                  rows={4}
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               <Button variant="outline" onClick={handleSearchDialogCancel}>
                 Hủy
               </Button>
               <Button 
                 onClick={handleSearchDialogConfirm}
-                disabled={!externalIdInput.trim()}
+                disabled={!externalIdInput.trim() || !violationDescriptionInput.trim()}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Xác nhận xóa
