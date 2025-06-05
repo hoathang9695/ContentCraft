@@ -192,7 +192,7 @@ export default function RealUserPage() {
         <div className="mb-4">
           {/* Desktop layout (md and up) - single horizontal row */}
           <div className="hidden md:flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <div className="bg-background border rounded-md p-1">
                 <div className="flex space-x-1">
                   <Button 
