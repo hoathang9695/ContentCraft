@@ -5,7 +5,7 @@ import { DashboardLayout } from "../components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Calendar, CalendarIcon, Search } from "lucide-react";
+import { Calendar, CalendarIcon, Search, Plus } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -30,6 +30,14 @@ import {
   PaginationNext, 
   PaginationPrevious,
 } from "../components/ui/pagination";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { useDebounce } from "../hooks/use-debounce";
 import { useToast } from "../hooks/use-toast";
 
@@ -83,6 +91,8 @@ export default function InfringingContentPage() {
   const [endDate, setEndDate] = useState<Date>();
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
+  const [externalIdInput, setExternalIdInput] = useState("");
 
   // Fetch infringing contents data
   const {
@@ -158,6 +168,27 @@ export default function InfringingContentPage() {
     toast({
       title: "Đã đặt lại bộ lọc",
       description: "Hiển thị tất cả dữ liệu",
+    });
+  };
+
+  const handleSearchDialogOpen = () => {
+    setIsSearchDialogOpen(true);
+    setExternalIdInput("");
+  };
+
+  const handleSearchDialogCancel = () => {
+    setIsSearchDialogOpen(false);
+    setExternalIdInput("");
+  };
+
+  const handleSearchDialogConfirm = () => {
+    // TODO: Implement search and process logic here
+    console.log("Processing External ID:", externalIdInput);
+    setIsSearchDialogOpen(false);
+    setExternalIdInput("");
+    toast({
+      title: "Đang xử lý",
+      description: `Tìm kiếm và xử lý External ID: ${externalIdInput}`,
     });
   };
 
@@ -432,6 +463,17 @@ export default function InfringingContentPage() {
           </div>
         </div>
 
+        {/* Action Buttons */}
+        <div className="flex justify-end">
+          <Button
+            onClick={handleSearchDialogOpen}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Tìm kiếm và xử lý
+          </Button>
+        </div>
+
         {/* Content Table */}
         <Card>
           <CardHeader>
@@ -587,6 +629,44 @@ export default function InfringingContentPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Search and Process Dialog */}
+        <Dialog open={isSearchDialogOpen} onOpenChange={setIsSearchDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Tìm kiếm và xử lý nội dung vi phạm</DialogTitle>
+              <DialogDescription>
+                Nhập External ID để tìm kiếm và xử lý nội dung vi phạm.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="externalId" className="text-right">
+                  External ID
+                </Label>
+                <Input
+                  id="externalId"
+                  value={externalIdInput}
+                  onChange={(e) => setExternalIdInput(e.target.value)}
+                  className="col-span-3"
+                  placeholder="Nhập External ID..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleSearchDialogCancel}>
+                Hủy
+              </Button>
+              <Button 
+                onClick={handleSearchDialogConfirm}
+                disabled={!externalIdInput.trim()}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Xác nhận xóa
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
