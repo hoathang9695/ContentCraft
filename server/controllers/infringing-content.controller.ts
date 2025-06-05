@@ -271,8 +271,15 @@ export class InfringingContentController {
           const redis = new Redis({
             host: redisHost,
             port: parseInt(redisPort),
-            password: redisPassword
+            password: redisPassword,
+            connectTimeout: 3000, // 3 seconds timeout for production
+            lazyConnect: true,
+            retryDelayOnFailover: 100,
+            maxRetriesPerRequest: 1
           });
+          
+          // Try to connect with timeout
+          await redis.connect();
           
           // Search for the key pattern
           const searchPattern = `*${externalId}*`;
