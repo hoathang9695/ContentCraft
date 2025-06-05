@@ -2919,8 +2919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           or(
             sql`LOWER(${pagesTable.pageName}::jsonb->>'page_name') LIKE ${searchPattern}`,
             sql`LOWER(${pagesTable.pageName}::jsonb->>'name') LIKE ${searchPattern}`,
-            ```text
-sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`,
+            sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`,
           ),
         );
       }
