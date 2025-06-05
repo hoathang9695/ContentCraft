@@ -377,15 +377,32 @@ export default function FakeUsersPage() {
   // Xử lý click vào tên user để login với email/password auto-fill
   const handleUserLogin = (token: string, userName: string, email?: string, password?: string) => {
     try {
+      // Copy thông tin vào clipboard trước
+      const loginInfo = `Email: ${email || 'vuquangbao121@emso.vn'}\nPassword: ${password || 'emso1604!@#'}\nToken: ${token}`;
+      navigator.clipboard.writeText(loginInfo).then(() => {
+        console.log('Login info copied to clipboard');
+      }).catch(() => {
+        console.log('Could not copy login info to clipboard');
+      });
+
       // Mở tab mới đến emso.vn
       const newTab = window.open('https://emso.vn/', '_blank', 'noopener,noreferrer');
 
-      if (!newTab) {
+      if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
+        // Popup bị chặn - hiển thị thông tin để user copy thủ công
         toast({
-          title: "Lỗi",
-          description: "Không thể mở tab mới. Vui lòng kiểm tra popup blocker.",
-          variant: "destructive",
+          title: "Thông tin đăng nhập đã được copy",
+          description: `Popup bị chặn. Hãy mở emso.vn thủ công và paste thông tin đăng nhập.\n\nEmail: ${email || 'vuquangbao121@emso.vn'}\nPassword: ${password || 'emso1604!@#'}`,
+          variant: "default",
         });
+        
+        // Fallback: mở trong cùng tab nếu user muốn
+        setTimeout(() => {
+          const confirmOpen = confirm(`Popup bị chặn. Bạn có muốn mở emso.vn trong tab hiện tại không?\n\nThông tin đăng nhập:\nEmail: ${email || 'vuquangbao121@emso.vn'}\nPassword: ${password || 'emso1604!@#'}`);
+          if (confirmOpen) {
+            window.location.href = 'https://emso.vn/';
+          }
+        }, 1000);
         return;
       }
 
@@ -463,20 +480,9 @@ export default function FakeUsersPage() {
         }
       }, 1000);
 
-      // Copy thông tin vào clipboard làm backup
-      const loginInfo = `Email: ${email || 'vuquangbao121@emso.vn'}\nPassword: ${password || 'emso1604!@#'}\nToken: ${token}`;
-      navigator.clipboard.writeText(loginInfo).then(() => {
-        toast({
-          title: "Thông tin đăng nhập đã được copy",
-          description: "Email, password và token đã được copy vào clipboard để bạn có thể paste thủ công nếu cần.",
-        });
-      }).catch(() => {
-        console.log('Could not copy login info to clipboard');
-      });
-
-      // Hiển thị thông báo
+      // Hiển thị thông báo thành công
       toast({
-        title: "Đã mở emso.vn",
+        title: "Đã mở emso.vn thành công",
         description: `Đang thử auto-login với email: ${email || 'vuquangbao121@emso.vn'}. Thông tin đăng nhập đã được copy vào clipboard.`,
       });
     } catch (error) {
