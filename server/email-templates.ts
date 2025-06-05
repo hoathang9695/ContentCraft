@@ -17,13 +17,16 @@ export class EmailTemplateService {
     try {
       const { db } = await import('./db.js');
       const { emailTemplates } = await import('../shared/schema.js');
-      const { eq } = await import('drizzle-orm');
+      const { eq, and, desc } = await import('drizzle-orm');
       
       const [template] = await db
         .select()
         .from(emailTemplates)
-        .where(eq(emailTemplates.type, type))
-        .where(eq(emailTemplates.isActive, true))
+        .where(and(
+          eq(emailTemplates.type, type),
+          eq(emailTemplates.isActive, true)
+        ))
+        .orderBy(desc(emailTemplates.createdAt))
         .limit(1);
       
       if (template) {
