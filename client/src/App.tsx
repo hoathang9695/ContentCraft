@@ -48,7 +48,7 @@ function Router() {
       <Route path="/user-feedback/feedback" component={FeedbackPage} />
       <Route path="/real-user" component={RealUserPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} adminOnly={true} />
-      <Route path="/email-templates" component={EmailTemplatesPage} />
+      <ProtectedRoute path="/email-templates" component={EmailTemplatesPage} adminOnly={true} />
       <Route component={NotFound} />
     </Switch>
   );

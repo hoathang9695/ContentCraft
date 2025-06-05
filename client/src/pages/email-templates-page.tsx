@@ -91,6 +91,8 @@ const COMMON_VARIABLES = [
   '{{companyTagline}}'
 ];
 
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+
 export default function EmailTemplatesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -388,19 +390,20 @@ export default function EmailTemplatesPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Quản lý Email Templates</h1>
-          <p className="text-muted-foreground">
-            Quản lý các template email cho các luồng tự động
-          </p>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Quản lý Email Templates</h1>
+            <p className="text-muted-foreground">
+              Quản lý các template email cho các luồng tự động
+            </p>
+          </div>
+          <Button onClick={openCreateDialog}>
+            <Plus className="h-4 w-4 mr-2" />
+            Thêm Template
+          </Button>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          Thêm Template
-        </Button>
-      </div>
 
       <Card>
         <CardHeader>
@@ -620,6 +623,7 @@ export default function EmailTemplatesPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
