@@ -2509,6 +2509,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email Templates API endpoints
+  // Get all email templates
+  app.get("/api/email-templates", isAuthenticated, async (req, res) => {
+    try {
+      const { emailTemplates } = await import("../shared/schema.js");
+      
+      const templates = await db
+        .select()
+        .from(emailTemplates)
+        .orderBy(desc(emailTemplates.createdAt));
+
+      // Parse variables JSON string back to array
+      const templatesWithParsedVariables = templates.map(template => ({
+        ...template,
+        variables: JSON.parse(template.variables || '[]')
+      }));
+
+      res.json(templatesWithParsedVariables);
+    } catch (error) {
+      console.error("Error fetching email templates:", error);
+      res.status(500).json({
+        message: "Error fetching email templates",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  // Get single email template
+  app.get("/api/email-templates/:id", isAuthenticated, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const { emailTemplates } = await import("../shared/schema.js");
+      
+      const [template] = await db
+        .select()
+        .from(emailTemplates)
+        .where(eq(emailTemplates.id, templateId))
+        .limit(1);
+
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Parse variables JSON string back to array
+      const templateWithParsedVariables = {
+        ...template,
+        variables: JSON.parse(template.variables || '[]')
+      };
+
+      res.json(templateWithParsedVariables);
+    } catch (error) {
+      console.error("Error fetching email template:", error);
+      res.status(500).json({
+        message: "Error fetching email template",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  // Create new email template (admin only)
+  app.post("/api/email-templates", isAdmin, async (req, res) => {
+    try {
+      const { name, type, subject, htmlContent, variables, description, isActive } = req.body;
+      const { emailTemplates } = await import("../shared/schema.js");
+
+      // Validate required fields
+      if (!name || !type || !subject || !htmlContent) {
+        return res.status(400).json({
+          message: "Name, type, subject, and htmlContent are required"
+        });
+      }
+
+      // Convert variables array to JSON string
+      const variablesJson = JSON.stringify(variables || []);
+
+      const [newTemplate] = await db
+        .insert(emailTemplates)
+        .values({
+          name,
+          type,
+          subject,
+          htmlContent,
+          variables: variablesJson,
+          description: description || null,
+          isActive: isActive !== undefined ? isActive : true,
+        })
+        .returning();
+
+      // Parse variables back to array for response
+      const templateWithParsedVariables = {
+        ...newTemplate,
+        variables: JSON.parse(newTemplate.variables || '[]')
+      };
+
+      res.status(201).json(templateWithParsedVariables);
+    } catch (error) {
+      console.error("Error creating email template:", error);
+      res.status(500).json({
+        message: "Error creating email template",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  // Update email template (admin only)
+  app.put("/api/email-templates/:id", isAdmin, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const { name, type, subject, htmlContent, variables, description, isActive } = req.body;
+      const { emailTemplates } = await import("../shared/schema.js");
+      const { eq } = await import("drizzle-orm");
+
+      console.log("Updating template:", templateId, req.body);
+
+      // Check if template exists
+      const [existingTemplate] = await db
+        .select()
+        .from(emailTemplates)
+        .where(eq(emailTemplates.id, templateId))
+        .limit(1);
+
+      if (!existingTemplate) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Convertt variabvariables array to JSON string
+      const variablesJson = JSON.stringify(variables || []);
+
+      const [updatedTemplate] = await db
+        .update(emailTemplates)
+        .set({
+          name,
+          type,
+          subject,
+          htmlContent,
+          variables: variablesJson,
+          description: description || null,
+          isActive: isActive !== undefined ? isActive : true,
+          updatedAt: new Date(),
+        })
+        .where(eq(emailTemplates.id, templateId))
+        .returning();
+
+      // Parse variables back to array for response
+      const templateWithParsedVariables = {
+        ...updatedTemplate,
+        variables: JSON.parse(updatedTemplate.variables || '[]')
+      };
+
+      console.log("Template updated successfully:", templateWithParsedVariables);
+      res.json(templateWithParsedVariables);
+    } catch (error) {
+      console.error("Error updating email template:", error);
+      res.status(500).json({
+        message: "Error updating email template",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  // Delete email template (admin only)
+  app.delete("/api/email-templates/:id", isAdmin, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const { emailTemplates } = await import("../shared/schema.js");
+
+      // Check if template exists
+      const [existingTemplate] = await db
+        .select()
+        .from(emailTemplates)
+        .where(eq(emailTemplates.id, templateId))
+        .limit(1);
+
+      if (!existingTemplate) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      await db
+        .delete(emailTemplates)
+        .where(eq(emailTemplates.id, templateId));
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting email template:", error);
+      res.status(500).json({
+        message: "Error deleting email template",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
   // Support routes
   const supportRouter = (await import("./routes/support.router")).default;
   const { SupportController } = await import(

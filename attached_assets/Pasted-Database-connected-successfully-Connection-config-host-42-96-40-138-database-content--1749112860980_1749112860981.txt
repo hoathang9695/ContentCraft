@@ -1,0 +1,59 @@
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+Database connection test successful: { now: 2025-06-05T08:34:48.384Z }
+🚀 Bắt đầu giả lập 5 message feedback...
+🔄 Processing feedback message: Báo lỗi: Không load được trang
+✅ Feedback request created with ID 323
+👤 Assigned to: Nguyễn Hoàng Anh (ID: 3)
+📧 Email: nguyenvana@test.com, Type: bug_report
+❌ Error sending confirmation email: TransformError: Transform failed with 1 error:
+/home/runner/workspace/server/email.ts:643:9: ERROR: Multiple exports with the same name "EmailService"
+📝 Processed 1/5 feedback messages
+
+🔄 Processing feedback message: Yêu cầu tính năng: Export Excel
+✅ Feedback request created with ID 324
+👤 Assigned to: Nguyễn Thị Khuyên (ID: 2)
+📧 Email: tranthib@test.com, Type: feature_request
+❌ Error sending confirmation email: TransformError: Transform failed with 1 error:
+/home/runner/workspace/server/email.ts:643:9: ERROR: Multiple exports with the same name "EmailService"
+📝 Processed 2/5 feedback messages
+
+🔄 Processing feedback message: Khiếu nại: Interface khó sử dụng
+✅ Feedback request created with ID 325
+👤 Assigned to: Administrator (ID: 1)
+📧 Email: leminhc@test.com, Type: complaint
+❌ Error sending confirmation email: TransformError: Transform failed with 1 error:
+/home/runner/workspace/server/email.ts:643:9: ERROR: Multiple exports with the same name "EmailService"
+📝 Processed 3/5 feedback messages
+
+🔄 Processing feedback message: Đề xuất: Thêm dark mode
+✅ Feedback request created with ID 326
+👤 Assigned to: Nguyễn Hoàng Anh (ID: 3)
+📧 Email: phamthid@test.com, Type: suggestion
+❌ Error sending confirmation email: TransformError: Transform failed with 1 error:
+/home/runner/workspace/server/email.ts:643:9: ERROR: Multiple exports with the same name "EmailService"
+📝 Processed 4/5 feedback messages
+
+🔄 Processing feedback message: Khác: Câu hỏi về API
+✅ Feedback request created with ID 327
+👤 Assigned to: Nguyễn Thị Khuyên (ID: 2)
+📧 Email: hoangvane@test.com, Type: other
+❌ Error sending confirmation email: TransformError: Transform failed with 1 error:
+/home/runner/workspace/server/email.ts:643:9: ERROR: Multiple exports with the same name "EmailService"
+📝 Processed 5/5 feedback messages
+
+🎉 Hoàn tất giả lập 5 feedback messages!
+📊 Kiểm tra trang /user-feedback/feedback để xem kết quả
+✅ Script completed successfully
+run process: run_parent
+
+Caused by:
+    0: handle_syscall pid=725
+    1: get_target_path
+    2: ptrace::getregs
+    3: ESRCH: No such process

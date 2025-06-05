@@ -980,6 +980,55 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
       log(`👤 Feedback request assigned to user ID ${assigned_to_id} (${activeUsers.find(u => u.id === assigned_to_id)?.name})`, "kafka");
       log(`📧 Email: ${message.email}, Subject: ${message.subject}, Type: ${message.feedback_type}`, "kafka");
 
+      // Send confirmation email to user - AFTER transaction completes successfully
+      setTimeout(async () => {
+        try {
+          log(`📧 Starting email confirmation process for feedback #${newRequest[0].id}`, "kafka");
+          
+          // Import EmailService class instead of singleton instance
+          const { EmailService } = await import('./email.js');
+          
+          // Create a fresh instance with proper initialization
+          const emailService = new EmailService();
+          
+          // Force reload SMTP config and wait for it to complete
+          log('🔄 Loading SMTP config from database...', "kafka");
+          await emailService.loadConfigFromDB();
+          
+          // Initialize transporter with loaded config
+          log('🔧 Initializing SMTP transporter...', "kafka");
+          emailService.initializeTransporter();
+          
+          // Wait longer for transporter to be fully ready
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Test if transporter is ready before sending
+          const testResult = await emailService.testConnection();
+          if (!testResult) {
+            log(`❌ SMTP connection test failed for feedback #${newRequest[0].id}`, "kafka-error");
+            return;
+          }
+          
+          log(`✅ SMTP ready, sending confirmation email for feedback #${newRequest[0].id}`, "kafka");
+          
+          const emailSent = await emailService.sendFeedbackConfirmation({
+            to: message.email,
+            fullName: message.full_name,
+            subject: message.subject,
+            feedbackType: message.feedback_type,
+            requestId: newRequest[0].id
+          });
+
+          if (emailSent) {
+            log(`📨 Confirmation email sent successfully to ${message.email} for feedback #${newRequest[0].id}`, "kafka");
+          } else {
+            log(`⚠️ Failed to send confirmation email to ${message.email} for feedback #${newRequest[0].id}`, "kafka-error");
+          }
+        } catch (emailError) {
+          log(`❌ Error sending confirmation email: ${emailError}`, "kafka-error");
+        }
+      }, 3000); // Increase delay to 3 seconds
+
       // Broadcast feedback badge update
       if ((global as any).broadcastFeedbackBadgeUpdate) {
         await (global as any).broadcastFeedbackBadgeUpdate();

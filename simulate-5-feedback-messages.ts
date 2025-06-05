@@ -83,6 +83,28 @@ async function processFeedbackMessage(message: FeedbackMessage) {
     console.log(`👤 Assigned to: ${assignedUser?.name} (ID: ${assigned_to_id})`);
     console.log(`📧 Email: ${message.email}, Type: ${message.feedback_type}`);
 
+    // Send confirmation email to user using EmailService
+    try {
+      const { emailService } = await import('./server/email.js');
+      
+      const emailSent = await emailService.sendFeedbackConfirmation({
+        to: message.email,
+        fullName: message.full_name,
+        subject: message.subject,
+        feedbackType: message.feedback_type,
+        requestId: newRequest[0].id
+      });
+
+      if (emailSent) {
+        console.log(`📨 Confirmation email sent successfully to ${message.email} for feedback #${newRequest[0].id}`);
+      } else {
+        console.log(`⚠️ Failed to send confirmation email to ${message.email} for feedback #${newRequest[0].id}`);
+      }
+    } catch (emailError) {
+      console.log(`❌ Error sending confirmation email: ${emailError}`);
+      // Don't throw error - we don't want to fail the feedback processing if email fails
+    }
+
     return newRequest[0];
   });
 }
