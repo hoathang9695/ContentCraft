@@ -243,6 +243,19 @@ export const smtpConfig = pgTable("smtp_config", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 100 }).notNull(), // feedback_confirmation, support_confirmation, welcome, etc.
+  subject: varchar("subject", { length: 500 }).notNull(),
+  htmlContent: text("html_content").notNull(),
+  variables: text("variables").notNull(), // JSON array of variable names used in template
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Schema để insert SMTP Config
 export const insertSMTPConfigSchema = createInsertSchema(smtpConfig).omit({ 
   id: true, 

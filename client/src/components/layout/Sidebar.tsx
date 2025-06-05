@@ -273,6 +273,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </SidebarItem>
 
                 <SidebarItem
+                  href="/email-templates"
+                  icon={Tag} // Using Tag icon, could be replaced with a more suitable one
+                  isActive={isActivePath('/email-templates')}
+                  onClick={handleItemClick}
+                >
+                  Email Templates
+                </SidebarItem>
+
+                <SidebarItem
                   href="/settings"
                   icon={UserCog}
                   isActive={isActivePath('/settings')}
