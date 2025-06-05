@@ -2327,40 +2327,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const userData of users) {
         try {
-          // Validate data
-          const validatedData = insertFakeUserSchema.parse({
+          // Prepare data for validation
+          const dataToValidate: any = {
             name: userData.name,
             token: userData.token,
             status: "active",
-          });
+          };
+
+          // Add email if provided
+          if (userData.email && userData.email.trim()) {
+            dataToValidate.email = userData.email.trim();
+          }
+
+          // Add password if provided
+          if (userData.password && userData.password.trim()) {
+            dataToValidate.password = userData.password.trim();
+          }
+
+          // Validate data
+          const validatedData = insertFakeUserSchema.parse(dataToValidate);
 
           // Kiểm tra token đã tồn tại chưa
           const existingFakeUser = await storage.getFakeUserByToken(
             validatedData.token,
           );
+          
           if (existingFakeUser) {
-            errors.push(`Token "${validatedData.token}" đã tồn tại`);
-            failedCount++;
+            // Nếu user đã tồn tại, kiểm tra xem có thông tin mới để cập nhật không
+            const updateData: any = {};
+            let hasNewData = false;
+            
+            // Kiểm tra email mới
+            if (validatedData.email && (!existingFakeUser.email || existingFakeUser.email !== validatedData.email)) {
+              updateData.email = validatedData.email;
+              hasNewData = true;
+            }
+            
+            // Kiểm tra password mới
+            if (validatedData.password && (!existingFakeUser.password || existingFakeUser.password !== validatedData.password)) {
+              updateData.password = validatedData.password;
+              hasNewData = true;
+            }
+            
+            // Kiểm tra name mới (trường hợp name khác)
+            if (validatedData.name && existingFakeUser.name !== validatedData.name) {
+              updateData.name = validatedData.name;
+              hasNewData = true;
+            }
+            
+            if (hasNewData) {
+              // Cập nhật thông tin mới
+              await storage.updateFakeUser(existingFakeUser.id, updateData);
+              successCount++;
+              console.log(`✅ Updated existing fake user: ${validatedData.name} (token: ${validatedData.token}) with new data:`, updateData);
+            } else {
+              // Không có thông tin mới để cập nhật
+              errors.push(`Token "${validatedData.token}" đã tồn tại và không có thông tin mới để cập nhật`);
+              failedCount++;
+            }
             continue;
           }
 
           // Tạo người dùng ảo mới
           await storage.createFakeUser(validatedData);
           successCount++;
+          
+          console.log(`✅ Created fake user: ${validatedData.name} with email: ${validatedData.email || 'N/A'}`);
         } catch (error) {
           const errorMsg =
             error instanceof Error ? error.message : String(error);
           errors.push(`Lỗi với "${userData.name}": ${errorMsg}`);
           failedCount++;
+          console.error(`❌ Failed to create fake user ${userData.name}:`, errorMsg);
         }
       }
 
+      console.log(`Bulk upload completed: ${successCount} success, ${failedCount} failed`);
+      
       res.json({
         success: successCount,
         failed: failedCount,
         errors: errors,
       });
     } catch (error) {
+      console.error("Error in bulk upload:", error);
       res.status(500).json({
         message: "Error bulk uploading fake users",
         error: error instanceof Error ? error.message : String(error),
