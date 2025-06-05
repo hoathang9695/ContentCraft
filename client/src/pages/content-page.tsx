@@ -83,13 +83,16 @@ export default function ContentPage() {
 
   return (
     <DashboardLayout onSearch={handleSearch}>
-      <div className="mb-4 flex items-center justify-between"> {/* Modified to align filters */}
-        <div className="flex items-center gap-4">
-          <div className="bg-background border rounded-md p-1">
-            <div className="flex space-x-1">
+      {/* Mobile-optimized filters layout */}
+      <div className="mb-4 space-y-4">
+        {/* Status and verification filters - always on top */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="bg-background border rounded-md p-1 w-full sm:w-auto">
+            <div className="flex space-x-1 w-full">
               <Button 
                 variant={activeTab === 'all' ? 'default' : 'ghost'} 
                 size="sm"
+                className="flex-1 sm:flex-none text-xs sm:text-sm"
                 onClick={() => setActiveTab('all')}
               >
                 Tất cả
@@ -97,6 +100,7 @@ export default function ContentPage() {
               <Button 
                 variant={activeTab === 'processed' ? 'default' : 'ghost'} 
                 size="sm"
+                className="flex-1 sm:flex-none text-xs sm:text-sm"
                 onClick={() => setActiveTab('processed')}
               >
                 Đã xử lý
@@ -104,6 +108,7 @@ export default function ContentPage() {
               <Button 
                 variant={activeTab === 'unprocessed' ? 'default' : 'ghost'} 
                 size="sm"
+                className="flex-1 sm:flex-none text-xs sm:text-sm"
                 onClick={() => setActiveTab('unprocessed')}
               >
                 Chưa xử lý
@@ -111,107 +116,113 @@ export default function ContentPage() {
             </div>
           </div>
 
-          <div className="bg-background border rounded-md p-1">
-            <Button
-              variant={sourceStatus === 'verified' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={toggleSourceStatus}
-            >
-              {sourceStatus === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
-            </Button>
-          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="bg-background border rounded-md p-1 flex-1 sm:flex-none">
+              <Button
+                variant={sourceStatus === 'verified' ? 'default' : 'ghost'}
+                size="sm"
+                className="w-full text-xs sm:text-sm"
+                onClick={toggleSourceStatus}
+              >
+                {sourceStatus === 'verified' ? "Đã xác minh" : "Chưa xác minh"}
+              </Button>
+            </div>
 
-          {user?.role === 'admin' && (
-            <Select 
-              value={selectedUser?.toString() || "all"} 
-              onValueChange={(value) => setSelectedUser(value === "all" ? null : parseInt(value))}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Tất cả" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {editorUsers?.map(user => (
-                  <SelectItem key={user.id} value={user.id.toString()}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+            {user?.role === 'admin' && (
+              <Select 
+                value={selectedUser?.toString() || "all"} 
+                onValueChange={(value) => setSelectedUser(value === "all" ? null : parseInt(value))}
+              >
+                <SelectTrigger className="w-full sm:w-[180px] h-9">
+                  <SelectValue placeholder="Tất cả" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {editorUsers?.map(user => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div>
-            <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "h-10 justify-start text-left font-normal",
-                    !startDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, 'dd/MM/yyyy') : "Tất cả"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setStartDate(date);
-                      if (date > endDate) {
-                        setEndDate(date);
-                      }
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div>
-            <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "h-10 justify-start text-left font-normal",
-                    !endDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, 'dd/MM/yyyy') : "Tất cả"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setEndDate(date);
-                      if (date < startDate) {
+        {/* Date filters - separate row for better mobile layout */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1">
+            <div className="flex-1 sm:flex-none">
+              <Label htmlFor="startDate" className="text-xs mb-1 block">Ngày bắt đầu</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 w-full sm:w-auto justify-start text-left font-normal text-xs sm:text-sm",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    {startDate ? format(startDate, 'dd/MM/yyyy') : "Tất cả"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      if (date) {
                         setStartDate(date);
+                        if (date > endDate) {
+                          setEndDate(date);
+                        }
                       }
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="flex-1 sm:flex-none">
+              <Label htmlFor="endDate" className="text-xs mb-1 block">Ngày kết thúc</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 w-full sm:w-auto justify-start text-left font-normal text-xs sm:text-sm",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    {endDate ? format(endDate, 'dd/MM/yyyy') : "Tất cả"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setEndDate(date);
+                        if (date < startDate) {
+                          setStartDate(date);
+                        }
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
-          <div className="flex items-end gap-2 h-[74px]">
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button 
               variant="default" 
-              className="h-10 bg-green-600 hover:bg-green-700 text-white" 
+              className="h-9 flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm px-3" 
               onClick={() => {
                 if (startDate && endDate) {
                   handleDateFilter();
@@ -233,7 +244,7 @@ export default function ContentPage() {
 
             <Button 
               variant="outline" 
-              className="h-10" 
+              className="h-9 flex-1 sm:flex-none text-xs sm:text-sm px-3" 
               onClick={() => {
                 setStartDate(undefined);
                 setEndDate(undefined);
