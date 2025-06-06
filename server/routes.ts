@@ -3453,16 +3453,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Get content type and validate it's an image
+        // Get content type
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.startsWith('image/')) {
-          console.error('Response is not an image:', contentType);
+        console.log('Response content-type:', contentType, 'for URL:', url);
+
+        // Check if URL suggests it's an image file
+        const urlLower = url.toLowerCase();
+        const isImageUrl = urlLower.includes('.jpg') || urlLower.includes('.jpeg') || 
+                          urlLower.includes('.png') || urlLower.includes('.gif') || 
+                          urlLower.includes('.webp') || urlLower.includes('.svg');
+
+        // Accept if content-type is image/* OR if URL suggests it's an image
+        const isValidImage = (contentType && contentType.startsWith('image/')) || isImageUrl;
+
+        if (!isValidImage) {
+          console.error('Response is not an image:', contentType, 'URL:', url);
           return res.status(400).json({ error: 'URL does not point to an image' });
+        }
+
+        // Determine the actual content type to send
+        let responseContentType = contentType;
+        if (!contentType || contentType === 'application/octet-stream') {
+          // Guess content type from URL extension
+          if (urlLower.includes('.jpg') || urlLower.includes('.jpeg')) {
+            responseContentType = 'image/jpeg';
+          } else if (urlLower.includes('.png')) {
+            responseContentType = 'image/png';
+          } else if (urlLower.includes('.gif')) {
+            responseContentType = 'image/gif';
+          } else if (urlLower.includes('.webp')) {
+            responseContentType = 'image/webp';
+          } else if (urlLower.includes('.svg')) {
+            responseContentType = 'image/svg+xml';
+          } else {
+            responseContentType = 'image/jpeg'; // Default fallback
+          }
+          console.log('Corrected content-type to:', responseContentType);
         }
 
         // Set appropriate headers for image response
         res.set({
-          'Content-Type': contentType,
+          'Content-Type': responseContentType,
           'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET',
