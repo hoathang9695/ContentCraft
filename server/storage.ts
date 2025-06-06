@@ -4,12 +4,33 @@ import {
   userActivities, type UserActivity, type InsertUserActivity,
   categories, type Category, type InsertCategory,
   labels, type Label, type InsertLabel,
-  fakeUsers, type FakeUser, type InsertFakeUser
+  fakeUsers, type FakeUser, type InsertFakeUser,
+  infringingContents, type InfringingContent, type InsertInfringingContent
 } from "@shared/schema";
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db, pool } from "./db"; // Import pool from db.ts
 import { eq, and, or, desc, like, ilike, gte, lte, isNull, ne, count, sql, inArray } from "drizzle-orm";
+import type {
+  User,
+  Content,
+  InsertContent,
+  InsertUser,
+  InsertCategory,
+  Category,
+  InsertLabel,
+  Label,
+  InsertFakeUser,
+  FakeUser,
+  InsertSupportRequest,
+  SupportRequest,
+  InsertPage,
+  Page,
+  InsertGroup,
+  Group,
+  InsertSMTPConfig,
+  SMTPConfig,
+} from "@shared/schema";
 
 // Create a PostgreSQL session store with proper types for ESM
 const PgSession = connectPgSimple(expressSession);
@@ -98,85 +119,45 @@ export interface IStorage {
   updateFakeUser(id: number, fakeUser: Partial<InsertFakeUser>): Promise<FakeUser | undefined>;
   deleteFakeUser(id: number): Promise<boolean>;
   getRandomFakeUser(): Promise<FakeUser | undefined>; // Get a random fake user for comments
+  // Infringing Content methods
+  getPaginatedInfringingContents({
+    userId,
+    userRole,
+    page,
+    limit,
+    startDate,
+    endDate,
+    searchQuery
+  }: {
+    userId: number;
+    userRole: string;
+    page?: number;
+    limit?: number;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    searchQuery?: string;
+  }): Promise<{
+    data: any[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    itemsPerPage: number;
+    dataLength: number;
+  }>;
+  getInfringingContent(id: number): Promise<any>;
+  createInfringingContent(data: any): Promise<any>;
+  updateInfringingContent(id: number, data: Partial<any>): Promise<any>;
+  deleteInfringingContent(id: number): Promise<boolean>;
 
   sessionStore: any; // Using 'any' as a workaround for ESM compatibility
 }
 
 export class DatabaseStorage implements IStorage {
-  // Support request implementations
-  async createSupportRequest(request: InsertSupportRequest): Promise<SupportRequest> {
-    const result = await db.insert(supportRequests).values(request).returning();
-    return result[0];
-  }
-
-  async getSupportRequest(id: number): Promise<SupportRequest | undefined> {
-    const result = await db.select().from(supportRequests).where(eq(supportRequests.id, id));
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async getAllSupportRequests(): Promise<SupportRequest[]> {
-    return await db.select().from(supportRequests).orderBy(desc(supportRequests.created_at));
-  }
-
-  async getSupportRequestsByAssignee(userId: number): Promise<SupportRequest[]> {
-    return await db
-      .select()
-      .from(supportRequests)
-      .where(eq(supportRequests.assigned_to_id, userId))
-      .orderBy(desc(supportRequests.created_at));
-  }
-
-  async updateSupportRequest(id: number, request: Partial<InsertSupportRequest>): Promise<SupportRequest | undefined> {
-    const result = await db
-      .update(supportRequests)
-      .set({
-        ...request,
-        updated_at: new Date()
-      })
-      .where(eq(supportRequests.id, id))
-      .returning();
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async deleteSupportRequest(id: number): Promise<boolean> {
-    const result = await db
-      .delete(supportRequests)
-      .where(eq(supportRequests.id, id))
-      .returning({ id: supportRequests.id });
-    return result.length > 0;
-  }
-
-  async assignSupportRequest(id: number, userId: number): Promise<SupportRequest | undefined> {
-    const result = await db
-      .update(supportRequests)
-      .set({
-        assigned_to_id: userId,
-        assigned_at: new Date(),
-        status: 'processing',
-        updated_at: new Date()
-      })
-      .where(eq(supportRequests.id, id))
-      .returning();
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async completeSupportRequest(id: number, responseContent: string, responderId: number): Promise<SupportRequest | undefined> {
-    const result = await db
-      .update(supportRequests)
-      .set({
-        status: 'completed',
-        response_content: responseContent,
-        responder_id: responderId,
-        response_time: new Date(),
-        updated_at: new Date()
-      })
-      .where(eq(supportRequests.id, id))
-      .returning();
-    return result.length > 0 ? result[0] : undefined;
-  }
-  sessionStore: any;
+  // Add db property
+  private db: any;
 
   constructor() {
+    this.db = db; // Assign the imported db instance
     this.sessionStore = new PgSession({
       pool,
       tableName: 'session', // Specify table name explicitly
@@ -187,6 +168,182 @@ export class DatabaseStorage implements IStorage {
     // Log when session store is initialized
     console.log('PostgreSQL session store initialized');
   }
+  // Infringing Content methods
+  async getPaginatedInfringingContents({
+    userId,
+    userRole,
+    page = 1,
+    limit = 10,
+    startDate,
+    endDate,
+    searchQuery
+  }: {
+    userId: number;
+    userRole: string;
+    page?: number;
+    limit?: number;
+    startDate?: Date | null;
+    endDate?: Date | null;
+    searchQuery?: string;
+  }) {
+    try {
+      const offset = (page - 1) * limit;
+
+      // Build where conditions
+      const conditions = [];
+
+      // Role-based filtering
+      if (userRole !== "admin") {
+        conditions.push(eq(infringingContents.assigned_to_id, userId));
+      }
+
+      // Date range filtering
+      if (startDate) {
+        conditions.push(gte(infringingContents.created_at, startDate));
+      }
+      if (endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        conditions.push(lte(infringingContents.created_at, endOfDay));
+      }
+
+      // Search filtering
+      if (searchQuery && searchQuery.trim()) {
+        conditions.push(
+          or(
+            ilike(infringingContents.externalId, `%${searchQuery}%`),
+            ilike(infringingContents.violation_description, `%${searchQuery}%`)
+          )
+        );
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Get total count
+      const totalResult = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(infringingContents)
+        .where(whereClause);
+
+      const total = Number(totalResult[0]?.count || 0);
+
+      // Get paginated data with processor info
+      const data = await this.db
+        .select({
+          id: infringingContents.id,
+          externalId: infringingContents.externalId,
+          assigned_to_id: infringingContents.assigned_to_id,
+          processing_time: infringingContents.processing_time,
+          violation_description: infringingContents.violation_description,
+          status: infringingContents.status,
+          created_at: infringingContents.created_at,
+          updated_at: infringingContents.updated_at,
+          processor: {
+            username: users.username,
+            name: users.name,
+          },
+        })
+        .from(infringingContents)
+        .leftJoin(users, eq(infringingContents.assigned_to_id, users.id))
+        .where(whereClause)
+        .orderBy(desc(infringingContents.created_at))
+        .limit(limit)
+        .offset(offset);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data,
+        total,
+        totalPages,
+        currentPage: page,
+        itemsPerPage: limit,
+        dataLength: data.length,
+      };
+    } catch (error) {
+      console.error("Error in getPaginatedInfringingContents:", error);
+      throw error;
+    }
+  }
+
+  async getInfringingContent(id: number) {
+    try {
+      const result = await this.db
+        .select({
+          id: infringingContents.id,
+          externalId: infringingContents.externalId,
+          assigned_to_id: infringingContents.assigned_to_id,
+          processing_time: infringingContents.processing_time,
+          violation_description: infringingContents.violation_description,
+          status: infringingContents.status,
+          created_at: infringingContents.created_at,
+          updated_at: infringingContents.updated_at,
+          processor: {
+            username: users.username,
+            name: users.name,
+          },
+        })
+        .from(infringingContents)
+        .leftJoin(users, eq(infringingContents.assigned_to_id, users.id))
+        .where(eq(infringingContents.id, id))
+        .limit(1);
+
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting infringing content:", error);
+      return null;
+    }
+  }
+
+  async createInfringingContent(data: InsertInfringingContent) {
+    try {
+      const result = await this.db
+        .insert(infringingContents)
+        .values({
+          ...data,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .returning();
+
+      return result[0];
+    } catch (error) {
+      console.error("Error creating infringing content:", error);
+      throw error;
+    }
+  }
+
+  async updateInfringingContent(id: number, data: Partial<InsertInfringingContent>) {
+    try {
+      const result = await this.db
+        .update(infringingContents)
+        .set({
+          ...data,
+          updated_at: new Date(),
+        })
+        .where(eq(infringingContents.id, id))
+        .returning();
+
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error updating infringing content:", error);
+      throw error;
+    }
+  }
+
+  async deleteInfringingContent(id: number): Promise<boolean> {
+    try {
+      const result = await this.db
+        .delete(infringingContents)
+        .where(eq(infringingContents.id, id));
+
+      return result.rowCount! > 0;
+    } catch (error) {
+      console.error("Error deleting infringing content:", error);
+      return false;
+    }
+  }
+  sessionStore: any;
 
   // Update all content statuses based on categories
   async updateAllContentStatuses(): Promise<number> {
@@ -588,7 +745,7 @@ export class DatabaseStorage implements IStorage {
     if (searchQuery) {
       const searchTerm = searchQuery.trim();
       const searchTermLower = searchTerm.toLowerCase();
-      
+
       whereConditions.push(
         or(
           // Exact match for external ID
@@ -796,7 +953,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(labels.id, id))
       .returning();
 
-    return result.length > 0 ? result[0] : undefined;
+    return result.length >0 ? result[0] : undefined;
   }
 
   async deleteLabel(id: number): Promise<boolean> {
@@ -871,7 +1028,7 @@ async getFakeUsersWithPagination(page: number, pageSize: number, search: string 
     totalPages: number;
   }> {
     console.log("Storage: getFakeUsersWithPagination called with:", { page, pageSize, search });
-    
+
     const offset = (page - 1) * pageSize;
 
     // Build search conditions
