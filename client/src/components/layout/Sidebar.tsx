@@ -131,6 +131,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </SidebarItem>
 
             <SidebarItem
+              href="/infringing-content"
+              icon={FileText}
+              isActive={isActivePath('/infringing-content')}
+              onClick={handleItemClick}
+            >
+              Xử lý nội dung vi phạm
+            </SidebarItem>
+
+            <SidebarItem
               href="/contents"
               icon={FileText}
               isActive={isActivePath('/contents')}

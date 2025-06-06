@@ -266,6 +266,27 @@ export const insertSMTPConfigSchema = createInsertSchema(smtpConfig).omit({
 export type InsertSMTPConfig = z.infer<typeof insertSMTPConfigSchema>;
 export type SMTPConfig = typeof smtpConfig.$inferSelect;
 
+// Bảng nội dung vi phạm (Infringing Contents)
+export const infringingContents = pgTable("infringing_contents", {
+  id: serial("id").primaryKey(),
+  externalId: text("external_id").notNull().unique(), // ID nội dung từ service bên ngoài
+  assigned_to_id: integer("assigned_to_id").references(() => users.id), // Người xử lý
+  processing_time: timestamp("processing_time"), // Thời gian xử lý
+  violation_description: text("violation_description"), // Mô tả vi phạm
+  status: text("status").notNull().default("pending"), // 'pending', 'processing', 'completed'
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertInfringingContentSchema = createInsertSchema(infringingContents).omit({ 
+  id: true, 
+  created_at: true,
+  updated_at: true 
+});
+
+export type InsertInfringingContent = z.infer<typeof insertInfringingContentSchema>;
+export type InfringingContent = typeof infringingContents.$inferSelect;
+
 export interface ContentMessage {
   externalId: string;        // ID nội dung, kiểu string
   source?: {                // Nguồn cấp dạng object
