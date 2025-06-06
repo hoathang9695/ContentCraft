@@ -160,7 +160,9 @@ async function simulateNewFeedbackMessages() {
       type: "feedback",
       feature_type: "Bảng tin điều khiển chuyên nghiệp",
       detailed_description: "kokokokooookoko",
-      attachment_url: ["https://s3.hn-1.cloud.cmctelecom.vn/prod/sn-web/portal/media_attachments/files/114/634/369/326/923/155/original/f04b8e1e3ec5d9ab.jpg",]
+      attachment_url: [
+        "https://s3.hn-1.cloud.cmctelecom.vn/prod/sn-web/portal/media_attachments/files/114/634/369/326/923/155/original/f04b8e1e3ec5d9ab.jpg"
+      ]
     },
     {
       id: "113725869733725554",
@@ -171,7 +173,9 @@ async function simulateNewFeedbackMessages() {
       feedback_type: "bug_report",
       detailed_description:
         "Trang dashboard không tải được, lỗi 500 server error",
-      attachment_url: "https://example.com/screenshot.png",
+      attachment_url: [
+        "https://example.com/screenshot.png"
+      ],
     },
     {
       id: "113725869733725555",
@@ -182,6 +186,7 @@ async function simulateNewFeedbackMessages() {
       feedback_type: "feature_request",
       feature_type: "Export dữ liệu",
       detailed_description: "Cần tính năng export data ra Excel và CSV",
+      attachment_url: []
     },
     {
       id: "113725869733725556",
@@ -191,6 +196,7 @@ async function simulateNewFeedbackMessages() {
       type: "feedback",
       feedback_type: "complaint",
       detailed_description: "Giao diện khó sử dụng, cần cải thiện UX/UI",
+      attachment_url: []
     },
     {
       id: "113725869733725557",
@@ -201,6 +207,7 @@ async function simulateNewFeedbackMessages() {
       feedback_type: "suggestion",
       feature_type: "Performance",
       detailed_description: "Đề xuất tối ưu hóa tốc độ tải trang",
+      attachment_url: []
     },
     {
       id: "113725869733725558",
@@ -212,7 +219,7 @@ async function simulateNewFeedbackMessages() {
       detailed_description: "Gửi kèm nhiều ảnh minh họa lỗi",
       attachment_url: [
         "https://s3.hn-1.cloud.cmctelecom.vn/prod/sn-web/portal/media_attachments/files/114/634/369/326/923/155/original/f04b8e1e3ec5d9ab.jpg",
-        "https://cdn3.emso.vn/sn-web/media_attachments/files/114/634/476/653/690/641/original/097ae37eb76bcfd9.jpg",
+        "https://cdn3.emso.vn/sn-web/media_attachments/files/114/634/476/653/690/641/original/097ae37eb76bcfd9.jpg"
       ],
     },
   ];
