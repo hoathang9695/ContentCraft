@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SupportRequest } from "@/lib/types";
@@ -14,7 +13,7 @@ interface Props {
 export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   if (!request) return null;
 
   const handleMarkAsViewed = async () => {
@@ -30,7 +29,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
             status: 'processing'
           })
         });
-        
+
         if (response.ok) {
           toast({
             title: "Thành công",
@@ -67,7 +66,9 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
           <div className="space-y-4">
             <div className="grid grid-cols-[100px,1fr] items-center">
               <span className="text-muted-foreground">Họ và tên:</span>
-              <span className="font-medium" style={{ color: '#7367e0' }}>{request.full_name}</span>
+              <span className="font-medium" style={{ color: '#7367e0' }}>{typeof request.full_name === 'string'
+                  ? request.full_name
+                  : (request.full_name as any)?.name || 'N/A'}</span>
             </div>
 
             <div className="grid grid-cols-[100px,1fr] items-center">
@@ -119,9 +120,9 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
             {(request as any).attachment_url && (
               <div className="grid grid-cols-[100px,1fr] items-center">
                 <span className="text-muted-foreground">File đính kèm:</span>
-                <a 
-                  href={(request as any).attachment_url} 
-                  target="_blank" 
+                <a
+                  href={(request as any).attachment_url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-800 underline font-medium"
                 >
@@ -133,10 +134,10 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
         </div>
 
         <div className="flex justify-end bg-gray-50 p-4 mt-6">
-          <Button 
+          <Button
             onClick={handleMarkAsViewed}
             className="text-white px-6"
-            style={{ 
+            style={{
               backgroundColor: '#7367e0',
               '&:hover': { backgroundColor: '#5a52cc' }
             }}

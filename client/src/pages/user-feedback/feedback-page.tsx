@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
@@ -36,10 +35,11 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { EmailReplyDialog } from "@/components/EmailReplyDialog";
 import { SupportDetailDialog } from "@/components/SupportDetailDialog";
+import { FilePreviewDialog } from "@/components/FilePreviewDialog";
 
 interface FeedbackRequest {
   id: number;
-  full_name: string;
+  full_name: string | { id: string; name: string };
   email: string;
   subject: string;
   content: string;
@@ -52,6 +52,7 @@ interface FeedbackRequest {
   response_time: string | null;
   created_at: string;
   updated_at: string;
+  attachment_url: string | string[] | null;
 }
 
 export default function FeedbackPage() {
@@ -64,6 +65,11 @@ export default function FeedbackPage() {
   const [searchResults, setSearchResults] = useState<FeedbackRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<FeedbackRequest | null>(null);
   const [replyRequest, setReplyRequest] = useState<FeedbackRequest | null>(null);
+  const [filePreview, setFilePreview] = useState<{ isOpen: boolean; fileUrl: string | string[] | null; fileName?: string }>({
+    isOpen: false,
+    fileUrl: null,
+    fileName: undefined
+  });
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -467,9 +473,35 @@ export default function FeedbackPage() {
               {
                 key: 'full_name',
                 header: 'Họ và tên',
-                render: (row: FeedbackRequest) => (
-                  <div className="font-medium">{row.full_name}</div>
-                ),
+                render: (row: FeedbackRequest) => {
+                  const userName = typeof row.full_name === 'string' 
+                    ? row.full_name 
+                    : (row.full_name as any)?.name || 'N/A';
+
+                  const userId = typeof row.full_name === 'object' && row.full_name 
+                    ? (row.full_name as any)?.id 
+                    : null;
+
+                  if (userId) {
+                    return (
+                      <div 
+                        className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline"
+                        onClick={() => {
+                          window.open(`https://emso.vn/user/${userId}`, '_blank', 'noopener,noreferrer');
+                        }}
+                        title={`Xem profile của ${userName}`}
+                      >
+                        {userName}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="font-medium">
+                      {userName}
+                    </div>
+                  );
+                },
               },
               {
                 key: 'email',
@@ -507,24 +539,58 @@ export default function FeedbackPage() {
                 ),
               },
               {
-                key: 'attachment',
-                header: 'File đính kèm',
-                render: (row: FeedbackRequest) => (
-                  <div>
-                    {row.attachment_url ? (
-                      <a 
-                        href={row.attachment_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline"
+                key: "attachment",
+                header: "File đính kèm",
+                render: (row: FeedbackRequest) => {
+                  console.log('FeedbackPage - Row attachment_url:', row.attachment_url, 'Type:', typeof row.attachment_url);
+
+                  // Check if no attachment or empty array
+                  if (!row.attachment_url) {
+                    return <span className="text-muted-foreground">Không có</span>;
+                  }
+
+                  // Handle string case - parse JSON if it's a JSON string
+                  let hasValidAttachments = false;
+                  try {
+                    if (typeof row.attachment_url === 'string') {
+                      const trimmed = row.attachment_url.trim();
+                      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                        const parsed = JSON.parse(trimmed);
+                        hasValidAttachments = Array.isArray(parsed) && parsed.length > 0 && parsed.some(url => url && typeof url === 'string' && url.trim() !== '');
+                      } else {
+                        hasValidAttachments = trimmed !== '';
+                      }
+                    } else if (Array.isArray(row.attachment_url)) {
+                      hasValidAttachments = row.attachment_url.length > 0 && row.attachment_url.some(url => url && typeof url === 'string' && url.trim() !== '');
+                    }
+                  } catch (error) {
+                    hasValidAttachments = false;
+                  }
+
+                  if (!hasValidAttachments) {
+                    return <span className="text-muted-foreground">Không có</span>;
+                  }
+
+                  return (
+                    <div>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+                        onClick={() => {
+                          console.log('FeedbackPage - Opening preview for:', row.attachment_url);
+                          setFilePreview({
+                            isOpen: true,
+                            fileUrl: row.attachment_url,
+                            fileName: `Feedback #${row.id} - File đính kèm`
+                          });
+                        }}
                       >
                         Xem file
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">Không có</span>
-                    )}
-                  </div>
-                ),
+                      </Button>
+                    </div>
+                  );
+                },
               },
               {
                 key: 'status',
@@ -609,7 +675,7 @@ export default function FeedbackPage() {
                                   response_content: 'Đã xử lý đóng góp ý kiến'
                                 })
                               });
-                              
+
                               if (response.ok) {
                                 toast({
                                   title: "Thành công",
@@ -617,7 +683,7 @@ export default function FeedbackPage() {
                                 });
                                 queryClient.invalidateQueries(['/api/feedback-requests']);
                                 queryClient.invalidateQueries(['/api/badge-counts']);
-                                
+
                                 // Force refresh badge counts immediately
                                 queryClient.refetchQueries(['/api/badge-counts'], { active: true });
                               } else {
@@ -655,6 +721,12 @@ export default function FeedbackPage() {
           onSuccess={() => {
             queryClient.invalidateQueries(['/api/feedback-requests']);
           }}
+        />
+        <FilePreviewDialog
+          isOpen={filePreview.isOpen}
+          onClose={() => setFilePreview({ isOpen: false, fileUrl: null, fileName: undefined })}
+          fileUrl={filePreview.fileUrl}
+          fileName={filePreview.fileName}
         />
       </div>
     </DashboardLayout>

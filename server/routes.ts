@@ -3419,6 +3419,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(401).json({ message: "Unauthorized" });
   };
 
+  // Image proxy endpoint with improved error handling
+  app.get("/api/proxy-image", async (req, res) => {
+    try {
+      const { url } = req.query;
+      
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: 'URL parameter is required' });
+      }
+
+      console.log('Proxy image request for:', url);
+
+      // Set timeout for fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'image/*,*/*',
+            'Cache-Control': 'no-cache'
+          }
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.error('Failed to fetch image:', response.status, response.statusText);
+          return res.status(response.status).json({ 
+            error: `Failed to fetch image: ${response.status} ${response.statusText}` 
+          });
+        }
+
+        // Get content type
+        const contentType = response.headers.get('content-type');
+        console.log('Response content-type:', contentType, 'for URL:', url);
+
+        // Check if URL suggests it's an image file
+        const urlLower = url.toLowerCase();
+        const isImageUrl = urlLower.includes('.jpg') || urlLower.includes('.jpeg') || 
+                          urlLower.includes('.png') || urlLower.includes('.gif') || 
+                          urlLower.includes('.webp') || urlLower.includes('.svg');
+
+        // Accept if content-type is image/* OR if URL suggests it's an image
+        const isValidImage = (contentType && contentType.startsWith('image/')) || isImageUrl;
+
+        if (!isValidImage) {
+          console.error('Response is not an image:', contentType, 'URL:', url);
+          return res.status(400).json({ error: 'URL does not point to an image' });
+        }
+
+        // Determine the actual content type to send
+        let responseContentType = contentType;
+        if (!contentType || contentType === 'application/octet-stream') {
+          // Guess content type from URL extension
+          if (urlLower.includes('.jpg') || urlLower.includes('.jpeg')) {
+            responseContentType = 'image/jpeg';
+          } else if (urlLower.includes('.png')) {
+            responseContentType = 'image/png';
+          } else if (urlLower.includes('.gif')) {
+            responseContentType = 'image/gif';
+          } else if (urlLower.includes('.webp')) {
+            responseContentType = 'image/webp';
+          } else if (urlLower.includes('.svg')) {
+            responseContentType = 'image/svg+xml';
+          } else {
+            responseContentType = 'image/jpeg'; // Default fallback
+          }
+          console.log('Corrected content-type to:', responseContentType);
+        }
+
+        // Set appropriate headers for image response
+        res.set({
+          'Content-Type': responseContentType,
+          'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        });
+
+        // Stream the image data
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+
+        console.log('Successfully proxied image:', url);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          console.error('Image fetch timeout for:', url);
+          return res.status(408).json({ error: 'Request timeout' });
+        }
+        
+        console.error('Error fetching image:', fetchError.message);
+        return res.status(500).json({ error: 'Failed to fetch image' });
+      }
+    } catch (error) {
+      console.error('Proxy image error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });

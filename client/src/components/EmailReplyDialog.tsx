@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface SupportRequest {
   id: number;
-  full_name: string;
+  full_name: string | { id: number; name: string };
   email: string;
   subject: string;
   content: string;
@@ -72,28 +72,28 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      
+
       // Check if the item is an image
       if (item.type.indexOf('image') !== -1) {
         e.preventDefault();
-        
+
         const file = item.getAsFile();
         if (file) {
           // Create a unique filename for the pasted image
           const timestamp = Date.now();
           const fileName = `pasted-image-${timestamp}.${file.type.split('/')[1]}`;
-          
+
           // Create a new File object with a proper name
           const namedFile = new File([file], fileName, { type: file.type });
-          
+
           // Add to attached files
           setAttachedFiles(prev => [...prev, namedFile]);
-          
+
           // Create a data URL for display in editor
           const reader = new FileReader();
           reader.onload = (event) => {
             const dataUrl = event.target?.result as string;
-            
+
             // Insert image into editor at cursor position
             if (editorRef.current) {
               const selection = window.getSelection();
@@ -104,22 +104,22 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                 img.style.maxWidth = '100%';
                 img.style.height = 'auto';
                 img.alt = fileName;
-                
+
                 range.deleteContents();
                 range.insertNode(img);
-                
+
                 // Move cursor after image
                 range.setStartAfter(img);
                 range.setEndAfter(img);
                 selection.removeAllRanges();
                 selection.addRange(range);
-                
+
                 handleEditorChange();
               }
             }
           };
           reader.readAsDataURL(file);
-          
+
           toast({
             title: "Hình ảnh đã được thêm",
             description: `${fileName} đã được thêm vào email và danh sách đính kèm`,
@@ -146,7 +146,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
       submitFormData.append('subject', formData.subject);
       submitFormData.append('content', htmlContent);
       submitFormData.append('response_content', plainTextContent);
-      
+
       // Add attached files
       attachedFiles.forEach((file, index) => {
         submitFormData.append('attachments', file);
@@ -351,7 +351,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
 
           {/* Original Request */}
           <div className="px-4 py-3 bg-gray-50 border-b flex-shrink-0">
-            <div className="text-sm text-gray-600 mb-2">Yêu cầu gốc từ {request.full_name}:</div>
+            <div className="text-sm text-gray-600 mb-2">Yêu cầu gốc từ {typeof request.full_name === 'string' ? request.full_name : (request.full_name as any)?.name || 'N/A'}:</div>
             <div className="bg-white p-3 rounded border text-sm max-h-20 overflow-y-auto">
               {request.content}
             </div>
@@ -437,12 +437,12 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                   const truncatedName = file.name.length > 25
                     ? `${file.name.substring(0, 12)}...${file.name.substring(file.name.lastIndexOf('.'))}`
                     : file.name;
-                  
+
                   const fileSizeKB = (file.size / 1024).toFixed(1);
                   const fileSizeDisplay = file.size > 1024 * 1024 
                     ? `${(file.size / (1024 * 1024)).toFixed(1)}MB`
                     : `${fileSizeKB}KB`;
-                  
+
                   return (
                     <div 
                       key={index} 
@@ -531,7 +531,7 @@ export function EmailReplyDialog({ isOpen, onClose, request, onSuccess }: EmailR
                   height: 0 !important;
                   overflow: hidden !important;
                 }
-                
+
                 /* Additional specific selector for the exact button structure */
                 .dialog-content button.absolute.right-4.top-4 {
                   display: none !important;
