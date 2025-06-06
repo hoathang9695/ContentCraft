@@ -150,9 +150,24 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
           processedExternalId = `${content?.externalId}_${type}_${sourceData.id}`;
         }
 
-        // Format categories and labels for Gorse API
-        const categoriesArray = data.categories.split(',').map(c => c.trim()).filter(Boolean);
-        const labelsArray = data.labels.split(',').map(l => l.trim()).filter(Boolean);
+        // Parse categories and labels for Gorse API (handle PostgreSQL array format)
+        const parsePostgreSQLArray = (str: string): string[] => {
+          if (!str) return [];
+          
+          // Handle PostgreSQL array format like {"default","Kỹ năng sống"}
+          if (str.startsWith('{') && str.endsWith('}')) {
+            return str.slice(1, -1)
+              .split(',')
+              .map(item => item.replace(/"/g, '').trim())
+              .filter(Boolean);
+          }
+          
+          // Handle comma-separated format
+          return str.split(',').map(c => c.trim()).filter(Boolean);
+        };
+
+        const categoriesArray = parsePostgreSQLArray(data.categories);
+        const labelsArray = parsePostgreSQLArray(data.labels);
 
         const gorsePayload = {
           Categories: categoriesArray,

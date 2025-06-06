@@ -407,6 +407,87 @@ export class ContentController {
 
         console.log("Content updated successfully:", updatedContent);
 
+        // Send to Gorse after successful database update
+        try {
+          if (validatedData.safe === true && validatedData.sourceVerification === 'verified') {
+            // Parse source data for external ID processing
+            let sourceData = null;
+            if (existingContent.source) {
+              try {
+                sourceData = JSON.parse(existingContent.source);
+              } catch (e) {
+                console.error("Error parsing source data:", e);
+              }
+            }
+
+            // Process external ID for Gorse
+            let processedExternalId = existingContent.externalId;
+            if (sourceData?.id && sourceData?.type) {
+              const type = sourceData.type.toLowerCase() === 'account' ? 'user' : 'page';
+              processedExternalId = `${existingContent.externalId}_${type}_${sourceData.id}`;
+            }
+
+            // Parse categories and labels (handle PostgreSQL array format)
+            const parsePostgreSQLArray = (str: string): string[] => {
+              if (!str) return [];
+              
+              // Handle PostgreSQL array format like {"default","Kỹ năng sống"}
+              if (str.startsWith('{') && str.endsWith('}')) {
+                return str.slice(1, -1)
+                  .split(',')
+                  .map(item => item.replace(/"/g, '').trim())
+                  .filter(Boolean);
+              }
+              
+              // Handle comma-separated format
+              return str.split(',').map(c => c.trim()).filter(Boolean);
+            };
+
+            const categoriesArray = parsePostgreSQLArray(updatedContent.categories || '');
+            const labelsArray = parsePostgreSQLArray(updatedContent.labels || '');
+
+            const gorsePayload = {
+              Categories: categoriesArray,
+              Labels: labelsArray,
+              IsHidden: validatedData.safe === false,
+              Timestamp: new Date().toISOString()
+            };
+
+            console.log("Sending to Gorse:", {
+              url: `https://prod-gorse-sn.emso.vn/api/item/${processedExternalId}`,
+              method: existingContent.sourceVerification === 'unverified' ? 'POST' : 'PATCH',
+              payload: { ...gorsePayload, ...(existingContent.sourceVerification === 'unverified' ? { ItemId: processedExternalId } : {}) }
+            });
+
+            // Determine HTTP method based on verification status change
+            const httpMethod = existingContent.sourceVerification === 'unverified' ? 'POST' : 'PATCH';
+            const apiUrl = httpMethod === 'POST' 
+              ? 'https://prod-gorse-sn.emso.vn/api/item'
+              : `https://prod-gorse-sn.emso.vn/api/item/${processedExternalId}`;
+
+            const requestBody = httpMethod === 'POST' 
+              ? { ...gorsePayload, ItemId: processedExternalId }
+              : gorsePayload;
+
+            const gorseResponse = await fetch(apiUrl, {
+              method: httpMethod,
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(requestBody)
+            });
+
+            if (gorseResponse.ok) {
+              console.log(`✅ Successfully sent ${httpMethod} to Gorse for item: ${processedExternalId}`);
+            } else {
+              console.error(`❌ Gorse API error: ${gorseResponse.status} - ${gorseResponse.statusText}`);
+            }
+          }
+        } catch (gorseError) {
+          console.error("Error sending to Gorse:", gorseError);
+          // Don't fail the main request if Gorse fails
+        }
+
         return res.json({
           success: true,
           data: updatedContent,
