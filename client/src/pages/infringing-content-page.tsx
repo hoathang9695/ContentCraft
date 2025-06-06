@@ -559,7 +559,14 @@ export default function InfringingContentPage() {
                 infringingContentsData?.data.map((content) => (
                   <TableRow key={content.id}>
                     <TableCell className="font-mono text-sm">
-                      {content.externalId}
+                      <a
+                        href={`https://emso.vn/posts/${content.externalId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      >
+                        {content.externalId}
+                      </a>
                     </TableCell>
                     <TableCell>
                       {content.processor ? (
