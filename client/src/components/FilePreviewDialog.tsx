@@ -146,19 +146,20 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
 
     switch (fileType) {
       case 'image':
+        // Use proxy endpoint for external URLs
+        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(currentFileUrl)}`;
+        
         return (
           <div className="flex justify-center">
             <img 
-              src={currentFileUrl} 
+              src={proxyUrl}
               alt={fileName || 'File đính kèm'}
               className="max-w-full max-h-96 object-contain rounded-lg"
-              crossOrigin="anonymous"
-              referrerPolicy="no-referrer"
               onLoad={() => {
-                console.log('FilePreviewDialog - Image loaded successfully:', currentFileUrl);
+                console.log('FilePreviewDialog - Image loaded successfully via proxy:', currentFileUrl);
               }}
               onError={(e) => {
-                console.error('FilePreviewDialog - Image failed to load:', currentFileUrl);
+                console.error('FilePreviewDialog - Image failed to load via proxy:', currentFileUrl);
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
                 // Show fallback message
@@ -166,11 +167,11 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
                 if (parent) {
                   parent.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-64 text-gray-500 p-4">
-                      <div class="h-16 w-16 mb-4 flex items-center justify-center border-2 border-amber-300 rounded bg-amber-50">
-                        <span class="text-xs text-amber-600 font-semibold">IMG</span>
+                      <div class="h-16 w-16 mb-4 flex items-center justify-center border-2 border-red-300 rounded bg-red-50">
+                        <span class="text-xs text-red-600 font-semibold">IMG</span>
                       </div>
-                      <p class="text-amber-600 font-medium mb-2">⚠️ Không thể hiển thị ảnh trong Replit</p>
-                      <p class="text-xs text-gray-400 mb-3 text-center">Môi trường Replit có thể bị hạn chế truy cập tài nguyên bên ngoài</p>
+                      <p class="text-red-600 font-medium mb-2">❌ Không thể tải ảnh</p>
+                      <p class="text-xs text-gray-400 mb-3 text-center">Server không thể truy cập URL này hoặc URL đã hết hạn</p>
                       <p class="text-xs text-gray-600 mb-4 break-all max-w-md text-center bg-gray-100 p-2 rounded">
                         URL: ${currentFileUrl}
                       </p>
