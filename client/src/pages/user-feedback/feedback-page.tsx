@@ -39,7 +39,7 @@ import { SupportDetailDialog } from "@/components/SupportDetailDialog";
 
 interface FeedbackRequest {
   id: number;
-  full_name: string;
+  full_name: string | { id: string; name: string };
   email: string;
   subject: string;
   content: string;
@@ -468,7 +468,12 @@ export default function FeedbackPage() {
                 key: 'full_name',
                 header: 'Họ và tên',
                 render: (row: FeedbackRequest) => (
-                  <div className="font-medium">{row.full_name}</div>
+                  <div className="font-medium">
+                    {typeof row.full_name === 'string' 
+                      ? row.full_name 
+                      : (row.full_name as any)?.name || 'N/A'
+                    }
+                  </div>
                 ),
               },
               {
