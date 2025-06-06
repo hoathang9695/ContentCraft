@@ -45,6 +45,12 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
           return validUrls;
         }
         
+        // If parsed result is an empty object {}, treat as no files
+        if (typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length === 0) {
+          console.log('FilePreviewDialog - Empty JSON object, no URLs');
+          return [];
+        }
+        
         // If parsed result is a string, treat as single URL
         if (typeof parsed === 'string' && parsed.trim() !== '') {
           console.log('FilePreviewDialog - JSON string, URL:', [parsed.trim()]);
