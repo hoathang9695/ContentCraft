@@ -86,22 +86,40 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
 
       default:
         return (
-          <div key={index} className="flex flex-col items-center justify-center mb-4 p-8 border-2 border-dashed border-gray-300 rounded-lg">
-            <div className="text-6xl text-gray-400 mb-4">📄</div>
-            <p className="text-lg font-medium text-gray-700">{displayName}</p>
-            <p className="text-sm text-gray-500 mb-4">Không thể xem trước file này</p>
-            <div className="flex gap-2">
+          <div key={index} className="flex flex-col items-center justify-center mb-4 p-12 border border-gray-200 rounded-lg bg-gray-50">
+            {/* File Icon */}
+            <div className="flex items-center justify-center w-16 h-20 mb-4">
+              <svg width="64" height="80" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 0H48L64 16V72C64 76.4183 60.4183 80 56 80H8C3.58172 80 0 76.4183 0 72V8C0 3.58172 3.58172 0 8 0Z" fill="#E5E7EB"/>
+                <path d="M48 0V16H64L48 0Z" fill="#D1D5DB"/>
+                <rect x="8" y="32" width="24" height="2" fill="#9CA3AF"/>
+                <rect x="8" y="40" width="32" height="2" fill="#9CA3AF"/>
+                <rect x="8" y="48" width="28" height="2" fill="#9CA3AF"/>
+                <rect x="8" y="56" width="20" height="2" fill="#9CA3AF"/>
+              </svg>
+            </div>
+            
+            {/* File Name */}
+            <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">{displayName}</h3>
+            
+            {/* Message */}
+            <p className="text-sm text-gray-500 mb-6 text-center">Không thể xem trước file này</p>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-3">
               <Button 
                 variant="outline" 
                 size="sm"
+                className="flex items-center gap-2"
                 onClick={() => window.open(url, '_blank')}
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <ExternalLink className="h-4 w-4" />
                 Mở trong tab mới
               </Button>
               <Button 
                 variant="outline" 
                 size="sm"
+                className="flex items-center gap-2"
                 onClick={() => {
                   const a = document.createElement('a');
                   a.href = url;
@@ -111,7 +129,7 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
                   document.body.removeChild(a);
                 }}
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4" />
                 Tải xuống
               </Button>
             </div>
