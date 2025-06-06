@@ -1,4 +1,4 @@
-typescript
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "../components/layout/DashboardLayout";
@@ -216,10 +216,10 @@ export default function InfringingContentPage() {
         setIsSearchDialogOpen(false);
         setExternalIdInput("");
         setViolationDescriptionInput("");
-
+        
         // Refresh the table data
         refetch();
-
+        
         toast({
           title: "Thành công",
           description: result.message || "Đã xử lý thành công nội dung vi phạm",
@@ -306,8 +306,13 @@ export default function InfringingContentPage() {
                         mode="single"
                         selected={startDate}
                         onSelect={(date) => {
-                        setStartDate(date);
-                      }}
+                          if (date) {
+                            setStartDate(date);
+                            if (date > endDate) {
+                              setEndDate(date);
+                            }
+                          }
+                        }}
                         locale={vi}
                         initialFocus
                       />
@@ -335,8 +340,13 @@ export default function InfringingContentPage() {
                         mode="single"
                         selected={endDate}
                         onSelect={(date) => {
-                        setEndDate(date);
-                      }}
+                          if (date) {
+                            setEndDate(date);
+                            if (date < startDate) {
+                              setStartDate(date);
+                            }
+                          }
+                        }}
                         locale={vi}
                         initialFocus
                       />
@@ -687,7 +697,7 @@ export default function InfringingContentPage() {
                   className="w-full"
                 />
               </div>
-
+              
               <div className="grid gap-2">
                 <Label htmlFor="violationDescription" className="text-sm font-medium">
                   Mô tả vi phạm <span className="text-red-500">*</span>
