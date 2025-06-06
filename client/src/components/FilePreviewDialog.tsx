@@ -17,9 +17,13 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
   const fileUrls = useMemo(() => {
     if (!fileUrl) return [];
 
+    console.log('FilePreviewDialog - Input fileUrl:', fileUrl, 'Type:', typeof fileUrl);
+
     // If it's already an array, return it
     if (Array.isArray(fileUrl)) {
-      return fileUrl.filter(url => url && url.trim() !== '');
+      const validUrls = fileUrl.filter(url => url && typeof url === 'string' && url.trim() !== '');
+      console.log('FilePreviewDialog - Array input, valid URLs:', validUrls);
+      return validUrls;
     }
 
     // If it's a string, handle different cases
@@ -32,26 +36,48 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
       // Try to parse as JSON first (for both array and string cases)
       try {
         const parsed = JSON.parse(trimmed);
+        console.log('FilePreviewDialog - Parsed JSON:', parsed);
         
         // If parsed result is an array
         if (Array.isArray(parsed)) {
-          return parsed.filter(url => url && typeof url === 'string' && url.trim() !== '');
+          const validUrls = parsed.filter(url => url && typeof url === 'string' && url.trim() !== '');
+          console.log('FilePreviewDialog - JSON array, valid URLs:', validUrls);
+          return validUrls;
         }
         
         // If parsed result is a string, treat as single URL
         if (typeof parsed === 'string' && parsed.trim() !== '') {
+          console.log('FilePreviewDialog - JSON string, URL:', [parsed.trim()]);
           return [parsed.trim()];
         }
         
         return [];
       } catch (error) {
+        console.log('FilePreviewDialog - JSON parse failed, error:', error);
+        
         // If JSON parsing fails, check if it looks like a JSON array format but malformed
         if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
           console.error('Malformed JSON array:', trimmed, error);
-          return [];
+          
+          // Try to extract URLs from malformed JSON array
+          try {
+            // Remove brackets and split by comma, then clean up
+            const content = trimmed.slice(1, -1);
+            const urls = content.split(',').map(url => {
+              // Remove quotes and trim
+              return url.replace(/['"]/g, '').trim();
+            }).filter(url => url && url.length > 0);
+            
+            console.log('FilePreviewDialog - Extracted URLs from malformed JSON:', urls);
+            return urls;
+          } catch (extractError) {
+            console.error('Failed to extract URLs from malformed JSON:', extractError);
+            return [];
+          }
         }
         
         // If it's not JSON, treat as a single URL
+        console.log('FilePreviewDialog - Single URL string:', [trimmed]);
         return [trimmed];
       }
     }
@@ -126,7 +152,11 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
               src={currentFileUrl} 
               alt={fileName || 'File đính kèm'}
               className="max-w-full max-h-96 object-contain rounded-lg"
+              onLoad={() => {
+                console.log('FilePreviewDialog - Image loaded successfully:', currentFileUrl);
+              }}
               onError={(e) => {
+                console.error('FilePreviewDialog - Image failed to load:', currentFileUrl);
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
                 // Show fallback message
@@ -138,7 +168,13 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
                         <span class="text-xs">IMG</span>
                       </div>
                       <p>Không thể tải ảnh</p>
-                      <p class="text-sm mt-2 break-all">URL: ${currentFileUrl}</p>
+                      <p class="text-sm mt-2 break-all max-w-md">URL: ${currentFileUrl}</p>
+                      <button 
+                        onclick="window.open('${currentFileUrl}', '_blank')"
+                        class="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                      >
+                        Mở trong tab mới
+                      </button>
                     </div>
                   `;
                 }
