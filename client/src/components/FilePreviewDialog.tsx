@@ -1,7 +1,117 @@
 import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, Download, ExternalLink, File as FileIcon } from "lucide-react";
+import { X, Download, ExternalLink, File as FileIcon, RefreshCw } from "lucide-react";
+
+// Component for image with retry mechanism
+function ImageWithRetry({ 
+  src, 
+  originalUrl, 
+  alt, 
+  className 
+}: { 
+  src: string; 
+  originalUrl: string; 
+  alt: string; 
+  className: string; 
+}) {
+  const [retryCount, setRetryCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const handleLoad = () => {
+    console.log('FilePreviewDialog - Image loaded successfully via proxy:', originalUrl);
+    setIsLoading(false);
+    setHasError(false);
+  };
+
+  const handleError = () => {
+    console.error('FilePreviewDialog - Image failed to load via proxy (attempt ' + (retryCount + 1) + '):', originalUrl);
+    setIsLoading(false);
+    
+    if (retryCount < 2) {
+      // Auto retry up to 2 times
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        setRetryKey(prev => prev + 1);
+        setIsLoading(true);
+        setHasError(false);
+      }, 1000 * (retryCount + 1)); // Increase delay with each retry
+    } else {
+      setHasError(true);
+    }
+  };
+
+  const handleManualRetry = () => {
+    setRetryCount(0);
+    setRetryKey(prev => prev + 1);
+    setIsLoading(true);
+    setHasError(false);
+  };
+
+  if (hasError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-gray-500 p-4">
+        <div className="h-16 w-16 mb-4 flex items-center justify-center border-2 border-red-300 rounded bg-red-50">
+          <span className="text-xs text-red-600 font-semibold">IMG</span>
+        </div>
+        <p className="text-red-600 font-medium mb-2">❌ Không thể tải ảnh</p>
+        <p className="text-xs text-gray-400 mb-3 text-center">
+          Server không thể truy cập URL này hoặc URL đã hết hạn (Đã thử {retryCount + 1} lần)
+        </p>
+        <p className="text-xs text-gray-600 mb-4 break-all max-w-md text-center bg-gray-100 p-2 rounded">
+          URL: {originalUrl}
+        </p>
+        <div className="flex gap-2 flex-wrap justify-center">
+          <button 
+            onClick={handleManualRetry}
+            className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs transition-colors flex items-center gap-1"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Thử lại
+          </button>
+          <button 
+            onClick={() => window.open(originalUrl, '_blank')}
+            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors"
+          >
+            🔗 Mở trong tab mới
+          </button>
+          <button 
+            onClick={() => navigator.clipboard.writeText(originalUrl)}
+            className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs transition-colors"
+          >
+            📋 Copy URL
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-blue-500 mb-2" />
+            <p className="text-sm text-gray-500">
+              Đang tải ảnh... {retryCount > 0 && `(Lần thử ${retryCount + 1})`}
+            </p>
+          </div>
+        </div>
+      )}
+      <img 
+        key={retryKey}
+        src={src}
+        alt={alt}
+        className={className}
+        onLoad={handleLoad}
+        onError={handleError}
+        style={{ display: hasError ? 'none' : 'block' }}
+      />
+    </div>
+  );
+}
 
 interface FilePreviewDialogProps {
   isOpen: boolean;
@@ -152,53 +262,16 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
 
     switch (fileType) {
       case 'image':
-        // Use proxy endpoint for external URLs
+        // Use proxy endpoint for external URLs with retry mechanism
         const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(currentFileUrl)}`;
         
         return (
           <div className="flex justify-center">
-            <img 
+            <ImageWithRetry 
               src={proxyUrl}
+              originalUrl={currentFileUrl}
               alt={fileName || 'File đính kèm'}
               className="max-w-full max-h-96 object-contain rounded-lg"
-              onLoad={() => {
-                console.log('FilePreviewDialog - Image loaded successfully via proxy:', currentFileUrl);
-              }}
-              onError={(e) => {
-                console.error('FilePreviewDialog - Image failed to load via proxy:', currentFileUrl);
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                // Show fallback message
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-64 text-gray-500 p-4">
-                      <div class="h-16 w-16 mb-4 flex items-center justify-center border-2 border-red-300 rounded bg-red-50">
-                        <span class="text-xs text-red-600 font-semibold">IMG</span>
-                      </div>
-                      <p class="text-red-600 font-medium mb-2">❌ Không thể tải ảnh</p>
-                      <p class="text-xs text-gray-400 mb-3 text-center">Server không thể truy cập URL này hoặc URL đã hết hạn</p>
-                      <p class="text-xs text-gray-600 mb-4 break-all max-w-md text-center bg-gray-100 p-2 rounded">
-                        URL: ${currentFileUrl}
-                      </p>
-                      <div class="flex gap-2">
-                        <button 
-                          onclick="window.open('${currentFileUrl}', '_blank')"
-                          class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors"
-                        >
-                          🔗 Mở trong tab mới
-                        </button>
-                        <button 
-                          onclick="navigator.clipboard.writeText('${currentFileUrl}')"
-                          class="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs transition-colors"
-                        >
-                          📋 Copy URL
-                        </button>
-                      </div>
-                    </div>
-                  `;
-                }
-              }}
             />
           </div>
         );
