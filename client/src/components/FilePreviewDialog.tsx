@@ -152,6 +152,8 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
               src={currentFileUrl} 
               alt={fileName || 'File đính kèm'}
               className="max-w-full max-h-96 object-contain rounded-lg"
+              crossOrigin="anonymous"
+              referrerPolicy="no-referrer"
               onLoad={() => {
                 console.log('FilePreviewDialog - Image loaded successfully:', currentFileUrl);
               }}
@@ -164,11 +166,11 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
                 if (parent) {
                   parent.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-64 text-gray-500 p-4">
-                      <div class="h-16 w-16 mb-4 flex items-center justify-center border-2 border-red-300 rounded bg-red-50">
-                        <span class="text-xs text-red-600 font-semibold">IMG</span>
+                      <div class="h-16 w-16 mb-4 flex items-center justify-center border-2 border-amber-300 rounded bg-amber-50">
+                        <span class="text-xs text-amber-600 font-semibold">IMG</span>
                       </div>
-                      <p class="text-red-600 font-medium mb-2">❌ Không thể tải ảnh</p>
-                      <p class="text-xs text-gray-400 mb-3 text-center">Có thể file không tồn tại hoặc URL đã hết hạn</p>
+                      <p class="text-amber-600 font-medium mb-2">⚠️ Không thể hiển thị ảnh trong Replit</p>
+                      <p class="text-xs text-gray-400 mb-3 text-center">Môi trường Replit có thể bị hạn chế truy cập tài nguyên bên ngoài</p>
                       <p class="text-xs text-gray-600 mb-4 break-all max-w-md text-center bg-gray-100 p-2 rounded">
                         URL: ${currentFileUrl}
                       </p>
