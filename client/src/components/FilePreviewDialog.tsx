@@ -15,7 +15,27 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
   if (!fileUrl) return null;
 
   // Handle both single file and array of files
-  const files = Array.isArray(fileUrl) ? fileUrl : [fileUrl];
+  let files: string[] = [];
+  
+  if (Array.isArray(fileUrl)) {
+    files = fileUrl;
+  } else if (typeof fileUrl === 'string') {
+    try {
+      // Try to parse as JSON array first (for cases where it's a JSON string)
+      const parsed = JSON.parse(fileUrl);
+      if (Array.isArray(parsed)) {
+        files = parsed;
+      } else {
+        files = [fileUrl];
+      }
+    } catch {
+      // If not JSON, treat as single URL
+      files = [fileUrl];
+    }
+  }
+
+  // Filter out empty or invalid URLs
+  files = files.filter(url => url && typeof url === 'string' && url.trim().length > 0);
 
   const getFileType = (url: string) => {
     const extension = url.split('.').pop()?.toLowerCase();

@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
@@ -53,6 +52,7 @@ interface FeedbackRequest {
   response_time: string | null;
   created_at: string;
   updated_at: string;
+  attachment_url: string | string[] | null;
 }
 
 export default function FeedbackPage() {
@@ -477,7 +477,7 @@ export default function FeedbackPage() {
                   const userName = typeof row.full_name === 'string' 
                     ? row.full_name 
                     : (row.full_name as any)?.name || 'N/A';
-                  
+
                   const userId = typeof row.full_name === 'object' && row.full_name 
                     ? (row.full_name as any)?.id 
                     : null;
@@ -645,7 +645,7 @@ export default function FeedbackPage() {
                                   response_content: 'Đã xử lý đóng góp ý kiến'
                                 })
                               });
-                              
+
                               if (response.ok) {
                                 toast({
                                   title: "Thành công",
@@ -653,7 +653,7 @@ export default function FeedbackPage() {
                                 });
                                 queryClient.invalidateQueries(['/api/feedback-requests']);
                                 queryClient.invalidateQueries(['/api/badge-counts']);
-                                
+
                                 // Force refresh badge counts immediately
                                 queryClient.refetchQueries(['/api/badge-counts'], { active: true });
                               } else {
