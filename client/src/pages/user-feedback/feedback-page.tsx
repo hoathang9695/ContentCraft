@@ -36,6 +36,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { EmailReplyDialog } from "@/components/EmailReplyDialog";
 import { SupportDetailDialog } from "@/components/SupportDetailDialog";
+import { FilePreviewDialog } from "@/components/FilePreviewDialog";
 
 interface FeedbackRequest {
   id: number;
@@ -64,6 +65,11 @@ export default function FeedbackPage() {
   const [searchResults, setSearchResults] = useState<FeedbackRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<FeedbackRequest | null>(null);
   const [replyRequest, setReplyRequest] = useState<FeedbackRequest | null>(null);
+  const [filePreview, setFilePreview] = useState<{ isOpen: boolean; fileUrl: string | string[] | null; fileName?: string }>({
+    isOpen: false,
+    fileUrl: null,
+    fileName: undefined
+  });
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -538,14 +544,18 @@ export default function FeedbackPage() {
                 render: (row: FeedbackRequest) => (
                   <div>
                     {row.attachment_url ? (
-                      <a 
-                        href={row.attachment_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline"
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+                        onClick={() => setFilePreview({
+                          isOpen: true,
+                          fileUrl: row.attachment_url,
+                          fileName: `Feedback #${row.id} - File đính kèm`
+                        })}
                       >
                         Xem file
-                      </a>
+                      </Button>
                     ) : (
                       <span className="text-muted-foreground">Không có</span>
                     )}
@@ -681,6 +691,12 @@ export default function FeedbackPage() {
           onSuccess={() => {
             queryClient.invalidateQueries(['/api/feedback-requests']);
           }}
+        />
+        <FilePreviewDialog
+          isOpen={filePreview.isOpen}
+          onClose={() => setFilePreview({ isOpen: false, fileUrl: null, fileName: undefined })}
+          fileUrl={filePreview.fileUrl}
+          fileName={filePreview.fileName}
         />
       </div>
     </DashboardLayout>
