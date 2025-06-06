@@ -160,7 +160,7 @@ async function simulateNewFeedbackMessages() {
       type: "feedback",
       feature_type: "Bảng tin điều khiển chuyên nghiệp",
       detailed_description: "kokokokooookoko",
-      attachment_url: "https://s3.hn-1.cloud.cmctelecom.vn/prod/sn-web/portal/media_attachments/files/114/634/369/326/923/155/original/f04b8e1e3ec5d9ab.jpg",
+      attachment_url: ["https://s3.hn-1.cloud.cmctelecom.vn/prod/sn-web/portal/media_attachments/files/114/634/369/326/923/155/original/f04b8e1e3ec5d9ab.jpg",]
     },
     {
       id: "113725869733725554",
