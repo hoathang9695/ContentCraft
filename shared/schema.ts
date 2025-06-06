@@ -142,7 +142,7 @@ export type FakeUser = typeof fakeUsers.$inferSelect;
 // Bảng yêu cầu hỗ trợ (Support Requests)
 export const supportRequests = pgTable("support_requests", {
   id: serial("id").primaryKey(),
-  full_name: text("full_name").notNull(),
+  full_name: jsonb("full_name").notNull(),
   email: text("email").notNull(),
   subject: text("subject").notNull(),
   content: text("content").notNull(),
