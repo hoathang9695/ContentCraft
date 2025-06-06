@@ -541,26 +541,33 @@ export default function FeedbackPage() {
               {
                 key: 'attachment',
                 header: 'File đính kèm',
-                render: (row: FeedbackRequest) => (
-                  <div>
-                    {row.attachment_url ? (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="text-blue-600 hover:text-blue-800 p-0 h-auto"
-                        onClick={() => setFilePreview({
-                          isOpen: true,
-                          fileUrl: row.attachment_url,
-                          fileName: `Feedback #${row.id} - File đính kèm`
-                        })}
-                      >
-                        Xem file
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground">Không có</span>
-                    )}
-                  </div>
-                ),
+                render: (row: FeedbackRequest) => {
+                  console.log('FeedbackPage - Row attachment_url:', row.attachment_url, 'Type:', typeof row.attachment_url);
+                  
+                  return (
+                    <div>
+                      {row.attachment_url ? (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+                          onClick={() => {
+                            console.log('FeedbackPage - Opening preview for:', row.attachment_url);
+                            setFilePreview({
+                              isOpen: true,
+                              fileUrl: row.attachment_url,
+                              fileName: `Feedback #${row.id} - File đính kèm`
+                            });
+                          }}
+                        >
+                          Xem file
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground">Không có</span>
+                      )}
+                    </div>
+                  );
+                },
               },
               {
                 key: 'status',
