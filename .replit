@@ -132,3 +132,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npx tsx cleanup-duplicate-support-requests.ts"
+
+[[workflows.workflow]]
+name = "Simulate New Feedback Format"
+author = 41108408
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx simulate-new-feedback-format.ts"

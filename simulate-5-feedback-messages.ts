@@ -4,15 +4,16 @@ import { users, supportRequests } from './shared/schema.js';
 import { eq } from 'drizzle-orm';
 
 interface FeedbackMessage {
+  id: string;
   full_name: string;
   email: string;
   subject: string;
-  content: string;
   type: 'feedback';
   feedback_type?: 'bug_report' | 'feature_request' | 'complaint' | 'suggestion' | 'other';
   feature_type?: string;
   detailed_description?: string;
-  attachment_url?: string;
+  attachment_url?: string | string[];
+  content?: string;
 }
 
 async function processFeedbackMessage(message: FeedbackMessage) {
@@ -114,52 +115,52 @@ async function simulate5FeedbackMessages() {
 
   const feedbackMessages: FeedbackMessage[] = [
     {
+      id: "113725869733725001",
       full_name: "Nguyễn Văn A",
       email: "nguyenvana@test.com",
       subject: "Báo lỗi: Không load được trang",
-      content: "Trang dashboard không load được, hiển thị lỗi 500.",
       type: "feedback",
       feedback_type: "bug_report",
-      detailed_description: "Lỗi xuất hiện từ 10h sáng nay, affect tất cả users. Browser: Chrome 120.",
+      detailed_description: "Trang dashboard không load được, hiển thị lỗi 500. Lỗi xuất hiện từ 10h sáng nay, affect tất cả users. Browser: Chrome 120.",
       attachment_url: "https://example.com/error-screenshot.png"
     },
     {
+      id: "113725869733725002",
       full_name: "Trần Thị B",
       email: "tranthib@test.com", 
       subject: "Yêu cầu tính năng: Export Excel",
-      content: "Muốn có tính năng export dữ liệu ra Excel.",
       type: "feedback",
       feedback_type: "feature_request",
       feature_type: "Xuất dữ liệu",
-      detailed_description: "Export theo filter hiện tại, hỗ trợ format .xlsx và .csv."
+      detailed_description: "Muốn có tính năng export dữ liệu ra Excel. Export theo filter hiện tại, hỗ trợ format .xlsx và .csv."
     },
     {
+      id: "113725869733725003",
       full_name: "Lê Minh C",
       email: "leminhc@test.com",
       subject: "Khiếu nại: Interface khó sử dụng",
-      content: "Giao diện phức tạp, khó tìm các chức năng cần thiết.",
       type: "feedback",
       feedback_type: "complaint",
-      detailed_description: "Buttons quá nhỏ, menu không intuitive. Cần redesign UX."
+      detailed_description: "Giao diện phức tạp, khó tìm các chức năng cần thiết. Buttons quá nhỏ, menu không intuitive. Cần redesign UX."
     },
     {
+      id: "113725869733725004",
       full_name: "Phạm Thị D",
       email: "phamthid@test.com",
       subject: "Đề xuất: Thêm dark mode",
-      content: "Đề xuất thêm dark mode để giảm mỏi mắt.",
       type: "feedback",
       feedback_type: "suggestion", 
       feature_type: "Giao diện người dùng",
-      detailed_description: "Toggle switch ở header, lưu preference vào localStorage."
+      detailed_description: "Đề xuất thêm dark mode để giảm mỏi mắt. Toggle switch ở header, lưu preference vào localStorage."
     },
     {
+      id: "113725869733725005",
       full_name: "Hoàng Văn E",
       email: "hoangvane@test.com",
       subject: "Khác: Câu hỏi về API",
-      content: "Tôi muốn hỏi về API documentation ở đâu?",
       type: "feedback",
       feedback_type: "other",
-      detailed_description: "Cần API docs để integrate với hệ thống bên ngoài."
+      detailed_description: "Tôi muốn hỏi về API documentation ở đâu? Cần API docs để integrate với hệ thống bên ngoài."
     }
   ];
 
