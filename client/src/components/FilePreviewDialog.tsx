@@ -21,21 +21,40 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
     files = fileUrl;
   } else if (typeof fileUrl === 'string') {
     try {
-      // Try to parse as JSON array first (for cases where it's a JSON string)
-      const parsed = JSON.parse(fileUrl);
-      if (Array.isArray(parsed)) {
-        files = parsed;
+      // Clean up the URL string first by removing any extra encoding
+      let cleanUrl = fileUrl.trim();
+      
+      // If it starts with { or [, try to parse as JSON
+      if (cleanUrl.startsWith('{') || cleanUrl.startsWith('[')) {
+        const parsed = JSON.parse(cleanUrl);
+        if (Array.isArray(parsed)) {
+          files = parsed;
+        } else {
+          files = [cleanUrl];
+        }
       } else {
-        files = [fileUrl];
+        // Check if it's a comma-separated list of URLs
+        if (cleanUrl.includes(',')) {
+          files = cleanUrl.split(',').map(url => url.trim().replace(/['"]/g, ''));
+        } else {
+          files = [cleanUrl];
+        }
       }
     } catch {
-      // If not JSON, treat as single URL
-      files = [fileUrl];
+      // If parsing fails, try to handle as comma-separated or single URL
+      const cleanUrl = fileUrl.trim().replace(/['"]/g, '');
+      if (cleanUrl.includes(',')) {
+        files = cleanUrl.split(',').map(url => url.trim());
+      } else {
+        files = [cleanUrl];
+      }
     }
   }
 
-  // Filter out empty or invalid URLs
-  files = files.filter(url => url && typeof url === 'string' && url.trim().length > 0);
+  // Filter out empty or invalid URLs and clean them up
+  files = files
+    .map(url => url.trim().replace(/['"]/g, ''))
+    .filter(url => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
 
   const getFileType = (url: string) => {
     const extension = url.split('.').pop()?.toLowerCase();
@@ -62,33 +81,93 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
     switch (fileType) {
       case 'image':
         return (
-          <div key={index} className="flex flex-col items-center mb-4">
-            <div className="relative">
+          <div key={index} className="flex flex-col items-center mb-6">
+            <div className="relative max-w-full">
               <img 
                 src={url} 
                 alt={displayName}
-                className="max-w-full max-h-96 object-contain rounded-lg shadow-lg"
+                className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+                onClick={() => window.open(url, '_blank')}
                 onError={(e) => {
                   e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZjNmNGY2Ii8+CjxwYXRoIGQ9Ik0xMDAgNzBMMTMwIDEzMEg3MEwxMDAgNzBaIiBmaWxsPSIjOWNhM2FmIi8+CjxjaXJjbGUgY3g9IjE0MCIgY3k9IjYwIiByPSIxMCIgZmlsbD0iIzljYTNhZiIvPgo8L3N2Zz4K';
                 }}
               />
+              {/* Click to enlarge indicator */}
+              <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity">
+                Click để phóng to
+              </div>
             </div>
-            <p className="text-sm text-gray-600 mt-2">{displayName}</p>
+            <p className="text-sm text-gray-600 mt-3 text-center">{displayName}</p>
+            <div className="flex gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => window.open(url, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Mở trong tab mới
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = displayName;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
+              >
+                <Download className="h-4 w-4" />
+                Tải xuống
+              </Button>
+            </div>
           </div>
         );
 
       case 'video':
         return (
-          <div key={index} className="flex flex-col items-center mb-4">
+          <div key={index} className="flex flex-col items-center mb-6">
             <video 
               controls 
-              className="max-w-full max-h-96 rounded-lg shadow-lg"
+              className="max-w-full max-h-[70vh] rounded-lg shadow-lg"
               preload="metadata"
+              poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgdmlld0JveD0iMCAwIDMyMCAyNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMjQwIiBmaWxsPSIjMjEyMTIxIi8+Cjxwb2x5Z29uIHBvaW50cz0iMTMwLDkwIDE5MCwxMjAgMTMwLDE1MCIgZmlsbD0iI2ZmZmZmZiIvPgo8L3N2Zz4K"
             >
               <source src={url} />
               Trình duyệt không hỗ trợ video này.
             </video>
-            <p className="text-sm text-gray-600 mt-2">{displayName}</p>
+            <p className="text-sm text-gray-600 mt-3 text-center">{displayName}</p>
+            <div className="flex gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => window.open(url, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Mở trong tab mới
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = displayName;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
+              >
+                <Download className="h-4 w-4" />
+                Tải xuống
+              </Button>
+            </div>
           </div>
         );
 
@@ -158,9 +237,34 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
     }
   };
 
+  if (files.length === 0) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Xem file đính kèm</span>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <p className="text-gray-500">Không có file đính kèm hợp lệ</p>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={onClose}>
+              Đóng
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Xem file đính kèm</span>
@@ -170,14 +274,36 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {files.length > 1 && (
             <p className="text-sm text-gray-600">
               Hiển thị {files.length} file đính kèm:
             </p>
           )}
           
-          {files.map((url, index) => renderFilePreview(url, index))}
+          {/* Grid layout for multiple images */}
+          {files.length > 1 && files.every(url => getFileType(url) === 'image') ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {files.map((url, index) => (
+                <div key={index} className="aspect-square">
+                  <img 
+                    src={url} 
+                    alt={`File ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => window.open(url, '_blank')}
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZjNmNGY2Ii8+CjxwYXRoIGQ9Ik0xMDAgNzBMMTMwIDEzMEg3MEwxMDAgNzBaIiBmaWxsPSIjOWNhM2FmIi8+CjxjaXJjbGUgY3g9IjE0MCIgY3k9IjYwIiByPSIxMCIgZmlsbD0iIzljYTNhZiIvPgo8L3N2Zz4K';
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Single file or mixed types - vertical layout */
+            <div className="space-y-4">
+              {files.map((url, index) => renderFilePreview(url, index))}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
