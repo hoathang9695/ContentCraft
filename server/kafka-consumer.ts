@@ -646,15 +646,16 @@ async function sendToDeadLetterQueue(message: any) {
 }
 
 export interface FeedbackMessage {
+  id: string;
   full_name: string;
   email: string;
   subject: string;
-  content: string;
   type: 'feedback';
   feedback_type?: 'bug_report' | 'feature_request' | 'complaint' | 'suggestion' | 'other';
   feature_type?: string;
   detailed_description?: string;
-  attachment_url?: string;
+  attachment_url?: string | string[];
+  content?: string;
 }
 
 function parseMessage(
@@ -666,8 +667,8 @@ function parseMessage(
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
-    // Check for feedback message first (has type: 'feedback')
-    if ("full_name" in message && "email" in message && "type" in message && message.type === 'feedback') {
+    // Check for feedback message first (has type: 'feedback' and id)
+    if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'feedback') {
       return message as FeedbackMessage;
     }
     // Check for support/contact message (has full_name, email, subject, content)
@@ -886,10 +887,10 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
   try {
     // Validate required fields
     if (
+      !message.id ||
       !message.full_name ||
       !message.email ||
-      !message.subject ||
-      !message.content
+      !message.subject
     ) {
       log(`Invalid feedback message: ${JSON.stringify(message)}`, "kafka-error");
       return;
@@ -952,18 +953,30 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
     const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
+    // Prepare full_name as JSON object format like real_users table
+    const fullNameObj = {
+      id: message.id,
+      name: message.full_name
+    };
+
+    // Handle attachment_url - convert array to JSON string if it's an array
+    let attachmentUrl = message.attachment_url;
+    if (Array.isArray(attachmentUrl)) {
+      attachmentUrl = JSON.stringify(attachmentUrl);
+    }
+
     // Prepare insert data with type='feedback' and feedback-specific fields
     const insertData = {
-      full_name: message.full_name,
+      full_name: fullNameObj,
       email: message.email,
       subject: message.subject,
-      content: message.content,
+      content: message.detailed_description || message.subject, // Use detailed_description as content, fallback to subject
       status: "pending",
       type: "feedback", // Explicitly set type
       feedback_type: message.feedback_type || null,
       feature_type: message.feature_type || null,
       detailed_description: message.detailed_description || null,
-      attachment_url: message.attachment_url || null,
+      attachment_url: attachmentUrl || null,
       assigned_to_id,
       assigned_at: now,
       created_at: now,
@@ -978,7 +991,7 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
         .returning();
       log(`✅ Feedback request created with ID ${newRequest[0].id}`, "kafka");
       log(`👤 Feedback request assigned to user ID ${assigned_to_id} (${activeUsers.find(u => u.id === assigned_to_id)?.name})`, "kafka");
-      log(`📧 Email: ${message.email}, Subject: ${message.subject}, Type: ${message.feedback_type}`, "kafka");
+      log(`📧 Email: ${message.email}, Name: ${message.full_name}, Subject: ${message.subject}, Type: ${message.feedback_type}`, "kafka");
 
       // Send confirmation email to user - AFTER transaction completes successfully
       setTimeout(async () => {
@@ -1013,7 +1026,7 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
           
           const emailSent = await emailService.sendFeedbackConfirmation({
             to: message.email,
-            fullName: message.full_name,
+            fullName: message.full_name, // This is the name string from the message
             subject: message.subject,
             feedbackType: message.feedback_type,
             requestId: newRequest[0].id
