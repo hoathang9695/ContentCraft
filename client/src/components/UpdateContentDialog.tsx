@@ -150,9 +150,69 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
           processedExternalId = `${content?.externalId}_${type}_${sourceData.id}`;
         }
 
-        // Format categories and labels for Gorse API
-        const categoriesArray = data.categories.split(',').map(c => c.trim()).filter(Boolean);
-        const labelsArray = data.labels.split(',').map(l => l.trim()).filter(Boolean);
+        // Parse categories and labels for Gorse API (handle PostgreSQL array format)
+        const parsePostgreSQLArray = (str: string): string[] => {
+          if (!str) return [];
+          
+          const result: string[] = [];
+          let current = '';
+          let insidePostgreSQLArray = false;
+          let depth = 0;
+          
+          for (let i = 0; i < str.length; i++) {
+            const char = str[i];
+            
+            if (char === '{') {
+              depth++;
+              insidePostgreSQLArray = true;
+              current += char;
+            } else if (char === '}') {
+              depth--;
+              current += char;
+              if (depth === 0) {
+                insidePostgreSQLArray = false;
+              }
+            } else if (char === ',' && !insidePostgreSQLArray) {
+              // This comma is a separator, not inside PostgreSQL array
+              if (current.trim()) {
+                result.push(current.trim());
+              }
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          
+          // Add the last item
+          if (current.trim()) {
+            result.push(current.trim());
+          }
+          
+          // Process each item to clean PostgreSQL array format
+          return result.map(item => {
+            if (item.startsWith('{') && item.endsWith('}')) {
+              // Parse PostgreSQL array format
+              const inner = item.slice(1, -1);
+              if (!inner.trim()) return [];
+              
+              return inner.split(',')
+                .map(subItem => {
+                  return subItem.trim()
+                    .replace(/^"/, '')  // Remove leading quote
+                    .replace(/"$/, '')  // Remove trailing quote
+                    .replace(/\\"/g, '"') // Unescape quotes
+                    .trim();
+                })
+                .filter(Boolean);
+            } else {
+              // Regular item
+              return [item.trim()];
+            }
+          }).flat().filter(Boolean);
+        };
+
+        const categoriesArray = parsePostgreSQLArray(data.categories);
+        const labelsArray = parsePostgreSQLArray(data.labels);
 
         const gorsePayload = {
           Categories: categoriesArray,
