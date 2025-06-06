@@ -539,32 +539,55 @@ export default function FeedbackPage() {
                 ),
               },
               {
-                key: 'attachment',
-                header: 'File đính kèm',
+                key: "attachment",
+                header: "File đính kèm",
                 render: (row: FeedbackRequest) => {
                   console.log('FeedbackPage - Row attachment_url:', row.attachment_url, 'Type:', typeof row.attachment_url);
-                  
+
+                  // Check if no attachment or empty array
+                  if (!row.attachment_url) {
+                    return <span className="text-muted-foreground">Không có</span>;
+                  }
+
+                  // Handle string case - parse JSON if it's a JSON string
+                  let hasValidAttachments = false;
+                  try {
+                    if (typeof row.attachment_url === 'string') {
+                      const trimmed = row.attachment_url.trim();
+                      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                        const parsed = JSON.parse(trimmed);
+                        hasValidAttachments = Array.isArray(parsed) && parsed.length > 0 && parsed.some(url => url && typeof url === 'string' && url.trim() !== '');
+                      } else {
+                        hasValidAttachments = trimmed !== '';
+                      }
+                    } else if (Array.isArray(row.attachment_url)) {
+                      hasValidAttachments = row.attachment_url.length > 0 && row.attachment_url.some(url => url && typeof url === 'string' && url.trim() !== '');
+                    }
+                  } catch (error) {
+                    hasValidAttachments = false;
+                  }
+
+                  if (!hasValidAttachments) {
+                    return <span className="text-muted-foreground">Không có</span>;
+                  }
+
                   return (
                     <div>
-                      {row.attachment_url ? (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="text-blue-600 hover:text-blue-800 p-0 h-auto"
-                          onClick={() => {
-                            console.log('FeedbackPage - Opening preview for:', row.attachment_url);
-                            setFilePreview({
-                              isOpen: true,
-                              fileUrl: row.attachment_url,
-                              fileName: `Feedback #${row.id} - File đính kèm`
-                            });
-                          }}
-                        >
-                          Xem file
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground">Không có</span>
-                      )}
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+                        onClick={() => {
+                          console.log('FeedbackPage - Opening preview for:', row.attachment_url);
+                          setFilePreview({
+                            isOpen: true,
+                            fileUrl: row.attachment_url,
+                            fileName: `Feedback #${row.id} - File đính kèm`
+                          });
+                        }}
+                      >
+                        Xem file
+                      </Button>
                     </div>
                   );
                 },
