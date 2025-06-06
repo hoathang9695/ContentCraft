@@ -1,0 +1,68 @@
+🔍 [STEP 1] Starting infringing content processing request
+✅ [STEP 1] User authenticated: { userId: 1, username: 'admin', name: 'Administrator', role: 'admin' }
+✅ [STEP 2] Request validation passed: {
+  externalId: '114630000352707511',
+  violationDescription: 'Anhr bậy',
+  descriptionLength: 8
+}
+🔍 [STEP 3] Creating infringing content record in database...
+✅ [STEP 3] Database record created successfully: {
+  recordId: 1,
+  externalId: '114630000352707511',
+  assignedTo: 1,
+  status: 'pending',
+  createdAt: undefined
+}
+🔍 [STEP 4] Starting Redis connection and key deletion process...
+🔍 [STEP 4.1] Checking Redis environment variables: {
+  redisHost: '172.16.0.40',
+  redisPort: '6380',
+  redisPassword: '***CONFIGURED***'
+}
+✅ [STEP 4.1] Redis configuration found, creating connection...
+🔍 [STEP 4.2] Attempting Redis connection...
+✅ [STEP 4.2] Redis connection established successfully
+🔍 [STEP 4.3] Searching for keys with pattern: *114630000352707511*
+✅ [STEP 4.3] Found 67 keys matching pattern
+🔍 [STEP 4.4] Deleting found keys...
+Keys to delete: feed-113478904903718396:114630000352707511, feed-109387002371879521:114630000352707511, feed-111346198778019028:114630000352707511, feed-112018141767984548:114630000352707511, feed-109396655022960107:114630000352707511 ... and 62 more
+✅ [STEP 4.4] Successfully deleted 67 keys from Redis
+🔍 [STEP 4.5] Closing Redis connection...
+✅ [STEP 4.5] Redis connection closed successfully
+🔍 [STEP 5] Updating database record status based on Redis result...
+🔍 [STEP 5.1] Status update details: {
+  finalStatus: 'completed',
+  processingTime: 2025-06-05T11:31:50.961Z,
+  redisDeleteSuccess: true,
+  foundKeysCount: 67,
+  deletedKeysCount: 67
+}
+✅ [STEP 5] Database record updated successfully: {
+  recordId: 1,
+  finalStatus: 'completed',
+  processingTime: 2025-06-05T11:31:50.961Z,
+  updatedAt: 2025-06-05T11:31:50.961Z
+}
+✅ [STEP 6] Sending successful response: {
+  success: true,
+  recordId: 1,
+  redisSuccess: true,
+  message: 'Đã xử lý thành công và xóa 67 nội dung vi phạm từ Redis'
+}
+6:31:50 PM [express] POST /api/infringing-content/search-and-process 200 in 49ms :: {"success":true,…
+Session check for /paginated: {
+  sessionID: '5lzm_d28wmw9YOfHifnoIuyb4P52zST5',
+  hasSession: true,
+  isAuthenticated: true,
+  user: { id: 1, username: 'admin', role: 'admin' }
+}
+Paginated infringing contents request: {
+  user: { id: 1, role: 'admin' },
+  page: 1,
+  limit: 10,
+  startDate: null,
+  endDate: null,
+  searchQuery: undefined
+}
+Returning paginated infringing contents: 1 items of 1 total
+6:31:50 PM [express] GET /api/infringing-content/paginated 200 in 7ms :: {"data":[{"id":1,"externalI…
