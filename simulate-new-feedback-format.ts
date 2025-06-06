@@ -87,6 +87,12 @@ async function processFeedbackMessage(message: NewFeedbackMessage) {
     const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
+    // Handle attachment_url - convert array to JSON string if it's an array
+    let attachmentUrl = message.attachment_url;
+    if (Array.isArray(attachmentUrl)) {
+      attachmentUrl = JSON.stringify(attachmentUrl);
+    }
+
     // Prepare insert data with new JSONB full_name structure
     const insertData = {
       full_name: fullNameJsonb, // JSONB format: {id, name}
@@ -98,7 +104,7 @@ async function processFeedbackMessage(message: NewFeedbackMessage) {
       feedback_type: message.feedback_type || null,
       feature_type: message.feature_type || null,
       detailed_description: message.detailed_description || null,
-      attachment_url: message.attachment_url || null,
+      attachment_url: attachmentUrl || null,
       assigned_to_id,
       assigned_at: now,
       created_at: now,
