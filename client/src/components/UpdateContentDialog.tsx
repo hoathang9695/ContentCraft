@@ -154,11 +154,21 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         const parsePostgreSQLArray = (str: string): string[] => {
           if (!str) return [];
           
-          // Handle PostgreSQL array format like {"default","Kỹ năng sống"}
+          // Handle PostgreSQL array format like {"moment","unknown"} or {moment,unknown}
           if (str.startsWith('{') && str.endsWith('}')) {
-            return str.slice(1, -1)
-              .split(',')
-              .map(item => item.replace(/"/g, '').trim())
+            const inner = str.slice(1, -1);
+            if (!inner.trim()) return [];
+            
+            // Split by comma and clean each item
+            return inner.split(',')
+              .map(item => {
+                // Remove surrounding quotes and escaped quotes
+                return item.trim()
+                  .replace(/^"/, '')  // Remove leading quote
+                  .replace(/"$/, '')  // Remove trailing quote
+                  .replace(/\\"/g, '"') // Unescape quotes
+                  .trim();
+              })
               .filter(Boolean);
           }
           
