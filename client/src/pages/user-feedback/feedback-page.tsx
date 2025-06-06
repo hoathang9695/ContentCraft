@@ -467,14 +467,35 @@ export default function FeedbackPage() {
               {
                 key: 'full_name',
                 header: 'Họ và tên',
-                render: (row: FeedbackRequest) => (
-                  <div className="font-medium">
-                    {typeof row.full_name === 'string' 
-                      ? row.full_name 
-                      : (row.full_name as any)?.name || 'N/A'
-                    }
-                  </div>
-                ),
+                render: (row: FeedbackRequest) => {
+                  const userName = typeof row.full_name === 'string' 
+                    ? row.full_name 
+                    : (row.full_name as any)?.name || 'N/A';
+                  
+                  const userId = typeof row.full_name === 'object' && row.full_name 
+                    ? (row.full_name as any)?.id 
+                    : null;
+
+                  if (userId) {
+                    return (
+                      <div 
+                        className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline"
+                        onClick={() => {
+                          window.open(`https://emso.vn/user/${userId}`, '_blank', 'noopener,noreferrer');
+                        }}
+                        title={`Xem profile của ${userName}`}
+                      >
+                        {userName}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="font-medium">
+                      {userName}
+                    </div>
+                  );
+                },
               },
               {
                 key: 'email',
