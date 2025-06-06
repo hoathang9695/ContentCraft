@@ -407,6 +407,132 @@ export class ContentController {
 
         console.log("Content updated successfully:", updatedContent);
 
+        // Send to Gorse after successful database update
+        try {
+          if (validatedData.safe === true && validatedData.sourceVerification === 'verified') {
+            // Parse source data for external ID processing
+            let sourceData = null;
+            if (existingContent.source) {
+              try {
+                sourceData = JSON.parse(existingContent.source);
+              } catch (e) {
+                console.error("Error parsing source data:", e);
+              }
+            }
+
+            // Process external ID for Gorse
+            let processedExternalId = existingContent.externalId;
+            if (sourceData?.id && sourceData?.type) {
+              const type = sourceData.type.toLowerCase() === 'account' ? 'user' : 'page';
+              processedExternalId = `${existingContent.externalId}_${type}_${sourceData.id}`;
+            }
+
+            // Parse categories and labels (handle PostgreSQL array format)
+            const parsePostgreSQLArray = (str: string): string[] => {
+              if (!str) return [];
+              
+              const result: string[] = [];
+              let current = '';
+              let insidePostgreSQLArray = false;
+              let depth = 0;
+              
+              for (let i = 0; i < str.length; i++) {
+                const char = str[i];
+                
+                if (char === '{') {
+                  depth++;
+                  insidePostgreSQLArray = true;
+                  current += char;
+                } else if (char === '}') {
+                  depth--;
+                  current += char;
+                  if (depth === 0) {
+                    insidePostgreSQLArray = false;
+                  }
+                } else if (char === ',' && !insidePostgreSQLArray) {
+                  // This comma is a separator, not inside PostgreSQL array
+                  if (current.trim()) {
+                    result.push(current.trim());
+                  }
+                  current = '';
+                } else {
+                  current += char;
+                }
+              }
+              
+              // Add the last item
+              if (current.trim()) {
+                result.push(current.trim());
+              }
+              
+              // Process each item to clean PostgreSQL array format
+              return result.map(item => {
+                if (item.startsWith('{') && item.endsWith('}')) {
+                  // Parse PostgreSQL array format
+                  const inner = item.slice(1, -1);
+                  if (!inner.trim()) return [];
+                  
+                  return inner.split(',')
+                    .map(subItem => {
+                      return subItem.trim()
+                        .replace(/^"/, '')  // Remove leading quote
+                        .replace(/"$/, '')  // Remove trailing quote
+                        .replace(/\\"/g, '"') // Unescape quotes
+                        .trim();
+                    })
+                    .filter(Boolean);
+                } else {
+                  // Regular item
+                  return [item.trim()];
+                }
+              }).flat().filter(Boolean);
+            };
+
+            const categoriesArray = parsePostgreSQLArray(updatedContent.categories || '');
+            const labelsArray = parsePostgreSQLArray(updatedContent.labels || '');
+
+            const gorsePayload = {
+              Categories: categoriesArray,
+              Labels: labelsArray,
+              IsHidden: validatedData.safe === false,
+              Timestamp: new Date().toISOString()
+            };
+
+            console.log("Sending to Gorse:", {
+              url: `https://prod-gorse-sn.emso.vn/api/item/${processedExternalId}`,
+              method: existingContent.sourceVerification === 'unverified' ? 'POST' : 'PATCH',
+              payload: { ...gorsePayload, ...(existingContent.sourceVerification === 'unverified' ? { ItemId: processedExternalId } : {}) }
+            });
+
+            // Determine HTTP method based on verification status change
+            const httpMethod = existingContent.sourceVerification === 'unverified' ? 'POST' : 'PATCH';
+            const apiUrl = httpMethod === 'POST' 
+              ? 'https://prod-gorse-sn.emso.vn/api/item'
+              : `https://prod-gorse-sn.emso.vn/api/item/${processedExternalId}`;
+
+            const requestBody = httpMethod === 'POST' 
+              ? { ...gorsePayload, ItemId: processedExternalId }
+              : gorsePayload;
+
+            const gorseResponse = await fetch(apiUrl, {
+              method: httpMethod,
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(requestBody)
+            });
+
+            if (gorseResponse.ok) {
+              console.log(`✅ Successfully sent ${httpMethod} to Gorse for item: ${processedExternalId}`);
+            } else {
+              console.error(`❌ Gorse API error: ${gorseResponse.status} - ${gorseResponse.statusText}`);
+            }
+          }
+        } catch (gorseError) {
+          console.error("Error sending to Gorse:", gorseError);
+          // Don't fail the main request if Gorse fails
+        }
+
         return res.json({
           success: true,
           data: updatedContent,
