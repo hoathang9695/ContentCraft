@@ -22,23 +22,36 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
       return fileUrl.filter(url => url && url.trim() !== '');
     }
 
-    // If it's a string, check if it looks like JSON array
+    // If it's a string, handle different cases
     if (typeof fileUrl === 'string') {
       const trimmed = fileUrl.trim();
 
-      // Check if it starts with [ and ends with ] (JSON array)
-      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          return Array.isArray(parsed) ? parsed.filter(url => url && url.trim() !== '') : [];
-        } catch (error) {
-          console.error('Error parsing JSON array:', error);
+      // Handle empty string
+      if (trimmed === '') return [];
+
+      // Try to parse as JSON first (for both array and string cases)
+      try {
+        const parsed = JSON.parse(trimmed);
+        
+        // If parsed result is an array
+        if (Array.isArray(parsed)) {
+          return parsed.filter(url => url && typeof url === 'string' && url.trim() !== '');
+        }
+        
+        // If parsed result is a string, treat as single URL
+        if (typeof parsed === 'string' && parsed.trim() !== '') {
+          return [parsed.trim()];
+        }
+        
+        return [];
+      } catch (error) {
+        // If JSON parsing fails, check if it looks like a JSON array format but malformed
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          console.error('Malformed JSON array:', trimmed, error);
           return [];
         }
-      }
-
-      // If it's a single URL string
-      if (trimmed !== '') {
+        
+        // If it's not JSON, treat as a single URL
         return [trimmed];
       }
     }
