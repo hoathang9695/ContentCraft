@@ -163,18 +163,29 @@ export function FilePreviewDialog({ isOpen, onClose, fileUrl, fileName }: FilePr
                 const parent = target.parentElement;
                 if (parent) {
                   parent.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-64 text-gray-500">
-                      <div class="h-16 w-16 mb-4 flex items-center justify-center border-2 border-gray-300 rounded">
-                        <span class="text-xs">IMG</span>
+                    <div class="flex flex-col items-center justify-center h-64 text-gray-500 p-4">
+                      <div class="h-16 w-16 mb-4 flex items-center justify-center border-2 border-red-300 rounded bg-red-50">
+                        <span class="text-xs text-red-600 font-semibold">IMG</span>
                       </div>
-                      <p>Không thể tải ảnh</p>
-                      <p class="text-sm mt-2 break-all max-w-md">URL: ${currentFileUrl}</p>
-                      <button 
-                        onclick="window.open('${currentFileUrl}', '_blank')"
-                        class="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                      >
-                        Mở trong tab mới
-                      </button>
+                      <p class="text-red-600 font-medium mb-2">❌ Không thể tải ảnh</p>
+                      <p class="text-xs text-gray-400 mb-3 text-center">Có thể file không tồn tại hoặc URL đã hết hạn</p>
+                      <p class="text-xs text-gray-600 mb-4 break-all max-w-md text-center bg-gray-100 p-2 rounded">
+                        URL: ${currentFileUrl}
+                      </p>
+                      <div class="flex gap-2">
+                        <button 
+                          onclick="window.open('${currentFileUrl}', '_blank')"
+                          class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors"
+                        >
+                          🔗 Mở trong tab mới
+                        </button>
+                        <button 
+                          onclick="navigator.clipboard.writeText('${currentFileUrl}')"
+                          class="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs transition-colors"
+                        >
+                          📋 Copy URL
+                        </button>
+                      </div>
                     </div>
                   `;
                 }
