@@ -81,23 +81,32 @@ export default function TickPage() {
     totalPages: number;
     currentPage: number;
   }>({
-    queryKey: ['/api/tick-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm],
+    queryKey: ['/api/tick-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (userFilter) params.append('userId', userFilter.toString());
-      if (startDate) params.append('startDate', startDate.toISOString());
-      if (endDate) params.append('endDate', endDate.toISOString());
+      if (startDate) params.append('startDate', startOfDay(startDate).toISOString());
+      if (endDate) params.append('endDate', endOfDay(endDate).toISOString());
       params.append('page', currentPage.toString());
       params.append('limit', pageSize.toString());
       if (searchTerm) params.append('search', searchTerm);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      
+      console.log('Fetching tick requests with params:', Object.fromEntries(params));
+      
       const response = await fetch(`/api/tick-requests?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch tick requests');
-      return response.json();
+      if (!response.ok) {
+        console.error('Failed to fetch tick requests:', response.status, response.statusText);
+        throw new Error('Failed to fetch tick requests');
+      }
+      const data = await response.json();
+      console.log('Received tick data:', data);
+      return data;
     },
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     refetchOnReconnect: false,
-    staleTime: Infinity
+    staleTime: 1000 * 60 * 5 // 5 minutes
   });
 
   const tickRequests = tickData?.data || [];

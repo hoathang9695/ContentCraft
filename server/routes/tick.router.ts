@@ -17,8 +17,14 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
       endDate, 
       page = 1, 
       limit = 20,
-      search = ''
+      search = '',
+      status = ''
     } = req.query;
+
+    console.log('Tick requests API called with params:', {
+      userId, startDate, endDate, page, limit, search, status,
+      userRole: user.role, userUsername: user.username
+    });
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
@@ -35,6 +41,15 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
     // Add userId filter if specified (for admin users or when filtering by specific user)
     if (userId && userId !== 'all') {
       conditions.push(eq(supportRequests.assigned_to_id, parseInt(userId as string)));
+    }
+
+    // Add status filter
+    if (status && status !== 'all') {
+      if (status === 'pending') {
+        conditions.push(eq(supportRequests.status, 'pending'));
+      } else if (status === 'completed') {
+        conditions.push(eq(supportRequests.status, 'completed'));
+      }
     }
 
     if (startDate) {
@@ -98,7 +113,8 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
     .offset(offset);
 
     console.log(`Found ${result.length}/${total} tick requests (type=tick) for user ${user.username} (role: ${user.role})`);
-    console.log('Query conditions:', { userId, startDate, endDate, search, userRole: user.role });
+    console.log('Query conditions:', { userId, startDate, endDate, search, status, userRole: user.role });
+    console.log('First few results:', result.slice(0, 3).map(r => ({ id: r.id, email: r.email, status: r.status })));
 
     res.json({
       data: result,
