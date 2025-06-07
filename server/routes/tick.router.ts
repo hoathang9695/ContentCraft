@@ -9,6 +9,12 @@ const router = Router();
 // Get all tick requests with server-side pagination
 router.get('/tick-requests', isAuthenticated, async (req, res) => {
   try {
+    console.log('✅ TICK ROUTER HIT - Processing request');
+    console.log('- Route path: /tick-requests');
+    console.log('- Request method:', req.method);
+    console.log('- Request URL:', req.url);
+    console.log('- Request originalUrl:', req.originalUrl);
+    
     const user = req.user as Express.User;
     const { 
       userId, 
