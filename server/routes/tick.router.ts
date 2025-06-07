@@ -21,18 +21,18 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
       status = ''
     } = req.query;
 
-    console.log('Tick requests API called with params:', {
-      userId, startDate, endDate, page, limit, search, status,
-      userRole: user.role, userUsername: user.username
-    });
-    console.log('Base conditions length:', conditions.length);
-
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const offset = (pageNum - 1) * limitNum;
 
     // Base condition for tick type
     const conditions = [eq(supportRequests.type, 'tick')];
+    
+    console.log('Tick requests API called with params:', {
+      userId, startDate, endDate, page, limit, search, status,
+      userRole: user.role, userUsername: user.username
+    });
+    console.log('Base conditions length:', conditions.length);
 
     // Only add role-based filtering for non-admin users AND when userId is not specified
     if (user.role !== 'admin' && !userId) {
