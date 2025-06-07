@@ -1,10 +1,20 @@
 
 import { db } from './server/db.js';
 import { supportRequests } from './shared/schema.js';
+import { eq } from 'drizzle-orm';
 
-async function createVerificationTestData() {
+async function updateVerificationTestData() {
   try {
-    console.log('Creating verification test data...');
+    console.log('Deleting old verification test data...');
+    
+    // Delete the old test data we just created (IDs 417-422)
+    const deleteResult = await db.delete(supportRequests)
+      .where(eq(supportRequests.type, 'verify'))
+      .returning();
+    
+    console.log(`✅ Deleted ${deleteResult.length} old verification records`);
+    
+    console.log('Creating new verification test data with correct JSON format...');
     
     const testData = [
       {
@@ -116,19 +126,20 @@ async function createVerificationTestData() {
       }
     ];
 
-    // Insert test data
+    // Insert new test data
     const inserted = await db.insert(supportRequests).values(testData).returning();
     
-    console.log(`✅ Successfully created ${inserted.length} verification test records:`);
+    console.log(`✅ Successfully created ${inserted.length} new verification test records:`);
     inserted.forEach(record => {
-      console.log(`- ID: ${record.id}, Name: ${record.verification_name}, Status: ${record.status}`);
+      const fullNameObj = typeof record.full_name === 'string' ? record.full_name : JSON.stringify(record.full_name);
+      console.log(`- ID: ${record.id}, Name: ${record.verification_name}, Status: ${record.status}, Full Name: ${fullNameObj}`);
     });
     
   } catch (error) {
-    console.error('❌ Error creating verification test data:', error);
+    console.error('❌ Error updating verification test data:', error);
   } finally {
     process.exit(0);
   }
 }
 
-createVerificationTestData();
+updateVerificationTestData();
