@@ -95,12 +95,15 @@ export default function TickPage() {
       console.log('Fetching tick requests with params:', Object.fromEntries(params));
       
       const response = await fetch(`/api/tick-requests?${params.toString()}`);
+      console.log('API Response status:', response.status);
       if (!response.ok) {
         console.error('Failed to fetch tick requests:', response.status, response.statusText);
         throw new Error('Failed to fetch tick requests');
       }
       const data = await response.json();
       console.log('Received tick data:', data);
+      console.log('Tick requests array:', data.data);
+      console.log('Total records:', data.total);
       return data;
     },
     refetchOnWindowFocus: false,
