@@ -162,11 +162,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ),
           );
 
+        // Đếm verification requests có type = 'verify' và status = 'pending'
+        const pendingVerificationRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(
+            and(
+              eq(supportRequests.type, "verify"),
+              eq(supportRequests.status, "pending"),
+            ),
+          );
+
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+        const pendingVerification = pendingVerificationRequests[0]?.count || 0;
 
-        // Tổng số pending requests (support + feedback) cho menu cha "Xử lý phản hồi"
-        const totalPendingRequests = pendingSupport + pendingFeedback;
+        // Tổng số pending requests (support + feedback + verification) cho menu cha "Xử lý phản hồi"
+        const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification;
 
         const badgeCounts = {
           realUsers: realUsersNewCount[0]?.count || 0,
@@ -174,6 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           groups: groupsNewCount[0]?.count || 0,
           supportRequests: pendingSupport,
           feedbackRequests: pendingFeedback,
+          verificationRequests: pendingVerification,
           totalRequests: totalPendingRequests, // Tổng cho menu cha
         };
 
@@ -189,6 +202,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           feedbackRequests:
             badgeCounts.feedbackRequests > 0
               ? badgeCounts.feedbackRequests
+              : undefined,
+          verificationRequests:
+            badgeCounts.verificationRequests > 0
+              ? badgeCounts.verificationRequests
               : undefined,
           totalRequests:
             badgeCounts.totalRequests > 0
@@ -323,6 +340,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { users } = await import("../shared/schema");
       const { realUsers } = await import("../shared/schema");
 
+      // Clear any potential cache
+      statsCache.clear();
+
       const [realUsersNewCount, pagesNewCount, groupsNewCount] =
         await Promise.all([
           db
@@ -372,11 +392,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ),
         );
 
+      // Đếm verification requests có type = 'verify' và status = 'pending' - với debug logging
+      const pendingVerificationRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(
+          and(
+            eq(supportRequests.type, "verify"),
+            eq(supportRequests.status, "pending"),
+          ),
+        );
+
+      console.log("Badge count debug - Verification requests:", {
+        count: pendingVerificationRequests[0]?.count || 0,
+        query: "type='verify' AND status='pending'"
+      });
+
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
       const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+      const pendingVerification = pendingVerificationRequests[0]?.count || 0;
 
-      // Tổng số pending requests (support + feedback) cho menu cha "Xử lý phản hồi"
-      const totalPendingRequests = pendingSupport + pendingFeedback;
+      // Tổng số pending requests (support + feedback + verification) cho menu cha "Xử lý phản hồi"
+      const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification;
 
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
@@ -384,6 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         groups: groupsNewCount[0]?.count || 0,
         supportRequests: pendingSupport,
         feedbackRequests: pendingFeedback,
+        verificationRequests: pendingVerification,
         totalRequests: totalPendingRequests, // Tổng cho menu cha
       };
 
@@ -399,6 +437,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         feedbackRequests:
           badgeCounts.feedbackRequests > 0
             ? badgeCounts.feedbackRequests
+            : undefined,
+        verificationRequests:
+          badgeCounts.verificationRequests > 0
+            ? badgeCounts.verificationRequests
             : undefined,
         totalRequests:
           badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
@@ -2710,9 +2752,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
   const supportController = new SupportController();
 
+  // Verification routes
+  const { verificationRouter } = await import("./routes/verification.router");
+
   app.use("/api/support-requests", supportRouterModule);
   app.use("/api", supportRouterModule);
   app.use("/api", feedbackRouter);
+  app.use("/api", verificationRouter);
 
   // Infringing content routes
   app.use("/api/infringing-content", infringingContentRouter);
@@ -3791,6 +3837,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
       res.status(500).json({ error: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Force refresh badge counts (admin only)
+  app.post("/api/badge-counts/refresh", isAdmin, async (req, res) => {
+    try {
+      // Clear all caches
+      cache.clear();
+      statsCache.clear();
+      
+      // Force broadcast fresh badge counts
+      await broadcastFeedbackBadgeUpdate();
+      
+      res.json({ message: "Badge counts refreshed successfully" });
+    } catch (error) {
+      console.error("Error refreshing badge counts:", error);
+      res.status(500).json({ error: "Failed to refresh badge counts" });
     }
   });
 
