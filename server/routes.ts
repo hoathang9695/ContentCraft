@@ -2763,6 +2763,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Infringing content routes
   app.use("/api/infringing-content", infringingContentRouter);
 
+  // Import and mount tick router
+  const { tickRouter } = await import("./routes/tick.router");
+  app.use("/api", tickRouter);
+
   // Support requests routes
   app.get(
     "/api/support-requests",
