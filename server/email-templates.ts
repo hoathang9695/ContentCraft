@@ -255,7 +255,7 @@ export class EmailTemplateService {
 
   // Template cho email phản hồi từ admin
   static getAdminReplyTemplate(data: {
-    userName: string;
+    userName: string | { id: string; name: string };
     adminMessage: string;
     originalRequest: {
       id: number;
@@ -264,6 +264,10 @@ export class EmailTemplateService {
     };
     attachmentInfo?: string;
   }): EmailTemplate {
+    // Extract actual name from userName (handle both string and object formats)
+    const actualUserName = typeof data.userName === 'string' 
+      ? data.userName 
+      : data.userName?.name || 'N/A';
     const content = `
       <h3 style="color: #495057; margin: 0 0 15px 0;">Nội dung phản hồi:</h3>
       <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #007bff;">
@@ -285,7 +289,7 @@ export class EmailTemplateService {
       html: this.generateBaseTemplate(
         "Phản hồi từ hệ thống hỗ trợ",
         content,
-        `Xin chào ${data.userName}, cảm ơn bạn đã liên hệ với chúng tôi. Dưới đây là phản hồi cho yêu cầu hỗ trợ của bạn.`
+        `Xin chào ${actualUserName}, cảm ơn bạn đã liên hệ với chúng tôi. Dưới đây là phản hồi cho yêu cầu hỗ trợ của bạn.`
       )
     };
   }

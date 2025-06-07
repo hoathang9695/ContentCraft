@@ -80,6 +80,18 @@ export interface GroupMessage {
   monetizationEnabled?: boolean;
 }
 
+export interface VerificationMessage {
+  id: string;
+  full_name: string;
+  email: string;
+  subject?: string;
+  type: 'verify';
+  verification_name?: string;
+  phone_number?: string;
+  detailed_description?: string;
+  attachment_url?: string | string[];
+}
+
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
@@ -230,14 +242,17 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
                       if ("externalId" in msg) {
                         log(`🔄 Processing content message: ${JSON.stringify(msg)}`, "kafka");
                         await processContentMessage(msg as ContentMessage, tx);
-                      } else if ("full_name" in msg && "type" in msg && (msg as any).type === 'feedback') {
+                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'verify') {
+                        log(`🔄 Processing verification message: ${JSON.stringify(msg)}`, "kafka");
+                        await processVerificationMessage(msg as VerificationMessage, tx);
+                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'feedback') {
                         log(`🔄 Processing feedback message: ${JSON.stringify(msg)}`, "kafka");
                         await processFeedbackMessage(msg as FeedbackMessage, tx);
                       } else if ("full_name" in msg && "email" in msg && "subject" in msg && "content" in msg) {
@@ -660,7 +675,7 @@ export interface FeedbackMessage {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage {
+): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage {
   if (!messageValue) return null;
 
   try {
@@ -682,6 +697,8 @@ function parseMessage(
       return message as PageMessage;
     } else if ("groupId" in message && "groupName" in message && "groupType" in message) {
       return message as GroupMessage;
+    } else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'verify') {
+      return message as VerificationMessage;
     }
 
     return null;
@@ -997,33 +1014,33 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
       setTimeout(async () => {
         try {
           log(`📧 Starting email confirmation process for feedback #${newRequest[0].id}`, "kafka");
-          
+
           // Import EmailService class instead of singleton instance
           const { EmailService } = await import('./email.js');
-          
+
           // Create a fresh instance with proper initialization
           const emailService = new EmailService();
-          
+
           // Force reload SMTP config and wait for it to complete
           log('🔄 Loading SMTP config from database...', "kafka");
           await emailService.loadConfigFromDB();
-          
+
           // Initialize transporter with loaded config
           log('🔧 Initializing SMTP transporter...', "kafka");
           emailService.initializeTransporter();
-          
+
           // Wait longer for transporter to be fully ready
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
+
           // Test if transporter is ready before sending
           const testResult = await emailService.testConnection();
           if (!testResult) {
             log(`❌ SMTP connection test failed for feedback #${newRequest[0].id}`, "kafka-error");
             return;
           }
-          
+
           log(`✅ SMTP ready, sending confirmation email for feedback #${newRequest[0].id}`, "kafka");
-          
+
           const emailSent = await emailService.sendFeedbackConfirmation({
             to: message.email,
             fullName: message.full_name, // This is the name string from the message
@@ -1057,6 +1074,128 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
     }
   } catch (error) {
     log(`Error processing feedback message: ${error}`, "kafka-error");
+    throw error;
+  }
+}
+
+async function processVerificationMessage(message: VerificationMessage, tx: any) {
+  try {
+    // Validate required fields
+    if (
+      !message.id ||
+      !message.full_name ||
+      !message.email ||
+      !message.type
+    ) {
+      log(`Invalid verification message: ${JSON.stringify(message)}`, "kafka-error");
+      return;
+    }
+
+    // Check for duplicate verification request based on email and id
+    const existingRequest = await tx
+      .select()
+      .from(supportRequests)
+      .where(
+        and(
+          eq(supportRequests.email, message.email),
+          eq(supportRequests.type, "verify")
+        )
+      )
+      .limit(1);
+
+    if (existingRequest.length > 0) {
+      log(`Verification request for ${message.email} already exists, skipping...`, "kafka");
+      return existingRequest[0];
+    }
+
+    log(`Processing verification message: ${JSON.stringify(message)}`, "kafka");
+
+    // Get active users (exclude admin for verification assignment)
+    const activeUsers = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+    if (!activeUsers || activeUsers.length === 0) {
+      log("No active non-admin users found to assign verification.", "kafka");
+      return;
+    }
+    log(`Found ${activeUsers.length} active users for verification assignment`, "kafka");
+
+    // Find last assigned VERIFICATION REQUEST for round-robin (specific to type='verify')
+    const lastAssignedVerificationRequest = await tx.query.supportRequests.findFirst({
+      where: eq(supportRequests.type, 'verify'),
+      orderBy: (supportRequests, { desc }) => [
+        desc(supportRequests.assigned_at),
+      ],
+    });
+    log(
+      `Last assigned verification request: ${JSON.stringify(lastAssignedVerificationRequest)}`,
+      "kafka",
+    );
+
+    // Calculate next assignee (round-robin) based on verification requests only
+    let nextAssigneeIndex = 0;
+    if (lastAssignedVerificationRequest && lastAssignedVerificationRequest.assigned_to_id) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        (user) => user.id === lastAssignedVerificationRequest.assigned_to_id,
+      );
+      if (lastAssigneeIndex !== -1) {
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+      }
+    }
+
+    const assigned_to_id = activeUsers[nextAssigneeIndex].id;
+    const now = new Date();
+
+    // Prepare full_name as JSON object format
+    const fullNameObj = {
+      id: message.id,
+      name: message.full_name
+    };
+
+    // Prepare insert data with type='verify' and verification-specific fields
+    const insertData = {
+      full_name: fullNameObj,
+      email: message.email,
+      subject: message.subject || "Yêu cầu xác minh danh tính",
+      content: message.detailed_description || "Yêu cầu xác minh danh tính từ người dùng",
+      status: "pending",
+      type: "verify", // Explicitly set type
+      verification_name: message.verification_name || message.full_name,
+      phone_number: message.phone_number || null,
+      attachment_url: message.attachment_url ? JSON.stringify(message.attachment_url) : null,
+      assigned_to_id,
+      assigned_at: now,
+      created_at: now,
+      updated_at: now,
+    };
+
+    try {
+      // Insert into DB
+      const newRequest = await tx
+        .insert(supportRequests)
+        .values(insertData)
+        .returning();
+      log(`✅ Verification request created with ID ${newRequest[0].id}`, "kafka");
+      log(`👤 Verification request assigned to user ID ${assigned_to_id} (${activeUsers.find(u => u.id === assigned_to_id)?.name})`, "kafka");
+      log(`📧 Email: ${message.email}, Name: ${message.full_name}, Subject: ${insertData.subject}`, "kafka");
+
+      // Broadcast verification badge update
+      if ((global as any).broadcastFeedbackBadgeUpdate) {
+        await (global as any).broadcastFeedbackBadgeUpdate();
+      }
+
+      return newRequest[0];
+    } catch (dbError) {
+      log(
+        `Database error while inserting verification request: ${dbError}`,
+        "kafka-error",
+      );
+      throw dbError;
+    }
+  } catch (error) {
+    log(`Error processing verification message: ${error}`, "kafka-error");
     throw error;
   }
 }
