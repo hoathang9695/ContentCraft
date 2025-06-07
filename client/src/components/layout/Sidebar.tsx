@@ -225,6 +225,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   icon={BadgeCheck}
                   isActive={isActivePath('/user-feedback/tick')}
                   onClick={handleItemClick}
+                  badge={finalBadgeCounts?.tickRequests}
                 >
                   Yêu cầu tick Tím
                 </SidebarItem>
