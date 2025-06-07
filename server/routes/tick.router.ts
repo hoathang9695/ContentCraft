@@ -117,13 +117,23 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
     console.log('Query conditions:', { userId, startDate, endDate, search, status, userRole: user.role });
     console.log('Where condition:', whereCondition);
     console.log('First few results:', result.slice(0, 3).map(r => ({ id: r.id, email: r.email, status: r.status, type: r.type })));
+    console.log('Sending response:', {
+      dataLength: result.length,
+      total,
+      totalPages,
+      currentPage: pageNum,
+      sampleData: result.slice(0, 2)
+    });
 
-    res.json({
+    const response = {
       data: result,
       total,
       totalPages,
       currentPage: pageNum
-    });
+    };
+
+    console.log('Final API response structure:', Object.keys(response));
+    res.json(response);
   } catch (err) {
     console.error('Error fetching tick requests:', err);
     return res.status(500).json({ 
