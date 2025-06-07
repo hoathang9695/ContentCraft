@@ -94,12 +94,34 @@ export default function TickPage() {
       
       console.log('Fetching tick requests with params:', Object.fromEntries(params));
       
-      const response = await fetch(`/api/tick-requests?${params.toString()}`);
-      console.log('API Response status:', response.status);
+      const url = `/api/tick-requests?${params.toString()}`;
+      console.log('🚀 MAKING REQUEST TO:', url);
+      
+      const response = await fetch(url);
+      console.log('📊 API Response details:');
+      console.log('- Status:', response.status);
+      console.log('- StatusText:', response.statusText);
+      console.log('- Headers:', Object.fromEntries(response.headers.entries()));
+      console.log('- URL:', response.url);
+      
       if (!response.ok) {
         console.error('Failed to fetch tick requests:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
         throw new Error('Failed to fetch tick requests');
       }
+      
+      const contentType = response.headers.get('content-type');
+      console.log('📋 Content-Type:', contentType);
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.error('⚠️ RECEIVED NON-JSON RESPONSE:');
+        console.error('Response text length:', responseText.length);
+        console.error('First 500 chars:', responseText.substring(0, 500));
+        throw new Error('API returned non-JSON response');
+      }
+      
       const data = await response.json();
       console.log('Received tick data:', data);
       console.log('Data structure keys:', Object.keys(data || {}));
