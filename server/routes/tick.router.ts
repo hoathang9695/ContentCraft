@@ -25,6 +25,7 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
       userId, startDate, endDate, page, limit, search, status,
       userRole: user.role, userUsername: user.username
     });
+    console.log('Base conditions length:', conditions.length);
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
@@ -114,7 +115,8 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
 
     console.log(`Found ${result.length}/${total} tick requests (type=tick) for user ${user.username} (role: ${user.role})`);
     console.log('Query conditions:', { userId, startDate, endDate, search, status, userRole: user.role });
-    console.log('First few results:', result.slice(0, 3).map(r => ({ id: r.id, email: r.email, status: r.status })));
+    console.log('Where condition:', whereCondition);
+    console.log('First few results:', result.slice(0, 3).map(r => ({ id: r.id, email: r.email, status: r.status, type: r.type })));
 
     res.json({
       data: result,
