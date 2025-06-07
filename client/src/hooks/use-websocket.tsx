@@ -13,17 +13,33 @@ interface BadgeCounts {
 
 export function useWebSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>(() => {
-    // Load cached data from localStorage on mount
-    try {
-      const cached = localStorage.getItem('badgeCounts');
-      return cached ? JSON.parse(cached) : {};
-    } catch {
-      return {};
-    }
-  });
   const [isConnected, setIsConnected] = useState(false);
+  const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({});
   const [hasInitialData, setHasInitialData] = useState(false);
+
+  // Load cached badge counts from localStorage on mount
+  useEffect(() => {
+    const cached = localStorage.getItem('badgeCounts');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        console.log('Loaded cached badge counts:', parsed);
+
+        // Force reset verification counts if they exist but shouldn't
+        if (parsed.verificationRequests && parsed.verificationRequests > 0) {
+          console.log('Clearing potentially stale verification count');
+          delete parsed.verificationRequests;
+          localStorage.setItem('badgeCounts', JSON.stringify(parsed));
+        }
+
+        setBadgeCounts(parsed);
+        setHasInitialData(true);
+      } catch (error) {
+        console.error('Error parsing cached badge counts:', error);
+        localStorage.removeItem('badgeCounts');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // Kết nối đến WebSocket server
