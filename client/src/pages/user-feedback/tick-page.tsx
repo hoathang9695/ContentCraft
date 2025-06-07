@@ -102,8 +102,11 @@ export default function TickPage() {
       }
       const data = await response.json();
       console.log('Received tick data:', data);
+      console.log('Data structure keys:', Object.keys(data || {}));
       console.log('Tick requests array:', data.data);
+      console.log('Array length:', data.data?.length);
       console.log('Total records:', data.total);
+      console.log('Sample tick request:', data.data?.[0]);
       return data;
     },
     refetchOnWindowFocus: false,
@@ -113,6 +116,12 @@ export default function TickPage() {
   });
 
   const tickRequests = tickData?.data || [];
+  
+  console.log('Final tickRequests for rendering:', {
+    length: tickRequests.length,
+    isArray: Array.isArray(tickRequests),
+    sampleItem: tickRequests[0]
+  });
 
   // Reset to page 1 when filters change
   const resetToFirstPage = () => {
