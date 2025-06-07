@@ -124,7 +124,7 @@ app.use((req, res, next) => {
   log('File cleanup service started', 'express');
 
   if (process.env.KAFKA_ENABLED === 'true') {
-  
+
     setupKafkaConsumer()
       .then(() => log('Kafka consumer started successfully', 'kafka'))
       .catch(err => log(`Failed to start Kafka consumer: ${err}`, 'kafka-error'));
@@ -160,3 +160,13 @@ app.use((req, res, next) => {
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 })();
+
+// Debug middleware for tick routes
+app.use('/api/tick-requests*', (req, res, next) => {
+  console.log('🎯 TICK API REQUEST INTERCEPTED:');
+  console.log('- Method:', req.method);
+  console.log('- URL:', req.url);
+  console.log('- Headers:', req.headers);
+  console.log('- Query:', req.query);
+  next();
+});

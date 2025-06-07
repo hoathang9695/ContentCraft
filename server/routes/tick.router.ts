@@ -139,6 +139,11 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
     console.log('- Query filters:', { userId, startDate, endDate, search, status });
 
     console.log('Final API response structure:', Object.keys(response));
+    console.log('🔍 FULL RESPONSE BEING SENT:');
+    console.log('- Response object:', JSON.stringify(response, null, 2));
+    console.log('- Headers about to be sent:', res.getHeaders());
+    
+    res.setHeader('Content-Type', 'application/json');
     res.json(response);
   } catch (err) {
     console.error('Error fetching tick requests:', err);
