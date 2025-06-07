@@ -49,6 +49,16 @@ async function testConnection(retryCount = 0) {
     const res = await pool.query("SELECT NOW()");
     console.log("Database connection test successful:", res.rows[0]);
 
+    // Enable unaccent extension for search (only on first successful connection)
+    if (retryCount === 0) {
+      try {
+        await pool.query('CREATE EXTENSION IF NOT EXISTS unaccent');
+        console.log("✅ Unaccent extension enabled");
+      } catch (extErr) {
+        console.warn("⚠️ Could not enable unaccent extension:", extErr.message);
+      }
+    }
+
     // Reset retry count on success
     if (retryCount > 0) {
       console.log(`✅ Database reconnected after ${retryCount} retries`);
@@ -68,9 +78,6 @@ async function testConnection(retryCount = 0) {
 }
 
 testConnection();
-
-// Enable unaccent extension for search
-await pool.query('CREATE EXTENSION IF NOT EXISTS unaccent');
 
 // Create Drizzle ORM instance
 export const db = drizzle(pool, { schema });

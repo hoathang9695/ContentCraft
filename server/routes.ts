@@ -173,12 +173,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ),
           );
 
+        // Đếm tick requests có type = 'tick' và status = 'pending'
+        const pendingTickRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(
+            and(
+              eq(supportRequests.type, "tick"),
+              eq(supportRequests.status, "pending"),
+            ),
+          );
+
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
         const pendingVerification = pendingVerificationRequests[0]?.count || 0;
+        const pendingTick = pendingTickRequests[0]?.count || 0;
 
-        // Tổng số pending requests (support + feedback + verification) cho menu cha "Xử lý phản hồi"
-        const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification;
+        // Tổng số pending requests (support + feedback + verification + tick) cho menu cha "Xử lý phản hồi"
+        const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
 
         const badgeCounts = {
           realUsers: realUsersNewCount[0]?.count || 0,
@@ -187,6 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           supportRequests: pendingSupport,
           feedbackRequests: pendingFeedback,
           verificationRequests: pendingVerification,
+          tickRequests: pendingTick,
           totalRequests: totalPendingRequests, // Tổng cho menu cha
         };
 
@@ -206,6 +219,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           verificationRequests:
             badgeCounts.verificationRequests > 0
               ? badgeCounts.verificationRequests
+              : undefined,
+          tickRequests:
+            badgeCounts.tickRequests > 0
+              ? badgeCounts.tickRequests
               : undefined,
           totalRequests:
             badgeCounts.totalRequests > 0
@@ -408,12 +425,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query: "type='verify' AND status='pending'"
       });
 
+      // Đếm tick requests có type = 'tick' và status = 'pending'
+      const pendingTickRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(
+          and(
+            eq(supportRequests.type, "tick"),
+            eq(supportRequests.status, "pending"),
+          ),
+        );
+
+      console.log("Badge count debug - Tick requests:", {
+        count: pendingTickRequests[0]?.count || 0,
+        query: "type='tick' AND status='pending'"
+      });
+
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
       const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
       const pendingVerification = pendingVerificationRequests[0]?.count || 0;
+      const pendingTick = pendingTickRequests[0]?.count || 0;
 
-      // Tổng số pending requests (support + feedback + verification) cho menu cha "Xử lý phản hồi"
-      const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification;
+      // Tổng số pending requests (support + feedback + verification + tick) cho menu cha "Xử lý phản hồi"
+      const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
 
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
@@ -422,6 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         supportRequests: pendingSupport,
         feedbackRequests: pendingFeedback,
         verificationRequests: pendingVerification,
+        tickRequests: pendingTick,
         totalRequests: totalPendingRequests, // Tổng cho menu cha
       };
 
@@ -441,6 +476,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verificationRequests:
           badgeCounts.verificationRequests > 0
             ? badgeCounts.verificationRequests
+            : undefined,
+        tickRequests:
+          badgeCounts.tickRequests > 0
+            ? badgeCounts.tickRequests
             : undefined,
         totalRequests:
           badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
@@ -2762,6 +2801,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Infringing content routes
   app.use("/api/infringing-content", infringingContentRouter);
+
+  // Import and mount tick router
+  const { tickRouter } = await import("./routes/tick.router");
+  app.use("/api", tickRouter);
 
   // Support requests routes
   app.get(

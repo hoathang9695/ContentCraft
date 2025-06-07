@@ -92,6 +92,17 @@ export interface VerificationMessage {
   attachment_url?: string | string[];
 }
 
+export interface TickMessage {
+  id: string;
+  full_name: string;
+  email: string;
+  subject?: string;
+  type: 'tick';
+  phone_number?: string;
+  detailed_description?: string;
+  attachment_url?: string | string[];
+}
+
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
@@ -249,6 +260,9 @@ export async function setupKafkaConsumer() {
                       if ("externalId" in msg) {
                         log(`🔄 Processing content message: ${JSON.stringify(msg)}`, "kafka");
                         await processContentMessage(msg as ContentMessage, tx);
+                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'tick') {
+                        log(`🔄 Processing tick message: ${JSON.stringify(msg)}`, "kafka");
+                        await processTickMessage(msg as TickMessage, tx);
                       } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'verify') {
                         log(`🔄 Processing verification message: ${JSON.stringify(msg)}`, "kafka");
                         await processVerificationMessage(msg as VerificationMessage, tx);
@@ -675,15 +689,19 @@ export interface FeedbackMessage {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage {
+): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage {
   if (!messageValue) return null;
 
   try {
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
-    // Check for feedback message first (has type: 'feedback' and id)
-    if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'feedback') {
+    // Check for tick message first (has type: 'tick' and id)
+    if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'tick') {
+      return message as TickMessage;
+    }
+    // Check for feedback message (has type: 'feedback' and id)
+    else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'feedback') {
       return message as FeedbackMessage;
     }
     // Check for support/contact message (has full_name, email, subject, content)
@@ -1074,6 +1092,127 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
     }
   } catch (error) {
     log(`Error processing feedback message: ${error}`, "kafka-error");
+    throw error;
+  }
+}
+
+async function processTickMessage(message: TickMessage, tx: any) {
+  try {
+    // Validate required fields
+    if (
+      !message.id ||
+      !message.full_name ||
+      !message.email ||
+      !message.type
+    ) {
+      log(`Invalid tick message: ${JSON.stringify(message)}`, "kafka-error");
+      return;
+    }
+
+    // Check for duplicate tick request based on email and type
+    const existingRequest = await tx
+      .select()
+      .from(supportRequests)
+      .where(
+        and(
+          eq(supportRequests.email, message.email),
+          eq(supportRequests.type, "tick")
+        )
+      )
+      .limit(1);
+
+    if (existingRequest.length > 0) {
+      log(`Tick request for ${message.email} already exists, skipping...`, "kafka");
+      return existingRequest[0];
+    }
+
+    log(`Processing tick message: ${JSON.stringify(message)}`, "kafka");
+
+    // Get active users (exclude admin for tick assignment)
+    const activeUsers = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+    if (!activeUsers || activeUsers.length === 0) {
+      log("No active non-admin users found to assign tick.", "kafka");
+      return;
+    }
+    log(`Found ${activeUsers.length} active users for tick assignment`, "kafka");
+
+    // Find last assigned TICK REQUEST for round-robin (specific to type='tick')
+    const lastAssignedTickRequest = await tx.query.supportRequests.findFirst({
+      where: eq(supportRequests.type, 'tick'),
+      orderBy: (supportRequests, { desc }) => [
+        desc(supportRequests.assigned_at),
+      ],
+    });
+    log(
+      `Last assigned tick request: ${JSON.stringify(lastAssignedTickRequest)}`,
+      "kafka",
+    );
+
+    // Calculate next assignee (round-robin) based on tick requests only
+    let nextAssigneeIndex = 0;
+    if (lastAssignedTickRequest && lastAssignedTickRequest.assigned_to_id) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        (user) => user.id === lastAssignedTickRequest.assigned_to_id,
+      );
+      if (lastAssigneeIndex !== -1) {
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+      }
+    }
+
+    const assigned_to_id = activeUsers[nextAssigneeIndex].id;
+    const now = new Date();
+
+    // Prepare full_name as JSON object format
+    const fullNameObj = {
+      id: message.id,
+      name: message.full_name
+    };
+
+    // Prepare insert data with type='tick' and tick-specific fields
+    const insertData = {
+      full_name: fullNameObj,
+      email: message.email,
+      subject: message.subject || "Yêu cầu tick xanh",
+      content: message.detailed_description || "Yêu cầu tick xanh từ người dùng",
+      status: "pending",
+      type: "tick", // Explicitly set type
+      phone_number: message.phone_number || null,
+      attachment_url: message.attachment_url ? JSON.stringify(message.attachment_url) : null,
+      assigned_to_id,
+      assigned_at: now,
+      created_at: now,
+      updated_at: now,
+    };
+
+    try {
+      // Insert into DB
+      const newRequest = await tx
+        .insert(supportRequests)
+        .values(insertData)
+        .returning();
+      log(`✅ Tick request created with ID ${newRequest[0].id}`, "kafka");
+      log(`👤 Tick request assigned to user ID ${assigned_to_id} (${activeUsers.find(u => u.id === assigned_to_id)?.name})`, "kafka");
+      log(`📧 Email: ${message.email}, Name: ${message.full_name}, Subject: ${insertData.subject}`, "kafka");
+
+      // Broadcast tick badge update
+      if ((global as any).broadcastFeedbackBadgeUpdate) {
+        await (global as any).broadcastFeedbackBadgeUpdate();
+      }
+
+      return newRequest[0];
+    } catch (dbError) {
+      log(
+        `Database error while inserting tick request: ${dbError}`,
+        "kafka-error",
+      );
+      throw dbError;
+    }
+  } catch (error) {
+    log(`Error processing tick message: ${error}`, "kafka-error");
     throw error;
   }
 }

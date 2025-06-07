@@ -64,7 +64,21 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Define routes FIRST (before static middleware)
   const server = await registerRoutes(app);
+
+  // Debug middleware for tick routes - AFTER routes are registered
+  app.use('/api/tick-requests*', (req, res, next) => {
+    console.log('🎯 TICK API REQUEST INTERCEPTED:');
+    console.log('- Method:', req.method);
+    console.log('- URL:', req.url);
+    console.log('- Full URL:', req.originalUrl);
+    console.log('- Base URL:', req.baseUrl);
+    console.log('- Path:', req.path);
+    console.log('- Headers:', req.headers);
+    console.log('- Query:', req.query);
+    next();
+  });
 
   // Improved error handling for unhandled promise rejections
   process.on('unhandledRejection', (reason, promise) => {
@@ -104,6 +118,7 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
+    // Serve static files from client/dist (AFTER API routes)
     serveStatic(app);
   }
 
@@ -124,7 +139,7 @@ app.use((req, res, next) => {
   log('File cleanup service started', 'express');
 
   if (process.env.KAFKA_ENABLED === 'true') {
-  
+
     setupKafkaConsumer()
       .then(() => log('Kafka consumer started successfully', 'kafka'))
       .catch(err => log(`Failed to start Kafka consumer: ${err}`, 'kafka-error'));
