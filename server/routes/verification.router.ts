@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { db } from '../db';
 import { supportRequests, users } from '@shared/schema';
@@ -98,7 +97,7 @@ router.get('/verification-requests', isAuthenticated, async (req, res) => {
     .offset(offset);
 
     console.log(`Found ${result.length}/${total} verification requests (type=verify)`);
-    
+
     res.json({
       data: result,
       total,
@@ -149,19 +148,25 @@ router.put('/verification-requests/:id', isAuthenticated, async (req, res) => {
       updateData.response_time = new Date();
     }
 
-    const result = await db.update(supportRequests)
+    const result = await db
+      .update(supportRequests)
       .set(updateData)
       .where(eq(supportRequests.id, parseInt(id)))
       .returning();
 
-    // Broadcast badge update after status change
-    if ((global as any).broadcastBadgeUpdate) {
-      setTimeout(async () => {
-        await (global as any).broadcastBadgeUpdate();
-      }, 100);
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'Verification request not found' });
     }
 
-    return res.json(result[0]);
+    // Broadcast badge update to all clients when verification status changes
+    if ((global as any).broadcastFeedbackBadgeUpdate) {
+      (global as any).broadcastFeedbackBadgeUpdate();
+    }
+
+    res.json({
+      message: 'Verification request updated successfully',
+      data: result[0]
+    });
   } catch (err) {
     console.error('Error updating verification request:', err);
     return res.status(500).json({

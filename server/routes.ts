@@ -162,11 +162,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ),
           );
 
+        // Đếm verification requests có type = 'verify' và status = 'pending'
+        const pendingVerificationRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(supportRequests)
+          .where(
+            and(
+              eq(supportRequests.type, "verify"),
+              eq(supportRequests.status, "pending"),
+            ),
+          );
+
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+        const pendingVerification = pendingVerificationRequests[0]?.count || 0;
 
-        // Tổng số pending requests (support + feedback) cho menu cha "Xử lý phản hồi"
-        const totalPendingRequests = pendingSupport + pendingFeedback;
+        // Tổng số pending requests (support + feedback + verification) cho menu cha "Xử lý phản hồi"
+        const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification;
 
         const badgeCounts = {
           realUsers: realUsersNewCount[0]?.count || 0,
@@ -174,6 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           groups: groupsNewCount[0]?.count || 0,
           supportRequests: pendingSupport,
           feedbackRequests: pendingFeedback,
+          verificationRequests: pendingVerification,
           totalRequests: totalPendingRequests, // Tổng cho menu cha
         };
 
@@ -189,6 +202,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           feedbackRequests:
             badgeCounts.feedbackRequests > 0
               ? badgeCounts.feedbackRequests
+              : undefined,
+          verificationRequests:
+            badgeCounts.verificationRequests > 0
+              ? badgeCounts.verificationRequests
               : undefined,
           totalRequests:
             badgeCounts.totalRequests > 0
@@ -372,11 +389,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ),
         );
 
+      // Đếm verification requests có type = 'verify' và status = 'pending'
+      const pendingVerificationRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(supportRequests)
+        .where(
+          and(
+            eq(supportRequests.type, "verify"),
+            eq(supportRequests.status, "pending"),
+          ),
+        );
+
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
       const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
+      const pendingVerification = pendingVerificationRequests[0]?.count || 0;
 
-      // Tổng số pending requests (support + feedback) cho menu cha "Xử lý phản hồi"
-      const totalPendingRequests = pendingSupport + pendingFeedback;
+      // Tổng số pending requests (support + feedback + verification) cho menu cha "Xử lý phản hồi"
+      const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification;
 
       const badgeCounts = {
         realUsers: realUsersNewCount[0]?.count || 0,
@@ -384,6 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         groups: groupsNewCount[0]?.count || 0,
         supportRequests: pendingSupport,
         feedbackRequests: pendingFeedback,
+        verificationRequests: pendingVerification,
         totalRequests: totalPendingRequests, // Tổng cho menu cha
       };
 
@@ -399,6 +429,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         feedbackRequests:
           badgeCounts.feedbackRequests > 0
             ? badgeCounts.feedbackRequests
+            : undefined,
+        verificationRequests:
+          badgeCounts.verificationRequests > 0
+            ? badgeCounts.verificationRequests
             : undefined,
         totalRequests:
           badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
