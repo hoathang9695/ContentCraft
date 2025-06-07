@@ -81,7 +81,7 @@ export default function TickPage() {
     totalPages: number;
     currentPage: number;
   }>({
-    queryKey: ['/api/tick-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm, statusFilter],
+    queryKey: ['tick-requests', userFilter, startDate?.toISOString(), endDate?.toISOString(), currentPage, pageSize, searchTerm, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (userFilter) params.append('userId', userFilter.toString());
@@ -623,7 +623,7 @@ export default function TickPage() {
                                   title: "Thành công",
                                   description: "Đã cập nhật trạng thái yêu cầu tick",
                                 });
-                                queryClient.invalidateQueries(['/api/tick-requests']);
+                                queryClient.invalidateQueries(['tick-requests']);
                                 queryClient.invalidateQueries(['/api/badge-counts']);
 
                                 // Force refresh badge counts immediately
@@ -661,7 +661,7 @@ export default function TickPage() {
           onClose={() => setReplyRequest(null)}
           request={replyRequest}
           onSuccess={() => {
-            queryClient.invalidateQueries(['/api/tick-requests']);
+            queryClient.invalidateQueries(['tick-requests']);
           }}
         />
         <FilePreviewDialog
