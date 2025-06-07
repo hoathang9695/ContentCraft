@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { db } from '../db';
 import { supportRequests, users } from '@shared/schema';
@@ -27,7 +26,7 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
 
     // Base condition for tick type
     const conditions = [eq(supportRequests.type, 'tick')];
-    
+
     console.log('Tick requests API called with params:', {
       userId, startDate, endDate, page, limit, search, status,
       userRole: user.role, userUsername: user.username
@@ -131,6 +130,13 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
       totalPages,
       currentPage: pageNum
     };
+
+    // Debug logs
+    console.log('🔍 Tick API Debug:');
+    console.log('- Total tick requests found:', total);
+    console.log('- Result count:', result.length);
+    console.log('- Sample result:', result.length > 0 ? result[0] : 'No results');
+    console.log('- Query filters:', { userId, startDate, endDate, search, status });
 
     console.log('Final API response structure:', Object.keys(response));
     res.json(response);
