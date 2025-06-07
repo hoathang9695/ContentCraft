@@ -27,12 +27,13 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
     // Base condition for tick type
     const conditions = [eq(supportRequests.type, 'tick')];
 
-    // Add role-based filtering
-    if (user.role !== 'admin') {
+    // Only add role-based filtering for non-admin users AND when userId is not specified
+    if (user.role !== 'admin' && !userId) {
       conditions.push(eq(supportRequests.assigned_to_id, user.id));
     }
 
-    if (userId) {
+    // Add userId filter if specified (for admin users or when filtering by specific user)
+    if (userId && userId !== 'all') {
       conditions.push(eq(supportRequests.assigned_to_id, parseInt(userId as string)));
     }
 
@@ -44,15 +45,15 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
       conditions.push(lte(supportRequests.created_at, new Date(endDate as string)));
     }
 
-    // Add search conditions
+    // Add search conditions (exclude full_name as it's JSONB)
     if (search) {
       const searchTerm = `%${search}%`;
       conditions.push(
         or(
-          ilike(supportRequests.full_name, searchTerm),
           ilike(supportRequests.email, searchTerm),
           ilike(supportRequests.subject, searchTerm),
-          ilike(supportRequests.content, searchTerm)
+          ilike(supportRequests.content, searchTerm),
+          ilike(supportRequests.phone_number, searchTerm)
         )
       );
     }
@@ -96,7 +97,8 @@ router.get('/tick-requests', isAuthenticated, async (req, res) => {
     .limit(limitNum)
     .offset(offset);
 
-    console.log(`Found ${result.length}/${total} tick requests (type=tick)`);
+    console.log(`Found ${result.length}/${total} tick requests (type=tick) for user ${user.username} (role: ${user.role})`);
+    console.log('Query conditions:', { userId, startDate, endDate, search, userRole: user.role });
 
     res.json({
       data: result,
