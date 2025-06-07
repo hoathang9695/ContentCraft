@@ -42,6 +42,7 @@ interface BadgeCounts {
   supportRequests?: number;
   feedbackRequests?: number;
   totalRequests?: number;
+  verificationRequests?: number;
 }
 
 function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: SidebarItemProps) {
@@ -214,6 +215,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   icon={ShieldCheck}
                   isActive={isActivePath('/user-feedback/verification')}
                   onClick={handleItemClick}
+                  badge={finalBadgeCounts?.verificationRequests}
                 >
                   Yêu cầu xác minh danh tính
                 </SidebarItem>

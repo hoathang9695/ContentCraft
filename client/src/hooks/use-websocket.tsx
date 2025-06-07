@@ -7,6 +7,7 @@ interface BadgeCounts {
   groups?: number;
   supportRequests?: number;
   feedbackRequests?: number;
+  verificationRequests?: number;
   totalRequests?: number;
 }
 
