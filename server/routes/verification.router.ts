@@ -160,7 +160,10 @@ router.put('/verification-requests/:id', isAuthenticated, async (req, res) => {
 
     // Broadcast badge update to all clients when verification status changes
     if ((global as any).broadcastFeedbackBadgeUpdate) {
-      (global as any).broadcastFeedbackBadgeUpdate();
+      // Add small delay to ensure DB transaction is fully committed
+      setTimeout(async () => {
+        await (global as any).broadcastFeedbackBadgeUpdate();
+      }, 100);
     }
 
     res.json({
