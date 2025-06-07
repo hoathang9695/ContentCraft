@@ -64,7 +64,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Register routes FIRST
+  // Define routes FIRST (before static middleware)
   const server = await registerRoutes(app);
 
   // Debug middleware for tick routes - AFTER routes are registered
@@ -118,6 +118,7 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
+    // Serve static files from client/dist (AFTER API routes)
     serveStatic(app);
   }
 
