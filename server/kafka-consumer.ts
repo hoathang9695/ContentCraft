@@ -84,7 +84,12 @@ export interface VerificationMessage {
   id: string;
   full_name: string;
   email: string;
+  subject?: string;
   type: 'verify';
+  verification_name?: string;
+  phone_number?: string;
+  detailed_description?: string;
+  attachment_url?: string | string[];
 }
 
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
@@ -855,7 +860,7 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
     // Prepare insert data with type='support'
     const insertData = {
       full_name: message.full_name,
-      email: message: message.email,
+      email: message.email,
       subject: message.subject,
       content: message.content,
       status: "pending",
@@ -1075,20 +1080,120 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
 
 async function processVerificationMessage(message: VerificationMessage, tx: any) {
   try {
+    // Validate required fields
+    if (
+      !message.id ||
+      !message.full_name ||
+      !message.email ||
+      !message.type
+    ) {
+      log(`Invalid verification message: ${JSON.stringify(message)}`, "kafka-error");
+      return;
+    }
+
+    // Check for duplicate verification request based on email and id
+    const existingRequest = await tx
+      .select()
+      .from(supportRequests)
+      .where(
+        and(
+          eq(supportRequests.email, message.email),
+          eq(supportRequests.type, "verify")
+        )
+      )
+      .limit(1);
+
+    if (existingRequest.length > 0) {
+      log(`Verification request for ${message.email} already exists, skipping...`, "kafka");
+      return existingRequest[0];
+    }
+
     log(`Processing verification message: ${JSON.stringify(message)}`, "kafka");
 
-    // Implement logic to handle verification messages here
-    // This might involve updating a user's status in the database,
-    // sending a confirmation email, etc.
-    // Example:
-    // const user = await tx.select().from(users).where(eq(users.email, message.email));
-    // if (user.length > 0) {
-    //   await tx.update(users).set({ verified: true }).where(eq(users.email, message.email));
-    //   log(`User ${message.email} verified`, "kafka");
-    // } else {
-    //   log(`User ${message.email} not found`, "kafka-error");
-    // }
+    // Get active users (exclude admin for verification assignment)
+    const activeUsers = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
 
+    if (!activeUsers || activeUsers.length === 0) {
+      log("No active non-admin users found to assign verification.", "kafka");
+      return;
+    }
+    log(`Found ${activeUsers.length} active users for verification assignment`, "kafka");
+
+    // Find last assigned VERIFICATION REQUEST for round-robin (specific to type='verify')
+    const lastAssignedVerificationRequest = await tx.query.supportRequests.findFirst({
+      where: eq(supportRequests.type, 'verify'),
+      orderBy: (supportRequests, { desc }) => [
+        desc(supportRequests.assigned_at),
+      ],
+    });
+    log(
+      `Last assigned verification request: ${JSON.stringify(lastAssignedVerificationRequest)}`,
+      "kafka",
+    );
+
+    // Calculate next assignee (round-robin) based on verification requests only
+    let nextAssigneeIndex = 0;
+    if (lastAssignedVerificationRequest && lastAssignedVerificationRequest.assigned_to_id) {
+      const lastAssigneeIndex = activeUsers.findIndex(
+        (user) => user.id === lastAssignedVerificationRequest.assigned_to_id,
+      );
+      if (lastAssigneeIndex !== -1) {
+        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+      }
+    }
+
+    const assigned_to_id = activeUsers[nextAssigneeIndex].id;
+    const now = new Date();
+
+    // Prepare full_name as JSON object format
+    const fullNameObj = {
+      id: message.id,
+      name: message.full_name
+    };
+
+    // Prepare insert data with type='verify' and verification-specific fields
+    const insertData = {
+      full_name: fullNameObj,
+      email: message.email,
+      subject: message.subject || "Yêu cầu xác minh danh tính",
+      content: message.detailed_description || "Yêu cầu xác minh danh tính từ người dùng",
+      status: "pending",
+      type: "verify", // Explicitly set type
+      verification_name: message.verification_name || message.full_name,
+      phone_number: message.phone_number || null,
+      attachment_url: message.attachment_url ? JSON.stringify(message.attachment_url) : null,
+      assigned_to_id,
+      assigned_at: now,
+      created_at: now,
+      updated_at: now,
+    };
+
+    try {
+      // Insert into DB
+      const newRequest = await tx
+        .insert(supportRequests)
+        .values(insertData)
+        .returning();
+      log(`✅ Verification request created with ID ${newRequest[0].id}`, "kafka");
+      log(`👤 Verification request assigned to user ID ${assigned_to_id} (${activeUsers.find(u => u.id === assigned_to_id)?.name})`, "kafka");
+      log(`📧 Email: ${message.email}, Name: ${message.full_name}, Subject: ${insertData.subject}`, "kafka");
+
+      // Broadcast verification badge update
+      if ((global as any).broadcastFeedbackBadgeUpdate) {
+        await (global as any).broadcastFeedbackBadgeUpdate();
+      }
+
+      return newRequest[0];
+    } catch (dbError) {
+      log(
+        `Database error while inserting verification request: ${dbError}`,
+        "kafka-error",
+      );
+      throw dbError;
+    }
   } catch (error) {
     log(`Error processing verification message: ${error}`, "kafka-error");
     throw error;
