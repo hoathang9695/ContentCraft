@@ -311,11 +311,16 @@ export class EmailService {
           </div>
         `;
 
+      // Extract actual name from userInfo.name (handle both string and object formats)
+      const actualUserName = typeof data.userInfo.name === 'string' 
+        ? data.userInfo.name 
+        : (data.userInfo.name as any)?.name || 'N/A';
+
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
             <h2 style="color: #333; margin: 0 0 10px 0;">Thông báo từ EMSO System</h2>
-            <p style="margin: 0; color: #666;">Xin chào ${data.userInfo.name}, đây là thông báo từ hệ thống EMSO.</p>
+            <p style="margin: 0; color: #666;">Xin chào ${actualUserName}, đây là thông báo từ hệ thống EMSO.</p>
           </div>
 
           <div style="background-color: #fff; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px;">
@@ -424,9 +429,14 @@ export class EmailService {
            </div>`
         : '';
 
+      // Extract actual name from full_name (handle both string and object formats)
+      const userName = typeof data.originalRequest.full_name === 'string' 
+        ? data.originalRequest.full_name 
+        : (data.originalRequest.full_name as any)?.name || 'N/A';
+
       // Use email template service for admin reply
       const emailTemplate = EmailTemplateService.getAdminReplyTemplate({
-        userName: data.originalRequest.full_name,
+        userName: userName,
         adminMessage: processedContent,
         originalRequest: data.originalRequest,
         attachmentInfo
