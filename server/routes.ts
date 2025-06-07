@@ -2710,9 +2710,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
   const supportController = new SupportController();
 
+  // Verification routes
+  const { verificationRouter } = await import("./routes/verification.router");
+
   app.use("/api/support-requests", supportRouterModule);
   app.use("/api", supportRouterModule);
   app.use("/api", feedbackRouter);
+  app.use("/api", verificationRouter);
 
   // Infringing content routes
   app.use("/api/infringing-content", infringingContentRouter);
