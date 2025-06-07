@@ -80,6 +80,13 @@ export interface GroupMessage {
   monetizationEnabled?: boolean;
 }
 
+export interface VerificationMessage {
+  id: string;
+  full_name: string;
+  email: string;
+  type: 'verify';
+}
+
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
@@ -230,14 +237,17 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
                       if ("externalId" in msg) {
                         log(`🔄 Processing content message: ${JSON.stringify(msg)}`, "kafka");
                         await processContentMessage(msg as ContentMessage, tx);
-                      } else if ("full_name" in msg && "type" in msg && (msg as any).type === 'feedback') {
+                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'verify') {
+                        log(`🔄 Processing verification message: ${JSON.stringify(msg)}`, "kafka");
+                        await processVerificationMessage(msg as VerificationMessage, tx);
+                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'feedback') {
                         log(`🔄 Processing feedback message: ${JSON.stringify(msg)}`, "kafka");
                         await processFeedbackMessage(msg as FeedbackMessage, tx);
                       } else if ("full_name" in msg && "email" in msg && "subject" in msg && "content" in msg) {
@@ -660,7 +670,7 @@ export interface FeedbackMessage {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage {
+): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage {
   if (!messageValue) return null;
 
   try {
@@ -682,6 +692,8 @@ function parseMessage(
       return message as PageMessage;
     } else if ("groupId" in message && "groupName" in message && "groupType" in message) {
       return message as GroupMessage;
+    } else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'verify') {
+      return message as VerificationMessage;
     }
 
     return null;
@@ -843,7 +855,7 @@ async function processSupportMessage(message: SupportMessage, tx: any) {
     // Prepare insert data with type='support'
     const insertData = {
       full_name: message.full_name,
-      email: message.email,
+      email: message: message.email,
       subject: message.subject,
       content: message.content,
       status: "pending",
@@ -997,33 +1009,33 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
       setTimeout(async () => {
         try {
           log(`📧 Starting email confirmation process for feedback #${newRequest[0].id}`, "kafka");
-          
+
           // Import EmailService class instead of singleton instance
           const { EmailService } = await import('./email.js');
-          
+
           // Create a fresh instance with proper initialization
           const emailService = new EmailService();
-          
+
           // Force reload SMTP config and wait for it to complete
           log('🔄 Loading SMTP config from database...', "kafka");
           await emailService.loadConfigFromDB();
-          
+
           // Initialize transporter with loaded config
           log('🔧 Initializing SMTP transporter...', "kafka");
           emailService.initializeTransporter();
-          
+
           // Wait longer for transporter to be fully ready
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
+
           // Test if transporter is ready before sending
           const testResult = await emailService.testConnection();
           if (!testResult) {
             log(`❌ SMTP connection test failed for feedback #${newRequest[0].id}`, "kafka-error");
             return;
           }
-          
+
           log(`✅ SMTP ready, sending confirmation email for feedback #${newRequest[0].id}`, "kafka");
-          
+
           const emailSent = await emailService.sendFeedbackConfirmation({
             to: message.email,
             fullName: message.full_name, // This is the name string from the message
@@ -1057,6 +1069,28 @@ async function processFeedbackMessage(message: FeedbackMessage, tx: any) {
     }
   } catch (error) {
     log(`Error processing feedback message: ${error}`, "kafka-error");
+    throw error;
+  }
+}
+
+async function processVerificationMessage(message: VerificationMessage, tx: any) {
+  try {
+    log(`Processing verification message: ${JSON.stringify(message)}`, "kafka");
+
+    // Implement logic to handle verification messages here
+    // This might involve updating a user's status in the database,
+    // sending a confirmation email, etc.
+    // Example:
+    // const user = await tx.select().from(users).where(eq(users.email, message.email));
+    // if (user.length > 0) {
+    //   await tx.update(users).set({ verified: true }).where(eq(users.email, message.email));
+    //   log(`User ${message.email} verified`, "kafka");
+    // } else {
+    //   log(`User ${message.email} not found`, "kafka-error");
+    // }
+
+  } catch (error) {
+    log(`Error processing verification message: ${error}`, "kafka-error");
     throw error;
   }
 }
