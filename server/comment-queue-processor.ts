@@ -14,6 +14,7 @@ export class CommentQueueProcessor {
   private processingInterval: NodeJS.Timeout | null = null;
 
   constructor() {
+    console.log('🚀 CommentQueueProcessor constructor called');
     this.startProcessor();
   }
 
