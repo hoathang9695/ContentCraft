@@ -104,12 +104,17 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     const successResponse = {
       success: true,
-      message: `Created queue with ${comments.length} comments`,
+      message: `Đã tạo queue với ${comments.length} comments`,
       sessionId: queue.session_id,
       totalComments: queue.total_comments
     };
 
     console.log("📝 SENDING SUCCESS RESPONSE:", JSON.stringify(successResponse, null, 2));
+    
+    // Ensure headers are set correctly
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
+    
     return res.status(200).json(successResponse);
 
   } catch (error) {
@@ -131,6 +136,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     // Ensure we always return JSON
     res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
     
     const errorResponse = {
       success: false,
