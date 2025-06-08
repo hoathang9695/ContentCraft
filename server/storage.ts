@@ -1136,6 +1136,35 @@ export class DatabaseStorage implements IStorage {
     return result.rows[0];
   }
 
+  async cleanupOldQueues(hoursOld: number = 24): Promise<number> {
+    console.log(`🧹 Cleaning up queues older than ${hoursOld} hours...`);
+
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - hoursOld);
+
+    try {
+      const result = await pool.query(`
+        DELETE FROM comment_queues 
+        WHERE status IN ('completed', 'failed') 
+        AND completed_at < $1
+        RETURNING session_id
+      `, [cutoffTime.toISOString()]);
+
+      const deletedCount = result.rows.length;
+      
+      if (deletedCount > 0) {
+        console.log(`🧹 Successfully cleaned up ${deletedCount} old queues:`, 
+          result.rows.map(row => row.session_id)
+        );
+      }
+
+      return deletedCount;
+    } catch (error) {
+      console.error('❌ Error cleaning up old queues:', error);
+      return 0;
+    }
+  }
+
   async updateCommentQueueProgress(sessionId: string, updates: {
     status?: string;
     processedCount?: number;
