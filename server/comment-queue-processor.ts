@@ -27,17 +27,15 @@ export class CommentQueueProcessor {
     
     console.log('🚀 Comment Queue Processor started');
     
-    // Check every 10 seconds for new queues (reduced from 30s)
+    // Check every 30 seconds for new queues
     this.processingInterval = setInterval(async () => {
       if (!this.isProcessing) {
         await this.processNextQueue();
       }
-    }, 10000);
+    }, 30000);
 
     // Process immediately on start
-    setTimeout(() => {
-      this.processNextQueue();
-    }, 2000); // Small delay to ensure DB is ready
+    this.processNextQueue();
   }
 
   stopProcessor() {
@@ -49,20 +47,14 @@ export class CommentQueueProcessor {
   }
 
   async processNextQueue() {
-    if (this.isProcessing) {
-      console.log('🔄 Processor already running, skipping...');
-      return;
-    }
+    if (this.isProcessing) return;
 
     try {
       this.isProcessing = true;
-      console.log('🔍 Checking for pending queues...');
       
       const pendingQueues = await storage.getPendingCommentQueues();
-      console.log(`📊 Found ${pendingQueues.length} pending queues`);
       
       if (pendingQueues.length === 0) {
-        console.log('✅ No pending queues to process');
         return;
       }
 
@@ -181,8 +173,8 @@ export class CommentQueueProcessor {
   }
 
   private async sendCommentToAPI(externalId: string, fakeUserId: number, comment: string) {
-    // Use external service URL for comment sending
-    const baseUrl = process.env.EXTERNAL_API_URL || 'https://emso.vn';
+    // Get the base URL - use localhost for internal requests
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:5000';
     const apiUrl = `${baseUrl}/api/contents/${externalId}/send-comment`;
     
     console.log(`🔗 Sending comment to API: ${apiUrl}`);

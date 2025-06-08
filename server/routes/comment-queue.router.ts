@@ -101,25 +101,15 @@ router.post("/", isAuthenticated, async (req, res) => {
     });
 
     console.log("✅ Queue created successfully:", queue.session_id);
-    console.log("✅ Queue details:", JSON.stringify(queue, null, 2));
-
-    // Verify queue was inserted into database
-    const verifyQueue = await storage.getCommentQueue(queue.session_id);
-    console.log("🔍 Queue verification:", verifyQueue ? "Found in DB" : "NOT FOUND in DB");
 
     const successResponse = {
       success: true,
-      message: `Đã tạo queue với ${comments.length} comments`,
+      message: `Created queue with ${comments.length} comments`,
       sessionId: queue.session_id,
       totalComments: queue.total_comments
     };
 
     console.log("📝 SENDING SUCCESS RESPONSE:", JSON.stringify(successResponse, null, 2));
-    
-    // Ensure headers are set correctly
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache');
-    
     return res.status(200).json(successResponse);
 
   } catch (error) {
@@ -141,7 +131,6 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     // Ensure we always return JSON
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache');
     
     const errorResponse = {
       success: false,
@@ -216,29 +205,6 @@ router.get("/", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to get user queues"
-    });
-  }
-});
-
-// Test endpoint to manually trigger processor
-router.post("/test-processor", isAuthenticated, async (req, res) => {
-  try {
-    console.log("🧪 Manual processor test triggered");
-    
-    // Import and trigger processor
-    const { commentQueueProcessor } = await import('../comment-queue-processor');
-    await commentQueueProcessor.processNextQueue();
-    
-    res.json({
-      success: true,
-      message: "Processor test triggered"
-    });
-  } catch (error) {
-    console.error("❌ Processor test failed:", error);
-    res.status(500).json({
-      success: false,
-      message: "Processor test failed",
-      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
