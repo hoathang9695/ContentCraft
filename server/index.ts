@@ -93,9 +93,11 @@ app.use((req, res, next) => {
   });
 
   // Error handling middleware - improved with more specific error types
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     // Log the error for debugging
     console.error('Application error:', err);
+    console.error('Request URL:', req.originalUrl);
+    console.error('Request method:', req.method);
 
     const status = err.status || err.statusCode || 500;
     let message = err.message || "Internal Server Error";
@@ -108,7 +110,18 @@ app.use((req, res, next) => {
       log(`Error: ${err.message}`, "error");
     }
 
-    res.status(status).json({ message });
+    // Ensure JSON response for API routes
+    if (req.originalUrl.startsWith('/api')) {
+      res.setHeader('Content-Type', 'application/json');
+    }
+
+    res.status(status).json({ 
+      success: false,
+      message,
+      error: err.message,
+      timestamp: new Date().toISOString(),
+      path: req.originalUrl
+    });
     // DO NOT throw error here as it will crash the application
   });
 
