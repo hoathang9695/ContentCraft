@@ -1064,7 +1064,6 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  }
 
   async getActiveCommentQueueForExternal(externalId: string) {
     const result = await pool.query(`
