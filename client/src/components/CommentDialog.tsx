@@ -241,20 +241,32 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         onOpenChange(false);
         setCommentText('');
       } else {
-        throw new Error(response?.message || 'Failed to create queue - Invalid response');
+        const errorMsg = response?.message || 'Failed to create queue - Invalid response format';
+        console.error('Invalid response format:', response);
+        throw new Error(errorMsg);
       }
 
     } catch (error) {
       console.error('Full error details:', error);
+      console.error('Error type:', typeof error);
       console.error('Error creating comment queue:', error);
       
       let errorMessage = 'Không thể tạo queue comment';
+      
       if (error instanceof Error) {
         if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
           errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Không thể kết nối tới server. Vui lòng kiểm tra kết nối mạng.';
+        } else if (error.message.includes('Invalid response')) {
+          errorMessage = 'Server trả về dữ liệu không hợp lệ. Vui lòng thử lại.';
         } else {
           errorMessage = error.message;
         }
+      } else if (typeof error === 'object' && error !== null) {
+        // Handle case where error is an object but not Error instance
+        console.error('Non-Error object caught:', JSON.stringify(error));
+        errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.';
       }
       
       toast({

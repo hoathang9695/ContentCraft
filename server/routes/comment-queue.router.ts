@@ -52,7 +52,7 @@ router.post("/", isAuthenticated, async (req, res) => {
           [JSON.stringify(updatedComments), existingQueue.session_id]
         );
 
-        res.status(200).json({
+        return res.status(200).json({
           success: true,
           message: `Added ${comments.length} comments to existing queue`,
           sessionId: existingQueue.session_id,
@@ -79,7 +79,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("Queue created successfully:", queue.session_id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: `Created queue with ${comments.length} comments`,
       sessionId: queue.session_id,
@@ -88,6 +88,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
   } catch (error) {
     console.error("Error creating comment queue:", error);
+    console.error("Full error stack:", error instanceof Error ? error.stack : error);
     return res.status(500).json({
       success: false,
       message: "Failed to create comment queue",
