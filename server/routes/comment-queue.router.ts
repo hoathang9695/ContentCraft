@@ -66,10 +66,20 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("✅ Creating new queue...");
 
-    // Check database connection
+    // Check database connection with timeout
     console.log("🔍 Testing database connection...");
-    await pool.query("SELECT 1"); // Simple query to test connection
-    console.log("✅ Database connection successful");
+    try {
+      const connectionTest = await Promise.race([
+        pool.query("SELECT NOW() as current_time"),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database connection timeout')), 5000)
+        )
+      ]);
+      console.log("✅ Database connection successful:", connectionTest);
+    } catch (dbError) {
+      console.error("❌ Database connection failed:", dbError);
+      throw new Error(`Database connection failed: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}`);
+    }
 
     // Create new queue
     const queue = await storage.createCommentQueue({
@@ -91,18 +101,29 @@ router.post("/", isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
     console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-    console.error("❌ Error details:", {
-      message: error instanceof Error ? error.message : "Unknown error",
-      // code: error.code, //Commented out to avoid type error, since error.code might not exist
-      // detail: error.detail,  //Commented out to avoid type error, since error.detail might not exist
-      // constraint: error.constraint  //Commented out to avoid type error, since error.constraint might not exist
-    });
+    
+    // More detailed error information
+    if (error && typeof error === 'object') {
+      console.error("❌ Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        name: error instanceof Error ? error.name : undefined,
+        code: (error as any).code || undefined,
+        detail: (error as any).detail || undefined,
+        constraint: (error as any).constraint || undefined,
+        table: (error as any).table || undefined,
+        column: (error as any).column || undefined
+      });
+    }
 
-    return res.status(500).json({
+    // Return appropriate error response
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const statusCode = errorMessage.includes('connection') || errorMessage.includes('timeout') ? 503 : 500;
+
+    return res.status(statusCode).json({
       success: false,
-      message: "Failed to create comment queue",
-      error: error instanceof Error ? error.message : "Unknown error",
-      // code: error.code //Commented out to avoid type error, since error.code might not exist
+      message: statusCode === 503 ? "Database connection error. Please try again." : "Failed to create comment queue",
+      error: errorMessage,
+      timestamp: new Date().toISOString()
     });
   }
 });
