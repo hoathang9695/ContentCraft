@@ -31,6 +31,7 @@ export class CommentQueueProcessor {
     this.processingInterval = setInterval(async () => {
       if (!this.isProcessing) {
         await this.processNextQueue();
+        await this.cleanupCompletedQueues();
       }
     }, 30000);
 
@@ -265,6 +266,19 @@ export class CommentQueueProcessor {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async cleanupCompletedQueues() {
+    try {
+      // Xóa các queues đã completed/failed cách đây hơn 24 giờ
+      const cleanupResult = await storage.cleanupOldQueues(24); // 24 hours
+      
+      if (cleanupResult > 0) {
+        console.log(`🧹 Cleaned up ${cleanupResult} old completed queues`);
+      }
+    } catch (error) {
+      console.error('❌ Error during queue cleanup:', error);
+    }
   }
 }
 

@@ -188,4 +188,35 @@ router.get("/", isAuthenticated, async (req, res) => {
   }
 });
 
+// Manual cleanup for admin
+router.delete("/cleanup", isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as Express.User;
+    
+    // Only allow admin to cleanup
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Only admin can perform cleanup"
+      });
+    }
+
+    const { hoursOld = 24 } = req.body;
+    const deletedCount = await storage.cleanupOldQueues(hoursOld);
+
+    res.json({
+      success: true,
+      message: `Cleaned up ${deletedCount} old queues`,
+      deletedCount
+    });
+
+  } catch (error) {
+    console.error("Error during manual cleanup:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to cleanup old queues"
+    });
+  }
+});
+
 export default router;
