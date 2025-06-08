@@ -1127,4 +1127,5 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result.length > 0 ? result[0] : undefined;
-  }</old_str>
+  }
+}</old_str>
