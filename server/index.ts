@@ -11,27 +11,7 @@ import { simulateKafkaMessage } from "./kafka-simulator";
 import { FileCleanupService } from "./file-cleanup";
 
 const app = express();
-// Improved JSON parsing with error handling
-app.use((req, res, next) => {
-  // Set default content type for API routes
-  if (req.originalUrl.startsWith('/api')) {
-    res.setHeader('Content-Type', 'application/json');
-  }
-  next();
-});
-
-app.use(express.json({ 
-  limit: '50mb',
-  verify: (req, res, buf, encoding) => {
-    try {
-      JSON.parse(buf.toString());
-    } catch (e) {
-      console.error('JSON parsing error:', e);
-      throw new Error('Invalid JSON in request body');
-    }
-  }
-}));
-
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // Cấu hình CORS để cho phép truy cập từ Vite development server

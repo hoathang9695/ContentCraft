@@ -229,15 +229,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         selectedGender
       });
 
-      console.log('✅ Full API Response:', responseData);
-      console.log('✅ Response type:', typeof responseData);
-      console.log('✅ Response success field:', responseData?.success);
+      console.log('Comment queue created successfully:', responseData);
 
-      // Check if response is valid and has success field
-      if (responseData && typeof responseData === 'object' && responseData.success === true) {
+      if (responseData.success) {
         toast({
           title: "Thành công",
-          description: `${responseData.message || 'Đã tạo queue thành công'}. Hệ thống sẽ xử lý tự động trong nền.`,
+          description: `${responseData.message}. Hệ thống sẽ xử lý tự động trong nền.`,
         });
 
         // Đóng dialog sau khi thành công
@@ -245,13 +242,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         setCommentText('');
 
       } else {
-        console.error('❌ Error in comment queue creation:', responseData);
-        
-        const errorMessage = responseData?.message || responseData?.error || 'Không thể tạo queue comment';
+        console.error('Error in comment queue creation:', responseData);
         
         toast({
           title: "Lỗi tạo queue",
-          description: errorMessage,
+          description: responseData.message || 'Không thể tạo queue comment',
           variant: "destructive",
         });
       }

@@ -966,9 +966,9 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  // Fake User operations
+  // FakeUser management implementations
   async getAllFakeUsers(): Promise<FakeUser[]> {
-    return await db.select().from(fakeUsers).orderBy(fakeUsers.username);
+    return await db.select().from(fakeUsers).orderBy(fakeUsers.name);
   }
 
   async getFakeUser(id: number): Promise<FakeUser | undefined> {
@@ -981,52 +981,8 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0] : undefined;
   }
 
-  async getFakeUsersWithPagination(page: number, pageSize: number, search?: string): Promise<{
-    users: FakeUser[];
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-  }> {
-    const offset = (page - 1) * pageSize;
-    
-    let whereCondition;
-    if (search && search.trim()) {
-      whereCondition = or(
-        like(fakeUsers.username, `%${search}%`),
-        like(fakeUsers.name, `%${search}%`),
-        like(fakeUsers.email, `%${search}%`)
-      );
-    }
-
-    // Get total count
-    const totalResult = await db
-      .select({ count: count() })
-      .from(fakeUsers)
-      .where(whereCondition);
-
-    const total = totalResult[0]?.count || 0;
-
-    // Get paginated users
-    const users = await db
-      .select()
-      .from(fakeUsers)
-      .where(whereCondition)
-      .orderBy(fakeUsers.username)
-      .limit(pageSize)
-      .offset(offset);
-
-    return {
-      users,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize)
-    };
-  }
-
-  async createFakeUser(fakeUser: InsertFakeUser): Promise<FakeUser> {
-    const result = await db.insert(fakeUsers).values(fakeUser).returning();
+  async createFakeUser(insertFakeUser: InsertFakeUser): Promise<FakeUser> {
+    const result = await db.insert(fakeUsers).values(insertFakeUser).returning();
     return result[0];
   }
 
@@ -1043,6 +999,197 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0] : undefined;
   }
 
+  // Comment Queue methods
+  async createCommentQueue(data: {
+    externalId: string;
+    comments: string[];
+    selectedGender: string;
+    userId: number;
+  }): Promise<any> {
+    try {
+      console.log('Storage.createCommentQueue called with:', data);
+
+      if (!data.externalId || !data.comments || !Array.isArray(data.comments)) {
+        throw new Error('externalId and comments array are required');
+      }
+
+      // Generate session ID
+      const sessionId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Use raw SQL to insert with timeout
+      const query = `
+        INSERT INTO comment_queues (
+          session_id, external_id, comments, selected_gender, user_id, 
+          total_comments, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING *
+      `;
+
+      const values = [
+        sessionId,
+        data.externalId,
+        JSON.stringify(data.comments),
+        data.selectedGender || 'all',
+        data.userId,
+        data.comments.length,
+        'pending'
+      ];
+
+      console.log('Executing query with timeout...');
+      console.log('Query:', query);
+      console.log('Values:', values);
+
+      // Add timeout to the database query
+      const result = await Promise.race([
+        pool.query(query, values),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database query timeout after 10 seconds')), 10000)
+        )
+      ]) as any;
+
+      if (!result || result.rows.length === 0) {
+        throw new Error('Failed to insert comment queue entry - no rows returned');
+      }
+
+      console.log('✅ Comment queue created successfully:', result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ Error in createCommentQueue:', error);
+      
+      // Enhanced error logging
+      if (error && typeof error === 'object') {
+        console.error('❌ Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          name: error instanceof Error ? error.name : undefined,
+          code: (error as any).code || undefined,
+          detail: (error as any).detail || undefined,
+          constraint: (error as any).constraint || undefined,
+          stack: error instanceof Error ? error.stack : 'No stack trace'
+        });
+      }
+      
+      throw error;
+    }
+  }
+
+  async getActiveCommentQueueForExternal(externalId: string) {
+    const result = await pool.query(`
+      SELECT * FROM comment_queues 
+      WHERE external_id = $1 AND status IN ('pending', 'processing')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [externalId]);
+
+    return result.rows.length > 0 ? result.rows[0] : null;
+  }
+
+  async getCommentQueue(sessionId: string) {
+    const result = await pool.query(
+      'SELECT * FROM comment_queues WHERE session_id = $1',
+      [sessionId]
+    );
+
+    return result.rows.length > 0 ? result.rows[0] : null;
+  }
+
+  async getPendingCommentQueues() {
+    const result = await pool.query(`
+      SELECT * FROM comment_queues 
+      WHERE status = 'pending'
+      ORDER BY created_at ASC
+    `);
+
+    return result.rows;
+  }
+
+  async updateCommentQueueProgress(sessionId: string, updates: {
+    status?: string;
+    processedCount?: number;
+    successCount?: number;
+    failureCount?: number;
+    currentCommentIndex?: number;
+    totalComments?: number;
+    errorInfo?: string;
+  }) {
+    const fields = [];
+    const values = [];
+    let paramCount = 0;
+
+    if (updates.status !== undefined) {
+      fields.push(`status = $${++paramCount}`);
+      values.push(updates.status);
+    }
+
+    if (updates.processedCount !== undefined) {
+      fields.push(`processed_count = $${++paramCount}`);
+      values.push(updates.processedCount);
+    }
+
+    if (updates.successCount !== undefined) {
+      fields.push(`success_count = $${++paramCount}`);
+      values.push(updates.successCount);
+    }
+
+    if (updates.failureCount !== undefined) {
+      fields.push(`failure_count = $${++paramCount}`);
+      values.push(updates.failureCount);
+    }
+
+    if (updates.currentCommentIndex !== undefined) {
+      fields.push(`current_comment_index = $${++paramCount}`);
+      values.push(updates.currentCommentIndex);
+    }
+
+    if (updates.totalComments !== undefined) {
+      fields.push(`total_comments = $${++paramCount}`);
+      values.push(updates.totalComments);
+    }
+
+    if (updates.errorInfo !== undefined) {
+      fields.push(`error_info = $${++paramCount}`);
+      values.push(updates.errorInfo);
+    }
+
+    if (fields.length === 0) {
+      return;
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(sessionId);
+
+    const query = `
+      UPDATE comment_queues 
+      SET ${fields.join(', ')}
+      WHERE session_id = $${++paramCount}
+    `;
+
+    if (updates.status === 'processing') {
+      fields.push(`started_at = $${++paramCount}`);
+      values.push(new Date().toISOString());
+    }
+
+    if (updates.status === 'completed' || updates.status === 'failed') {
+      fields.push(`completed_at = $${++paramCount}`);
+      values.push(new Date().toISOString());
+    }
+
+    fields.push(`updated_at = $${++paramCount}`);
+    values.push(new Date().toISOString());
+
+    values.push(sessionId);
+
+    const updateQuery = `
+      UPDATE comment_queues 
+      SET ${fields.join(', ')}
+      WHERE session_id = $${++paramCount}
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, values);
+    return result.rows[0];
+  }
+
+
   async deleteFakeUser(id: number): Promise<boolean> {
     const result = await db
       .delete(fakeUsers)
@@ -1053,79 +1200,79 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRandomFakeUser(): Promise<FakeUser | undefined> {
-    const result = await db
+    // Lấy danh sách tất cả người dùng ảo đang hoạt động
+    const activeFakeUsers = await db
       .select()
       .from(fakeUsers)
-      .orderBy(sql`RANDOM()`)
-      .limit(1);
+      .where(eq(fakeUsers.status, 'active'));
 
-    return result.length > 0 ? result[0] : undefined;
+    if (activeFakeUsers.length === 0) return undefined;
+
+    // Chọn ngẫu nhiên một người dùng ảo
+    const randomIndex = Math.floor(Math.random() * activeFakeUsers.length);
+    return activeFakeUsers[randomIndex];
   }
+async getFakeUsersWithPagination(page: number, pageSize: number, search: string = ''): Promise<{
+    users: FakeUser[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    console.log("Storage: getFakeUsersWithPagination called with:", { page, pageSize, search });
 
-  // Support request operations
-  async createSupportRequest(request: InsertSupportRequest): Promise<SupportRequest> {
-    const result = await db.insert(supportRequests).values(request).returning();
-    return result[0];
+    const offset = (page - 1) * pageSize;
+
+    // Build search conditions
+    const searchConditions = [];
+    if (search && search.trim()) {
+      const searchPattern = `%${search.toLowerCase()}%`;
+      searchConditions.push(
+        or(
+          ilike(fakeUsers.name, searchPattern),
+          ilike(fakeUsers.token, searchPattern),
+          ilike(fakeUsers.description, searchPattern)
+        )
+      );
+    }
+
+    const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
+
+    try {
+      // Get total count
+      const countResult = await db
+        .select({ count: count() })
+        .from(fakeUsers)
+        .where(whereClause);
+
+      const total = Number(countResult[0]?.count || 0);
+      const totalPages = Math.ceil(total / pageSize);
+
+      console.log("Storage: Total fake users found:", total);
+
+      // Get paginated data
+      const results = await db
+        .select()
+        .from(fakeUsers)
+        .where(whereClause)
+        .orderBy(fakeUsers.name)
+        .limit(pageSize)
+        .offset(offset);
+
+      console.log("Storage: Returning", results.length, "fake users for page", page);
+
+      return {
+        users: results,
+        total,
+        page,
+        pageSize,
+        totalPages
+      };
+    } catch (error) {
+      console.error("Storage: Error in getFakeUsersWithPagination:", error);
+      throw error;
+    }
   }
+}
 
-  async getSupportRequest(id: number): Promise<SupportRequest | undefined> {
-    const result = await db.select().from(supportRequests).where(eq(supportRequests.id, id));
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async getAllSupportRequests(): Promise<SupportRequest[]> {
-    return await db.select().from(supportRequests).orderBy(desc(supportRequests.createdAt));
-  }
-
-  async updateSupportRequest(id: number, request: Partial<InsertSupportRequest>): Promise<SupportRequest | undefined> {
-    const result = await db
-      .update(supportRequests)
-      .set({
-        ...request,
-        updatedAt: new Date()
-      })
-      .where(eq(supportRequests.id, id))
-      .returning();
-
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async deleteSupportRequest(id: number): Promise<boolean> {
-    const result = await db
-      .delete(supportRequests)
-      .where(eq(supportRequests.id, id))
-      .returning({ id: supportRequests.id });
-
-    return result.length > 0;
-  }
-
-  async assignSupportRequest(id: number, userId: number): Promise<SupportRequest | undefined> {
-    const result = await db
-      .update(supportRequests)
-      .set({
-        assignedTo: userId,
-        status: 'in_progress',
-        updatedAt: new Date()
-      })
-      .where(eq(supportRequests.id, id))
-      .returning();
-
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async completeSupportRequest(id: number, responseContent: string, responderId: number): Promise<SupportRequest | undefined> {
-    const result = await db
-      .update(supportRequests)
-      .set({
-        responseContent,
-        responderId,
-        status: 'completed',
-        completedAt: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(supportRequests.id, id))
-      .returning();
-
-    return result.length > 0 ? result[0] : undefined;
-  }
-}</old_str>
+export const storage = new DatabaseStorage();
