@@ -80,6 +80,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
+    console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     
     return res.status(500).json({
       success: false,
