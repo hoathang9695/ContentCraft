@@ -222,20 +222,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         selectedGender
       });
 
-      // Gửi queue đến backend API
-      const response = await apiRequest('POST', '/api/comment-queues', {
+      // Gửi queue đến backend API - sử dụng apiRequest đúng cách
+      const result = await apiRequest('POST', '/api/comment-queues', {
         externalId,
         comments: uniqueComments,
         selectedGender
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server error response:', errorText);
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log('Comment queue created successfully:', result);
 
       if (!result.success) {
