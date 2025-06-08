@@ -1178,14 +1178,14 @@ export class DatabaseStorage implements IStorage {
 
     values.push(sessionId);
 
-    const query = `
+    const updateQuery = `
       UPDATE comment_queues 
       SET ${fields.join(', ')}
       WHERE session_id = $${++paramCount}
       RETURNING *
     `;
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(updateQuery, values);
     return result.rows[0];
   }
 
