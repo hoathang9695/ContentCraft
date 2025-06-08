@@ -253,10 +253,17 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
     } catch (error) {
       console.error('Error in comment queue creation:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'No stack'
+      });
 
       let errorMessage = 'Không thể tạo queue comment';
 
       if (error instanceof Error) {
+        console.log('Error message content:', error.message);
+        
         if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
           errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
         } else if (error.message.includes('Failed to fetch')) {
