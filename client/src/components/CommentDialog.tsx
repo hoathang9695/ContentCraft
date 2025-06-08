@@ -253,6 +253,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       } else {
         // Invalid response format
         console.error('Invalid response format - missing success property:', response);
+        console.error('Raw response:', response);
+        
+        // Check if response is HTML (common when server returns error page)
+        if (typeof response === 'string' && response.includes('<!DOCTYPE')) {
+          throw new Error('Server trả về trang HTML thay vì JSON. Server có thể đang gặp lỗi.');
+        }
+        
         throw new Error('Server trả về dữ liệu không hợp lệ');
       }
 
@@ -270,13 +277,19 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           errorMessage = 'Không thể kết nối tới server. Vui lòng kiểm tra kết nối mạng.';
         } else if (error.message.includes('Invalid response') || error.message.includes('không hợp lệ')) {
           errorMessage = 'Server trả về dữ liệu không hợp lệ. Vui lòng thử lại.';
+        } else if (error.message.includes('Unexpected token') || error.message.includes('JSON')) {
+          errorMessage = 'Server trả về dữ liệu không phải JSON. Vui lòng thử lại.';
         } else {
           errorMessage = error.message;
         }
       } else if (typeof error === 'object' && error !== null) {
         // Handle case where error is an object but not Error instance
         console.error('Non-Error object caught:', JSON.stringify(error));
-        errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.';
+        if (Object.keys(error).length === 0) {
+          errorMessage = 'Lỗi không xác định từ server. Vui lòng thử lại sau.';
+        } else {
+          errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.';
+        }
       }
       
       toast({
