@@ -2784,6 +2784,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Comment Queue routes
+  const commentQueueRouter = (await import("./routes/comment-queue.router")).default;
+  app.use("/api/comment-queues", commentQueueRouter);
+
   // Support routes
   const supportRouterModule = (await import("./routes/support.router")).default;
   const { SupportController } = await import(

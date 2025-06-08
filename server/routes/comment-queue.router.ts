@@ -2,95 +2,6 @@ import express from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../middleware/auth";
 import { pool } from "../db";
-import { sql } from 'drizzle-orm';
-
-const router = express.Router();
-
-// Create comment queue endpoint
-router.post('/', isAuthenticated, async (req, res) => {
-  try {
-    console.log('🚀 POST /api/comment-queues called');
-    console.log('Request body:', req.body);
-    console.log('User:', req.user);
-
-    const { externalId, comments, selectedGender = 'all' } = req.body;
-    const userId = (req.user as Express.User).id;
-
-    // Validate input
-    if (!externalId || !comments || !Array.isArray(comments) || comments.length === 0) {
-      console.log('❌ Invalid input data');
-      return res.status(400).json({
-        success: false,
-        message: 'externalId and comments array are required'
-      });
-    }
-
-    // Check if there's already an active queue for this external ID
-    const existingQueue = await storage.getActiveCommentQueueForExternal(externalId);
-    if (existingQueue) {
-      console.log('⚠️ Queue already exists for external ID:', externalId);
-      return res.status(400).json({
-        success: false,
-        message: 'There is already an active comment queue for this content'
-      });
-    }
-
-    // Create the comment queue
-    const queueData = {
-      externalId,
-      comments,
-      selectedGender,
-      userId
-    };
-
-    console.log('✅ Creating comment queue with data:', queueData);
-    const result = await storage.createCommentQueue(queueData);
-
-    console.log('✅ Comment queue created successfully:', result);
-    return res.status(200).json({
-      success: true,
-      message: 'Comment queue created successfully',
-      data: result
-    });
-
-  } catch (error) {
-    console.error('❌ Error in comment queue creation:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create comment queue',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get comment queue status
-router.get('/:sessionId', isAuthenticated, async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    const queue = await storage.getCommentQueue(sessionId);
-    
-    if (!queue) {
-      return res.status(404).json({
-        success: false,
-        message: 'Comment queue not found'
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: queue
-    });
-  } catch (error) {
-    console.error('Error getting comment queue:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get comment queue status',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-export { router as commentQueueRouter };
 
 const router = express.Router();
 
@@ -105,58 +16,68 @@ router.post("/", isAuthenticated, async (req, res) => {
   console.log("📝 COMMENT QUEUE REQUEST START");
   console.log("📝 Request URL:", req.originalUrl);
   console.log("📝 Request method:", req.method);
-  console.log("📝 Request headers:", req.headers);
   console.log("📝 Request body:", JSON.stringify(req.body, null, 2));
   console.log("📝 User authenticated:", req.user);
 
   // Set response headers early
   res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-cache');
 
   try {
-      const user = req.user as Express.User;
-      const { externalId, comments, selectedGender } = req.body;
+    const user = req.user as Express.User;
+    const { externalId, comments, selectedGender } = req.body;
 
-      console.log("📝 Extracted data:", { externalId, commentsLength: comments?.length, selectedGender });
+    console.log("📝 Extracted data:", { externalId, commentsLength: comments?.length, selectedGender });
 
-      // Validate request data
-      if (!externalId) {
-        console.error("❌ Validation failed: External ID is missing");
-        return res.status(400).json({
-          success: false,
-          message: "External ID is required"
-        });
-      }
-
-      if (!comments || !Array.isArray(comments) || comments.length === 0) {
-        console.error("❌ Validation failed: Comments array is missing or empty");
-        return res.status(400).json({
-          success: false,
-          message: "Comments array is required and must not be empty"
-        });
-      }
-
-      console.log("✅ Creating new queue...");
-
-      // Create new queue
-      const queue = await storage.createCommentQueue({
-        externalId,
-        comments,
-        selectedGender: selectedGender || 'all',
-        userId: user.id
+    // Validate request data
+    if (!externalId) {
+      console.error("❌ Validation failed: External ID is missing");
+      return res.status(400).json({
+        success: false,
+        message: "External ID is required"
       });
+    }
 
-      console.log("✅ Queue created successfully:", queue.session_id);
+    if (!comments || !Array.isArray(comments) || comments.length === 0) {
+      console.error("❌ Validation failed: Comments array is missing or empty");
+      return res.status(400).json({
+        success: false,
+        message: "Comments array is required and must not be empty"
+      });
+    }
 
-      const successResponse = {
-        success: true,
-        message: `Đã tạo queue với ${comments.length} comments`,
-        sessionId: queue.session_id,
-        totalComments: queue.total_comments
-      };
+    // Check if there's already an active queue for this external ID
+    const existingQueue = await storage.getActiveCommentQueueForExternal(externalId);
+    if (existingQueue) {
+      console.log('⚠️ Queue already exists for external ID:', externalId);
+      return res.status(400).json({
+        success: false,
+        message: 'There is already an active comment queue for this content'
+      });
+    }
 
-      console.log("📝 SENDING SUCCESS RESPONSE:", JSON.stringify(successResponse, null, 2));
+    console.log("✅ Creating new queue...");
 
-      return res.status(200).json(successResponse);
+    // Create new queue
+    const queue = await storage.createCommentQueue({
+      externalId,
+      comments,
+      selectedGender: selectedGender || 'all',
+      userId: user.id
+    });
+
+    console.log("✅ Queue created successfully:", queue.session_id);
+
+    const successResponse = {
+      success: true,
+      message: `Đã tạo queue với ${comments.length} comments`,
+      sessionId: queue.session_id,
+      totalComments: queue.total_comments
+    };
+
+    console.log("📝 SENDING SUCCESS RESPONSE:", JSON.stringify(successResponse, null, 2));
+
+    return res.status(200).json(successResponse);
 
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
@@ -176,9 +97,6 @@ router.post("/", isAuthenticated, async (req, res) => {
     }
 
     // Ensure we always return JSON
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache');
-
     const errorResponse = {
       success: false,
       message: "Lỗi tạo comment queue", 
@@ -233,7 +151,7 @@ router.get("/:sessionId", isAuthenticated, async (req, res) => {
 router.get("/", isAuthenticated, async (req, res) => {
   try {
     const user = req.user as Express.User;
-    const result = await storage.db.query(`
+    const result = await pool.query(`
       SELECT session_id, external_id, total_comments, processed_count, 
              success_count, failure_count, status, created_at, updated_at
       FROM comment_queues 
