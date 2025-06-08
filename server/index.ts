@@ -177,5 +177,5 @@ app.use((req, res, next) => {
 })();
 
 // Start the comment queue processor
-import './comment-queue-processor';
+import './comment-queue-processor';nt-queue-processor';
 console.log('🚀 CommentQueueProcessor initialized and started');
