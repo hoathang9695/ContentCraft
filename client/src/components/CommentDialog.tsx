@@ -51,29 +51,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     ? allFakeUsers 
     : allFakeUsers.filter(user => user.gender === selectedGender);
 
-  // Hàm lấy ngẫu nhiên một người dùng ảo không trùng lặp trong cùng session
-  const getRandomFakeUser = (usedUserIds: Set<number>): FakeUser | null => {
-    if (fakeUsers.length === 0) return null;
-
-    // Lọc ra những người dùng chưa được sử dụng trong session này
-    const availableUsers = fakeUsers.filter(user => !usedUserIds.has(user.id));
-
-    // Nếu đã sử dụng hết tất cả user, reset và bắt đầu lại
-    if (availableUsers.length === 0) {
-      console.log('Đã sử dụng hết tất cả user, bắt đầu chu kỳ mới...');
-      usedUserIds.clear();
-      const randomIndex = Math.floor(Math.random() * fakeUsers.length);
-      const selectedUser = fakeUsers[randomIndex];
-      usedUserIds.add(selectedUser.id);
-      return selectedUser;
-    }
-
-    // Chọn ngẫu nhiên một người dùng từ danh sách chưa sử dụng
-    const randomIndex = Math.floor(Math.random() * availableUsers.length);
-    const selectedUser = availableUsers[randomIndex];
-    usedUserIds.add(selectedUser.id);
-    return selectedUser;
-  };
+  
 
   // Extract comments inside {} brackets
   const extractComments = (text: string): string[] => {
@@ -123,30 +101,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     }
   }, [open]);
 
-  // Mutation để gửi comment đến API bên ngoài sử dụng API mới
-  const sendExternalCommentMutation = useMutation({
-    mutationFn: async ({ externalId, fakeUserId, comment }: { externalId: string, fakeUserId: number, comment: string }) => {
-      return await apiRequest('POST', `/api/contents/${externalId}/send-comment`, { 
-        fakeUserId, 
-        comment 
-      });
-    },
-    onSuccess: (data) => {
-      console.log('Kết quả gửi comment API:', data);
-      toast({
-        title: 'Gửi comment thành công',
-        description: 'Comment đã được gửi tới API bên ngoài thành công.',
-      });
-    },
-    onError: (error) => {
-      console.error('Lỗi khi gửi comment thông qua API mới:', error);
-      toast({
-        title: 'Lỗi khi gửi comment',
-        description: error instanceof Error ? error.message : 'Lỗi không xác định khi gửi comment',
-        variant: 'destructive',
-      });
-    }
-  });
+  
 
   // Mutation để cập nhật số lượng comment trong DB nội bộ
   const commentMutation = useMutation({
@@ -444,12 +399,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             className="w-24"
             disabled={
               commentMutation.isPending || 
-              sendExternalCommentMutation.isPending || 
               (externalId && fakeUsers.length === 0) ||
               extractedComments.length === 0
             }
           >
-            {commentMutation.isPending || sendExternalCommentMutation.isPending ? "Đang gửi..." : "Gửi"}
+            {commentMutation.isPending ? "Đang gửi..." : "Gửi"}
           </Button>
         </DialogFooter>
       </DialogContent>
