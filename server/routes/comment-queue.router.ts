@@ -124,7 +124,6 @@ router.post("/", isAuthenticated, async (req, res) => {
       message: statusCode === 503 ? "Database connection error. Please try again." : "Failed to create comment queue",
       error: errorMessage,
       timestamp: new Date().toISOString()
-    });ing()
     });
   }
 });
