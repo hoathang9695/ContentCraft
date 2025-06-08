@@ -60,6 +60,7 @@ export default function SettingsPage() {
   });
 
   const [testEmail, setTestEmail] = useState("");
+  const [cleanupHours, setCleanupHours] = useState(24);
 
   // Redirect if not admin
   if (user && user.role !== "admin") {
@@ -166,6 +167,35 @@ export default function SettingsPage() {
     },
   });
 
+  // Cleanup comment queues mutation
+  const cleanupMutation = useMutation({
+    mutationFn: async (hoursOld?: number) => {
+      const res = await fetch("/api/comment-queues/cleanup", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hoursOld }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to cleanup queues");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Dọn dẹp thành công",
+        description: `Đã xóa ${data.deletedCount} queues cũ`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi dọn dẹp",
+        description: error.message || "Không thể dọn dẹp queues. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleExportExcel = async () => {
     if (!realUsersData?.data || realUsersData.data.length === 0) {
       toast({
@@ -262,6 +292,15 @@ export default function SettingsPage() {
 
   const handleTestSMTP = () => {
     testSMTPMutation.mutate();
+  };
+
+  const handleManualCleanup = () => {
+    cleanupMutation.mutate(cleanupHours);
+  };
+
+  const handleImmediateCleanup = () => {
+    // Cleanup all completed/failed queues immediately (set to 0 hours)
+    cleanupMutation.mutate(0);
   };
 
   return (
@@ -455,6 +494,78 @@ export default function SettingsPage() {
                 <li><strong>Port 587</strong> với TLS (không phải SSL)</li>
               </ol>
               <p className="mt-2 text-amber-600"><strong>Lưu ý:</strong> App Password khác với mật khẩu Gmail thường!</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Manual Cleanup Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Dọn dẹp Comment Queues
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="space-y-2">
+                <Label htmlFor="cleanup-hours">Xóa queues cũ hơn (giờ)</Label>
+                <Input
+                  id="cleanup-hours"
+                  type="number"
+                  min="1"
+                  max="168"
+                  value={cleanupHours}
+                  onChange={(e) => setCleanupHours(parseInt(e.target.value) || 24)}
+                  placeholder="24"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Từ 1 đến 168 giờ (7 ngày)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Trạng thái cleanup</Label>
+                <div className="text-sm text-muted-foreground">
+                  {cleanupMutation.isPending ? (
+                    <span className="text-blue-600">Đang dọn dẹp...</span>
+                  ) : (
+                    <span>Sẵn sàng thực hiện</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleManualCleanup}
+                  disabled={cleanupMutation.isPending}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {cleanupMutation.isPending ? "Đang xóa..." : "Xóa queues cũ"}
+                </Button>
+                
+                <Button 
+                  onClick={handleImmediateCleanup}
+                  disabled={cleanupMutation.isPending}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Xóa ngay
+                </Button>
+              </div>
+            </div>
+
+            <div className="text-sm text-muted-foreground bg-yellow-50 p-3 rounded-md">
+              <p className="font-medium mb-2">Lưu ý về dọn dẹp Comment Queues:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong>Xóa queues cũ:</strong> Chỉ xóa các queues đã completed/failed trong khoảng thời gian được chọn</li>
+                <li><strong>Xóa ngay:</strong> Xóa tất cả queues completed/failed ngay lập tức (bỏ qua thời gian)</li>
+                <li><strong>An toàn:</strong> Không ảnh hưởng đến queues đang pending hoặc processing</li>
+                <li><strong>Tự động:</strong> Hệ thống cũng tự động dọn dẹp mỗi 30 giây</li>
+              </ul>
             </div>
           </CardContent>
         </Card>
