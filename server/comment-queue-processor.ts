@@ -173,22 +173,51 @@ export class CommentQueueProcessor {
   }
 
   private async sendCommentToAPI(externalId: string, fakeUserId: number, comment: string) {
-    const response = await fetch(`${process.env.API_BASE_URL || ''}/api/contents/${externalId}/send-comment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fakeUserId,
-        comment
-      })
-    });
+    // Get the base URL - use localhost for internal requests
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:5000';
+    const apiUrl = `${baseUrl}/api/contents/${externalId}/send-comment`;
+    
+    console.log(`🔗 Sending comment to API: ${apiUrl}`);
+    console.log(`📦 Payload:`, { fakeUserId, comment });
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fakeUserId,
+          comment
+        })
+      });
+
+      console.log(`📡 API Response status: ${response.status}`);
+      
+      // Log response headers for debugging
+      console.log(`📋 Response headers:`, Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`❌ API Error Response:`, responseText);
+        throw new Error(`API request failed: ${response.status} ${response.statusText} - ${responseText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.error(`❌ Expected JSON but got:`, contentType, responseText);
+        throw new Error(`API returned non-JSON response: ${contentType}`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ API Response data:`, result);
+      return result;
+      
+    } catch (error) {
+      console.error(`❌ Error calling API:`, error);
+      throw error;
     }
-
-    return await response.json();
   }
 
   private getRandomFakeUser(fakeUsers: FakeUser[], usedUserIds: Set<number>): FakeUser | null {
