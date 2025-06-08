@@ -5,7 +5,8 @@ import {
   categories, type Category, type InsertCategory,
   labels, type Label, type InsertLabel,
   fakeUsers, type FakeUser, type InsertFakeUser,
-  infringingContents, type InfringingContent, type InsertInfringingContent
+  infringingContents, type InfringingContent, type InsertInfringingContent,
+  commentQueues
 } from "@shared/schema";
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -951,8 +952,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(labels.id, id))
-      ```text
-.returning();
+      .returning();
 
     return result.length > 0 ? result[0] : undefined;
   }
