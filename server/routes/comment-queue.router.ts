@@ -14,11 +14,20 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("Parsed data:", { externalId, comments, selectedGender, userId: user.id });
 
-    if (!externalId || !comments || !Array.isArray(comments) || comments.length === 0) {
-      console.log("Invalid request data validation failed");
+    // Validate request data
+    if (!externalId) {
+      console.log("Missing externalId");
       return res.status(400).json({
         success: false,
-        message: "Invalid request data"
+        message: "External ID is required"
+      });
+    }
+
+    if (!comments || !Array.isArray(comments) || comments.length === 0) {
+      console.log("Invalid comments data");
+      return res.status(400).json({
+        success: false,
+        message: "Comments array is required and must not be empty"
       });
     }
 
@@ -27,26 +36,36 @@ router.post("/", isAuthenticated, async (req, res) => {
     
     if (existingQueue) {
       console.log("Found existing queue:", existingQueue.session_id);
-      // Add comments to existing queue
-      const existingComments = JSON.parse(existingQueue.comments);
-      const updatedComments = [...existingComments, ...comments];
-      
-      await storage.updateCommentQueueProgress(existingQueue.session_id, {
-        totalComments: updatedComments.length
-      });
+      try {
+        // Add comments to existing queue
+        const existingComments = JSON.parse(existingQueue.comments);
+        const updatedComments = [...existingComments, ...comments];
+        
+        await storage.updateCommentQueueProgress(existingQueue.session_id, {
+          totalComments: updatedComments.length
+        });
 
-      // Update comments in database
-      await storage.db.query(
-        'UPDATE comment_queues SET comments = $1 WHERE session_id = $2',
-        [JSON.stringify(updatedComments), existingQueue.session_id]
-      );
+        // Update comments in database using pool directly
+        const { pool } = require("../db");
+        await pool.query(
+          'UPDATE comment_queues SET comments = $1, updated_at = NOW() WHERE session_id = $2',
+          [JSON.stringify(updatedComments), existingQueue.session_id]
+        );
 
-      return res.json({
-        success: true,
-        message: `Added ${comments.length} comments to existing queue`,
-        sessionId: existingQueue.session_id,
-        totalComments: updatedComments.length
-      });
+        return res.status(200).json({
+          success: true,
+          message: `Added ${comments.length} comments to existing queue`,
+          sessionId: existingQueue.session_id,
+          totalComments: updatedComments.length
+        });
+      } catch (updateError) {
+        console.error("Error updating existing queue:", updateError);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to update existing queue",
+          error: updateError instanceof Error ? updateError.message : String(updateError)
+        });
+      }
     }
 
     console.log("Creating new queue...");
@@ -60,7 +79,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("Queue created successfully:", queue.session_id);
 
-    res.json({
+    return res.status(200).json({
       success: true,
       message: `Created queue with ${comments.length} comments`,
       sessionId: queue.session_id,
@@ -69,7 +88,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
   } catch (error) {
     console.error("Error creating comment queue:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to create comment queue",
       error: error instanceof Error ? error.message : String(error)
