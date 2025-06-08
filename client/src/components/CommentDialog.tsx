@@ -222,17 +222,16 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         selectedGender
       });
 
-      // Gửi queue đến backend API - sử dụng apiRequest đúng cách
-      const result = await apiRequest('POST', '/api/comment-queues', {
+      // Gửi queue đến backend API - apiRequest đã trả về parsed JSON
+      const responseData = await apiRequest('POST', '/api/comment-queues', {
         externalId,
         comments: uniqueComments,
         selectedGender
       });
 
-      console.log('Comment queue created successfully:', result);
+      console.log('Comment queue created successfully:', responseData);
 
-      const responseData = await result.json();
-      if (result.ok && responseData.success) {
+      if (responseData.success) {
         toast({
           title: "Thành công",
           description: `${responseData.message}. Hệ thống sẽ xử lý tự động trong nền.`,
@@ -244,24 +243,10 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
       } else {
         console.error('Error in comment queue creation:', responseData);
-
-        let errorMessage = 'Không thể tạo queue comment';
-
-        if (error instanceof Error) {
-          if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
-            errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
-          } else if (error.message.includes('Failed to fetch')) {
-            errorMessage = 'Không thể kết nối tới server. Vui lòng kiểm tra kết nối mạng.';
-          } else if (error.message.includes('Unexpected token') || error.message.includes('JSON')) {
-            errorMessage = 'Server trả về dữ liệu không hợp lệ. Vui lòng thử lại sau.';
-          } else {
-            errorMessage = error.message;
-          }
-        }
-
+        
         toast({
           title: "Lỗi tạo queue",
-          description: errorMessage,
+          description: responseData.message || 'Không thể tạo queue comment',
           variant: "destructive",
         });
       }
