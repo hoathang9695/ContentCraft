@@ -1005,10 +1005,11 @@ export class DatabaseStorage implements IStorage {
     selectedGender: string;
     userId: number;
   }) {
+    console.log("📝 Storage.createCommentQueue called with:", data);
+    
     try {
-      console.log("Creating comment queue with data:", data);
       const sessionId = Date.now().toString() + '_' + Math.random().toString(36).substring(2);
-      console.log("Generated sessionId:", sessionId);
+      console.log("📝 Generated sessionId:", sessionId);
 
       const queryParams = [
         sessionId,
@@ -1024,7 +1025,8 @@ export class DatabaseStorage implements IStorage {
         'pending' // status
       ];
 
-      console.log("Query parameters:", queryParams);
+      console.log("📝 Query parameters:", queryParams);
+      console.log("📝 About to execute INSERT query...");
 
       const result = await pool.query(`
         INSERT INTO comment_queues (
@@ -1035,21 +1037,29 @@ export class DatabaseStorage implements IStorage {
         RETURNING *
       `, queryParams);
 
-      console.log("Database query result:", result.rows[0]);
+      console.log("📝 Database query executed successfully");
+      console.log("📝 Result rows count:", result.rows.length);
+      console.log("📝 First row:", result.rows[0]);
 
       if (!result.rows || result.rows.length === 0) {
         throw new Error("No rows returned from insert query");
       }
 
+      console.log("📝 createCommentQueue completed successfully");
       return result.rows[0];
+      
     } catch (error) {
-      console.error("Database error in createCommentQueue:", error);
-      console.error("Error details:", {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        code: error && typeof error === 'object' && 'code' in error ? error.code : undefined
-      });
-      throw error;
+      console.error("❌ Database error in createCommentQueue:", error);
+      console.error("❌ Error type:", typeof error);
+      console.error("❌ Error name:", error instanceof Error ? error.name : 'Unknown');
+      console.error("❌ Error message:", error instanceof Error ? error.message : String(error));
+      console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack');
+      console.error("❌ Error code:", error && typeof error === 'object' && 'code' in error ? error.code : 'No code');
+      
+      // Re-throw with more context
+      const enhancedError = new Error(`Failed to create comment queue: ${error instanceof Error ? error.message : String(error)}`);
+      enhancedError.name = 'CommentQueueCreationError';
+      throw enhancedError;
     }
   }
 

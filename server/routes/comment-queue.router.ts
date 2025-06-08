@@ -7,8 +7,12 @@ const router = express.Router();
 
 // Create new comment queue
 router.post("/", isAuthenticated, async (req, res) => {
+  console.log("=== COMMENT QUEUE CREATION START ===");
+  console.log("Request headers:", req.headers);
+  console.log("Request body:", req.body);
+  console.log("User:", req.user);
+  
   try {
-    console.log("Creating comment queue - request body:", req.body);
     const user = req.user as Express.User;
     const { externalId, comments, selectedGender } = req.body;
 
@@ -19,7 +23,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     // Validate request data
     if (!externalId) {
-      console.log("Missing externalId");
+      console.log("❌ Missing externalId");
       const errorResponse = {
         success: false,
         message: "External ID is required"
@@ -29,7 +33,7 @@ router.post("/", isAuthenticated, async (req, res) => {
     }
 
     if (!comments || !Array.isArray(comments) || comments.length === 0) {
-      console.log("Invalid comments data");
+      console.log("❌ Invalid comments data");
       const errorResponse = {
         success: false,
         message: "Comments array is required and must not be empty"
@@ -80,7 +84,7 @@ router.post("/", isAuthenticated, async (req, res) => {
       }
     }
 
-    console.log("Creating new queue...");
+    console.log("✅ Creating new queue...");
     // Create new queue
     const queue = await storage.createCommentQueue({
       externalId,
@@ -89,7 +93,7 @@ router.post("/", isAuthenticated, async (req, res) => {
       userId: user.id
     });
 
-    console.log("Queue created successfully:", queue.session_id);
+    console.log("✅ Queue created successfully:", queue.session_id);
 
     const successResponse = {
       success: true,
@@ -98,12 +102,19 @@ router.post("/", isAuthenticated, async (req, res) => {
       totalComments: queue.total_comments
     };
 
-    console.log("Returning success response:", successResponse);
-    return res.status(200).json(successResponse);
+    console.log("✅ Returning success response:", successResponse);
+    console.log("=== COMMENT QUEUE CREATION END ===");
+    
+    // Ensure we return the response properly
+    res.status(200);
+    res.json(successResponse);
+    return;
 
   } catch (error) {
-    console.error("Error creating comment queue:", error);
-    console.error("Full error stack:", error instanceof Error ? error.stack : error);
+    console.error("❌ Error creating comment queue:", error);
+    console.error("❌ Full error stack:", error instanceof Error ? error.stack : error);
+    console.error("❌ Error type:", typeof error);
+    console.error("❌ Error name:", error instanceof Error ? error.name : 'Unknown');
     
     const errorResponse = {
       success: false,
@@ -111,8 +122,12 @@ router.post("/", isAuthenticated, async (req, res) => {
       error: error instanceof Error ? error.message : String(error)
     };
     
-    console.log("Sending error response:", errorResponse);
-    return res.status(500).json(errorResponse);
+    console.log("❌ Sending error response:", errorResponse);
+    console.log("=== COMMENT QUEUE CREATION END WITH ERROR ===");
+    
+    res.status(500);
+    res.json(errorResponse);
+    return;
   }
 });
 
