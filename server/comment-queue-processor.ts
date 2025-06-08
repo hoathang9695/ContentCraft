@@ -27,16 +27,30 @@ export class CommentQueueProcessor {
     
     console.log('🚀 Comment Queue Processor started');
     
-    // Check every 30 seconds for new queues
+    // Check every 30 seconds for new queues (process only)
     this.processingInterval = setInterval(async () => {
       if (!this.isProcessing) {
         await this.processNextQueue();
-        await this.cleanupCompletedQueues();
       }
     }, 30000);
 
+    // Run cleanup once daily at startup and then every 24 hours
+    this.scheduleCleanup();
+
     // Process immediately on start
     this.processNextQueue();
+  }
+
+  private scheduleCleanup() {
+    // Run cleanup immediately on start
+    this.cleanupCompletedQueues();
+    
+    // Then run every 24 hours (86400000 ms)
+    setInterval(async () => {
+      await this.cleanupCompletedQueues();
+    }, 24 * 60 * 60 * 1000);
+    
+    console.log('🗓️ Cleanup scheduled: once daily');
   }
 
   stopProcessor() {
