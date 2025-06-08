@@ -1016,7 +1016,7 @@ export class DatabaseStorage implements IStorage {
       // Generate session ID
       const sessionId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Use raw SQL to insert with timeout
+      // Use raw SQL to insert since our table structure doesn't match the schema
       const query = `
         INSERT INTO comment_queues (
           session_id, external_id, comments, selected_gender, user_id, 
@@ -1035,39 +1035,21 @@ export class DatabaseStorage implements IStorage {
         'pending'
       ];
 
-      console.log('Executing query with timeout...');
-      console.log('Query:', query);
-      console.log('Values:', values);
+      console.log('Executing query:', query);
+      console.log('With values:', values);
 
-      // Add timeout to the database query
-      const result = await Promise.race([
-        pool.query(query, values),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Database query timeout after 10 seconds')), 10000)
-        )
-      ]) as any;
+      const result = await pool.query(query, values);
 
       if (!result || result.rows.length === 0) {
-        throw new Error('Failed to insert comment queue entry - no rows returned');
+        throw new Error('Failed to insert comment queue entry');
       }
 
-      console.log('✅ Comment queue created successfully:', result.rows[0]);
+      console.log('Comment queue created successfully:', result.rows[0]);
       return result.rows[0];
     } catch (error) {
-      console.error('❌ Error in createCommentQueue:', error);
-      
-      // Enhanced error logging
-      if (error && typeof error === 'object') {
-        console.error('❌ Error details:', {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          name: error instanceof Error ? error.name : undefined,
-          code: (error as any).code || undefined,
-          detail: (error as any).detail || undefined,
-          constraint: (error as any).constraint || undefined,
-          stack: error instanceof Error ? error.stack : 'No stack trace'
-        });
-      }
-      
+      console.error('Error in createCommentQueue:', error);
+      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw error;
     }
   }
