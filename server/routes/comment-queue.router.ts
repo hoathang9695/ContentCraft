@@ -7,9 +7,7 @@ const router = express.Router();
 // Create new comment queue
 router.post("/", isAuthenticated, async (req, res) => {
   console.log("=== COMMENT QUEUE CREATION START ===");
-  console.log("Request headers:", req.headers);
   console.log("Request body:", req.body);
-  console.log("User:", req.user);
 
   try {
     const user = req.user as Express.User;
@@ -17,28 +15,19 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("Parsed data:", { externalId, comments, selectedGender, userId: user.id });
 
-    // Set content type header first
-    res.setHeader('Content-Type', 'application/json');
-
     // Validate request data
     if (!externalId) {
-      console.log("❌ Missing externalId");
-      const errorResponse = {
+      return res.status(400).json({
         success: false,
         message: "External ID is required"
-      };
-      console.log("Sending error response:", errorResponse);
-      return res.status(400).json(errorResponse);
+      });
     }
 
     if (!comments || !Array.isArray(comments) || comments.length === 0) {
-      console.log("❌ Invalid comments data");
-      const errorResponse = {
+      return res.status(400).json({
         success: false,
         message: "Comments array is required and must not be empty"
-      };
-      console.log("Sending error response:", errorResponse);
-      return res.status(400).json(errorResponse);
+      });
     }
 
     // Check if there's already an active queue for this external ID
@@ -46,44 +35,32 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     if (existingQueue) {
       console.log("Found existing queue:", existingQueue.session_id);
-      try {
-        // Add comments to existing queue
-        const existingComments = JSON.parse(existingQueue.comments);
-        const updatedComments = [...existingComments, ...comments];
+      
+      // Add comments to existing queue
+      const existingComments = JSON.parse(existingQueue.comments);
+      const updatedComments = [...existingComments, ...comments];
 
-        await storage.updateCommentQueueProgress(existingQueue.session_id, {
-          totalComments: updatedComments.length
-        });
+      await storage.updateCommentQueueProgress(existingQueue.session_id, {
+        totalComments: updatedComments.length
+      });
 
-        // Update comments in database using pool directly
-        const { pool } = require("../db");
-        await pool.query(
-          'UPDATE comment_queues SET comments = $1, updated_at = NOW() WHERE session_id = $2',
-          [JSON.stringify(updatedComments), existingQueue.session_id]
-        );
+      // Update comments in database
+      const { pool } = require("../db");
+      await pool.query(
+        'UPDATE comment_queues SET comments = $1, updated_at = NOW() WHERE session_id = $2',
+        [JSON.stringify(updatedComments), existingQueue.session_id]
+      );
 
-        const successResponse = {
-          success: true,
-          message: `Added ${comments.length} comments to existing queue`,
-          sessionId: existingQueue.session_id,
-          totalComments: updatedComments.length
-        };
-
-        console.log("Returning existing queue response:", successResponse);
-        return res.status(200).json(successResponse);
-      } catch (updateError) {
-        console.error("Error updating existing queue:", updateError);
-        const errorResponse = {
-          success: false,
-          message: "Failed to update existing queue",
-          error: updateError instanceof Error ? updateError.message : String(updateError)
-        };
-        console.log("Sending error response:", errorResponse);
-        return res.status(500).json(errorResponse);
-      }
+      return res.json({
+        success: true,
+        message: `Added ${comments.length} comments to existing queue`,
+        sessionId: existingQueue.session_id,
+        totalComments: updatedComments.length
+      });
     }
 
     console.log("✅ Creating new queue...");
+    
     // Create new queue
     const queue = await storage.createCommentQueue({
       externalId,
@@ -94,39 +71,21 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("✅ Queue created successfully:", queue.session_id);
 
-    const successResponse = {
+    return res.json({
       success: true,
       message: `Created queue with ${comments.length} comments`,
       sessionId: queue.session_id,
       totalComments: queue.total_comments
-    };
-
-    console.log("✅ Returning success response:", successResponse);
-    console.log("=== COMMENT QUEUE CREATION END ===");
-
-    // Ensure we return the response properly
-    res.status(200);
-    res.json(successResponse);
-    return;
+    });
 
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
-    console.error("❌ Full error stack:", error instanceof Error ? error.stack : error);
-    console.error("❌ Error type:", typeof error);
-    console.error("❌ Error name:", error instanceof Error ? error.name : 'Unknown');
-
-    const errorResponse = {
+    
+    return res.status(500).json({
       success: false,
       message: "Failed to create comment queue",
-      error: error instanceof Error ? error.message : String(error)
-    };
-
-    console.log("❌ Sending error response:", errorResponse);
-    console.log("=== COMMENT QUEUE CREATION END WITH ERROR ===");
-
-    res.status(500);
-    res.json(errorResponse);
-    return;
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 });
 

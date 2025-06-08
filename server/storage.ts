@@ -1002,39 +1002,50 @@ export class DatabaseStorage implements IStorage {
   // Comment Queue methods
   async createCommentQueue(data: {
     externalId: string;
-    comment: string;
-    gender: string;
-    status: string;
+    comments: string[];
+    selectedGender: string;
+    userId: number;
   }): Promise<any> {
     try {
       console.log('Storage.createCommentQueue called with:', data);
 
-      if (!data.externalId || !data.comment) {
-        throw new Error('externalId and comment are required');
+      if (!data.externalId || !data.comments || !Array.isArray(data.comments)) {
+        throw new Error('externalId and comments array are required');
       }
 
-      const insertData = {
-        externalId: data.externalId,
-        comment: data.comment,
-        gender: data.gender || 'all',
-        status: data.status || 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // Generate session ID
+      const sessionId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      console.log('Inserting comment queue data:', insertData);
+      // Use raw SQL to insert since our table structure doesn't match the schema
+      const query = `
+        INSERT INTO comment_queues (
+          session_id, external_id, comments, selected_gender, user_id, 
+          total_comments, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING *
+      `;
 
-      const result = await this.db
-        .insert(commentQueues)
-        .values(insertData)
-        .returning();
+      const values = [
+        sessionId,
+        data.externalId,
+        JSON.stringify(data.comments),
+        data.selectedGender || 'all',
+        data.userId,
+        data.comments.length,
+        'pending'
+      ];
 
-      if (!result || result.length === 0) {
+      console.log('Executing query:', query);
+      console.log('With values:', values);
+
+      const result = await pool.query(query, values);
+
+      if (!result || result.rows.length === 0) {
         throw new Error('Failed to insert comment queue entry');
       }
 
-      console.log('Comment queue created successfully with ID:', result[0].id);
-      return result[0];
+      console.log('Comment queue created successfully:', result.rows[0]);
+      return result.rows[0];
     } catch (error) {
       console.error('Error in createCommentQueue:', error);
       console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
