@@ -8,16 +8,18 @@ const router = express.Router();
 
 // Create new comment queue
 router.post("/", isAuthenticated, async (req, res) => {
-  console.log("=== COMMENT QUEUE CREATION START ===");
-  console.log("Request body:", req.body);
-  console.log("Request headers:", req.headers);
-  console.log("User:", req.user);
+  console.log("📝 COMMENT QUEUE REQUEST START");
+  console.log("📝 Request URL:", req.originalUrl);
+  console.log("📝 Request method:", req.method);
+  console.log("📝 Request headers:", req.headers);
+  console.log("📝 Request body:", JSON.stringify(req.body, null, 2));
+  console.log("📝 User authenticated:", req.user);
 
   try {
     const user = req.user as Express.User;
     const { externalId, comments, selectedGender } = req.body;
 
-    console.log("Parsed data:", { externalId, comments, selectedGender, userId: user.id });
+    console.log("📝 Extracted data:", { externalId, commentsLength: comments?.length, selectedGender });
 
     // Validate request data
     if (!externalId) {
@@ -101,7 +103,7 @@ router.post("/", isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
     console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-    
+
     // More detailed error information
     if (error && typeof error === 'object') {
       console.error("❌ Error details:", {
