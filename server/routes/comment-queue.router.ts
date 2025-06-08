@@ -6,6 +6,12 @@ import { sql } from 'drizzle-orm';
 
 const router = express.Router();
 
+// Middleware to ensure JSON responses
+router.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
+
 // Create new comment queue
 router.post("/", isAuthenticated, async (req, res) => {
   console.log("📝 COMMENT QUEUE REQUEST START");
@@ -117,15 +123,13 @@ router.post("/", isAuthenticated, async (req, res) => {
       });
     }
 
-    // Return appropriate error response
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    const statusCode = errorMessage.includes('connection') || errorMessage.includes('timeout') ? 503 : 500;
-
-    return res.status(statusCode).json({
-      success: false,
-      message: statusCode === 503 ? "Database connection error. Please try again." : "Failed to create comment queue",
-      error: errorMessage,
-      timestamp: new Date().toISOString()
+    // Ensure we always return JSON
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(500).json({
+      message: "Lỗi tạo comment queue",
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+      path: req.originalUrl
     });
   }
 });
