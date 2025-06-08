@@ -78,7 +78,8 @@ export class CommentQueueProcessor {
         currentCommentIndex: queue.processed_count || 0
       });
 
-      const comments = JSON.parse(queue.comments);
+      // Comments are already parsed from DB (PostgreSQL JSONB automatically parses)
+      const comments = Array.isArray(queue.comments) ? queue.comments : JSON.parse(queue.comments);
       const startIndex = queue.processed_count || 0;
 
       // Get fake users for the selected gender
