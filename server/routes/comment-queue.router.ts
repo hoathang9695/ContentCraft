@@ -101,6 +101,11 @@ router.post("/", isAuthenticated, async (req, res) => {
     });
 
     console.log("✅ Queue created successfully:", queue.session_id);
+    console.log("✅ Queue details:", JSON.stringify(queue, null, 2));
+
+    // Verify queue was inserted into database
+    const verifyQueue = await storage.getCommentQueue(queue.session_id);
+    console.log("🔍 Queue verification:", verifyQueue ? "Found in DB" : "NOT FOUND in DB");
 
     const successResponse = {
       success: true,
@@ -211,6 +216,29 @@ router.get("/", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to get user queues"
+    });
+  }
+});
+
+// Test endpoint to manually trigger processor
+router.post("/test-processor", isAuthenticated, async (req, res) => {
+  try {
+    console.log("🧪 Manual processor test triggered");
+    
+    // Import and trigger processor
+    const { commentQueueProcessor } = await import('../comment-queue-processor');
+    await commentQueueProcessor.processNextQueue();
+    
+    res.json({
+      success: true,
+      message: "Processor test triggered"
+    });
+  } catch (error) {
+    console.error("❌ Processor test failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Processor test failed",
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
