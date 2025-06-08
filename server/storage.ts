@@ -951,8 +951,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(labels.id, id))
-      .returning();
-
+      .returning();```text
     return result.length >0 ? result[0] : undefined;
   }
 
@@ -998,80 +997,42 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0] : undefined;
   }
 
+  async getAllFakeUsers() {
+    const result = await this.db.query('SELECT * FROM fake_users WHERE status = $1', ['active']);
+    return result.rows;
+  }
 
-  // Comment Queue Management
+  // Comment Queue methods
   async createCommentQueue(data: {
     externalId: string;
     comments: string[];
     selectedGender: string;
     userId: number;
   }) {
-    const sessionId = `comment_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+    const sessionId = Date.now().toString() + '_' + Math.random().toString(36).substring(2);
+
     const result = await this.db.query(`
       INSERT INTO comment_queues (
-        session_id, external_id, comments, selected_gender, 
-        user_id, total_comments, status, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        session_id, external_id, comments, selected_gender, user_id,
+        total_comments, processed_count, success_count, failure_count,
+        current_comment_index, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       RETURNING *
     `, [
       sessionId,
-      data.externalId, 
+      data.externalId,
       JSON.stringify(data.comments),
       data.selectedGender,
       data.userId,
       data.comments.length,
+      0, // processed_count
+      0, // success_count
+      0, // failure_count
+      0, // current_comment_index
       'pending'
     ]);
 
     return result.rows[0];
-  }
-
-  async getCommentQueue(sessionId: string) {
-    const result = await this.db.query(
-      'SELECT * FROM comment_queues WHERE session_id = $1',
-      [sessionId]
-    );
-    return result.rows[0];
-  }
-
-  async updateCommentQueueProgress(sessionId: string, updates: {
-    processedCount?: number;
-    successCount?: number;
-    failureCount?: number;
-    status?: string;
-    currentCommentIndex?: number;
-    errorInfo?: string;
-  }) {
-    const setClauses = [];
-    const values = [];
-    let paramCount = 1;
-
-    Object.entries(updates).forEach(([key, value]) => {
-      setClauses.push(`${key} = $${paramCount}`);
-      values.push(value);
-      paramCount++;
-    });
-
-    values.push(sessionId);
-    
-    const result = await this.db.query(`
-      UPDATE comment_queues 
-      SET ${setClauses.join(', ')}, updated_at = NOW()
-      WHERE session_id = $${paramCount}
-      RETURNING *
-    `, values);
-
-    return result.rows[0];
-  }
-
-  async getPendingCommentQueues() {
-    const result = await this.db.query(`
-      SELECT * FROM comment_queues 
-      WHERE status IN ('pending', 'processing') 
-      ORDER BY created_at ASC
-    `);
-    return result.rows;
   }
 
   async getActiveCommentQueueForExternal(externalId: string) {
@@ -1081,17 +1042,101 @@ export class DatabaseStorage implements IStorage {
       ORDER BY created_at DESC
       LIMIT 1
     `, [externalId]);
-    return result.rows[0];
+
+    return result.rows.length > 0 ? result.rows[0] : null;
   }
 
-  async deleteCompletedCommentQueues(olderThanHours: number = 24) {
+  async getCommentQueue(sessionId: string) {
+    const result = await this.db.query(
+      'SELECT * FROM comment_queues WHERE session_id = $1',
+      [sessionId]
+    );
+
+    return result.rows.length > 0 ? result.rows[0] : null;
+  }
+
+  async getPendingCommentQueues() {
     const result = await this.db.query(`
-      DELETE FROM comment_queues 
-      WHERE status IN ('completed', 'failed') 
-      AND updated_at < NOW() - INTERVAL '${olderThanHours} hours'
-      RETURNING count(*)
+      SELECT * FROM comment_queues 
+      WHERE status = 'pending'
+      ORDER BY created_at ASC
     `);
-    return result.rowCount;
+
+    return result.rows;
+  }
+
+  async updateCommentQueueProgress(sessionId: string, updates: {
+    status?: string;
+    processedCount?: number;
+    successCount?: number;
+    failureCount?: number;
+    currentCommentIndex?: number;
+    totalComments?: number;
+    errorInfo?: string;
+  }) {
+    const fields = [];
+    const values = [];
+    let paramCount = 0;
+
+    if (updates.status !== undefined) {
+      fields.push(`status = $${++paramCount}`);
+      values.push(updates.status);
+    }
+
+    if (updates.processedCount !== undefined) {
+      fields.push(`processed_count = $${++paramCount}`);
+      values.push(updates.processedCount);
+    }
+
+    if (updates.successCount !== undefined) {
+      fields.push(`success_count = $${++paramCount}`);
+      values.push(updates.successCount);
+    }
+
+    if (updates.failureCount !== undefined) {
+      fields.push(`failure_count = $${++paramCount}`);
+      values.push(updates.failureCount);
+    }
+
+    if (updates.currentCommentIndex !== undefined) {
+      fields.push(`current_comment_index = $${++paramCount}`);
+      values.push(updates.currentCommentIndex);
+    }
+
+    if (updates.totalComments !== undefined) {
+      fields.push(`total_comments = $${++paramCount}`);
+      values.push(updates.totalComments);
+    }
+
+    if (updates.errorInfo !== undefined) {
+      fields.push(`error_info = $${++paramCount}`);
+      values.push(updates.errorInfo);
+    }
+
+    if (updates.status === 'processing') {
+      fields.push(`started_at = $${++paramCount}`);
+      values.push(new Date().toISOString());
+    }
+
+    if (updates.status === 'completed' || updates.status === 'failed') {
+      fields.push(`completed_at = $${++paramCount}`);
+      values.push(new Date().toISOString());
+    }
+
+    fields.push(`updated_at = $${++paramCount}`);
+    values.push(new Date().toISOString());
+
+    values.push(sessionId);
+
+    const query = `
+      UPDATE comment_queues 
+      SET ${fields.join(', ')}
+      WHERE session_id = $${++paramCount}
+      RETURNING *
+    `;
+
+    const result = await this.db.query(query, values);
+    return result.rows[0];
   }
 
 
