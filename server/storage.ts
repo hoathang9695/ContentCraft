@@ -1006,46 +1006,40 @@ export class DatabaseStorage implements IStorage {
     selectedGender: string;
     userId: number;
   }): Promise<any> {
-    try {
-      console.log('Storage.createCommentQueue called with:', data);
+    console.log('🚀 Storage.createCommentQueue called with:', data);
 
-      if (!data.externalId || !data.comments || !Array.isArray(data.comments)) {
-        throw new Error('externalId and comments array are required');
-      }
+    if (!data.externalId || !data.comments || !Array.isArray(data.comments)) {
+      throw new Error('externalId and comments array are required');
+    }
 
-      // Generate session ID
-      const sessionId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Generate session ID
+    const sessionId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Use raw SQL to insert with timeout
-      const query = `
-        INSERT INTO comment_queues (
-          session_id, external_id, comments, selected_gender, user_id, 
-          total_comments, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        RETURNING *
+    // Use raw SQL to insert
+    const query = `
+      INSERT INTO comment_queues (
+        session_id, external_id, comments, selected_gender, user_id, 
+        total_comments, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      RETURNING *
       `;
 
-      const values = [
-        sessionId,
-        data.externalId,
-        JSON.stringify(data.comments),
-        data.selectedGender || 'all',
-        data.userId,
-        data.comments.length,
-        'pending'
-      ];
+    const values = [
+      sessionId,
+      data.externalId,
+      JSON.stringify(data.comments),
+      data.selectedGender || 'all',
+      data.userId,
+      data.comments.length,
+      'pending'
+    ];
 
-      console.log('Executing query with timeout...');
-      console.log('Query:', query);
-      console.log('Values:', values);
+    console.log('✅ Executing query...');
+    console.log('Query:', query);
+    console.log('Values:', values);
 
-      // Add timeout to the database query
-      const result = await Promise.race([
-        pool.query(query, values),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Database query timeout after 10 seconds')), 10000)
-        )
-      ]) as any;
+    try {
+      const result = await pool.query(query, values);
 
       if (!result || result.rows.length === 0) {
         throw new Error('Failed to insert comment queue entry - no rows returned');
@@ -1056,7 +1050,6 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('❌ Error in createCommentQueue:', error);
       
-      // Enhanced error logging
       if (error && typeof error === 'object') {
         console.error('❌ Error details:', {
           message: error instanceof Error ? error.message : 'Unknown error',
@@ -1069,6 +1062,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       throw error;
+    }w error;
     }
   }
 
