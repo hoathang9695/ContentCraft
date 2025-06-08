@@ -1096,19 +1096,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addCommentsToQueue(sessionId: string, newComments: string[]) {
+    console.log('🔧 Adding comments to existing queue:', sessionId);
+    console.log('🔧 New comments count:', newComments.length);
+
     // Get current queue
     const currentQueue = await this.getCommentQueue(sessionId);
     if (!currentQueue) {
       throw new Error('Queue not found');
     }
 
+    console.log('🔧 Current queue status:', currentQueue.status);
+    console.log('🔧 Current total comments:', currentQueue.total_comments);
+
     // Parse existing comments
     const existingComments = Array.isArray(currentQueue.comments) 
       ? currentQueue.comments 
       : JSON.parse(currentQueue.comments);
 
+    console.log('🔧 Existing comments count:', existingComments.length);
+
     // Merge comments
     const allComments = [...existingComments, ...newComments];
+    
+    console.log('🔧 Total comments after merge:', allComments.length);
 
     // Update queue
     const result = await pool.query(`
@@ -1118,6 +1128,11 @@ export class DatabaseStorage implements IStorage {
       RETURNING *
     `, [JSON.stringify(allComments), allComments.length, sessionId]);
 
+    if (!result || result.rows.length === 0) {
+      throw new Error('Failed to update queue with new comments');
+    }
+
+    console.log('✅ Queue updated successfully with new comments');
     return result.rows[0];
   }
 

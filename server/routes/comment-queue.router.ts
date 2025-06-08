@@ -49,16 +49,24 @@ router.post("/", isAuthenticated, async (req, res) => {
     // Check if there's already an active queue for this external ID
     const existingQueue = await storage.getActiveCommentQueueForExternal(externalId);
     if (existingQueue) {
-      console.log('⚠️ Queue already exists for external ID:', externalId);
-      return res.status(400).json({
-        success: false,
-        message: `Đã có queue đang xử lý cho nội dung này (${existingQueue.processed_count || 0}/${existingQueue.total_comments} comments đã gửi). Vui lòng đợi queue hiện tại hoàn thành.`,
-        existingQueue: {
-          sessionId: existingQueue.session_id,
-          status: existingQueue.status,
-          progress: `${existingQueue.processed_count || 0}/${existingQueue.total_comments}`
-        }
-      });
+      console.log('📝 Found existing queue for external ID:', externalId);
+      console.log('📝 Adding', comments.length, 'new comments to existing queue');
+
+      // Add comments to existing queue
+      const updatedQueue = await storage.addCommentsToQueue(existingQueue.session_id, comments);
+      
+      console.log("✅ Comments added to existing queue:", updatedQueue.session_id);
+
+      const successResponse = {
+        success: true,
+        message: `Đã thêm ${comments.length} comments vào queue hiện tại. Tổng cộng ${updatedQueue.total_comments} comments.`,
+        sessionId: updatedQueue.session_id,
+        totalComments: updatedQueue.total_comments,
+        isExistingQueue: true
+      };
+
+      console.log("📝 SENDING SUCCESS RESPONSE (EXISTING QUEUE):", JSON.stringify(successResponse, null, 2));
+      return res.status(200).json(successResponse);
     }
 
     console.log("✅ Creating new queue...");
@@ -77,7 +85,8 @@ router.post("/", isAuthenticated, async (req, res) => {
       success: true,
       message: `Đã tạo queue với ${comments.length} comments`,
       sessionId: queue.session_id,
-      totalComments: queue.total_comments
+      totalComments: queue.total_comments,
+      isExistingQueue: false
     };
 
     console.log("📝 SENDING SUCCESS RESPONSE:", JSON.stringify(successResponse, null, 2));
