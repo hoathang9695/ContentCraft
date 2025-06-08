@@ -222,79 +222,55 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         selectedGender
       });
 
-      console.log('🚀 Calling apiRequest...');
-
       // Gửi queue đến backend API
-      console.log('Sending request to create comment queue...');
-
       const response = await apiRequest('POST', '/api/comment-queues', {
         externalId,
         comments: uniqueComments,
         selectedGender
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      const result = await response.json();
-      console.log('Response data:', result);
-
       if (!response.ok) {
-        console.error('Server returned error:', result);
-        throw new Error(result.error || `Server error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error(`Server error: ${response.status}`);
       }
 
+      const result = await response.json();
       console.log('Comment queue created successfully:', result);
+
+      if (!result.success) {
+        throw new Error(result.message || 'Unknown server error');
+      }
 
       toast({
         title: "Thành công",
-        description: `${result.message || 'Queue created successfully'}. Hệ thống sẽ xử lý tự động trong nền.`,
+        description: `${result.message}. Hệ thống sẽ xử lý tự động trong nền.`,
       });
 
       // Đóng dialog sau khi thành công
       onOpenChange(false);
       setCommentText('');
-      return;
 
     } catch (error) {
-      console.error('Full error details:', error);
-      console.error('Error type:', typeof error);
       console.error('Error in comment queue creation:', error);
-      console.error('Error object:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error constructor:', error?.constructor?.name);
-      console.error('Error message:', error instanceof Error ? error.message : 'No message');
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
 
       let errorMessage = 'Không thể tạo queue comment';
-      const cause = error instanceof Error ? error.cause : 'no cause';
+      
       if (error instanceof Error) {
         if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
           errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
         } else if (error.message.includes('Failed to fetch')) {
           errorMessage = 'Không thể kết nối tới server. Vui lòng kiểm tra kết nối mạng.';
-        } else if (error.message.includes('Invalid response') || error.message.includes('không hợp lệ')) {
-          errorMessage = 'Server trả về dữ liệu không hợp lệ. Vui lòng thử lại.';
         } else if (error.message.includes('Unexpected token') || error.message.includes('JSON')) {
-          errorMessage = 'Server trả về dữ liệu không phải JSON. Vui lòng thử lại.';
+          errorMessage = 'Server trả về dữ liệu không hợp lệ. Vui lòng thử lại sau.';
         } else {
           errorMessage = error.message;
         }
-      } else if (typeof error === 'object' && error !== null) {
-        // Handle case where error is an object but not Error instance
-        console.error('❌ Non-Error object caught:', JSON.stringify(error));
-        if (Object.keys(error).length === 0) {
-          errorMessage = 'Lỗi không xác định từ server. Vui lòng thử lại sau.';
-        } else {
-          errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.';
-        }
       }
-
-      console.error('❌ Final error message:', errorMessage);
 
       toast({
         title: "Lỗi tạo queue",
-        description: `Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.`,
+        description: errorMessage,
         variant: "destructive",
       });
     }

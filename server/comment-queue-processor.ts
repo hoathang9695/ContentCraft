@@ -2,6 +2,8 @@
 import { storage } from './storage';
 import { apiRequest } from '../client/src/lib/queryClient';
 
+import { storage } from './storage';
+
 interface FakeUser {
   id: number;
   name: string;
@@ -108,6 +110,47 @@ export class CommentQueueProcessor {
         let success = false;
         let retryCount = 0;
         const maxRetries = 3;
+
+        while (!success && retryCount < maxRetries) {
+          try {
+            // Get random fake user
+            const fakeUser = this.getRandomFakeUser(fakeUsers, usedUserIds);
+            if (!fakeUser) {
+              throw new Error('No fake user available');
+            }
+
+            console.log(`📤 Sending comment ${index + 1}/${comments.length} from user: ${fakeUser.name}`);
+
+            // Send comment to external API
+            await this.sendCommentToAPI(queue.external_id, fakeUser.id, comment);
+            
+            success = true;
+            await storage.updateCommentQueueProgress(queue.session_id, {
+              processedCount: index + 1,
+              successCount: (queue.success_count || 0) + 1
+            });
+
+            console.log(`✅ Comment ${index + 1} sent successfully`);
+
+          } catch (error) {
+            retryCount++;
+            console.error(`❌ Attempt ${retryCount}/${maxRetries} failed for comment ${index + 1}:`, error);
+
+            if (retryCount < maxRetries) {
+              const retryDelay = this.getRetryDelay(retryCount);
+              console.log(`⏳ Retrying in ${retryDelay}ms...`);
+              await this.delay(retryDelay);
+            } else {
+              // Final failure
+              await storage.updateCommentQueueProgress(queue.session_id, {
+                processedCount: index + 1,
+                failureCount: (queue.failure_count || 0) + 1,
+                errorInfo: error instanceof Error ? error.message : 'Unknown error'
+              });
+              console.error(`❌ Comment ${index + 1} failed permanently`);
+            }
+          }
+        }t maxRetries = 3;
 
         while (!success && retryCount < maxRetries) {
           try {
@@ -222,4 +265,4 @@ export class CommentQueueProcessor {
 }
 
 // Export singleton instance
-export const commentQueueProcessor = new CommentQueueProcessor();
+export const commentQueueProcessor = new CommentQueueProcessor(); new CommentQueueProcessor();

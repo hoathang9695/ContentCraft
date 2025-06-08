@@ -9,7 +9,6 @@ import { setupKafkaConsumer, disconnectKafkaConsumer } from "./kafka-consumer";
 import { emailService, SMTPConfig } from "./email";
 import { simulateKafkaMessage } from "./kafka-simulator";
 import { FileCleanupService } from "./file-cleanup";
-import { commentQueueProcessor } from "./comment-queue-processor";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -176,3 +175,7 @@ app.use((req, res, next) => {
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 })();
+
+// Start the comment queue processor
+import './comment-queue-processor';
+console.log('🚀 CommentQueueProcessor initialized and started');
