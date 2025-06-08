@@ -1062,8 +1062,8 @@ export class DatabaseStorage implements IStorage {
       }
       
       throw error;
-    }w error;
     }
+  }
   }
 
   async getActiveCommentQueueForExternal(externalId: string) {
