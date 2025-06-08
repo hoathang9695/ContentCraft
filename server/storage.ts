@@ -951,4 +951,180 @@ export class DatabaseStorage implements IStorage {
         ...labelUpdate,
         updatedAt: new Date(),
       })
-      .where(eq(labels.id, idThis commit fixes an incomplete throw statement in `storage.ts`.
+      .where(eq(labels.id, id))
+      .returning();
+
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteLabel(id: number): Promise<boolean> {
+    const result = await db
+      .delete(labels)
+      .where(eq(labels.id, id))
+      .returning({ id: labels.id });
+
+    return result.length > 0;
+  }
+
+  // Fake User operations
+  async getAllFakeUsers(): Promise<FakeUser[]> {
+    return await db.select().from(fakeUsers).orderBy(fakeUsers.username);
+  }
+
+  async getFakeUser(id: number): Promise<FakeUser | undefined> {
+    const result = await db.select().from(fakeUsers).where(eq(fakeUsers.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getFakeUserByToken(token: string): Promise<FakeUser | undefined> {
+    const result = await db.select().from(fakeUsers).where(eq(fakeUsers.token, token));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getFakeUsersWithPagination(page: number, pageSize: number, search?: string): Promise<{
+    users: FakeUser[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    const offset = (page - 1) * pageSize;
+    
+    let whereCondition;
+    if (search && search.trim()) {
+      whereCondition = or(
+        like(fakeUsers.username, `%${search}%`),
+        like(fakeUsers.name, `%${search}%`),
+        like(fakeUsers.email, `%${search}%`)
+      );
+    }
+
+    // Get total count
+    const totalResult = await db
+      .select({ count: count() })
+      .from(fakeUsers)
+      .where(whereCondition);
+
+    const total = totalResult[0]?.count || 0;
+
+    // Get paginated users
+    const users = await db
+      .select()
+      .from(fakeUsers)
+      .where(whereCondition)
+      .orderBy(fakeUsers.username)
+      .limit(pageSize)
+      .offset(offset);
+
+    return {
+      users,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize)
+    };
+  }
+
+  async createFakeUser(fakeUser: InsertFakeUser): Promise<FakeUser> {
+    const result = await db.insert(fakeUsers).values(fakeUser).returning();
+    return result[0];
+  }
+
+  async updateFakeUser(id: number, fakeUserUpdate: Partial<InsertFakeUser>): Promise<FakeUser | undefined> {
+    const result = await db
+      .update(fakeUsers)
+      .set({
+        ...fakeUserUpdate,
+        updatedAt: new Date(),
+      })
+      .where(eq(fakeUsers.id, id))
+      .returning();
+
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteFakeUser(id: number): Promise<boolean> {
+    const result = await db
+      .delete(fakeUsers)
+      .where(eq(fakeUsers.id, id))
+      .returning({ id: fakeUsers.id });
+
+    return result.length > 0;
+  }
+
+  async getRandomFakeUser(): Promise<FakeUser | undefined> {
+    const result = await db
+      .select()
+      .from(fakeUsers)
+      .orderBy(sql`RANDOM()`)
+      .limit(1);
+
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  // Support request operations
+  async createSupportRequest(request: InsertSupportRequest): Promise<SupportRequest> {
+    const result = await db.insert(supportRequests).values(request).returning();
+    return result[0];
+  }
+
+  async getSupportRequest(id: number): Promise<SupportRequest | undefined> {
+    const result = await db.select().from(supportRequests).where(eq(supportRequests.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getAllSupportRequests(): Promise<SupportRequest[]> {
+    return await db.select().from(supportRequests).orderBy(desc(supportRequests.createdAt));
+  }
+
+  async updateSupportRequest(id: number, request: Partial<InsertSupportRequest>): Promise<SupportRequest | undefined> {
+    const result = await db
+      .update(supportRequests)
+      .set({
+        ...request,
+        updatedAt: new Date()
+      })
+      .where(eq(supportRequests.id, id))
+      .returning();
+
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteSupportRequest(id: number): Promise<boolean> {
+    const result = await db
+      .delete(supportRequests)
+      .where(eq(supportRequests.id, id))
+      .returning({ id: supportRequests.id });
+
+    return result.length > 0;
+  }
+
+  async assignSupportRequest(id: number, userId: number): Promise<SupportRequest | undefined> {
+    const result = await db
+      .update(supportRequests)
+      .set({
+        assignedTo: userId,
+        status: 'in_progress',
+        updatedAt: new Date()
+      })
+      .where(eq(supportRequests.id, id))
+      .returning();
+
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async completeSupportRequest(id: number, responseContent: string, responderId: number): Promise<SupportRequest | undefined> {
+    const result = await db
+      .update(supportRequests)
+      .set({
+        responseContent,
+        responderId,
+        status: 'completed',
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(supportRequests.id, id))
+      .returning();
+
+    return result.length > 0 ? result[0] : undefined;
+  }</old_str>
