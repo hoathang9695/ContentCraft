@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS comment_queues (
   completed_at TIMESTAMP
 );
 
+-- Create indexes only if they don't exist
 CREATE INDEX IF NOT EXISTS idx_comment_queues_status ON comment_queues(status);
 CREATE INDEX IF NOT EXISTS idx_comment_queues_external_id ON comment_queues(external_id);
 CREATE INDEX IF NOT EXISTS idx_comment_queues_user_id ON comment_queues(user_id);
+CREATE INDEX IF NOT EXISTS idx_comment_queues_session_id ON comment_queues(session_id);
