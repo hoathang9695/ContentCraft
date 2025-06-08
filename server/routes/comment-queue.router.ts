@@ -8,6 +8,8 @@ const router = express.Router();
 router.post("/", isAuthenticated, async (req, res) => {
   console.log("=== COMMENT QUEUE CREATION START ===");
   console.log("Request body:", req.body);
+  console.log("Request headers:", req.headers);
+  console.log("User:", req.user);
 
   try {
     const user = req.user as Express.User;
@@ -45,7 +47,7 @@ router.post("/", isAuthenticated, async (req, res) => {
       });
 
       // Update comments in database
-      const { pool } = require("../db");
+      import { pool } from "../db";
       await pool.query(
         'UPDATE comment_queues SET comments = $1, updated_at = NOW() WHERE session_id = $2',
         [JSON.stringify(updatedComments), existingQueue.session_id]
