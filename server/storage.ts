@@ -951,7 +951,8 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(labels.id, id))
-      .returning();
+      ```text
+.returning();
 
     return result.length > 0 ? result[0] : undefined;
   }
@@ -1001,65 +1002,44 @@ export class DatabaseStorage implements IStorage {
   // Comment Queue methods
   async createCommentQueue(data: {
     externalId: string;
-    comments: string[];
-    selectedGender: string;
-    userId: number;
-  }) {
-    console.log("📝 Storage.createCommentQueue called with:", data);
-    
+    comment: string;
+    gender: string;
+    status: string;
+  }): Promise<any> {
     try {
-      const sessionId = Date.now().toString() + '_' + Math.random().toString(36).substring(2);
-      console.log("📝 Generated sessionId:", sessionId);
+      console.log('Storage.createCommentQueue called with:', data);
 
-      const queryParams = [
-        sessionId,
-        data.externalId,
-        JSON.stringify(data.comments),
-        data.selectedGender,
-        data.userId,
-        data.comments.length,
-        0, // processed_count
-        0, // success_count
-        0, // failure_count
-        0, // current_comment_index
-        'pending' // status
-      ];
-
-      console.log("📝 Query parameters:", queryParams);
-      console.log("📝 About to execute INSERT query...");
-
-      const result = await pool.query(`
-        INSERT INTO comment_queues (
-          session_id, external_id, comments, selected_gender, user_id,
-          total_comments, processed_count, success_count, failure_count,
-          current_comment_index, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
-        RETURNING *
-      `, queryParams);
-
-      console.log("📝 Database query executed successfully");
-      console.log("📝 Result rows count:", result.rows.length);
-      console.log("📝 First row:", result.rows[0]);
-
-      if (!result.rows || result.rows.length === 0) {
-        throw new Error("No rows returned from insert query");
+      if (!data.externalId || !data.comment) {
+        throw new Error('externalId and comment are required');
       }
 
-      console.log("📝 createCommentQueue completed successfully");
-      return result.rows[0];
-      
+      const insertData = {
+        externalId: data.externalId,
+        comment: data.comment,
+        gender: data.gender || 'all',
+        status: data.status || 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      console.log('Inserting comment queue data:', insertData);
+
+      const result = await this.db
+        .insert(commentQueues)
+        .values(insertData)
+        .returning();
+
+      if (!result || result.length === 0) {
+        throw new Error('Failed to insert comment queue entry');
+      }
+
+      console.log('Comment queue created successfully with ID:', result[0].id);
+      return result[0];
     } catch (error) {
-      console.error("❌ Database error in createCommentQueue:", error);
-      console.error("❌ Error type:", typeof error);
-      console.error("❌ Error name:", error instanceof Error ? error.name : 'Unknown');
-      console.error("❌ Error message:", error instanceof Error ? error.message : String(error));
-      console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack');
-      console.error("❌ Error code:", error && typeof error === 'object' && 'code' in error ? error.code : 'No code');
-      
-      // Re-throw with more context
-      const enhancedError = new Error(`Failed to create comment queue: ${error instanceof Error ? error.message : String(error)}`);
-      enhancedError.name = 'CommentQueueCreationError';
-      throw enhancedError;
+      console.error('Error in createCommentQueue:', error);
+      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      throw error;
     }
   }
 

@@ -223,69 +223,51 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       });
 
       console.log('🚀 Calling apiRequest...');
-      
+
       // Gửi queue đến backend API
+      console.log('Sending request to create comment queue...');
+
       const response = await apiRequest('POST', '/api/comment-queues', {
         externalId,
         comments: uniqueComments,
         selectedGender
       });
 
-      console.log('✅ Queue creation response received');
-      console.log('✅ Response:', response);
-      console.log('✅ Response type:', typeof response);
-      console.log('✅ Response keys:', response ? Object.keys(response) : 'null');
-      console.log('✅ Response stringified:', JSON.stringify(response));
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
-      // Check if response exists and has success property
-      if (response && typeof response === 'object' && 'success' in response) {
-        console.log('✅ Response has success property:', response.success);
-        
-        if (response.success === true) {
-          console.log('✅ Success response received');
-          toast({
-            title: 'Queue đã được tạo',
-            description: `${response.message || 'Queue created successfully'}. Hệ thống sẽ xử lý tự động trong nền.`,
-          });
+      const result = await response.json();
+      console.log('Response data:', result);
 
-          // Đóng dialog sau khi thành công
-          onOpenChange(false);
-          setCommentText('');
-          return;
-        } else {
-          console.log('❌ Response has success: false');
-          // Response has success: false
-          const errorMsg = response.message || 'Failed to create queue';
-          throw new Error(errorMsg);
-        }
-      } else {
-        console.error('❌ Invalid response format - missing success property');
-        console.error('❌ Response details:', {
-          response,
-          type: typeof response,
-          isNull: response === null,
-          isUndefined: response === undefined,
-          keys: response ? Object.keys(response) : 'No keys'
-        });
-        
-        // Check if response is HTML (common when server returns error page)
-        if (typeof response === 'string' && response.includes('<!DOCTYPE')) {
-          throw new Error('Server trả về trang HTML thay vì JSON. Server có thể đang gặp lỗi.');
-        }
-        
-        throw new Error('Server trả về dữ liệu không hợp lệ: ' + JSON.stringify(response));
+      if (!response.ok) {
+        console.error('Server returned error:', result);
+        throw new Error(result.error || `Server error: ${response.status}`);
       }
 
+      console.log('Comment queue created successfully:', result);
+
+      toast({
+        title: "Thành công",
+        description: `${result.message || 'Queue created successfully'}. Hệ thống sẽ xử lý tự động trong nền.`,
+      });
+
+      // Đóng dialog sau khi thành công
+      onOpenChange(false);
+      setCommentText('');
+      return;
+
     } catch (error) {
-      console.error('❌ Error in comment queue creation:');
-      console.error('❌ Error object:', error);
-      console.error('❌ Error type:', typeof error);
-      console.error('❌ Error constructor:', error?.constructor?.name);
-      console.error('❌ Error message:', error instanceof Error ? error.message : 'No message');
-      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack');
-      
+      console.error('Full error details:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error in comment queue creation:', error);
+      console.error('Error object:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error constructor:', error?.constructor?.name);
+      console.error('Error message:', error instanceof Error ? error.message : 'No message');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+
       let errorMessage = 'Không thể tạo queue comment';
-      
+      const cause = error instanceof Error ? error.cause : 'no cause';
       if (error instanceof Error) {
         if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
           errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
@@ -307,13 +289,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.';
         }
       }
-      
+
       console.error('❌ Final error message:', errorMessage);
-      
+
       toast({
-        title: 'Lỗi tạo queue',
-        description: errorMessage,
-        variant: 'destructive',
+        title: "Lỗi tạo queue",
+        description: `Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.`,
+        variant: "destructive",
       });
     }
   };
