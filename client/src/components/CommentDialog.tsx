@@ -230,20 +230,30 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       });
 
       console.log('Queue creation response:', response);
+      console.log('Response type:', typeof response);
+      console.log('Response keys:', response ? Object.keys(response) : 'null');
 
-      if (response && response.success) {
-        toast({
-          title: 'Queue đã được tạo',
-          description: `${response.message}. Hệ thống sẽ xử lý tự động trong nền.`,
-        });
+      // Check if response exists and has success property
+      if (response && typeof response === 'object' && 'success' in response) {
+        if (response.success === true) {
+          toast({
+            title: 'Queue đã được tạo',
+            description: `${response.message || 'Queue created successfully'}. Hệ thống sẽ xử lý tự động trong nền.`,
+          });
 
-        // Đóng dialog sau khi thành công
-        onOpenChange(false);
-        setCommentText('');
+          // Đóng dialog sau khi thành công
+          onOpenChange(false);
+          setCommentText('');
+          return;
+        } else {
+          // Response has success: false
+          const errorMsg = response.message || 'Failed to create queue';
+          throw new Error(errorMsg);
+        }
       } else {
-        const errorMsg = response?.message || 'Failed to create queue - Invalid response format';
-        console.error('Invalid response format:', response);
-        throw new Error(errorMsg);
+        // Invalid response format
+        console.error('Invalid response format - missing success property:', response);
+        throw new Error('Server trả về dữ liệu không hợp lệ');
       }
 
     } catch (error) {
@@ -258,7 +268,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
         } else if (error.message.includes('Failed to fetch')) {
           errorMessage = 'Không thể kết nối tới server. Vui lòng kiểm tra kết nối mạng.';
-        } else if (error.message.includes('Invalid response')) {
+        } else if (error.message.includes('Invalid response') || error.message.includes('không hợp lệ')) {
           errorMessage = 'Server trả về dữ liệu không hợp lệ. Vui lòng thử lại.';
         } else {
           errorMessage = error.message;
