@@ -150,45 +150,6 @@ export class CommentQueueProcessor {
               console.error(`❌ Comment ${index + 1} failed permanently`);
             }
           }
-        }t maxRetries = 3;
-
-        while (!success && retryCount < maxRetries) {
-          try {
-            const randomUser = this.getRandomFakeUser(fakeUsers, usedUserIds);
-            
-            if (!randomUser) {
-              throw new Error('No available fake users');
-            }
-
-            console.log(`📤 Sending comment ${index + 1}/${comments.length} with user ${randomUser.name}...`);
-
-            // Send comment to external API
-            await this.sendCommentToAPI(queue.external_id, randomUser.id, comment);
-            
-            success = true;
-            
-            // Update success progress
-            await storage.updateCommentQueueProgress(queue.session_id, {
-              processedCount: index + 1,
-              successCount: (queue.success_count || 0) + 1
-            });
-
-            console.log(`✅ Comment ${index + 1}/${comments.length} sent successfully`);
-
-          } catch (error) {
-            retryCount++;
-            console.error(`❌ Comment ${index + 1} failed (attempt ${retryCount}):`, error);
-            
-            if (retryCount < maxRetries) {
-              await this.delay(this.getRetryDelay(retryCount));
-            } else {
-              // Update failure progress
-              await storage.updateCommentQueueProgress(queue.session_id, {
-                processedCount: index + 1,
-                failureCount: (queue.failure_count || 0) + 1
-              });
-            }
-          }
         }
       }
 
