@@ -14,21 +14,28 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("Parsed data:", { externalId, comments, selectedGender, userId: user.id });
 
+    // Set content type header first
+    res.setHeader('Content-Type', 'application/json');
+
     // Validate request data
     if (!externalId) {
       console.log("Missing externalId");
-      return res.status(400).json({
+      const errorResponse = {
         success: false,
         message: "External ID is required"
-      });
+      };
+      console.log("Sending error response:", errorResponse);
+      return res.status(400).json(errorResponse);
     }
 
     if (!comments || !Array.isArray(comments) || comments.length === 0) {
       console.log("Invalid comments data");
-      return res.status(400).json({
+      const errorResponse = {
         success: false,
         message: "Comments array is required and must not be empty"
-      });
+      };
+      console.log("Sending error response:", errorResponse);
+      return res.status(400).json(errorResponse);
     }
 
     // Check if there's already an active queue for this external ID
@@ -52,26 +59,24 @@ router.post("/", isAuthenticated, async (req, res) => {
           [JSON.stringify(updatedComments), existingQueue.session_id]
         );
 
-        console.log("Returning existing queue response:", {
+        const successResponse = {
           success: true,
           message: `Added ${comments.length} comments to existing queue`,
           sessionId: existingQueue.session_id,
           totalComments: updatedComments.length
-        });
+        };
 
-        return res.status(200).json({
-          success: true,
-          message: `Added ${comments.length} comments to existing queue`,
-          sessionId: existingQueue.session_id,
-          totalComments: updatedComments.length
-        });
+        console.log("Returning existing queue response:", successResponse);
+        return res.status(200).json(successResponse);
       } catch (updateError) {
         console.error("Error updating existing queue:", updateError);
-        return res.status(500).json({
+        const errorResponse = {
           success: false,
           message: "Failed to update existing queue",
           error: updateError instanceof Error ? updateError.message : String(updateError)
-        });
+        };
+        console.log("Sending error response:", errorResponse);
+        return res.status(500).json(errorResponse);
       }
     }
 
@@ -86,28 +91,28 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("Queue created successfully:", queue.session_id);
 
-    console.log("Returning success response:", {
+    const successResponse = {
       success: true,
       message: `Created queue with ${comments.length} comments`,
       sessionId: queue.session_id,
       totalComments: queue.total_comments
-    });
+    };
 
-    return res.status(200).json({
-      success: true,
-      message: `Created queue with ${comments.length} comments`,
-      sessionId: queue.session_id,
-      totalComments: queue.total_comments
-    });
+    console.log("Returning success response:", successResponse);
+    return res.status(200).json(successResponse);
 
   } catch (error) {
     console.error("Error creating comment queue:", error);
     console.error("Full error stack:", error instanceof Error ? error.stack : error);
-    return res.status(500).json({
+    
+    const errorResponse = {
       success: false,
       message: "Failed to create comment queue",
       error: error instanceof Error ? error.message : String(error)
-    });
+    };
+    
+    console.log("Sending error response:", errorResponse);
+    return res.status(500).json(errorResponse);
   }
 });
 

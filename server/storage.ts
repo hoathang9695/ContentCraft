@@ -950,9 +950,8 @@ export class DatabaseStorage implements IStorage {
         ...labelUpdate,
         updatedAt: new Date(),
       })
-      .where(eq(labels.id, id))
-      .returning();
-    
+      .where(eq(labels.id, id);
+
     return result.length > 0 ? result[0] : undefined;
   }
 
@@ -1006,16 +1005,11 @@ export class DatabaseStorage implements IStorage {
     userId: number;
   }) {
     try {
+      console.log("Creating comment queue with data:", data);
       const sessionId = Date.now().toString() + '_' + Math.random().toString(36).substring(2);
+      console.log("Generated sessionId:", sessionId);
 
-      const result = await pool.query(`
-        INSERT INTO comment_queues (
-          session_id, external_id, comments, selected_gender, user_id,
-          total_comments, processed_count, success_count, failure_count,
-          current_comment_index, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
-        RETURNING *
-      `, [
+      const queryParams = [
         sessionId,
         data.externalId,
         JSON.stringify(data.comments),
@@ -1026,13 +1020,34 @@ export class DatabaseStorage implements IStorage {
         0, // success_count
         0, // failure_count
         0, // current_comment_index
-        'pending'
-      ]);
+        'pending' // status
+      ];
 
-      console.log("Created comment queue in DB:", result.rows[0]);
+      console.log("Query parameters:", queryParams);
+
+      const result = await pool.query(`
+        INSERT INTO comment_queues (
+          session_id, external_id, comments, selected_gender, user_id,
+          total_comments, processed_count, success_count, failure_count,
+          current_comment_index, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        RETURNING *
+      `, queryParams);
+
+      console.log("Database query result:", result.rows[0]);
+
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error("No rows returned from insert query");
+      }
+
       return result.rows[0];
     } catch (error) {
       console.error("Database error in createCommentQueue:", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        code: error && typeof error === 'object' && 'code' in error ? error.code : undefined
+      });
       throw error;
     }
   }
