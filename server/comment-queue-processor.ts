@@ -1,8 +1,5 @@
 
 import { storage } from './storage';
-import { apiRequest } from '../client/src/lib/queryClient';
-
-import { storage } from './storage';
 
 interface FakeUser {
   id: number;
@@ -231,4 +228,4 @@ export class CommentQueueProcessor {
 }
 
 // Export singleton instance
-export const commentQueueProcessor = new CommentQueueProcessor(); new CommentQueueProcessor();
+export const commentQueueProcessor = new CommentQueueProcessor();
