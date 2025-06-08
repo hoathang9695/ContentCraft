@@ -52,6 +52,13 @@ router.post("/", isAuthenticated, async (req, res) => {
           [JSON.stringify(updatedComments), existingQueue.session_id]
         );
 
+        console.log("Returning existing queue response:", {
+          success: true,
+          message: `Added ${comments.length} comments to existing queue`,
+          sessionId: existingQueue.session_id,
+          totalComments: updatedComments.length
+        });
+
         return res.status(200).json({
           success: true,
           message: `Added ${comments.length} comments to existing queue`,
@@ -78,6 +85,13 @@ router.post("/", isAuthenticated, async (req, res) => {
     });
 
     console.log("Queue created successfully:", queue.session_id);
+
+    console.log("Returning success response:", {
+      success: true,
+      message: `Created queue with ${comments.length} comments`,
+      sessionId: queue.session_id,
+      totalComments: queue.total_comments
+    });
 
     return res.status(200).json({
       success: true,
