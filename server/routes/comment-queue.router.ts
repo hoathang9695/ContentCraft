@@ -8,10 +8,14 @@ const router = express.Router();
 // Create new comment queue
 router.post("/", isAuthenticated, async (req, res) => {
   try {
+    console.log("Creating comment queue - request body:", req.body);
     const user = req.user as Express.User;
     const { externalId, comments, selectedGender } = req.body;
 
+    console.log("Parsed data:", { externalId, comments, selectedGender, userId: user.id });
+
     if (!externalId || !comments || !Array.isArray(comments) || comments.length === 0) {
+      console.log("Invalid request data validation failed");
       return res.status(400).json({
         success: false,
         message: "Invalid request data"
@@ -22,6 +26,7 @@ router.post("/", isAuthenticated, async (req, res) => {
     const existingQueue = await storage.getActiveCommentQueueForExternal(externalId);
     
     if (existingQueue) {
+      console.log("Found existing queue:", existingQueue.session_id);
       // Add comments to existing queue
       const existingComments = JSON.parse(existingQueue.comments);
       const updatedComments = [...existingComments, ...comments];
@@ -44,6 +49,7 @@ router.post("/", isAuthenticated, async (req, res) => {
       });
     }
 
+    console.log("Creating new queue...");
     // Create new queue
     const queue = await storage.createCommentQueue({
       externalId,
@@ -51,6 +57,8 @@ router.post("/", isAuthenticated, async (req, res) => {
       selectedGender: selectedGender || 'all',
       userId: user.id
     });
+
+    console.log("Queue created successfully:", queue.session_id);
 
     res.json({
       success: true,

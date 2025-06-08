@@ -192,8 +192,16 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
+    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
+    if (!externalId) {
+      commentMutation.mutate({ id: contentId, count: uniqueComments.length });
+      onOpenChange(false);
+      setCommentText('');
+      return;
+    }
+
     // Kiểm tra nếu không có người dùng ảo nào khi có externalId
-    if (externalId && fakeUsers.length === 0) {
+    if (fakeUsers.length === 0) {
       const errorMessage = allFakeUsers.length === 0 
         ? 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.'
         : `Không có người dùng ảo nào với giới tính "${selectedGender === 'male' ? 'Nam' : selectedGender === 'female' ? 'Nữ' : 'Khác'}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`;
@@ -206,21 +214,17 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       return;
     }
 
-    // Cập nhật số lượng comment trong DB nội bộ nếu không có externalId
-    if (!externalId) {
-      commentMutation.mutate({ id: contentId, count: uniqueComments.length });
-      onOpenChange(false);
-      setCommentText('');
-      return;
-    }
-
     try {
+      console.log('Creating comment queue for externalId:', externalId);
+      
       // Gửi queue đến backend API
       const response = await apiRequest('POST', '/api/comment-queues', {
         externalId,
         comments: uniqueComments,
         selectedGender
       });
+
+      console.log('Queue creation response:', response);
 
       if (response.success) {
         toast({
@@ -243,8 +247,6 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         variant: 'destructive',
       });
     }
-
-    
   };
 
   return (
