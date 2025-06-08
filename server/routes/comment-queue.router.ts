@@ -1,6 +1,8 @@
 import express from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../middleware/auth";
+import { pool } from "../db"; // Import pool
+import { sql } from 'drizzle-orm';
 
 const router = express.Router();
 
@@ -19,6 +21,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     // Validate request data
     if (!externalId) {
+      console.error("❌ Validation failed: External ID is missing");
       return res.status(400).json({
         success: false,
         message: "External ID is required"
@@ -26,6 +29,7 @@ router.post("/", isAuthenticated, async (req, res) => {
     }
 
     if (!comments || !Array.isArray(comments) || comments.length === 0) {
+      console.error("❌ Validation failed: Comments array is missing or empty");
       return res.status(400).json({
         success: false,
         message: "Comments array is required and must not be empty"
@@ -47,7 +51,6 @@ router.post("/", isAuthenticated, async (req, res) => {
       });
 
       // Update comments in database
-      import { pool } from "../db";
       await pool.query(
         'UPDATE comment_queues SET comments = $1, updated_at = NOW() WHERE session_id = $2',
         [JSON.stringify(updatedComments), existingQueue.session_id]
@@ -62,6 +65,11 @@ router.post("/", isAuthenticated, async (req, res) => {
     }
 
     console.log("✅ Creating new queue...");
+
+    // Check database connection
+    console.log("🔍 Testing database connection...");
+    await pool.query("SELECT 1"); // Simple query to test connection
+    console.log("✅ Database connection successful");
 
     // Create new queue
     const queue = await storage.createCommentQueue({
@@ -83,11 +91,18 @@ router.post("/", isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
     console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    console.error("❌ Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      // code: error.code, //Commented out to avoid type error, since error.code might not exist
+      // detail: error.detail,  //Commented out to avoid type error, since error.detail might not exist
+      // constraint: error.constraint  //Commented out to avoid type error, since error.constraint might not exist
+    });
 
     return res.status(500).json({
       success: false,
       message: "Failed to create comment queue",
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
+      // code: error.code //Commented out to avoid type error, since error.code might not exist
     });
   }
 });
