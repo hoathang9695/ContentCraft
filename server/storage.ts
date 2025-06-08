@@ -997,11 +997,6 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0] : undefined;
   }
 
-  async getAllFakeUsers() {
-    const result = await this.db.query('SELECT * FROM fake_users WHERE status = $1', ['active']);
-    return result.rows;
-  }
-
   // Comment Queue methods
   async createCommentQueue(data: {
     externalId: string;
@@ -1011,7 +1006,7 @@ export class DatabaseStorage implements IStorage {
   }) {
     const sessionId = Date.now().toString() + '_' + Math.random().toString(36).substring(2);
 
-    const result = await this.db.query(`
+    const result = await pool.query(`
       INSERT INTO comment_queues (
         session_id, external_id, comments, selected_gender, user_id,
         total_comments, processed_count, success_count, failure_count,
@@ -1036,7 +1031,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveCommentQueueForExternal(externalId: string) {
-    const result = await this.db.query(`
+    const result = await pool.query(`
       SELECT * FROM comment_queues 
       WHERE external_id = $1 AND status IN ('pending', 'processing')
       ORDER BY created_at DESC
@@ -1047,7 +1042,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCommentQueue(sessionId: string) {
-    const result = await this.db.query(
+    const result = await pool.query(
       'SELECT * FROM comment_queues WHERE session_id = $1',
       [sessionId]
     );
@@ -1056,7 +1051,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingCommentQueues() {
-    const result = await this.db.query(`
+    const result = await pool.query(`
       SELECT * FROM comment_queues 
       WHERE status = 'pending'
       ORDER BY created_at ASC
@@ -1135,7 +1130,7 @@ export class DatabaseStorage implements IStorage {
       RETURNING *
     `;
 
-    const result = await this.db.query(query, values);
+    const result = await pool.query(query, values);
     return result.rows[0];
   }
 
