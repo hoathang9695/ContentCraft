@@ -231,46 +231,24 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
       console.log('Comment queue created successfully:', result);
 
-      const responseData = await result.json();
-      if (result.ok && responseData.success) {
-        toast({
-          title: "Thành công",
-          description: `${responseData.message}. Hệ thống sẽ xử lý tự động trong nền.`,
-        });
-
-        // Đóng dialog sau khi thành công
-        onOpenChange(false);
-        setCommentText('');
-
-      } else {
-        console.error('Error in comment queue creation:', responseData);
-
-        let errorMessage = 'Không thể tạo queue comment';
-
-        if (error instanceof Error) {
-          if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
-            errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
-          } else if (error.message.includes('Failed to fetch')) {
-            errorMessage = 'Không thể kết nối tới server. Vui lòng kiểm tra kết nối mạng.';
-          } else if (error.message.includes('Unexpected token') || error.message.includes('JSON')) {
-            errorMessage = 'Server trả về dữ liệu không hợp lệ. Vui lòng thử lại sau.';
-          } else {
-            errorMessage = error.message;
-          }
-        }
-
-        toast({
-          title: "Lỗi tạo queue",
-          description: errorMessage,
-          variant: "destructive",
-        });
+      if (!result.success) {
+        throw new Error(result.message || 'Unknown server error');
       }
+
+      toast({
+        title: "Thành công",
+        description: `${result.message}. Hệ thống sẽ xử lý tự động trong nền.`,
+      });
+
+      // Đóng dialog sau khi thành công
+      onOpenChange(false);
+      setCommentText('');
 
     } catch (error) {
       console.error('Error in comment queue creation:', error);
 
       let errorMessage = 'Không thể tạo queue comment';
-
+      
       if (error instanceof Error) {
         if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
           errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';

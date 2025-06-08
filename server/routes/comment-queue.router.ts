@@ -35,7 +35,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     if (existingQueue) {
       console.log("Found existing queue:", existingQueue.session_id);
-
+      
       // Add comments to existing queue
       const existingComments = JSON.parse(existingQueue.comments);
       const updatedComments = [...existingComments, ...comments];
@@ -60,7 +60,7 @@ router.post("/", isAuthenticated, async (req, res) => {
     }
 
     console.log("✅ Creating new queue...");
-
+    
     // Create new queue
     const queue = await storage.createCommentQueue({
       externalId,
@@ -81,7 +81,7 @@ router.post("/", isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
     console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-
+    
     return res.status(500).json({
       success: false,
       message: "Failed to create comment queue",
