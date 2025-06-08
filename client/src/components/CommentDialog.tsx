@@ -276,9 +276,6 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   const handleSubmit = async () => {
     if (!contentId) return;
 
-    // 🧹 Dọn dẹp queue cũ trước khi tạo queue mới
-    cleanupOldQueues();
-
     // Loại bỏ các comment trùng lặp
     const uniqueComments = Array.from(new Set(extractedComments));
 
@@ -311,6 +308,36 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       onOpenChange(false);
       setCommentText('');
       return;
+    }
+
+    // Đóng dialog ngay lập tức
+    onOpenChange(false);
+    setCommentText('');
+
+    try {
+      // Gửi queue đến backend
+      const response = await apiRequest('POST', '/api/comment-queues', {
+        externalId,
+        comments: uniqueComments,
+        selectedGender
+      });
+
+      if (response.success) {
+        toast({
+          title: 'Queue đã được tạo',
+          description: `${response.message}. Hệ thống sẽ xử lý tự động trong nền.`,
+        });
+      } else {
+        throw new Error(response.message || 'Failed to create queue');
+      }
+
+    } catch (error) {
+      console.error('Error creating comment queue:', error);
+      toast({
+        title: 'Lỗi tạo queue',
+        description: error instanceof Error ? error.message : 'Không thể tạo queue comment',
+        variant: 'destructive',
+      });
     }
 
     // Utility function để load queue từ localStorage một cách an toàn

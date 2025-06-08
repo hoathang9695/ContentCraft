@@ -998,6 +998,103 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0] : undefined;
   }
 
+
+  // Comment Queue Management
+  async createCommentQueue(data: {
+    externalId: string;
+    comments: string[];
+    selectedGender: string;
+    userId: number;
+  }) {
+    const sessionId = `comment_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const result = await this.db.query(`
+      INSERT INTO comment_queues (
+        session_id, external_id, comments, selected_gender, 
+        user_id, total_comments, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `, [
+      sessionId,
+      data.externalId, 
+      JSON.stringify(data.comments),
+      data.selectedGender,
+      data.userId,
+      data.comments.length,
+      'pending'
+    ]);
+
+    return result.rows[0];
+  }
+
+  async getCommentQueue(sessionId: string) {
+    const result = await this.db.query(
+      'SELECT * FROM comment_queues WHERE session_id = $1',
+      [sessionId]
+    );
+    return result.rows[0];
+  }
+
+  async updateCommentQueueProgress(sessionId: string, updates: {
+    processedCount?: number;
+    successCount?: number;
+    failureCount?: number;
+    status?: string;
+    currentCommentIndex?: number;
+    errorInfo?: string;
+  }) {
+    const setClauses = [];
+    const values = [];
+    let paramCount = 1;
+
+    Object.entries(updates).forEach(([key, value]) => {
+      setClauses.push(`${key} = $${paramCount}`);
+      values.push(value);
+      paramCount++;
+    });
+
+    values.push(sessionId);
+    
+    const result = await this.db.query(`
+      UPDATE comment_queues 
+      SET ${setClauses.join(', ')}, updated_at = NOW()
+      WHERE session_id = $${paramCount}
+      RETURNING *
+    `, values);
+
+    return result.rows[0];
+  }
+
+  async getPendingCommentQueues() {
+    const result = await this.db.query(`
+      SELECT * FROM comment_queues 
+      WHERE status IN ('pending', 'processing') 
+      ORDER BY created_at ASC
+    `);
+    return result.rows;
+  }
+
+  async getActiveCommentQueueForExternal(externalId: string) {
+    const result = await this.db.query(`
+      SELECT * FROM comment_queues 
+      WHERE external_id = $1 AND status IN ('pending', 'processing')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [externalId]);
+    return result.rows[0];
+  }
+
+  async deleteCompletedCommentQueues(olderThanHours: number = 24) {
+    const result = await this.db.query(`
+      DELETE FROM comment_queues 
+      WHERE status IN ('completed', 'failed') 
+      AND updated_at < NOW() - INTERVAL '${olderThanHours} hours'
+      RETURNING count(*)
+    `);
+    return result.rowCount;
+  }
+
+
   async deleteFakeUser(id: number): Promise<boolean> {
     const result = await db
       .delete(fakeUsers)
