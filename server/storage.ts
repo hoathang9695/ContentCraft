@@ -1108,6 +1108,7 @@ export class DatabaseStorage implements IStorage {
     const values = [];
     let paramCount = 0;
 
+    // Add dynamic fields
     if (updates.status !== undefined) {
       fields.push(`status = $${++paramCount}`);
       values.push(updates.status);
@@ -1143,19 +1144,7 @@ export class DatabaseStorage implements IStorage {
       values.push(updates.errorInfo);
     }
 
-    if (fields.length === 0) {
-      return;
-    }
-
-    fields.push(`updated_at = NOW()`);
-    values.push(sessionId);
-
-    const query = `
-      UPDATE comment_queues 
-      SET ${fields.join(', ')}
-      WHERE session_id = $${++paramCount}
-    `;
-
+    // Add timestamp fields based on status
     if (updates.status === 'processing') {
       fields.push(`started_at = $${++paramCount}`);
       values.push(new Date().toISOString());
@@ -1166,20 +1155,35 @@ export class DatabaseStorage implements IStorage {
       values.push(new Date().toISOString());
     }
 
-    fields.push(`updated_at = $${++paramCount}`);
-    values.push(new Date().toISOString());
+    if (fields.length === 0) {
+      return;
+    }
 
+    // Always update the updated_at field
+    fields.push(`updated_at = NOW()`);
+
+    // Add session_id as the last parameter
     values.push(sessionId);
 
-    const updateQuery = `
+    const query = `
       UPDATE comment_queues 
       SET ${fields.join(', ')}
       WHERE session_id = $${++paramCount}
       RETURNING *
     `;
 
-    const result = await pool.query(updateQuery, values);
-    return result.rows[0];
+    console.log('🔧 Update query:', query);
+    console.log('🔧 Update values:', values);
+
+    try {
+      const result = await pool.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ Error in updateCommentQueueProgress:', error);
+      console.error('❌ Query:', query);
+      console.error('❌ Values:', values);
+      throw error;
+    }
   }
 
 
