@@ -101,10 +101,10 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const end = textarea.selectionEnd;
       const currentText = commentText;
       const newText = currentText.substring(0, start) + emojiData.emoji + currentText.substring(end);
-      
+
       setCommentText(newText);
       setShowEmojiPicker(false);
-      
+
       // Focus back to textarea and set cursor position after emoji
       setTimeout(() => {
         textarea.focus();
@@ -175,7 +175,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     },
   });
 
-  
+
 
   const handleSubmit = async () => {
     if (!contentId) return;
@@ -216,7 +216,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
     try {
       console.log('Creating comment queue for externalId:', externalId);
-      
+
       // Gửi queue đến backend API
       const response = await apiRequest('POST', '/api/comment-queues', {
         externalId,
@@ -231,7 +231,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
           title: 'Queue đã được tạo',
           description: `${response.message}. Hệ thống sẽ xử lý tự động trong nền.`,
         });
-        
+
         // Đóng dialog sau khi thành công
         onOpenChange(false);
         setCommentText('');
@@ -286,7 +286,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
                     ? "Hệ thống sẽ tự động chọn ngẫu nhiên một người dùng ảo khác nhau để gửi mỗi comment" 
                     : selectedGender === 'all' 
                       ? "Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý."
-                      : `Không có người dùng ảo nào với giới tính "${selectedGender === 'male' ? 'Nam' : selectedGender === 'female' ? 'Nữ' : 'Khác'}". Hãy thử chọn giới tính khác hoặc tạo thêm người dùng ảo.`}
+                      : `Không có người dùng ảo nào với giới tính "${selectedGender === 'male' ? 'Nam' : selectedGender === 'female' ? 'Nữ' : 'Khác'}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`}
                 </p>
                 {fakeUsers.length > 0 && (
                   <p className="mt-1 text-xs">

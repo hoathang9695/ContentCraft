@@ -1005,30 +1005,36 @@ export class DatabaseStorage implements IStorage {
     selectedGender: string;
     userId: number;
   }) {
-    const sessionId = Date.now().toString() + '_' + Math.random().toString(36).substring(2);
+    try {
+      const sessionId = Date.now().toString() + '_' + Math.random().toString(36).substring(2);
 
-    const result = await pool.query(`
-      INSERT INTO comment_queues (
-        session_id, external_id, comments, selected_gender, user_id,
-        total_comments, processed_count, success_count, failure_count,
-        current_comment_index, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
-      RETURNING *
-    `, [
-      sessionId,
-      data.externalId,
-      JSON.stringify(data.comments),
-      data.selectedGender,
-      data.userId,
-      data.comments.length,
-      0, // processed_count
-      0, // success_count
-      0, // failure_count
-      0, // current_comment_index
-      'pending'
-    ]);
+      const result = await pool.query(`
+        INSERT INTO comment_queues (
+          session_id, external_id, comments, selected_gender, user_id,
+          total_comments, processed_count, success_count, failure_count,
+          current_comment_index, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        RETURNING *
+      `, [
+        sessionId,
+        data.externalId,
+        JSON.stringify(data.comments),
+        data.selectedGender,
+        data.userId,
+        data.comments.length,
+        0, // processed_count
+        0, // success_count
+        0, // failure_count
+        0, // current_comment_index
+        'pending'
+      ]);
 
-    return result.rows[0];
+      console.log("Created comment queue in DB:", result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error("Database error in createCommentQueue:", error);
+      throw error;
+    }
   }
 
   async getActiveCommentQueueForExternal(externalId: string) {
