@@ -1022,7 +1022,7 @@ export class DatabaseStorage implements IStorage {
           session_id, external_id, comments, selected_gender, user_id, 
           total_comments, status, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        RETURNING *G *
+        RETURNING *
       `;
 
       const values = [
@@ -1068,7 +1068,7 @@ export class DatabaseStorage implements IStorage {
         });
       }
       
-      throw error;w error;
+      throw error;
     }
   }
 
@@ -1162,34 +1162,6 @@ export class DatabaseStorage implements IStorage {
       SET ${fields.join(', ')}
       WHERE session_id = $${++paramCount}
     `;
-
-    await pool.query(query, values);essedCount);
-    }
-
-    if (updates.successCount !== undefined) {
-      fields.push(`success_count = $${++paramCount}`);
-      values.push(updates.successCount);
-    }
-
-    if (updates.failureCount !== undefined) {
-      fields.push(`failure_count = $${++paramCount}`);
-      values.push(updates.failureCount);
-    }
-
-    if (updates.currentCommentIndex !== undefined) {
-      fields.push(`current_comment_index = $${++paramCount}`);
-      values.push(updates.currentCommentIndex);
-    }
-
-    if (updates.totalComments !== undefined) {
-      fields.push(`total_comments = $${++paramCount}`);
-      values.push(updates.totalComments);
-    }
-
-    if (updates.errorInfo !== undefined) {
-      fields.push(`error_info = $${++paramCount}`);
-      values.push(updates.errorInfo);
-    }
 
     if (updates.status === 'processing') {
       fields.push(`started_at = $${++paramCount}`);
