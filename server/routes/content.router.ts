@@ -19,6 +19,8 @@ router.post("/:externalId/send-comment", async (req, res) => {
   try {
     console.log(`📥 Received comment request for externalId: ${req.params.externalId}`);
     console.log(`📦 Request body:`, req.body);
+    console.log(`📦 Request headers:`, req.headers);
+    console.log(`📦 Request method: ${req.method}, URL: ${req.url}`);
 
     const { externalId } = req.params;
     const { fakeUserId, comment } = req.body;
@@ -43,6 +45,8 @@ router.post("/:externalId/send-comment", async (req, res) => {
     }
 
     console.log(`✅ Comment sent successfully for ${externalId} by ${fakeUser.name}: ${comment.substring(0, 50)}...`);
+    console.log(`✅ Full comment content: "${comment}"`);
+    console.log(`✅ Comment length: ${comment.length} characters`);
 
     // For now, just return success - you can implement actual external API call here
     return res.json({
