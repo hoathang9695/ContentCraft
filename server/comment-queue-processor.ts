@@ -174,49 +174,62 @@ export class CommentQueueProcessor {
   }
 
   private async sendCommentToAPI(externalId: string, fakeUserId: number, comment: string) {
-    // Get the base URL - use localhost for internal requests
-    const baseUrl = process.env.API_BASE_URL || 'http://localhost:5000';
-    const apiUrl = `${baseUrl}/api/contents/${externalId}/send-comment`;
+    // Get fake user info for sending to external API
+    const fakeUser = await storage.getFakeUser(fakeUserId);
+    if (!fakeUser) {
+      throw new Error(`Fake user not found: ${fakeUserId}`);
+    }
+
+    // Send directly to emso.vn API
+    const apiUrl = `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/comments`;
     
-    console.log(`🔗 Sending comment to API: ${apiUrl}`);
-    console.log(`📦 Payload:`, { fakeUserId, comment });
+    console.log(`🔗 Sending comment to external API: ${apiUrl}`);
+    console.log(`📦 Payload:`, { 
+      fakeUser: { id: fakeUser.id, name: fakeUser.name, token: fakeUser.token },
+      comment: comment.substring(0, 100) + '...'
+    });
 
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${fakeUser.token}`,
+          'User-Agent': 'Content-Queue-Processor/1.0'
         },
         body: JSON.stringify({
-          fakeUserId,
-          comment
+          content: comment,
+          userId: fakeUser.id,
+          userName: fakeUser.name
         })
       });
 
-      console.log(`📡 API Response status: ${response.status}`);
+      console.log(`📡 External API Response status: ${response.status}`);
       
       // Log response headers for debugging
       console.log(`📋 Response headers:`, Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const responseText = await response.text();
-        console.error(`❌ API Error Response:`, responseText);
-        throw new Error(`API request failed: ${response.status} ${response.statusText} - ${responseText}`);
+        console.error(`❌ External API Error Response:`, responseText);
+        throw new Error(`External API request failed: ${response.status} ${response.statusText} - ${responseText}`);
       }
 
+      // Some APIs might return different content types
       const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const responseText = await response.text();
-        console.error(`❌ Expected JSON but got:`, contentType, responseText);
-        throw new Error(`API returned non-JSON response: ${contentType}`);
+      let result;
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        result = { success: true, text: await response.text() };
       }
 
-      const result = await response.json();
-      console.log(`✅ API Response data:`, result);
+      console.log(`✅ External API Response data:`, result);
       return result;
       
     } catch (error) {
-      console.error(`❌ Error calling API:`, error);
+      console.error(`❌ Error calling external API:`, error);
       throw error;
     }
   }
