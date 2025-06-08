@@ -91,7 +91,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("✅ Queue created successfully:", queue.session_id);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message: `Created queue with ${comments.length} comments`,
       sessionId: queue.session_id,
@@ -124,6 +124,7 @@ router.post("/", isAuthenticated, async (req, res) => {
       message: statusCode === 503 ? "Database connection error. Please try again." : "Failed to create comment queue",
       error: errorMessage,
       timestamp: new Date().toISOString()
+    });ing()
     });
   }
 });

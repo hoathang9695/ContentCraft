@@ -174,8 +174,12 @@ app.use((req, res, next) => {
   // Xử lý các sự kiện thoát
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+// Start the comment queue processor INSIDE the async function
+  import('./comment-queue-processor')
+    .then(() => {
+      console.log('🚀 CommentQueueProcessor initialized and started');
+    })
+    .catch((error) => {
+      console.error('❌ Failed to initialize CommentQueueProcessor:', error);
+    });
 })();
-
-// Start the comment queue processor
-import './comment-queue-processor';
-console.log('🚀 CommentQueueProcessor initialized and started');
