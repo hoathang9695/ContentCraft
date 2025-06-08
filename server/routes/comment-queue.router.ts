@@ -1,4 +1,3 @@
-
 import express from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../middleware/auth";
@@ -11,7 +10,7 @@ router.post("/", isAuthenticated, async (req, res) => {
   console.log("Request headers:", req.headers);
   console.log("Request body:", req.body);
   console.log("User:", req.user);
-  
+
   try {
     const user = req.user as Express.User;
     const { externalId, comments, selectedGender } = req.body;
@@ -44,14 +43,14 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     // Check if there's already an active queue for this external ID
     const existingQueue = await storage.getActiveCommentQueueForExternal(externalId);
-    
+
     if (existingQueue) {
       console.log("Found existing queue:", existingQueue.session_id);
       try {
         // Add comments to existing queue
         const existingComments = JSON.parse(existingQueue.comments);
         const updatedComments = [...existingComments, ...comments];
-        
+
         await storage.updateCommentQueueProgress(existingQueue.session_id, {
           totalComments: updatedComments.length
         });
@@ -104,7 +103,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("✅ Returning success response:", successResponse);
     console.log("=== COMMENT QUEUE CREATION END ===");
-    
+
     // Ensure we return the response properly
     res.status(200);
     res.json(successResponse);
@@ -115,16 +114,16 @@ router.post("/", isAuthenticated, async (req, res) => {
     console.error("❌ Full error stack:", error instanceof Error ? error.stack : error);
     console.error("❌ Error type:", typeof error);
     console.error("❌ Error name:", error instanceof Error ? error.name : 'Unknown');
-    
+
     const errorResponse = {
       success: false,
       message: "Failed to create comment queue",
       error: error instanceof Error ? error.message : String(error)
     };
-    
+
     console.log("❌ Sending error response:", errorResponse);
     console.log("=== COMMENT QUEUE CREATION END WITH ERROR ===");
-    
+
     res.status(500);
     res.json(errorResponse);
     return;
