@@ -1095,6 +1095,32 @@ export class DatabaseStorage implements IStorage {
     return result.rows;
   }
 
+  async addCommentsToQueue(sessionId: string, newComments: string[]) {
+    // Get current queue
+    const currentQueue = await this.getCommentQueue(sessionId);
+    if (!currentQueue) {
+      throw new Error('Queue not found');
+    }
+
+    // Parse existing comments
+    const existingComments = Array.isArray(currentQueue.comments) 
+      ? currentQueue.comments 
+      : JSON.parse(currentQueue.comments);
+
+    // Merge comments
+    const allComments = [...existingComments, ...newComments];
+
+    // Update queue
+    const result = await pool.query(`
+      UPDATE comment_queues 
+      SET comments = $1, total_comments = $2, updated_at = NOW()
+      WHERE session_id = $3
+      RETURNING *
+    `, [JSON.stringify(allComments), allComments.length, sessionId]);
+
+    return result.rows[0];
+  }
+
   async updateCommentQueueProgress(sessionId: string, updates: {
     status?: string;
     processedCount?: number;

@@ -52,7 +52,12 @@ router.post("/", isAuthenticated, async (req, res) => {
       console.log('⚠️ Queue already exists for external ID:', externalId);
       return res.status(400).json({
         success: false,
-        message: 'There is already an active comment queue for this content'
+        message: `Đã có queue đang xử lý cho nội dung này (${existingQueue.processed_count || 0}/${existingQueue.total_comments} comments đã gửi). Vui lòng đợi queue hiện tại hoàn thành.`,
+        existingQueue: {
+          sessionId: existingQueue.session_id,
+          status: existingQueue.status,
+          progress: `${existingQueue.processed_count || 0}/${existingQueue.total_comments}`
+        }
       });
     }
 
