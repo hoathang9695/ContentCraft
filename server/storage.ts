@@ -951,8 +951,9 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(labels.id, id))
-      .returning();```text
-    return result.length >0 ? result[0] : undefined;
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
   }
 
   async deleteLabel(id: number): Promise<boolean> {
