@@ -17,7 +17,12 @@ export class CommentQueueProcessor {
 
   constructor() {
     console.log('🚀 CommentQueueProcessor constructor called');
-    this.startProcessor();
+    try {
+      this.startProcessor();
+      console.log('✅ CommentQueueProcessor started successfully');
+    } catch (error) {
+      console.error('❌ Error starting CommentQueueProcessor:', error);
+    }
   }
 
   startProcessor() {

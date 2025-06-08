@@ -1,6 +1,8 @@
 import express from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../middleware/auth";
+import { pool } from "../db"; // Import pool
+import { sql } from 'drizzle-orm';
 
 const router = express.Router();
 
@@ -8,6 +10,8 @@ const router = express.Router();
 router.post("/", isAuthenticated, async (req, res) => {
   console.log("=== COMMENT QUEUE CREATION START ===");
   console.log("Request body:", req.body);
+  console.log("Request headers:", req.headers);
+  console.log("User:", req.user);
 
   try {
     const user = req.user as Express.User;
@@ -17,6 +21,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     // Validate request data
     if (!externalId) {
+      console.error("❌ Validation failed: External ID is missing");
       return res.status(400).json({
         success: false,
         message: "External ID is required"
@@ -24,6 +29,7 @@ router.post("/", isAuthenticated, async (req, res) => {
     }
 
     if (!comments || !Array.isArray(comments) || comments.length === 0) {
+      console.error("❌ Validation failed: Comments array is missing or empty");
       return res.status(400).json({
         success: false,
         message: "Comments array is required and must not be empty"
@@ -45,7 +51,6 @@ router.post("/", isAuthenticated, async (req, res) => {
       });
 
       // Update comments in database
-      const { pool } = require("../db");
       await pool.query(
         'UPDATE comment_queues SET comments = $1, updated_at = NOW() WHERE session_id = $2',
         [JSON.stringify(updatedComments), existingQueue.session_id]
@@ -60,6 +65,21 @@ router.post("/", isAuthenticated, async (req, res) => {
     }
 
     console.log("✅ Creating new queue...");
+
+    // Check database connection with timeout
+    console.log("🔍 Testing database connection...");
+    try {
+      const connectionTest = await Promise.race([
+        pool.query("SELECT NOW() as current_time"),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database connection timeout')), 5000)
+        )
+      ]);
+      console.log("✅ Database connection successful:", connectionTest);
+    } catch (dbError) {
+      console.error("❌ Database connection failed:", dbError);
+      throw new Error(`Database connection failed: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}`);
+    }
 
     // Create new queue
     const queue = await storage.createCommentQueue({
@@ -81,11 +101,29 @@ router.post("/", isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
     console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    
+    // More detailed error information
+    if (error && typeof error === 'object') {
+      console.error("❌ Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        name: error instanceof Error ? error.name : undefined,
+        code: (error as any).code || undefined,
+        detail: (error as any).detail || undefined,
+        constraint: (error as any).constraint || undefined,
+        table: (error as any).table || undefined,
+        column: (error as any).column || undefined
+      });
+    }
 
-    return res.status(500).json({
+    // Return appropriate error response
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const statusCode = errorMessage.includes('connection') || errorMessage.includes('timeout') ? 503 : 500;
+
+    return res.status(statusCode).json({
       success: false,
-      message: "Failed to create comment queue",
-      error: error instanceof Error ? error.message : "Unknown error"
+      message: statusCode === 503 ? "Database connection error. Please try again." : "Failed to create comment queue",
+      error: errorMessage,
+      timestamp: new Date().toISOString()
     });
   }
 });
