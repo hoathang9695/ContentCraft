@@ -21,6 +21,9 @@ router.post("/", isAuthenticated, async (req, res) => {
   console.log("📝 Request body:", JSON.stringify(req.body, null, 2));
   console.log("📝 User authenticated:", req.user);
 
+  // Set response headers early
+  res.setHeader('Content-Type', 'application/json');
+
   try {
     const user = req.user as Express.User;
     const { externalId, comments, selectedGender } = req.body;
@@ -99,12 +102,15 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     console.log("✅ Queue created successfully:", queue.session_id);
 
-    return res.status(200).json({
+    const successResponse = {
       success: true,
       message: `Created queue with ${comments.length} comments`,
       sessionId: queue.session_id,
       totalComments: queue.total_comments
-    });
+    };
+
+    console.log("📝 SENDING SUCCESS RESPONSE:", JSON.stringify(successResponse, null, 2));
+    return res.status(200).json(successResponse);
 
   } catch (error) {
     console.error("❌ Error creating comment queue:", error);
@@ -125,12 +131,17 @@ router.post("/", isAuthenticated, async (req, res) => {
 
     // Ensure we always return JSON
     res.setHeader('Content-Type', 'application/json');
-    return res.status(500).json({
-      message: "Lỗi tạo comment queue",
+    
+    const errorResponse = {
+      success: false,
+      message: "Lỗi tạo comment queue", 
       error: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString(),
       path: req.originalUrl
-    });
+    };
+
+    console.log("📝 SENDING ERROR RESPONSE:", JSON.stringify(errorResponse, null, 2));
+    return res.status(500).json(errorResponse);
   }
 });
 
