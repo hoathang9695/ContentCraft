@@ -950,7 +950,8 @@ export class DatabaseStorage implements IStorage {
         ...labelUpdate,
         updatedAt: new Date(),
       })
-      .where(eq(labels.id, id);
+      .where(eq(labels.id, id))
+      .returning();
 
     return result.length > 0 ? result[0] : undefined;
   }
