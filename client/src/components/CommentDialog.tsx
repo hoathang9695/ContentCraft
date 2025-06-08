@@ -216,6 +216,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
     try {
       console.log('Creating comment queue for externalId:', externalId);
+      console.log('Request payload:', {
+        externalId,
+        comments: uniqueComments,
+        selectedGender
+      });
 
       // Gửi queue đến backend API
       const response = await apiRequest('POST', '/api/comment-queues', {
@@ -226,7 +231,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
       console.log('Queue creation response:', response);
 
-      if (response.success) {
+      if (response && response.success) {
         toast({
           title: 'Queue đã được tạo',
           description: `${response.message}. Hệ thống sẽ xử lý tự động trong nền.`,
@@ -236,14 +241,25 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
         onOpenChange(false);
         setCommentText('');
       } else {
-        throw new Error(response.message || 'Failed to create queue');
+        throw new Error(response?.message || 'Failed to create queue - Invalid response');
       }
 
     } catch (error) {
+      console.error('Full error details:', error);
       console.error('Error creating comment queue:', error);
+      
+      let errorMessage = 'Không thể tạo queue comment';
+      if (error instanceof Error) {
+        if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
+          errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Lỗi tạo queue',
-        description: error instanceof Error ? error.message : 'Không thể tạo queue comment',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
