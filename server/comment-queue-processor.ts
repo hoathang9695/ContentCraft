@@ -198,9 +198,7 @@ export class CommentQueueProcessor {
           'User-Agent': 'Content-Queue-Processor/1.0'
         },
         body: JSON.stringify({
-          content: comment,
-          userId: fakeUser.id,
-          userName: fakeUser.name
+          status: comment
         })
       });
 
