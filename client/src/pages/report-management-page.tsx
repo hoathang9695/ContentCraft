@@ -240,6 +240,17 @@ export default function ReportManagementPage() {
     }
   };
 
+  const handleDateFilter = () => {
+    if (startDate && endDate) {
+      setCurrentPage(1);
+      fetchReports();
+      toast({
+        title: "Đã áp dụng bộ lọc",
+        description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
+      });
+    }
+  };
+
 
   return (
     <DashboardLayout>
