@@ -1,6 +1,5 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -69,125 +68,56 @@ export default function ReportManagementPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Mock data for now - will be replaced with real API
-  const mockReportRequests: ReportRequest[] = [
-    {
-      id: 1,
-      reported_id: "USER_123456",
-      report_type: 'user',
-      reporter_name: "Nguyễn Văn A",
-      reporter_email: "reporter1@example.com",
-      reason: "Spam",
-      detailed_reason: "Người dùng này liên tục gửi tin nhắn spam và nội dung không phù hợp",
-      status: 'pending',
-      assigned_to_id: null,
-      assigned_to_name: null,
-      assigned_at: null,
-      response_content: null,
-      responder_id: null,
-      response_time: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      reported_id: "POST_789012",
-      report_type: 'content',
-      reporter_name: "Trần Thị B",
-      reporter_email: "reporter2@example.com",
-      reason: "Nội dung không phù hợp",
-      detailed_reason: "Bài viết chứa hình ảnh và nội dung không phù hợp với cộng đồng",
-      status: 'processing',
-      assigned_to_id: 1,
-      assigned_to_name: "Administrator",
-      assigned_at: new Date().toISOString(),
-      response_content: null,
-      responder_id: null,
-      response_time: null,
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 3,
-      reported_id: "PAGE_345678",
-      report_type: 'page',
-      reporter_name: "Lê Văn C",
-      reporter_email: "reporter3@example.com",
-      reason: "Thông tin sai lệch",
-      detailed_reason: "Trang này đăng thông tin sai lệch về sản phẩm và dịch vụ",
-      status: 'completed',
-      assigned_to_id: 2,
-      assigned_to_name: "Nguyễn Thị Khuyên",
-      assigned_at: new Date(Date.now() - 172800000).toISOString(),
-      response_content: "Đã xử lý và gỡ bỏ nội dung vi phạm",
-      responder_id: 2,
-      response_time: new Date(Date.now() - 86400000).toISOString(),
-      created_at: new Date(Date.now() - 259200000).toISOString(),
-      updated_at: new Date(Date.now() - 86400000).toISOString(),
+  // Fetch data from API
+  const [reportRequests, setReportRequests] = useState<ReportRequest[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<ReportRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        pageSize: pageSize.toString(),
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(reportTypeFilter !== 'all' && { reportType: reportTypeFilter }),
+        ...(userFilter !== null && { assignedTo: userFilter !== null ? userFilter.toString() : 'all' }),
+        ...(searchTerm && { search: searchTerm }),
+        sortBy: sortBy,
+        sortOrder: sortOrder
+      });
+
+      const response = await fetch(`/api/report-management?${params}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch reports');
+      }
+
+      const data = await response.json();
+      setReportRequests(data.reports);
+      setFilteredRequests(data.reports);
+      setTotalPages(data.pagination.totalPages);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể tải dữ liệu báo cáo",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  // Filter data based on current filters
-  const filteredReports = useMemo(() => {
-    return mockReportRequests.filter(report => {
-      // Status filter
-      if (statusFilter !== 'all' && report.status !== statusFilter) {
-        return false;
-      }
-
-      // Report type filter
-      if (reportTypeFilter !== 'all' && report.report_type !== reportTypeFilter) {
-        return false;
-      }
-
-      // User filter (assigned user)
-      if (userFilter && report.assigned_to_id !== userFilter) {
-        return false;
-      }
-
-      // Date filter
-      if (startDate || endDate) {
-        const reportDate = new Date(report.created_at);
-        if (startDate && reportDate < startOfDay(startDate)) {
-          return false;
-        }
-        if (endDate && reportDate > endOfDay(endDate)) {
-          return false;
-        }
-      }
-
-      // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          report.id.toString().includes(searchLower) ||
-          report.reported_id.toLowerCase().includes(searchLower) ||
-          report.reporter_name.toLowerCase().includes(searchLower) ||
-          report.reason.toLowerCase().includes(searchLower) ||
-          report.detailed_reason.toLowerCase().includes(searchLower)
-        );
-      }
-
-      return true;
-    });
-  }, [mockReportRequests, statusFilter, reportTypeFilter, userFilter, startDate, endDate, searchTerm]);
-
-  // Pagination
-  const totalContents = filteredReports.length;
-  const totalPages = Math.ceil(totalContents / pageSize);
-  const paginatedReports = filteredReports.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  const handleDateFilter = () => {
-    setCurrentPage(1);
-    toast({
-      title: "Đã áp dụng bộ lọc",
-      description: `Hiển thị dữ liệu từ ${format(startDate!, 'dd/MM/yyyy')} đến ${format(endDate!, 'dd/MM/yyyy')}`,
-    });
   };
+
+  useEffect(() => {
+    fetchReports();
+  }, [currentPage, pageSize, statusFilter, reportTypeFilter, userFilter, searchTerm, sortBy, sortOrder]);
 
   const { data: users = [] } = useQuery({
     queryKey: ['/api/users'],
@@ -213,6 +143,103 @@ export default function ReportManagementPage() {
         return { label: 'Khác', variant: 'secondary' as const };
     }
   };
+
+  const handleAssignUser = async (reportId: number, userId: number) => {
+    try {
+      const response = await fetch(`/api/report-management/${reportId}/assign`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ assignedToId: userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to assign report');
+      }
+
+      toast({
+        title: "Thành công",
+        description: "Đã phân công báo cáo thành công",
+      });
+
+      // Refresh data
+      fetchReports();
+    } catch (error) {
+      console.error('Error assigning report:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể phân công báo cáo",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusChange = async (reportId: number, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/report-management/${reportId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật trạng thái thành công",
+      });
+
+      // Refresh data
+      fetchReports();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật trạng thái",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddResponse = async (reportId: number, response: string) => {
+    try {
+      const responseApi = await fetch(`/api/report-management/${reportId}/respond`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ responseContent: response }),
+      });
+
+      if (!responseApi.ok) {
+        throw new Error('Failed to add response');
+      }
+
+      toast({
+        title: "Thành công",
+        description: "Đã thêm phản hồi thành công",
+      });
+
+      // Refresh data
+      fetchReports();
+    } catch (error) {
+      console.error('Error adding response:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể thêm phản hồi",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   return (
     <DashboardLayout>
@@ -588,12 +615,12 @@ export default function ReportManagementPage() {
 
         <div className="bg-card rounded-lg shadow">
           <DataTable
-            data={paginatedReports}
-            isLoading={false}
+            data={filteredRequests}
+            isLoading={loading}
             pagination={{
               currentPage: currentPage,
               totalPages: totalPages,
-              total: totalContents,
+              total: reportRequests.length,
               pageSize: pageSize,
               onPageChange: setCurrentPage,
               onPageSizeChange: (newSize) => {
@@ -726,12 +753,7 @@ export default function ReportManagementPage() {
                           </DropdownMenuItem>
                         )}
                         {row.status !== 'completed' && (
-                          <DropdownMenuItem onClick={() => {
-                            toast({
-                              title: "Thành công",
-                              description: "Đã cập nhật trạng thái báo cáo",
-                            });
-                          }}>
+                          <DropdownMenuItem onClick={() =>  handleStatusChange(row.id, 'completed')}>
                             <CheckCircle className="mr-2 h-4 w-4" />
                             <span>Đánh dấu hoàn thành</span>
                           </DropdownMenuItem>
@@ -768,7 +790,7 @@ export default function ReportManagementPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">Người báo cáo</Label>
