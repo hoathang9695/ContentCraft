@@ -227,6 +227,423 @@ Hệ thống có thể tích hợp với Kafka để xử lý nội dung phân t
 - Biểu đồ phân phối nội dung trực quan
 - API RESTful đầy đủ
 
+## 📚 API Documentation
+
+### **Authentication APIs**
+
+#### Login
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "username": "string",
+  "password": "string"
+}
+```
+
+#### Logout
+```http
+POST /api/auth/logout
+```
+
+#### Register
+```http
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "username": "string",
+  "password": "string",
+  "name": "string",
+  "email": "string"
+}
+```
+
+### **Content Management APIs**
+
+#### Get Contents (Paginated)
+```http
+GET /api/contents/paginated?page=1&limit=10&statusFilter=pending&sourceVerification=unverified&search=keyword
+Authorization: Required (Session-based)
+```
+
+#### Get Content by ID
+```http
+GET /api/contents/:id
+Authorization: Required
+```
+
+#### Create Content
+```http
+POST /api/contents
+Content-Type: application/json
+Authorization: Required
+
+{
+  "externalId": "string",
+  "source": "string", // JSON string
+  "categories": "string", // comma-separated
+  "labels": "string", // comma-separated
+  "sourceVerification": "verified|unverified",
+  "assigned_to_id": "number",
+  "safe": "boolean"
+}
+```
+
+#### Update Content
+```http
+PATCH /api/contents/:id
+Content-Type: application/json
+Authorization: Required
+
+{
+  "status": "pending|processing|completed|failed",
+  "processingResult": "string",
+  "safe": "boolean",
+  "sourceVerification": "verified|unverified",
+  "categories": "string",
+  "labels": "string"
+}
+```
+
+#### Delete Content
+```http
+DELETE /api/contents/:id
+Authorization: Required (Admin only)
+```
+
+### **Comment Queue APIs**
+
+#### Create Comment Queue
+```http
+POST /api/comment-queues
+Content-Type: application/json
+Authorization: Required
+
+{
+  "externalId": "string",
+  "comments": ["string array"],
+  "selectedGender": "male|female|all"
+}
+```
+
+#### Get Queue Status
+```http
+GET /api/comment-queues/:sessionId
+Authorization: Required
+```
+
+#### Get User Queues
+```http
+GET /api/comment-queues
+Authorization: Required
+```
+
+#### Manual Cleanup (Admin)
+```http
+DELETE /api/comment-queues/cleanup
+Content-Type: application/json
+Authorization: Required (Admin only)
+
+{
+  "hoursOld": 24
+}
+```
+
+### **Support Request APIs**
+
+#### Get Support Requests
+```http
+GET /api/support-requests?page=1&limit=20&userId=123&startDate=2024-01-01&endDate=2024-12-31&search=keyword
+Authorization: Required
+```
+
+#### Update Support Request
+```http
+PUT /api/support-requests/:id
+Content-Type: application/json
+Authorization: Required
+
+{
+  "status": "pending|processing|completed",
+  "response_content": "string"
+}
+```
+
+#### Assign Support Request
+```http
+PUT /api/support-requests/:id/assign
+Content-Type: application/json
+Authorization: Required (Admin only)
+
+{
+  "assigned_to_id": "number"
+}
+```
+
+### **Tick Request APIs**
+
+#### Get Tick Requests
+```http
+GET /api/tick-requests?page=1&limit=20&userId=123&status=pending&search=keyword
+Authorization: Required
+```
+
+#### Update Tick Request
+```http
+PUT /api/tick-requests/:id
+Content-Type: application/json
+Authorization: Required
+
+{
+  "status": "pending|completed",
+  "response_content": "string"
+}
+```
+
+### **Verification Request APIs**
+
+#### Get Verification Requests
+```http
+GET /api/verification-requests?page=1&limit=20&search=keyword
+Authorization: Required
+```
+
+#### Update Verification Request
+```http
+PUT /api/verification-requests/:id
+Content-Type: application/json
+Authorization: Required
+
+{
+  "status": "pending|completed",
+  "response_content": "string"
+}
+```
+
+### **Feedback Request APIs**
+
+#### Get Feedback Requests
+```http
+GET /api/feedback-requests?page=1&limit=20&userId=123&search=keyword
+Authorization: Required
+```
+
+#### Update Feedback Request
+```http
+PUT /api/feedback-requests/:id
+Content-Type: application/json
+Authorization: Required
+
+{
+  "status": "pending|completed",
+  "response_content": "string"
+}
+```
+
+### **Infringing Content APIs**
+
+#### Get Infringing Contents
+```http
+GET /api/infringing-content/paginated?page=1&limit=10&search=keyword
+Authorization: Required
+```
+
+#### Create Infringing Content
+```http
+POST /api/infringing-content
+Content-Type: application/json
+Authorization: Required
+
+{
+  "externalId": "string",
+  "violation_description": "string",
+  "assigned_to_id": "number"
+}
+```
+
+#### Search and Process Infringing Content
+```http
+POST /api/infringing-content/search-and-process
+Content-Type: application/json
+Authorization: Required
+
+{
+  "externalId": "string",
+  "violationDescription": "string"
+}
+```
+
+#### Update Infringing Content
+```http
+PUT /api/infringing-content/:id
+Content-Type: application/json
+Authorization: Required
+
+{
+  "status": "pending|processing|completed",
+  "violation_description": "string"
+}
+```
+
+### **User Management APIs**
+
+#### Get Users
+```http
+GET /api/users
+Authorization: Required (Admin only)
+```
+
+#### Update User
+```http
+PUT /api/users/:id
+Content-Type: application/json
+Authorization: Required (Admin only)
+
+{
+  "name": "string",
+  "email": "string",
+  "role": "admin|editor|viewer",
+  "status": "active|pending|suspended"
+}
+```
+
+#### Delete User
+```http
+DELETE /api/users/:id
+Authorization: Required (Admin only)
+```
+
+### **Statistics APIs**
+
+#### Dashboard Stats
+```http
+GET /api/stats?startDate=2024-01-01&endDate=2024-12-31
+Authorization: Required
+```
+
+#### Badge Counts
+```http
+GET /api/badge-counts
+Authorization: Required
+```
+
+### **Fake Users APIs**
+
+#### Get Fake Users
+```http
+GET /api/fake-users
+Authorization: Required (Admin only)
+```
+
+#### Create Fake User
+```http
+POST /api/fake-users
+Content-Type: application/json
+Authorization: Required (Admin only)
+
+{
+  "name": "string",
+  "username": "string",
+  "email": "string",
+  "gender": "male|female",
+  "token": "string"
+}
+```
+
+### **Categories & Labels APIs**
+
+#### Get Categories
+```http
+GET /api/categories
+Authorization: Required
+```
+
+#### Create Category
+```http
+POST /api/categories
+Content-Type: application/json
+Authorization: Required (Admin only)
+
+{
+  "name": "string",
+  "description": "string"
+}
+```
+
+### **Page Management APIs**
+
+#### Get Pages
+```http
+GET /api/pages/paginated?page=1&limit=10&search=keyword
+Authorization: Required
+```
+
+#### Create Page
+```http
+POST /api/pages
+Content-Type: application/json
+Authorization: Required
+
+{
+  "pageName": "string",
+  "pageType": "string",
+  "classification": "string",
+  "phoneNumber": "string",
+  "monetizationEnabled": "boolean",
+  "adminData": "object"
+}
+```
+
+### **Error Responses**
+
+Tất cả API có thể trả về các mã lỗi sau:
+
+- **400 Bad Request**: Dữ liệu đầu vào không hợp lệ
+- **401 Unauthorized**: Chưa đăng nhập hoặc session hết hạn
+- **403 Forbidden**: Không có quyền truy cập
+- **404 Not Found**: Tài nguyên không tồn tại
+- **500 Internal Server Error**: Lỗi server
+
+#### Example Error Response:
+```json
+{
+  "success": false,
+  "message": "Error message",
+  "error": "Detailed error information"
+}
+```
+
+### **Success Responses**
+
+#### Paginated Response Format:
+```json
+{
+  "data": [...],
+  "total": 100,
+  "totalPages": 10,
+  "currentPage": 1
+}
+```
+
+#### Standard Success Response:
+```json
+{
+  "success": true,
+  "data": {...},
+  "message": "Success message"
+}
+```
+
+### **WebSocket Events**
+
+Hệ thống sử dụng WebSocket để real-time updates:
+
+- **badge-update**: Cập nhật số badge notifications
+- **content-update**: Cập nhật trạng thái content
+- **queue-progress**: Tiến độ xử lý comment queue
+
 ## Liên hệ hỗ trợ
 
 Nếu bạn gặp vấn đề khi triển khai hoặc sử dụng hệ thống, vui lòng liên hệ:
