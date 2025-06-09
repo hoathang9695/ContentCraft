@@ -8,7 +8,7 @@ import { authenticateUser } from '../middleware/auth.js';
 const router = Router();
 
 // Get all reports with filters and pagination
-router.get('/', authenticateUser, async (req, res) => {
+router.get('/', async (req, res) => {
   console.log('GET /api/report-management - Request received');
   
   // Ensure JSON response
@@ -136,7 +136,8 @@ router.get('/', authenticateUser, async (req, res) => {
 });
 
 // Assign report to user
-router.patch('/:id/assign', authenticateUser, async (req, res) => {
+router.patch('/:id/assign', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   try {
     const { id } = req.params;
     const { assignedToId } = req.body;
@@ -176,7 +177,8 @@ router.patch('/:id/assign', authenticateUser, async (req, res) => {
 });
 
 // Update report status
-router.patch('/:id/status', authenticateUser, async (req, res) => {
+router.patch('/:id/status', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -202,7 +204,8 @@ router.patch('/:id/status', authenticateUser, async (req, res) => {
 });
 
 // Add response to report
-router.patch('/:id/respond', authenticateUser, async (req, res) => {
+router.patch('/:id/respond', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   try {
     const { id } = req.params;
     const { responseContent } = req.body;
@@ -232,7 +235,8 @@ router.patch('/:id/respond', authenticateUser, async (req, res) => {
 });
 
 // Get report details
-router.get('/:id', authenticateUser, async (req, res) => {
+router.get('/:id', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   try {
     const { id } = req.params;
 
