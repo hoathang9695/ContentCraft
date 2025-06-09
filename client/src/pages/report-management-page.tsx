@@ -738,17 +738,38 @@ export default function ReportManagementPage() {
               {
                 key: 'reporter',
                 header: 'Người báo cáo',
-                render: (row: ReportRequest) => (
-                  <div>
-                    <div className="font-medium">
-                      {typeof row.reporterName === 'string' 
-                        ? row.reporterName 
-                        : (row.reporterName as any)?.name || JSON.stringify(row.reporterName)
-                      }
+                render: (row: ReportRequest) => {
+                  const reporterName = typeof row.reporterName === 'string' 
+                    ? row.reporterName 
+                    : (row.reporterName as any)?.name || 'N/A';
+
+                  const reporterId = typeof row.reporterName === 'object' && row.reporterName 
+                    ? (row.reporterName as any)?.id 
+                    : null;
+
+                  if (reporterId) {
+                    return (
+                      <div>
+                        <div 
+                          className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline"
+                          onClick={() => {
+                            window.open(`https://emso.vn/user/${reporterId}`, '_blank', 'noopener,noreferrer');
+                          }}
+                        >
+                          {reporterName}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div>
+                      <div className="font-medium">{reporterName}</div>
+                      <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
                     </div>
-                    <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
-                  </div>
-                ),
+                  );
+                },
               },
               {
                 key: 'reason',
