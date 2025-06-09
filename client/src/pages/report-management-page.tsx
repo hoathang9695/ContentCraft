@@ -37,21 +37,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 
 interface ReportRequest {
   id: number;
-  reported_id: string;
-  report_type: 'user' | 'content' | 'page' | 'group';
-  reporter_name: string;
-  reporter_email: string;
+  reportedId: string;
+  reportType: 'user' | 'content' | 'page' | 'group';
+  reporterName: string;
+  reporterEmail: string;
   reason: string;
-  detailed_reason: string;
+  detailedReason: string;
   status: 'pending' | 'processing' | 'completed';
-  assigned_to_id: number | null;
-  assigned_to_name: string | null;
-  assigned_at: string | null;
-  response_content: string | null;
-  responder_id: number | null;
-  response_time: string | null;
-  created_at: string;
-  updated_at: string;
+  assignedToId: number | null;
+  assignedToName: string | null;
+  assignedAt: string | null;
+  responseContent: string | null;
+  responderId: number | null;
+  responseTime: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function ReportManagementPage() {
@@ -648,17 +648,17 @@ export default function ReportManagementPage() {
                 ),
               },
               {
-                key: 'reported_id',
+                key: 'reportedId',
                 header: 'ID bị báo cáo',
                 render: (row: ReportRequest) => (
-                  <div className="font-medium text-blue-600">{row.reported_id}</div>
+                  <div className="font-medium text-blue-600">{row.reportedId}</div>
                 ),
               },
               {
-                key: 'report_type',
+                key: 'reportType',
                 header: 'Loại báo cáo',
                 render: (row: ReportRequest) => {
-                  const badge = getReportTypeBadge(row.report_type);
+                  const badge = getReportTypeBadge(row.reportType);
                   return (
                     <Badge variant={badge.variant}>
                       {badge.label}
@@ -671,8 +671,8 @@ export default function ReportManagementPage() {
                 header: 'Người báo cáo',
                 render: (row: ReportRequest) => (
                   <div>
-                    <div className="font-medium">{row.reporter_name}</div>
-                    <div className="text-sm text-muted-foreground">{row.reporter_email}</div>
+                    <div className="font-medium">{row.reporterName}</div>
+                    <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
                   </div>
                 ),
               },
@@ -682,7 +682,7 @@ export default function ReportManagementPage() {
                 render: (row: ReportRequest) => (
                   <div className="max-w-[200px]">
                     <div className="font-medium">{row.reason}</div>
-                    <div className="text-sm text-muted-foreground truncate">{row.detailed_reason}</div>
+                    <div className="text-sm text-muted-foreground truncate">{row.detailedReason}</div>
                   </div>
                 ),
               },
@@ -704,11 +704,11 @@ export default function ReportManagementPage() {
                 header: 'Phân công',
                 render: (row: ReportRequest) => (
                   <div>
-                    {row.assigned_to_id ? (
+                    {row.assignedToId ? (
                       <div className="text-sm">
-                        <div>{row.assigned_to_name}</div>
+                        <div>{row.assignedToName}</div>
                         <div className="text-muted-foreground">
-                          {format(new Date(row.assigned_at!), 'dd/MM/yyyy HH:mm')}
+                          {format(new Date(row.assignedAt!), 'dd/MM/yyyy HH:mm')}
                         </div>
                       </div>
                     ) : (
@@ -722,11 +722,11 @@ export default function ReportManagementPage() {
                 header: 'Phản hồi',
                 render: (row: ReportRequest) => (
                   <div>
-                    {row.response_content ? (
+                    {row.responseContent ? (
                       <div className="text-sm">
-                        <div className="truncate max-w-[200px]">{row.response_content}</div>
+                        <div className="truncate max-w-[200px]">{row.responseContent}</div>
                         <div className="text-muted-foreground">
-                          {format(new Date(row.response_time!), 'dd/MM/yyyy HH:mm')}
+                          {format(new Date(row.responseTime!), 'dd/MM/yyyy HH:mm')}
                         </div>
                       </div>
                     ) : (
@@ -789,13 +789,13 @@ export default function ReportManagementPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">ID bị báo cáo</Label>
-                    <p className="text-blue-600 font-medium">{selectedRequest.reported_id}</p>
+                    <p className="text-blue-600 font-medium">{selectedRequest.reportedId}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Loại báo cáo</Label>
                     <div className="mt-1">
                       {(() => {
-                        const badge = getReportTypeBadge(selectedRequest.report_type);
+                        const badge = getReportTypeBadge(selectedRequest.reportType);
                         return <Badge variant={badge.variant}>{badge.label}</Badge>;
                       })()}
                     </div>
@@ -805,12 +805,12 @@ export default function ReportManagementPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">Người báo cáo</Label>
-                    <p>{selectedRequest.reporter_name}</p>
-                    <p className="text-sm text-muted-foreground">{selectedRequest.reporter_email}</p>
+                    <p>{selectedRequest.reporterName}</p>
+                    <p className="text-sm text-muted-foreground">{selectedRequest.reporterEmail}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Ngày báo cáo</Label>
-                    <p>{format(new Date(selectedRequest.created_at), 'dd/MM/yyyy HH:mm')}</p>
+                    <p>{format(new Date(selectedRequest.createdAt), 'dd/MM/yyyy HH:mm')}</p>
                   </div>
                 </div>
 
@@ -821,25 +821,25 @@ export default function ReportManagementPage() {
 
                 <div>
                   <Label className="text-sm font-medium">Mô tả chi tiết</Label>
-                  <p className="text-sm bg-muted p-3 rounded">{selectedRequest.detailed_reason}</p>
+                  <p className="text-sm bg-muted p-3 rounded">{selectedRequest.detailedReason}</p>
                 </div>
 
-                {selectedRequest.assigned_to_name && (
+                {selectedRequest.assignedToName && (
                   <div>
                     <Label className="text-sm font-medium">Được phân công cho</Label>
-                    <p>{selectedRequest.assigned_to_name}</p>
+                    <p>{selectedRequest.assignedToName}</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(selectedRequest.assigned_at!), 'dd/MM/yyyy HH:mm')}
+                      {format(new Date(selectedRequest.assignedAt!), 'dd/MM/yyyy HH:mm')}
                     </p>
                   </div>
                 )}
 
-                {selectedRequest.response_content && (
+                {selectedRequest.responseContent && (
                   <div>
                     <Label className="text-sm font-medium">Phản hồi</Label>
-                    <p className="text-sm bg-muted p-3 rounded">{selectedRequest.response_content}</p>
+                    <p className="text-sm bg-muted p-3 rounded">{selectedRequest.responseContent}</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {format(new Date(selectedRequest.response_time!), 'dd/MM/yyyy HH:mm')}
+                      {format(new Date(selectedRequest.responseTime!), 'dd/MM/yyyy HH:mm')}
                     </p>
                   </div>
                 )}
