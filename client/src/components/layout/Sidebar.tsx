@@ -145,6 +145,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               icon={FileText}
               isActive={isActivePath('/report-management')}
               onClick={handleItemClick}
+              badge={finalBadgeCounts?.reportRequests}
             >
               Xử lý báo cáo
             </SidebarItem>
