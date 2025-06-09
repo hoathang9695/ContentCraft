@@ -11,7 +11,27 @@ import { simulateKafkaMessage } from "./kafka-simulator";
 import { FileCleanupService } from "./file-cleanup";
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
+// Improved JSON parsing with error handling
+app.use((req, res, next) => {
+  // Set default content type for API routes
+  if (req.originalUrl.startsWith('/api')) {
+    res.setHeader('Content-Type', 'application/json');
+  }
+  next();
+});
+
+app.use(express.json({ 
+  limit: '50mb',
+  verify: (req, res, buf, encoding) => {
+    try {
+      JSON.parse(buf.toString());
+    } catch (e) {
+      console.error('JSON parsing error:', e);
+      throw new Error('Invalid JSON in request body');
+    }
+  }
+}));
+
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // Cấu hình CORS để cho phép truy cập từ Vite development server
@@ -93,9 +113,11 @@ app.use((req, res, next) => {
   });
 
   // Error handling middleware - improved with more specific error types
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     // Log the error for debugging
     console.error('Application error:', err);
+    console.error('Request URL:', req.originalUrl);
+    console.error('Request method:', req.method);
 
     const status = err.status || err.statusCode || 500;
     let message = err.message || "Internal Server Error";
@@ -108,7 +130,18 @@ app.use((req, res, next) => {
       log(`Error: ${err.message}`, "error");
     }
 
-    res.status(status).json({ message });
+    // Ensure JSON response for API routes
+    if (req.originalUrl.startsWith('/api')) {
+      res.setHeader('Content-Type', 'application/json');
+    }
+
+    res.status(status).json({ 
+      success: false,
+      message,
+      error: err.message,
+      timestamp: new Date().toISOString(),
+      path: req.originalUrl
+    });
     // DO NOT throw error here as it will crash the application
   });
 
@@ -174,4 +207,12 @@ app.use((req, res, next) => {
   // Xử lý các sự kiện thoát
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+// Start the comment queue processor INSIDE the async function
+  import('./comment-queue-processor')
+    .then(() => {
+      console.log('🚀 CommentQueueProcessor initialized and started');
+    })
+    .catch((error) => {
+      console.error('❌ Failed to initialize CommentQueueProcessor:', error);
+    });
 })();

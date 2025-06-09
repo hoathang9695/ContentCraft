@@ -299,3 +299,25 @@ export interface ContentMessage {
   labels?: string;          // Nhãn, kiểu string và optional 
   sourceVerification?: 'verified' | 'unverified';  // Trạng thái xác minh nguồn
 }
+
+export const commentQueues = pgTable("comment_queues", {
+  id: serial("id").primaryKey(),
+  externalId: text("external_id").notNull(),
+  comment: text("comment").notNull(),
+  gender: text("gender").default("all").notNull(),
+  status: text("status").default("pending").notNull(),
+  sessionId: text("session_id"),
+  processedCount: integer("processed_count").default(0),
+  successCount: integer("success_count").default(0),
+  failureCount: integer("failure_count").default(0),
+  currentCommentIndex: integer("current_comment_index").default(0),
+  totalComments: integer("total_comments").default(0),
+  errorInfo: text("error_info"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type CommentQueue = typeof commentQueues.$inferSelect;
+export type InsertCommentQueue = typeof commentQueues.$inferInsert;
