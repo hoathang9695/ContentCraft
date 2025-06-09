@@ -216,3 +216,9 @@ app.use((req, res, next) => {
       console.error('❌ Failed to initialize CommentQueueProcessor:', error);
     });
 })();
+
+// Import routes
+import './routes.js';
+
+// Debug logging for routes
+console.log('Report management routes loaded');
