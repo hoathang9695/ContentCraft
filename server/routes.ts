@@ -185,10 +185,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ),
           );
 
+        // Đếm report requests có status = 'pending'
+        const { reportManagement } = await import("../shared/schema");
+        const pendingReportRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(reportManagement)
+          .where(eq(reportManagement.status, "pending"));
+
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
         const pendingVerification = pendingVerificationRequests[0]?.count || 0;
         const pendingTick = pendingTickRequests[0]?.count || 0;
+        const pendingReports = pendingReportRequests[0]?.count || 0;
 
         // Tổng số pending requests (support + feedback + verification + tick) cho menu cha "Xử lý phản hồi"
         const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
@@ -201,6 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           feedbackRequests: pendingFeedback,
           verificationRequests: pendingVerification,
           tickRequests: pendingTick,
+          reportRequests: pendingReports,
           totalRequests: totalPendingRequests, // Tổng cho menu cha
         };
 
@@ -224,6 +233,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tickRequests:
             badgeCounts.tickRequests > 0
               ? badgeCounts.tickRequests
+              : undefined,
+          reportRequests:
+            badgeCounts.reportRequests > 0
+              ? badgeCounts.reportRequests
               : undefined,
           totalRequests:
             badgeCounts.totalRequests > 0
@@ -442,10 +455,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query: "type='tick' AND status='pending'"
       });
 
+      // Đếm report requests có status = 'pending'
+      const { reportManagement } = await import("../shared/schema");
+      const pendingReportRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(reportManagement)
+        .where(eq(reportManagement.status, "pending"));
+
+      console.log("Badge count debug - Report requests:", {
+        count: pendingReportRequests[0]?.count || 0,
+        query: "status='pending'"
+      });
+
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
       const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
       const pendingVerification = pendingVerificationRequests[0]?.count || 0;
       const pendingTick = pendingTickRequests[0]?.count || 0;
+      const pendingReports = pendingReportRequests[0]?.count || 0;
 
       // Tổng số pending requests (support + feedback + verification + tick) cho menu cha "Xử lý phản hồi"
       const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
@@ -458,6 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         feedbackRequests: pendingFeedback,
         verificationRequests: pendingVerification,
         tickRequests: pendingTick,
+        reportRequests: pendingReports,
         totalRequests: totalPendingRequests, // Tổng cho menu cha
       };
 
@@ -481,6 +508,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tickRequests:
           badgeCounts.tickRequests > 0
             ? badgeCounts.tickRequests
+            : undefined,
+        reportRequests:
+          badgeCounts.reportRequests > 0
+            ? badgeCounts.reportRequests
             : undefined,
         totalRequests:
           badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
