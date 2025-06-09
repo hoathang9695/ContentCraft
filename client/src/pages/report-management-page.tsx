@@ -109,17 +109,31 @@ export default function ReportManagementPage() {
       console.log('Reports array:', data.reports);
       console.log('Reports length:', data.reports?.length);
 
-      if (data.reports && Array.isArray(data.reports)) {
-        setReportRequests(data.reports);
-        setFilteredRequests(data.reports);
-        setTotalPages(data.pagination?.totalPages || 1);
-        console.log('Successfully set reports:', data.reports.length);
-      } else {
-        console.error('Invalid data structure:', data);
-        setReportRequests([]);
-        setFilteredRequests([]);
-        setTotalPages(1);
-      }
+      // Map the data to ensure proper structure
+      const mappedReports = (data.reports || []).map((report: any) => ({
+        id: report.id,
+        reportedId: report.reportedId,
+        reportType: report.reportType,
+        reporterName: report.reporterName,
+        reporterEmail: report.reporterEmail,
+        reason: report.reason,
+        detailedReason: report.detailedReason,
+        status: report.status,
+        assignedToId: report.assignedToId,
+        assignedToName: report.assignedToName,
+        assignedAt: report.assignedAt,
+        responseContent: report.responseContent,
+        responderId: report.responderId,
+        responseTime: report.responseTime,
+        createdAt: report.createdAt,
+        updatedAt: report.updatedAt,
+      }));
+
+      console.log('Mapped reports:', mappedReports);
+      setReportRequests(mappedReports);
+      setFilteredRequests(mappedReports);
+      setTotalPages(data.pagination?.totalPages || 1);
+      console.log('Successfully set reports:', mappedReports.length);
     } catch (error) {
       console.error('Error fetching reports:', error);
       setReportRequests([]);
@@ -646,7 +660,7 @@ export default function ReportManagementPage() {
 
         <div className="bg-card rounded-lg shadow">
           <DataTable
-            data={filteredRequests}
+            data={reportRequests}
             isLoading={loading}
             pagination={{
               currentPage: currentPage,
