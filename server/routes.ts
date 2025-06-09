@@ -2807,8 +2807,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Infringing content routes
   app.use("/api/infringing-content", infringingContentRouter);
 
-  // Report management routes
-  app.use("/api/report-management", reportManagementRouter);
+  // Report management routes - with authentication middleware
+  app.use("/api/report-management", isAuthenticated, reportManagementRouter);
 
   // Import and mount tick router
   const { tickRouter } = await import("./routes/tick.router");
