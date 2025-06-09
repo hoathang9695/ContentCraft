@@ -220,6 +220,40 @@ export default function ReportManagementPage() {
     }
   };
 
+  const getReportUrl = (reportType: string, reportedId: string) => {
+    switch (reportType) {
+      case 'course':
+        return `https://emso.vn/course/${reportedId}/about`;
+      case 'project':
+        return `https://emso.vn/grow/${reportedId}/about`;
+      case 'recruitment':
+        return `https://emso.vn/recruit/${reportedId}/about`;
+      case 'content':
+        return `https://emso.vn/posts/${reportedId}`;
+      case 'comment':
+        return `https://emso.vn/posts/${reportedId}`;
+      case 'group':
+        return `https://emso.vn/group/${reportedId}`;
+      case 'page':
+        return `https://emso.vn/page/${reportedId}`;
+      case 'user':
+        return `https://emso.vn/user/${reportedId}`;
+      case 'song':
+        return `https://emso.vn/music_space/track/${reportedId}`;
+      case 'event':
+        return `https://emso.vn/event/${reportedId}`;
+      default:
+        return null;
+    }
+  };
+
+  const handleReportedIdClick = (reportType: string, reportedId: string) => {
+    const url = getReportUrl(reportType, reportedId);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const handleAssignUser = async (reportId: number, userId: number) => {
     try {
       const response = await fetch(`/api/report-management/${reportId}/assign`, {
@@ -738,14 +772,31 @@ export default function ReportManagementPage() {
               {
                 key: 'reportedId',
                 header: 'ID bị báo cáo',
-                render: (row: ReportRequest) => (
-                  <div className="font-medium text-blue-600">
-                    {typeof row.reportedId === 'string' 
-                      ? row.reportedId 
-                      : row.reportedId?.id || 'N/A'
-                    }
-                  </div>
-                ),
+                render: (row: ReportRequest) => {
+                  const reportedId = typeof row.reportedId === 'string' 
+                    ? row.reportedId 
+                    : row.reportedId?.id || 'N/A';
+
+                  const url = getReportUrl(row.reportType, reportedId);
+
+                  if (url && reportedId !== 'N/A') {
+                    return (
+                      <div 
+                        className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline transition-colors"
+                        onClick={() => handleReportedIdClick(row.reportType, reportedId)}
+                        title={`Mở ${getReportTypeBadge(row.reportType).label.toLowerCase()} trong tab mới`}
+                      >
+                        {reportedId}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="font-medium text-gray-600">
+                      {reportedId}
+                    </div>
+                  );
+                },
               },
               {
                 key: 'reportType',
@@ -908,12 +959,31 @@ export default function ReportManagementPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">ID bị báo cáo</Label>
-                    <p className="text-blue-600 font-medium">
-                      {typeof selectedRequest.reportedId === 'string' 
+                    {(() => {
+                      const reportedId = typeof selectedRequest.reportedId === 'string' 
                         ? selectedRequest.reportedId 
-                        : selectedRequest.reportedId?.id || 'N/A'
+                        : selectedRequest.reportedId?.id || 'N/A';
+
+                      const url = getReportUrl(selectedRequest.reportType, reportedId);
+
+                      if (url && reportedId !== 'N/A') {
+                        return (
+                          <p 
+                            className="text-blue-600 font-medium hover:text-blue-800 cursor-pointer underline transition-colors"
+                            onClick={() => handleReportedIdClick(selectedRequest.reportType, reportedId)}
+                            title={`Mở ${getReportTypeBadge(selectedRequest.reportType).label.toLowerCase()} trong tab mới`}
+                          >
+                            {reportedId}
+                          </p>
+                        );
                       }
-                    </p>
+
+                      return (
+                        <p className="text-gray-600 font-medium">
+                          {reportedId}
+                        </p>
+                      );
+                    })()}
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Loại báo cáo</Label>
