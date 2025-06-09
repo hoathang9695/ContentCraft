@@ -1,81 +1,62 @@
+` tags.
 
+```typescript
 import { pool } from './server/db.js';
 import fs from 'fs';
 
 async function runSQLScript() {
   try {
-    console.log('Creating report_management table...');
-    
-    // Create the table directly with SQL
-    const createTableSQL = `
-      -- Create report_management table
-      CREATE TABLE IF NOT EXISTS report_management (
-        id SERIAL PRIMARY KEY,
-        reported_id VARCHAR(255) NOT NULL,
-        report_type VARCHAR(50) NOT NULL CHECK (report_type IN ('user', 'content', 'page', 'group')),
-        reporter_name VARCHAR(255) NOT NULL,
-        reporter_email VARCHAR(255) NOT NULL,
-        reason VARCHAR(500) NOT NULL,
-        detailed_reason TEXT,
-        status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed')),
-        assigned_to_id INTEGER REFERENCES users(id),
-        assigned_to_name VARCHAR(255),
-        assigned_at TIMESTAMP,
-        response_content TEXT,
-        responder_id INTEGER REFERENCES users(id),
-        response_time TIMESTAMP,
-        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-      );
+    console.log('Updating report_management table schema...');
 
-      -- Create indexes for better performance
-      CREATE INDEX IF NOT EXISTS idx_report_management_status ON report_management(status);
-      CREATE INDEX IF NOT EXISTS idx_report_management_report_type ON report_management(report_type);
-      CREATE INDEX IF NOT EXISTS idx_report_management_assigned_to_id ON report_management(assigned_to_id);
-      CREATE INDEX IF NOT EXISTS idx_report_management_created_at ON report_management(created_at);
-      CREATE INDEX IF NOT EXISTS idx_report_management_reported_id ON report_management(reported_id);
+    // Read and execute the schema update script
+    const updateSchemaSQL = fs.readFileSync('./update-report-management-schema.sql', 'utf8');
 
-      -- Add comments for documentation
-      COMMENT ON TABLE report_management IS 'Bảng quản lý các báo cáo vi phạm từ người dùng';
-      COMMENT ON COLUMN report_management.reported_id IS 'ID của đối tượng bị báo cáo (user, content, page, group)';
-      COMMENT ON COLUMN report_management.report_type IS 'Loại báo cáo: user, content, page, group';
-    `;
+    console.log('Executing schema update...');
+    await pool.query(updateSchemaSQL);
+    console.log('✅ Schema updated successfully');
 
-    console.log('Executing SQL script...');
-    const result = await pool.query(createTableSQL);
+    // Read and execute the sample data insert script
+    const insertDataSQL = fs.readFileSync('./insert-sample-report-data.sql', 'utf8');
 
-    console.log('✅ SQL script executed successfully:', result);
-    
-    // Verify table creation
-    const checkTable = await pool.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = 'report_management'
+    console.log('Inserting sample data...');
+    await pool.query(insertDataSQL);
+    console.log('✅ Sample data inserted successfully');
+
+    // Verify the changes
+    const checkData = await pool.query(`
+      SELECT id, reported_id, reporter_name, report_type, reason, status
+      FROM report_management 
+      ORDER BY created_at DESC 
+      LIMIT 3
     `);
-    
-    if (checkTable.rows.length > 0) {
-      console.log('🎉 Report management table created and verified successfully!');
-    } else {
-      console.log('❌ Table was not created');
-    }
 
-    // Show all tables
-    const allTables = await pool.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      ORDER BY table_name
-    `);
-    
-    console.log('📋 All tables in database:', allTables.rows.map(row => row.table_name));
+    console.log('✅ Verification - Sample data from updated table:');
+    checkData.rows.forEach((row, index) => {
+      console.log(`${index + 1}. ID: ${row.id}`);
+      console.log(`   Reported ID: ${JSON.stringify(row.reported_id)}`);
+      console.log(`   Reporter: ${JSON.stringify(row.reporter_name)}`);
+      console.log(`   Type: ${row.report_type}`);
+      console.log(`   Reason: ${row.reason}`);
+      console.log(`   Status: ${row.status}`);
+      console.log('---');
+    });
 
   } catch (error) {
-    console.error('❌ Error executing SQL script:', error);
+    console.error('❌ Error running SQL script:', error);
+    throw error;
   } finally {
     await pool.end();
-    process.exit(0);
+    console.log('Database connection closed');
   }
 }
 
-runSQLScript();
+// Run the script
+runSQLScript()
+  .then(() => {
+    console.log('🎉 All operations completed successfully!');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('💥 Script failed:', error);
+    process.exit(1);
+  });
