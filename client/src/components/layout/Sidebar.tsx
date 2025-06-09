@@ -141,6 +141,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </SidebarItem>
 
             <SidebarItem
+              href="/report-management"
+              icon={FileText}
+              isActive={isActivePath('/report-management')}
+              onClick={handleItemClick}
+            >
+              Xử lý báo cáo
+            </SidebarItem>
+
+            <SidebarItem
               href="/contents"
               icon={FileText}
               isActive={isActivePath('/contents')}
