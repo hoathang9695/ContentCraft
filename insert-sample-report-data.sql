@@ -22,9 +22,9 @@ INSERT INTO report_management (
 ) VALUES 
 -- Báo cáo người dùng spam
 (
-  '114652263781752445', 
+  '{"id":"114652263781752445","target_id":"108277159419234302"}'::jsonb, 
   'user', 
-  'Nguyễn Văn Hưng', 
+  '{"id":"114643441906721003","name":"Nguyễn Văn Hưng"}'::jsonb, 
   'hung.nguyen@gmail.com', 
   'Spam tin nhắn', 
   'Người dùng zcng7ztfsy liên tục gửi tin nhắn spam quảng cáo đến nhiều người dùng khác trong hệ thống. Nội dung tin nhắn không phù hợp và gây phiền toái.', 
@@ -40,9 +40,9 @@ INSERT INTO report_management (
 ),
 -- Báo cáo trang vi phạm bản quyền
 (
-  'PAGE_123789456', 
+  '{"id":"PAGE_123789456","target_id":"PAGE_123789456_target"}'::jsonb, 
   'page', 
-  'Trần Thị Mai', 
+  '{"id":"114643441906721004","name":"Trần Thị Mai"}'::jsonb, 
   'mai.tran@company.vn', 
   'Vi phạm bản quyền', 
   'Trang này đăng tải nhiều hình ảnh và video có bản quyền mà không có sự cho phép của chủ sở hữu. Đây là vi phạm nghiêm trọng về bản quyền.', 

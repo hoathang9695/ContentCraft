@@ -2,9 +2,9 @@
 -- Create report_management table
 CREATE TABLE IF NOT EXISTS report_management (
   id SERIAL PRIMARY KEY,
-  reported_id VARCHAR(255) NOT NULL, -- ID của đối tượng bị báo cáo
+  reported_id JSONB NOT NULL, -- ID của đối tượng bị báo cáo (JSON format)
   report_type VARCHAR(50) NOT NULL CHECK (report_type IN ('user', 'content', 'page', 'group')), -- Loại báo cáo
-  reporter_name VARCHAR(255) NOT NULL, -- Tên người báo cáo
+  reporter_name JSONB NOT NULL, -- Tên người báo cáo (JSON format)
   reporter_email VARCHAR(255) NOT NULL, -- Email người báo cáo
   reason VARCHAR(500) NOT NULL, -- Lý do báo cáo
   detailed_reason TEXT, -- Mô tả chi tiết
@@ -28,9 +28,9 @@ CREATE INDEX IF NOT EXISTS idx_report_management_reported_id ON report_managemen
 
 -- Add comments for documentation
 COMMENT ON TABLE report_management IS 'Bảng quản lý các báo cáo vi phạm từ người dùng';
-COMMENT ON COLUMN report_management.reported_id IS 'ID của đối tượng bị báo cáo (user, content, page, group)';
+COMMENT ON COLUMN report_management.reported_id IS 'ID của đối tượng bị báo cáo (JSON format: {"id":"...", "target_id":"..."})';
 COMMENT ON COLUMN report_management.report_type IS 'Loại báo cáo: user, content, page, group';
-COMMENT ON COLUMN report_management.reporter_name IS 'Tên người báo cáo';
+COMMENT ON COLUMN report_management.reporter_name IS 'Tên người báo cáo (JSON format: {"id":"...", "name":"..."})';
 COMMENT ON COLUMN report_management.reporter_email IS 'Email người báo cáo';
 COMMENT ON COLUMN report_management.reason IS 'Lý do báo cáo ngắn gọn';
 COMMENT ON COLUMN report_management.detailed_reason IS 'Mô tả chi tiết về vi phạm';
