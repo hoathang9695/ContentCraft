@@ -37,9 +37,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 
 interface ReportRequest {
   id: number;
-  reportedId: string;
-  reportType: 'user' | 'content' | 'page' | 'group';
-  reporterName: string;
+  reportedId: string | { id: string; target_id?: string };
+  reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'recruitment' | 'project' | 'course' | 'event' | 'song';
+  reporterName: string | { id: string; name: string };
   reporterEmail: string;
   reason: string;
   detailedReason: string;
@@ -742,7 +742,7 @@ export default function ReportManagementPage() {
                   <div className="font-medium text-blue-600">
                     {typeof row.reportedId === 'string' 
                       ? row.reportedId 
-                      : (row.reportedId as any)?.id || JSON.stringify(row.reportedId)
+                      : row.reportedId?.id || 'N/A'
                     }
                   </div>
                 ),
@@ -765,10 +765,10 @@ export default function ReportManagementPage() {
                 render: (row: ReportRequest) => {
                   const reporterName = typeof row.reporterName === 'string' 
                     ? row.reporterName 
-                    : (row.reporterName as any)?.name || 'N/A';
+                    : row.reporterName?.name || 'N/A';
 
                   const reporterId = typeof row.reporterName === 'object' && row.reporterName 
-                    ? (row.reporterName as any)?.id 
+                    ? row.reporterName?.id 
                     : null;
 
                   if (reporterId) {
@@ -908,7 +908,12 @@ export default function ReportManagementPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">ID bị báo cáo</Label>
-                    <p className="text-blue-600 font-medium">{selectedRequest.reportedId}</p>
+                    <p className="text-blue-600 font-medium">
+                      {typeof selectedRequest.reportedId === 'string' 
+                        ? selectedRequest.reportedId 
+                        : selectedRequest.reportedId?.id || 'N/A'
+                      }
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Loại báo cáo</Label>
@@ -924,7 +929,12 @@ export default function ReportManagementPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">Người báo cáo</Label>
-                    <p>{selectedRequest.reporterName}</p>
+                    <p>
+                      {typeof selectedRequest.reporterName === 'string' 
+                        ? selectedRequest.reporterName 
+                        : selectedRequest.reporterName?.name || 'N/A'
+                      }
+                    </p>
                     <p className="text-sm text-muted-foreground">{selectedRequest.reporterEmail}</p>
                   </div>
                   <div>
