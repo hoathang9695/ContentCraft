@@ -99,18 +99,48 @@ export default function ReportManagementPage() {
 
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch reports: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Error response text:', errorText);
+        throw new Error(`Failed to fetch reports: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
-      console.log('API Response data:', data);
+      const responseText = await response.text();
+      console.log('Raw response text:', responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        console.error('Response was not valid JSON:', responseText);
+        throw new Error('Server returned invalid JSON response');
+      }
+
+      console.log('Parsed API Response data:', data);
+      console.log('Data type:', typeof data);
+      console.log('Data keys:', Object.keys(data));
       console.log('Reports array:', data.reports);
       console.log('Reports length:', data.reports?.length);
 
+      // Check if data.reports exists and is an array
+      if (!data.reports || !Array.isArray(data.reports)) {
+        console.error('Invalid data structure - reports is not an array:', data);
+        setReportRequests([]);
+        setFilteredRequests([]);
+        setTotalPages(1);
+        toast({
+          title: "Lỗi",
+          description: "Cấu trúc dữ liệu không hợp lệ từ server",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Map the data to ensure proper structure
-      const mappedReports = (data.reports || []).map((report: any) => ({
+      const mappedReports = data.reports.map((report: any) => ({
         id: report.id,
         reportedId: report.reportedId,
         reportType: report.reportType,
@@ -141,7 +171,7 @@ export default function ReportManagementPage() {
       setTotalPages(1);
       toast({
         title: "Lỗi",
-        description: "Không thể tải dữ liệu báo cáo",
+        description: `Không thể tải dữ liệu báo cáo: ${error.message}`,
         variant: "destructive",
       });
     } finally {
