@@ -61,7 +61,7 @@ export default function ReportManagementPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
-  const [reportTypeFilter, setReportTypeFilter] = useState<'all' | 'user' | 'content' | 'page' | 'group'>('all');
+  const [reportTypeFilter, setReportTypeFilter] = useState<'all' | 'user' | 'content' | 'page' | 'group' | 'comment' | 'recruitment' | 'project' | 'course' | 'event' | 'song'>('all');
   const [userFilter, setUserFilter] = useState<number | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<ReportRequest | null>(null);
 
@@ -203,6 +203,18 @@ export default function ReportManagementPage() {
         return { label: 'Trang', variant: 'outline' as const };
       case 'group':
         return { label: 'Nhóm', variant: 'destructive' as const };
+      case 'comment':
+        return { label: 'Bình luận', variant: 'secondary' as const };
+      case 'recruitment':
+        return { label: 'Tuyển dụng', variant: 'default' as const };
+      case 'project':
+        return { label: 'Dự án', variant: 'outline' as const };
+      case 'course':
+        return { label: 'Khóa học', variant: 'secondary' as const };
+      case 'event':
+        return { label: 'Sự kiện', variant: 'destructive' as const };
+      case 'song':
+        return { label: 'Bài hát', variant: 'default' as const };
       default:
         return { label: 'Khác', variant: 'secondary' as const };
     }
@@ -374,6 +386,12 @@ export default function ReportManagementPage() {
                   <SelectItem value="content">Nội dung</SelectItem>
                   <SelectItem value="page">Trang</SelectItem>
                   <SelectItem value="group">Nhóm</SelectItem>
+                  <SelectItem value="comment">Bình luận</SelectItem>
+                  <SelectItem value="recruitment">Tuyển dụng</SelectItem>
+                  <SelectItem value="project">Dự án</SelectItem>
+                  <SelectItem value="course">Khóa học</SelectItem>
+                  <SelectItem value="event">Sự kiện</SelectItem>
+                  <SelectItem value="song">Bài hát</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -553,8 +571,14 @@ export default function ReportManagementPage() {
                   <SelectItem value="content">Nội dung</SelectItem>
                   <SelectItem value="page">Trang</SelectItem>
                   <SelectItem value="group">Nhóm</SelectItem>
+                  <SelectItem value="comment">Bình luận</SelectItem>
+                  <SelectItem value="recruitment">Tuyển dụng</SelectItem>
+                  <SelectItem value="project">Dự án</SelectItem>
+                  <SelectItem value="course">Khóa học</SelectItem>
+                  <SelectItem value="event">Sự kiện</SelectItem>
+                  <SelectItem value="song">Bài hát</SelectItem>
                 </SelectContent>
-              </Select>
+              </Select></old_str>
 
               <Select 
                 value={userFilter?.toString() || "all"} 
