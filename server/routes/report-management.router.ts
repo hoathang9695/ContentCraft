@@ -100,17 +100,7 @@ router.get('/', authenticateUser, async (req, res) => {
     
     const total = Number(totalResult[0].count);
 
-    console.log('Sending response with:', {
-      reportsCount: reports.length,
-      pagination: {
-        page: pageNum,
-        pageSize: pageSizeNum,
-        total,
-        totalPages: Math.ceil(total / pageSizeNum)
-      }
-    });
-
-    res.json({
+    const responseData = {
       reports,
       pagination: {
         page: pageNum,
@@ -118,7 +108,17 @@ router.get('/', authenticateUser, async (req, res) => {
         total,
         totalPages: Math.ceil(total / pageSizeNum)
       }
+    };
+
+    console.log('Sending response with:', {
+      reportsCount: reports.length,
+      pagination: responseData.pagination,
+      firstReport: reports.length > 0 ? reports[0] : null
     });
+
+    console.log('Full response structure:', JSON.stringify(responseData, null, 2));
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('Error fetching reports:', error);
