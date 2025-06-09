@@ -578,7 +578,7 @@ export default function ReportManagementPage() {
                   <SelectItem value="event">Sự kiện</SelectItem>
                   <SelectItem value="song">Bài hát</SelectItem>
                 </SelectContent>
-              </Select></old_str>
+              </Select>
 
               <Select 
                 value={userFilter?.toString() || "all"} 
@@ -827,7 +827,7 @@ export default function ReportManagementPage() {
                       <div className="text-sm">
                         <div>{row.assignedToName}</div>
                         <div className="text-muted-foreground">
-                          {format(new Date(row.assignedAt!), 'dd/MM/yyyy HH:mm')}
+                          {format(new Date(row.assignedAt!, 'dd/MM/yyyy HH:mm'))}
                         </div>
                       </div>
                     ) : (
