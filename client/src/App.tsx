@@ -26,7 +26,7 @@ import RealUserPage from "@/pages/real-user-page";
 import SettingsPage from "@/pages/settings-page";
 import EmailTemplatesPage from "./pages/email-templates-page";
 import FeedbackPage from "@/pages/user-feedback/feedback-page";
-import { lazy } from "react";
+import ReportManagementPage from "@/pages/report-management-page";
 
 function Router() {
   return (
@@ -44,7 +44,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/page-management" component={PageManagementPage} />
       <Route path="/groups-management" component={GroupsManagementPage} />
-      <Route path="/report-management" component={lazy(() => import('./pages/report-management-page'))} />
+      <ProtectedRoute path="/report-management" component={ReportManagementPage} adminOnly={false} />
       <Route path="/user-feedback/support" component={SupportPage} />
       <Route path="/user-feedback/verification" component={VerificationPage} />
       <Route path="/user-feedback/tick" component={TickPage} />
