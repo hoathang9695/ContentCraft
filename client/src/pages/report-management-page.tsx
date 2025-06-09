@@ -715,7 +715,12 @@ export default function ReportManagementPage() {
                 key: 'reportedId',
                 header: 'ID bị báo cáo',
                 render: (row: ReportRequest) => (
-                  <div className="font-medium text-blue-600">{row.reportedId}</div>
+                  <div className="font-medium text-blue-600">
+                    {typeof row.reportedId === 'string' 
+                      ? row.reportedId 
+                      : (row.reportedId as any)?.id || JSON.stringify(row.reportedId)
+                    }
+                  </div>
                 ),
               },
               {
@@ -735,7 +740,12 @@ export default function ReportManagementPage() {
                 header: 'Người báo cáo',
                 render: (row: ReportRequest) => (
                   <div>
-                    <div className="font-medium">{row.reporterName}</div>
+                    <div className="font-medium">
+                      {typeof row.reporterName === 'string' 
+                        ? row.reporterName 
+                        : (row.reporterName as any)?.name || JSON.stringify(row.reporterName)
+                      }
+                    </div>
                     <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
                   </div>
                 ),
