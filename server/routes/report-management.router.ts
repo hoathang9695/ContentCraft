@@ -10,6 +10,10 @@ const router = Router();
 // Get all reports with filters and pagination
 router.get('/', authenticateUser, async (req, res) => {
   console.log('GET /api/report-management - Request received');
+  
+  // Ensure JSON response
+  res.setHeader('Content-Type', 'application/json');
+  
   try {
     const { 
       page = '1', 
@@ -122,7 +126,12 @@ router.get('/', authenticateUser, async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching reports:', error);
-    res.status(500).json({ error: 'Failed to fetch reports' });
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500).json({ 
+      error: 'Failed to fetch reports',
+      message: error.message,
+      success: false 
+    });
   }
 });
 
