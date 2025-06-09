@@ -99,6 +99,16 @@ router.get('/', authenticateUser, async (req, res) => {
     
     const total = Number(totalResult[0].count);
 
+    console.log('Sending response with:', {
+      reportsCount: reports.length,
+      pagination: {
+        page: pageNum,
+        pageSize: pageSizeNum,
+        total,
+        totalPages: Math.ceil(total / pageSizeNum)
+      }
+    });
+
     res.json({
       reports,
       pagination: {

@@ -85,26 +85,46 @@ export default function ReportManagementPage() {
         pageSize: pageSize.toString(),
         ...(statusFilter !== 'all' && { status: statusFilter }),
         ...(reportTypeFilter !== 'all' && { reportType: reportTypeFilter }),
-        ...(userFilter !== null && { assignedTo: userFilter !== null ? userFilter.toString() : 'all' }),
+        ...(userFilter !== null && { assignedTo: userFilter.toString() }),
         ...(searchTerm && { search: searchTerm }),
         sortBy: sortBy,
         sortOrder: sortOrder
       });
 
+      console.log('Fetching reports with URL:', `/api/report-management?${params}`);
+
       const response = await fetch(`/api/report-management?${params}`, {
         credentials: 'include'
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch reports');
+        throw new Error(`Failed to fetch reports: ${response.status}`);
       }
 
       const data = await response.json();
-      setReportRequests(data.reports);
-      setFilteredRequests(data.reports);
-      setTotalPages(data.pagination.totalPages);
+      console.log('API Response data:', data);
+      console.log('Reports array:', data.reports);
+      console.log('Reports length:', data.reports?.length);
+
+      if (data.reports && Array.isArray(data.reports)) {
+        setReportRequests(data.reports);
+        setFilteredRequests(data.reports);
+        setTotalPages(data.pagination?.totalPages || 1);
+        console.log('Successfully set reports:', data.reports.length);
+      } else {
+        console.error('Invalid data structure:', data);
+        setReportRequests([]);
+        setFilteredRequests([]);
+        setTotalPages(1);
+      }
     } catch (error) {
       console.error('Error fetching reports:', error);
+      setReportRequests([]);
+      setFilteredRequests([]);
+      setTotalPages(1);
       toast({
         title: "Lỗi",
         description: "Không thể tải dữ liệu báo cáo",
