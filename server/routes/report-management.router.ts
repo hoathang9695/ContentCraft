@@ -9,6 +9,7 @@ const router = Router();
 
 // Get all reports with filters and pagination
 router.get('/', authenticateUser, async (req, res) => {
+  console.log('GET /api/report-management - Request received');
   try {
     const { 
       page = '1', 
