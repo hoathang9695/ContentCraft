@@ -5,7 +5,8 @@ import {
   categories, type Category, type InsertCategory,
   labels, type Label, type InsertLabel,
   fakeUsers, type FakeUser, type InsertFakeUser,
-  infringingContents, type InfringingContent, type InsertInfringingContent
+  infringingContents, type InfringingContent, type InsertInfringingContent,
+  commentQueues
 } from "@shared/schema";
 import expressSession from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -953,7 +954,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(labels.id, id))
       .returning();
 
-    return result.length >0 ? result[0] : undefined;
+    return result.length > 0 ? result[0] : undefined;
   }
 
   async deleteLabel(id: number): Promise<boolean> {
@@ -997,6 +998,264 @@ export class DatabaseStorage implements IStorage {
 
     return result.length > 0 ? result[0] : undefined;
   }
+
+  // Comment Queue methods
+  async createCommentQueue(data: {
+    externalId: string;
+    comments: string[];
+    selectedGender: string;
+    userId: number;
+  }): Promise<any> {
+    console.log('🚀 Storage.createCommentQueue called with:', data);
+
+    if (!data.externalId || !data.comments || !Array.isArray(data.comments)) {
+      throw new Error('externalId and comments array are required');
+    }
+
+    // Generate session ID
+    const sessionId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Use raw SQL to insert
+    const query = `
+      INSERT INTO comment_queues (
+        session_id, external_id, comments, selected_gender, user_id, 
+        total_comments, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      RETURNING *
+      `;
+
+    const values = [
+      sessionId,
+      data.externalId,
+      JSON.stringify(data.comments),
+      data.selectedGender || 'all',
+      data.userId,
+      data.comments.length,
+      'pending'
+    ];
+
+    console.log('✅ Executing query...');
+    console.log('Query:', query);
+    console.log('Values:', values);
+
+    try {
+      const result = await pool.query(query, values);
+
+      if (!result || result.rows.length === 0) {
+        throw new Error('Failed to insert comment queue entry - no rows returned');
+      }
+
+      console.log('✅ Comment queue created successfully:', result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ Error in createCommentQueue:', error);
+      
+      if (error && typeof error === 'object') {
+        console.error('❌ Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          name: error instanceof Error ? error.name : undefined,
+          code: (error as any).code || undefined,
+          detail: (error as any).detail || undefined,
+          constraint: (error as any).constraint || undefined,
+          stack: error instanceof Error ? error.stack : 'No stack trace'
+        });
+      }
+      
+      throw error;
+    }
+  }
+
+  async getActiveCommentQueueForExternal(externalId: string) {
+    const result = await pool.query(`
+      SELECT * FROM comment_queues 
+      WHERE external_id = $1 AND status IN ('pending', 'processing')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [externalId]);
+
+    return result.rows.length > 0 ? result.rows[0] : null;
+  }
+
+  async getCommentQueue(sessionId: string) {
+    const result = await pool.query(
+      'SELECT * FROM comment_queues WHERE session_id = $1',
+      [sessionId]
+    );
+
+    return result.rows.length > 0 ? result.rows[0] : null;
+  }
+
+  async getPendingCommentQueues() {
+    const result = await pool.query(`
+      SELECT * FROM comment_queues 
+      WHERE status = 'pending'
+      ORDER BY created_at ASC
+    `);
+
+    return result.rows;
+  }
+
+  async addCommentsToQueue(sessionId: string, newComments: string[]) {
+    console.log('🔧 Adding comments to existing queue:', sessionId);
+    console.log('🔧 New comments count:', newComments.length);
+
+    // Get current queue
+    const currentQueue = await this.getCommentQueue(sessionId);
+    if (!currentQueue) {
+      throw new Error('Queue not found');
+    }
+
+    console.log('🔧 Current queue status:', currentQueue.status);
+    console.log('🔧 Current total comments:', currentQueue.total_comments);
+
+    // Parse existing comments
+    const existingComments = Array.isArray(currentQueue.comments) 
+      ? currentQueue.comments 
+      : JSON.parse(currentQueue.comments);
+
+    console.log('🔧 Existing comments count:', existingComments.length);
+
+    // Merge comments
+    const allComments = [...existingComments, ...newComments];
+    
+    console.log('🔧 Total comments after merge:', allComments.length);
+
+    // Update queue
+    const result = await pool.query(`
+      UPDATE comment_queues 
+      SET comments = $1, total_comments = $2, updated_at = NOW()
+      WHERE session_id = $3
+      RETURNING *
+    `, [JSON.stringify(allComments), allComments.length, sessionId]);
+
+    if (!result || result.rows.length === 0) {
+      throw new Error('Failed to update queue with new comments');
+    }
+
+    console.log('✅ Queue updated successfully with new comments');
+    return result.rows[0];
+  }
+
+  async cleanupOldQueues(hoursOld: number = 24): Promise<number> {
+    console.log(`🧹 Cleaning up queues older than ${hoursOld} hours...`);
+
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - hoursOld);
+
+    try {
+      const result = await pool.query(`
+        DELETE FROM comment_queues 
+        WHERE status IN ('completed', 'failed') 
+        AND completed_at < $1
+        RETURNING session_id
+      `, [cutoffTime.toISOString()]);
+
+      const deletedCount = result.rows.length;
+      
+      if (deletedCount > 0) {
+        console.log(`🧹 Successfully cleaned up ${deletedCount} old queues:`, 
+          result.rows.map(row => row.session_id)
+        );
+      }
+
+      return deletedCount;
+    } catch (error) {
+      console.error('❌ Error cleaning up old queues:', error);
+      return 0;
+    }
+  }
+
+  async updateCommentQueueProgress(sessionId: string, updates: {
+    status?: string;
+    processedCount?: number;
+    successCount?: number;
+    failureCount?: number;
+    currentCommentIndex?: number;
+    totalComments?: number;
+    errorInfo?: string;
+  }) {
+    const fields = [];
+    const values = [];
+    let paramCount = 0;
+
+    // Add dynamic fields
+    if (updates.status !== undefined) {
+      fields.push(`status = $${++paramCount}`);
+      values.push(updates.status);
+    }
+
+    if (updates.processedCount !== undefined) {
+      fields.push(`processed_count = $${++paramCount}`);
+      values.push(updates.processedCount);
+    }
+
+    if (updates.successCount !== undefined) {
+      fields.push(`success_count = $${++paramCount}`);
+      values.push(updates.successCount);
+    }
+
+    if (updates.failureCount !== undefined) {
+      fields.push(`failure_count = $${++paramCount}`);
+      values.push(updates.failureCount);
+    }
+
+    if (updates.currentCommentIndex !== undefined) {
+      fields.push(`current_comment_index = $${++paramCount}`);
+      values.push(updates.currentCommentIndex);
+    }
+
+    if (updates.totalComments !== undefined) {
+      fields.push(`total_comments = $${++paramCount}`);
+      values.push(updates.totalComments);
+    }
+
+    if (updates.errorInfo !== undefined) {
+      fields.push(`error_info = $${++paramCount}`);
+      values.push(updates.errorInfo);
+    }
+
+    // Add timestamp fields based on status
+    if (updates.status === 'processing') {
+      fields.push(`started_at = $${++paramCount}`);
+      values.push(new Date().toISOString());
+    }
+
+    if (updates.status === 'completed' || updates.status === 'failed') {
+      fields.push(`completed_at = $${++paramCount}`);
+      values.push(new Date().toISOString());
+    }
+
+    if (fields.length === 0) {
+      return;
+    }
+
+    // Always update the updated_at field
+    fields.push(`updated_at = NOW()`);
+
+    // Add session_id as the last parameter
+    values.push(sessionId);
+
+    const query = `
+      UPDATE comment_queues 
+      SET ${fields.join(', ')}
+      WHERE session_id = $${++paramCount}
+      RETURNING *
+    `;
+
+    console.log('🔧 Update query:', query);
+    console.log('🔧 Update values:', values);
+
+    try {
+      const result = await pool.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ Error in updateCommentQueueProgress:', error);
+      console.error('❌ Query:', query);
+      console.error('❌ Values:', values);
+      throw error;
+    }
+  }
+
 
   async deleteFakeUser(id: number): Promise<boolean> {
     const result = await db

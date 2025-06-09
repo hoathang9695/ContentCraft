@@ -1,7 +1,7 @@
-
 import express from "express";
 import { ContentController } from "../controllers/content.controller";
 import { isAuthenticated, isAdmin } from "../middleware/auth";
+import { storage } from "../storage";
 
 const router = express.Router();
 const contentController = new ContentController();
@@ -14,4 +14,5 @@ router.post("/", isAuthenticated, contentController.createContent);
 router.patch("/:id", isAuthenticated, contentController.updateContent);
 router.delete("/:id", isAuthenticated, contentController.deleteContent);
 
+// Export the router
 export default router;
