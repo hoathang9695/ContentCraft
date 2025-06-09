@@ -5,7 +5,7 @@ const pool = new Pool({
   host: process.env.DB_HOST || '42.96.40.138',
   database: process.env.DB_NAME || 'content',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'emso2024',
+  password: process.env.DB_PASSWORD || 'chiakhoathanhcong',
   port: parseInt(process.env.DB_PORT || '5432'),
 });
 
