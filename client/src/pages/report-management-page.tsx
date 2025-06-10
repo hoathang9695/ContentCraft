@@ -87,6 +87,8 @@ export default function ReportManagementPage() {
         ...(reportTypeFilter !== 'all' && { reportType: reportTypeFilter }),
         ...(userFilter !== null && { assignedTo: userFilter.toString() }),
         ...(searchTerm && { search: searchTerm }),
+        ...(startDate && { startDate: startOfDay(startDate).toISOString() }),
+        ...(endDate && { endDate: endOfDay(endDate).toISOString() }),
         sortBy: sortBy,
         sortOrder: sortOrder
       });
@@ -181,7 +183,7 @@ export default function ReportManagementPage() {
 
   useEffect(() => {
     fetchReports();
-  }, [currentPage, pageSize, statusFilter, reportTypeFilter, userFilter, searchTerm, sortBy, sortOrder]);
+  }, [currentPage, pageSize, statusFilter, reportTypeFilter, userFilter, searchTerm, sortBy, sortOrder, startDate, endDate]);
 
   const { data: users = [] } = useQuery({
     queryKey: ['/api/users'],
@@ -353,11 +355,11 @@ export default function ReportManagementPage() {
   const handleDateFilter = () => {
     if (startDate && endDate) {
       setCurrentPage(1);
-      fetchReports();
       toast({
         title: "Đã áp dụng bộ lọc",
         description: `Hiển thị dữ liệu từ ${format(startDate, 'dd/MM/yyyy')} đến ${format(endDate, 'dd/MM/yyyy')}`,
       });
+      // Data sẽ tự động được fetch thông qua useEffect khi startDate/endDate thay đổi
     }
   };
 
@@ -538,6 +540,7 @@ export default function ReportManagementPage() {
                       title: "Đã đặt lại bộ lọc",
                       description: "Hiển thị tất cả dữ liệu",
                     });
+                    // Data sẽ tự động được fetch thông qua useEffect
                   }}
                 >
                   Xóa bộ lọc
@@ -725,6 +728,7 @@ export default function ReportManagementPage() {
                       title: "Đã đặt lại bộ lọc",
                       description: "Hiển thị tất cả dữ liệu",
                     });
+                    // Data sẽ tự động được fetch thông qua useEffect
                   }}
                 >
                   Xóa bộ lọc

@@ -22,6 +22,8 @@ router.get('/', async (req, res) => {
       reportType, 
       assignedTo,
       search,
+      startDate,
+      endDate,
       sortBy = 'created_at',
       sortOrder = 'desc'
     } = req.query;
@@ -58,6 +60,15 @@ router.get('/', async (req, res) => {
           sql`${reportManagement.reportedId}->>'id' ILIKE ${`%${search}%`}`
         )
       );
+    }
+
+    // Add date range filtering
+    if (startDate) {
+      whereConditions.push(sql`${reportManagement.createdAt} >= ${new Date(startDate as string)}`);
+    }
+    
+    if (endDate) {
+      whereConditions.push(sql`${reportManagement.createdAt} <= ${new Date(endDate as string)}`);
     }
 
     // Build order by
