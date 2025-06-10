@@ -300,6 +300,36 @@ export interface ContentMessage {
   sourceVerification?: 'verified' | 'unverified';  // Trạng thái xác minh nguồn
 }
 
+// Bảng quản lý báo cáo (Report Management)
+export const reportManagement = pgTable("report_management", {
+  id: serial("id").primaryKey(),
+  reportedId: jsonb("reported_id").notNull(), // ID đối tượng bị báo cáo (JSON format)
+  reportType: varchar("report_type", { length: 50 }).notNull(), // 'user', 'content', 'page', 'group', 'comment', 'course', 'project', 'recruitment', 'song', 'event'
+  reporterName: jsonb("reporter_name").notNull(), // Tên người báo cáo (JSON format)
+  reporterEmail: varchar("reporter_email", { length: 255 }).notNull(), // Email người báo cáo
+  reason: varchar("reason", { length: 500 }).notNull(), // Lý do báo cáo
+  detailedReason: text("detailed_reason"), // Mô tả chi tiết
+  status: varchar("status", { length: 50 }).notNull().default("pending"), // 'pending', 'processing', 'completed'
+  assignedToId: integer("assigned_to_id").references(() => users.id), // Người được phân công
+  assignedToName: varchar("assigned_to_name", { length: 255 }), // Tên người được phân công
+  assignedAt: timestamp("assigned_at"), // Thời điểm phân công
+  responseContent: text("response_content"), // Nội dung phản hồi
+  responderId: integer("responder_id").references(() => users.id), // Người phản hồi
+  responseTime: timestamp("response_time"), // Thời gian phản hồi
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// Schema để insert Report
+export const insertReportManagementSchema = createInsertSchema(reportManagement).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertReportManagement = z.infer<typeof insertReportManagementSchema>;
+export type ReportManagement = typeof reportManagement.$inferSelect;
+
 export const commentQueues = pgTable("comment_queues", {
   id: serial("id").primaryKey(),
   externalId: text("external_id").notNull(),

@@ -48,5 +48,6 @@ export interface BadgeCounts {
   feedbackRequests: number;
   verificationRequests: number;
   tickRequests: number;
+  reportRequests: number;
   totalRequests: number; // Tổng support + feedback + verification + tick cho menu cha
 }
