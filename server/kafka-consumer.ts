@@ -103,6 +103,17 @@ export interface TickMessage {
   attachment_url?: string | string[];
 }
 
+export interface ReportMessage {
+  reportId: string;
+  reportType: 'user' | 'content' | 'page' | 'group' | 'comment';
+  reporterName: string;
+  reporterEmail: string;
+  reason: string;
+  detailedReason?: string;
+  reportedTargetId: string;
+  reportedTargetName?: string;
+}
+
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
@@ -624,6 +635,112 @@ export async function setupKafkaConsumer() {
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
+                      } else if ("reportId" in msg && "reportType" in msg && "reporterName" in msg && "reporterEmail" in msg) {
+                        // Handle report message from Kafka
+                        const reportMsg = msg as ReportMessage;
+                        const now = new Date();
+
+                        log(`🔄 Processing report message: ${JSON.stringify(reportMsg)}`, "kafka");
+
+                        try {
+                          // Validate required fields
+                          if (!reportMsg.reportId || !reportMsg.reportType || !reportMsg.reporterName || !reportMsg.reporterEmail || !reportMsg.reason || !reportMsg.reportedTargetId) {
+                            const error = `❌ Invalid report message format - missing required fields: ${JSON.stringify(reportMsg)}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Validate report type
+                          if (!['user', 'content', 'page', 'group', 'comment'].includes(reportMsg.reportType)) {
+                            const error = `❌ Invalid reportType: ${reportMsg.reportType}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Get active users for round-robin assignment (exclude admin)
+                          const activeUsers = await tx
+                            .select()
+                            .from(users)
+                            .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                          if (!activeUsers || activeUsers.length === 0) {
+                            const error = "❌ No active non-admin users found for assignment";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
+
+                          // Get last assigned REPORT for round-robin (specific to reportManagement table)
+                          const { reportManagement } = await import('../../shared/schema.js');
+                          const lastAssignedReport = await tx.query.reportManagement.findFirst({
+                            orderBy: (reportManagement, { desc }) => [desc(reportManagement.createdAt)]
+                          });
+
+                          // Calculate next assignee index based on reports table
+                          let nextAssigneeIndex = 0;
+                          if (lastAssignedReport && lastAssignedReport.assignedToId) {
+                            const lastAssigneeIndex = activeUsers.findIndex(
+                              user => user.id === lastAssignedReport.assignedToId
+                            );
+                            if (lastAssigneeIndex !== -1) {
+                              nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                            }
+                          }
+
+                          const assignedToId = activeUsers[nextAssigneeIndex].id;
+                          const assignedUser = activeUsers[nextAssigneeIndex];
+
+                          log(`👤 Assigned to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
+
+                          // Prepare insert data
+                          const insertData = {
+                            reportedId: {
+                              id: reportMsg.reportedTargetId
+                            },
+                            reportType: reportMsg.reportType,
+                            reporterName: {
+                              id: `reporter_${Date.now()}`,
+                              name: reportMsg.reporterName
+                            },
+                            reporterEmail: reportMsg.reporterEmail,
+                            reason: reportMsg.reason,
+                            detailedReason: reportMsg.detailedReason || null,
+                            status: 'pending',
+                            assignedToId: assignedToId,
+                            assignedToName: assignedUser.name,
+                            assignedAt: now,
+                            createdAt: now,
+                            updatedAt: now
+                          };
+
+                          log(`📝 Inserting report data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
+
+                          // Insert new report
+                          const result = await tx.insert(reportManagement).values(insertData).returning();
+
+                          if (!result || result.length === 0) {
+                            const error = "❌ Failed to insert report - no result returned";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`✅ Successfully inserted report: ID ${result[0].id}, ReportID: ${reportMsg.reportId}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+
+                        } catch (error) {
+                          const errorMsg = error instanceof Error ? error.message : String(error);
+                          const errorStack = error instanceof Error ? error.stack : '';
+                          log(`❌ Error processing report ${reportMsg.reportId}: ${errorMsg}`, "kafka-error");
+                          log(`📍 Error stack: ${errorStack}`, "kafka-error");
+
+                          // Log additional context for debugging
+                          log(`🔍 Report data that failed: ${JSON.stringify(reportMsg, null, 2)}`, "kafka-error");
+
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
@@ -689,15 +806,19 @@ export interface FeedbackMessage {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage {
+): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | ReportMessage {
   if (!messageValue) return null;
 
   try {
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
+    // Check for report message (has reportId, reportType, reporterName, reporterEmail)
+    if ("reportId" in message && "reportType" in message && "reporterName" in message && "reporterEmail" in message && "reason" in message) {
+      return message as ReportMessage;
+    }
     // Check for tick message first (has type: 'tick' and id)
-    if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'tick') {
+    else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'tick') {
       return message as TickMessage;
     }
     // Check for feedback message (has type: 'feedback' and id)
