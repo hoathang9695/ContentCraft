@@ -216,7 +216,7 @@ export default function ReportManagementPage() {
       case 'song':
         return { label: 'Bài hát', variant: 'default' as const };
       default:
-        return { label: 'Khác', variant: 'secondary' as const };
+        return { label: 'Khác', variant: 'default' as const };el: 'Khác', variant: 'secondary' as const };
     }
   };
 
