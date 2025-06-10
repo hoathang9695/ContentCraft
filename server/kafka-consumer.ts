@@ -695,16 +695,8 @@ export async function setupKafkaConsumer() {
 
                           log(`👤 Assigned to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
 
-                          // Handle reporterName format (support both string and object)
-                          let reporterNameObj;
-                          if (typeof reportMsg.reporterName === 'string') {
-                            reporterNameObj = {
-                              id: `reporter_${Date.now()}`,
-                              name: reportMsg.reporterName
-                            };
-                          } else {
-                            reporterNameObj = reportMsg.reporterName;
-                          }
+                          // Use reporterName as provided from Kafka message
+                          const reporterNameObj = reportMsg.reporterName;
 
                           // Prepare insert data
                           const insertData = {
