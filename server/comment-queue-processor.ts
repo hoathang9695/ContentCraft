@@ -8,15 +8,22 @@ interface FakeUser {
   gender: string;
 }
 
+interface ProcessingQueue {
+  sessionId: string;
+  startTime: number;
+}
+
 export class CommentQueueProcessor {
-  private isProcessing = false;
+  private processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
   private processingInterval: NodeJS.Timeout | null = null;
+  private maxConcurrentQueues = 3; // Maximum concurrent queue processing
+  private processingDelay = 10000; // 10 seconds between queue checks
 
   constructor() {
-    console.log('🚀 CommentQueueProcessor constructor called');
+    console.log('🚀 CommentQueueProcessor constructor called (Multi-threaded)');
     try {
       this.startProcessor();
-      console.log('✅ CommentQueueProcessor started successfully');
+      console.log('✅ CommentQueueProcessor started successfully (Multi-threaded mode)');
     } catch (error) {
       console.error('❌ Error starting CommentQueueProcessor:', error);
     }
@@ -25,21 +32,19 @@ export class CommentQueueProcessor {
   startProcessor() {
     if (this.processingInterval) return;
     
-    console.log('🚀 Comment Queue Processor started');
+    console.log(`🚀 Comment Queue Processor started (Max ${this.maxConcurrentQueues} concurrent queues)`);
     
-    // Check every 30 seconds for new queues (process only)
+    // Check every 10 seconds for new queues
     this.processingInterval = setInterval(async () => {
-      if (!this.isProcessing) {
-        await this.checkStuckQueues();
-        await this.processNextQueue();
-      }
-    }, 30000);
+      await this.checkStuckQueues();
+      await this.processAvailableQueues();
+    }, this.processingDelay);
 
     // Run cleanup once daily at startup and then every 24 hours
     this.scheduleCleanup();
 
     // Process immediately on start
-    this.processNextQueue();
+    this.processAvailableQueues();
   }
 
   private scheduleCleanup() {
@@ -62,37 +67,80 @@ export class CommentQueueProcessor {
     }
   }
 
-  async processNextQueue() {
-    if (this.isProcessing) return;
-
+  async processAvailableQueues() {
     try {
-      this.isProcessing = true;
+      // Check how many queues are currently processing
+      const currentProcessingCount = this.processingQueues.size;
       
-      const pendingQueues = await storage.getPendingCommentQueues();
-      
-      if (pendingQueues.length === 0) {
+      if (currentProcessingCount >= this.maxConcurrentQueues) {
+        console.log(`⏸️ Max concurrent queues reached (${currentProcessingCount}/${this.maxConcurrentQueues})`);
         return;
       }
 
-      const queue = pendingQueues[0];
-      console.log(`📝 Processing queue: ${queue.session_id} (${queue.total_comments} comments)`);
-
-      await this.processQueue(queue);
+      // Get pending queues
+      const pendingQueues = await storage.getPendingCommentQueues();
       
+      if (pendingQueues.length === 0) {
+        if (currentProcessingCount === 0) {
+          // console.log('📋 No pending queues to process');
+        }
+        return;
+      }
+
+      // Start processing available queues (up to max concurrent limit)
+      const availableSlots = this.maxConcurrentQueues - currentProcessingCount;
+      const queuesToProcess = pendingQueues.slice(0, availableSlots);
+
+      console.log(`🔄 Starting ${queuesToProcess.length} new queue(s) (${currentProcessingCount + queuesToProcess.length}/${this.maxConcurrentQueues} total)`);
+
+      // Process queues in parallel
+      const processingPromises = queuesToProcess.map(queue => 
+        this.processQueueAsync(queue)
+      );
+
+      // Don't wait for completion here - let them run in background
+      Promise.allSettled(processingPromises).then(results => {
+        const successful = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        console.log(`📊 Batch completed: ${successful} successful, ${failed} failed`);
+      });
+
     } catch (error) {
-      console.error('❌ Error in queue processor:', error);
+      console.error('❌ Error in processAvailableQueues:', error);
+    }
+  }
+
+  async processQueueAsync(queue: any) {
+    const sessionId = queue.session_id;
+    
+    // Mark as processing
+    this.processingQueues.set(sessionId, {
+      sessionId,
+      startTime: Date.now()
+    });
+
+    console.log(`📝 [${sessionId}] Starting queue processing (${queue.total_comments} comments)`);
+
+    try {
+      await this.processQueue(queue);
+      console.log(`✅ [${sessionId}] Queue completed successfully`);
+    } catch (error) {
+      console.error(`❌ [${sessionId}] Queue failed:`, error);
     } finally {
-      this.isProcessing = false;
+      // Remove from processing map
+      this.processingQueues.delete(sessionId);
+      console.log(`🏁 [${sessionId}] Queue processing finished`);
     }
   }
 
   async processQueue(queue: any) {
     const startTime = Date.now();
     const maxProcessingTime = 25 * 60 * 1000; // 25 minutes max
+    const sessionId = queue.session_id;
     
     try {
       // Mark as processing with started_at timestamp
-      await storage.updateCommentQueueProgress(queue.session_id, {
+      await storage.updateCommentQueueProgress(sessionId, {
         status: 'processing',
         currentCommentIndex: queue.processed_count || 0,
         startedAt: new Date()
@@ -118,7 +166,7 @@ export class CommentQueueProcessor {
       for (let index = startIndex; index < comments.length; index++) {
         // Check timeout
         if (Date.now() - startTime > maxProcessingTime) {
-          console.log(`⏰ Queue ${queue.session_id} timeout after ${maxProcessingTime/60000} minutes`);
+          console.log(`⏰ [${sessionId}] Timeout after ${maxProcessingTime/60000} minutes`);
           throw new Error('Processing timeout - queue took too long to process');
         }
 
@@ -127,12 +175,12 @@ export class CommentQueueProcessor {
         // Add delay between comments (except for first)
         if (index > startIndex) {
           const delayMs = this.getAdaptiveDelay(index);
-          console.log(`⏳ Waiting ${Math.ceil(delayMs / 60000)} minutes before comment ${index + 1}/${comments.length}...`);
+          console.log(`⏳ [${sessionId}] Waiting ${Math.ceil(delayMs / 60000)} minutes before comment ${index + 1}/${comments.length}...`);
           await this.delay(delayMs);
         }
 
         // Update current progress
-        await storage.updateCommentQueueProgress(queue.session_id, {
+        await storage.updateCommentQueueProgress(sessionId, {
           currentCommentIndex: index
         });
 
@@ -148,51 +196,51 @@ export class CommentQueueProcessor {
               throw new Error('No fake user available');
             }
 
-            console.log(`📤 Sending comment ${index + 1}/${comments.length} from user: ${fakeUser.name}`);
+            console.log(`📤 [${sessionId}] Sending comment ${index + 1}/${comments.length} from user: ${fakeUser.name}`);
 
             // Send comment to external API
             await this.sendCommentToAPI(queue.external_id, fakeUser.id, comment);
             
             success = true;
-            await storage.updateCommentQueueProgress(queue.session_id, {
+            await storage.updateCommentQueueProgress(sessionId, {
               processedCount: index + 1,
               successCount: (queue.success_count || 0) + 1
             });
 
-            console.log(`✅ Comment ${index + 1} sent successfully`);
+            console.log(`✅ [${sessionId}] Comment ${index + 1} sent successfully`);
 
           } catch (error) {
             retryCount++;
-            console.error(`❌ Attempt ${retryCount}/${maxRetries} failed for comment ${index + 1}:`, error);
+            console.error(`❌ [${sessionId}] Attempt ${retryCount}/${maxRetries} failed for comment ${index + 1}:`, error);
 
             if (retryCount < maxRetries) {
               const retryDelay = this.getRetryDelay(retryCount);
-              console.log(`⏳ Retrying in ${retryDelay}ms...`);
+              console.log(`⏳ [${sessionId}] Retrying in ${retryDelay}ms...`);
               await this.delay(retryDelay);
             } else {
               // Final failure
-              await storage.updateCommentQueueProgress(queue.session_id, {
+              await storage.updateCommentQueueProgress(sessionId, {
                 processedCount: index + 1,
                 failureCount: (queue.failure_count || 0) + 1,
                 errorInfo: error instanceof Error ? error.message : 'Unknown error'
               });
-              console.error(`❌ Comment ${index + 1} failed permanently`);
+              console.error(`❌ [${sessionId}] Comment ${index + 1} failed permanently`);
             }
           }
         }
       }
 
       // Mark as completed
-      await storage.updateCommentQueueProgress(queue.session_id, {
+      await storage.updateCommentQueueProgress(sessionId, {
         status: 'completed'
       });
 
-      console.log(`🎉 Queue ${queue.session_id} completed successfully`);
+      console.log(`🎉 [${sessionId}] Queue completed successfully`);
 
     } catch (error) {
-      console.error(`❌ Queue ${queue.session_id} failed:`, error);
+      console.error(`❌ [${sessionId}] Queue failed:`, error);
       
-      await storage.updateCommentQueueProgress(queue.session_id, {
+      await storage.updateCommentQueueProgress(sessionId, {
         status: 'failed',
         errorInfo: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -210,10 +258,6 @@ export class CommentQueueProcessor {
     const apiUrl = `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/comments`;
     
     console.log(`🔗 Sending comment to external API: ${apiUrl}`);
-    console.log(`📦 Payload:`, { 
-      fakeUser: { id: fakeUser.id, name: fakeUser.name, token: fakeUser.token },
-      comment: comment.substring(0, 100) + '...'
-    });
 
     try {
       const response = await fetch(apiUrl, {
@@ -221,7 +265,7 @@ export class CommentQueueProcessor {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${fakeUser.token}`,
-          'User-Agent': 'Content-Queue-Processor/1.0'
+          'User-Agent': 'Content-Queue-Processor/2.0-MultiThread'
         },
         body: JSON.stringify({
           status: comment
@@ -229,9 +273,6 @@ export class CommentQueueProcessor {
       });
 
       console.log(`📡 External API Response status: ${response.status}`);
-      
-      // Log response headers for debugging
-      console.log(`📋 Response headers:`, Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const responseText = await response.text();
@@ -279,14 +320,14 @@ export class CommentQueueProcessor {
   }
 
   private getAdaptiveDelay(attemptNumber: number): number {
-    const baseMs = 2 * 60000; // 2 minutes base
-    const maxMs = 5 * 60000; // 5 minutes max
+    const baseMs = 1 * 60000; // 1 minute base (reduced for multi-thread)
+    const maxMs = 3 * 60000; // 3 minutes max (reduced for multi-thread)
     const randomFactor = 0.5 + Math.random(); // 0.5 - 1.5
     return Math.min(baseMs * randomFactor, maxMs);
   }
 
   private getRetryDelay(retryCount: number): number {
-    return Math.min(2000 * Math.pow(2, retryCount), 30000); // Exponential backoff, max 30s
+    return Math.min(1000 * Math.pow(2, retryCount), 15000); // Exponential backoff, max 15s
   }
 
   private delay(ms: number): Promise<void> {
@@ -316,7 +357,24 @@ export class CommentQueueProcessor {
         console.log(`🔧 Reset ${result.rows.length} stuck queues:`, 
           result.rows.map(row => row.session_id)
         );
+        
+        // Remove stuck queues from our local processing map
+        result.rows.forEach(row => {
+          this.processingQueues.delete(row.session_id);
+        });
       }
+
+      // Also check for locally tracked queues that might be stuck
+      const now = Date.now();
+      const localStuckThreshold = 30 * 60 * 1000; // 30 minutes
+      
+      for (const [sessionId, processInfo] of this.processingQueues.entries()) {
+        if (now - processInfo.startTime > localStuckThreshold) {
+          console.log(`🔧 Removing locally stuck queue: ${sessionId}`);
+          this.processingQueues.delete(sessionId);
+        }
+      }
+
     } catch (error) {
       console.error('❌ Error checking stuck queues:', error);
     }
@@ -332,6 +390,25 @@ export class CommentQueueProcessor {
       }
     } catch (error) {
       console.error('❌ Error during queue cleanup:', error);
+    }
+  }
+
+  // Public method to get current processing status
+  getProcessingStatus() {
+    return {
+      currentProcessingCount: this.processingQueues.size,
+      maxConcurrentQueues: this.maxConcurrentQueues,
+      processingQueues: Array.from(this.processingQueues.values())
+    };
+  }
+
+  // Public method to adjust concurrent limit
+  setMaxConcurrentQueues(limit: number) {
+    if (limit > 0 && limit <= 10) {
+      this.maxConcurrentQueues = limit;
+      console.log(`⚙️ Max concurrent queues updated to: ${limit}`);
+    } else {
+      console.error('❌ Invalid concurrent limit. Must be between 1 and 10');
     }
   }
 }
