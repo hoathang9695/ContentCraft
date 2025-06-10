@@ -112,7 +112,7 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
 
     // Resubscribe to topics after reconnect
     // Ensure all required topics are explicitly defined
-    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management"];
+    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management", "report_management"];
     const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
     const topics = [...new Set([...requiredTopics, ...configuredTopics])];
 
@@ -217,7 +217,7 @@ export async function setupKafkaConsumer() {
     log("Connected to Kafka", "kafka");
 
     // Ensure all required topics are explicitly defined
-    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management"];
+    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management", "report_management"];
     const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
     const topics = [...new Set([...requiredTopics, ...configuredTopics])];
 
