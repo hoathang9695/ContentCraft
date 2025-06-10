@@ -16,7 +16,7 @@ interface ProcessingQueue {
 export class CommentQueueProcessor {
   private processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
   private processingInterval: NodeJS.Timeout | null = null;
-  private maxConcurrentQueues = 3; // Maximum concurrent queue processing
+  private maxConcurrentQueues = 5; // Maximum concurrent queue processing
   private processingDelay = 10000; // 10 seconds between queue checks
 
   constructor() {
