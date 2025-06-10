@@ -5,7 +5,10 @@ import { eq, ne, and } from 'drizzle-orm';
 interface ReportMessage {
   reportId: string;
   reportType: 'user' | 'page' | 'group' | 'content' | 'comment' | 'course' | 'project' | 'recruitment' | 'song' | 'event';
-  reporterName: string;
+  reporterName: {
+    id: string;
+    name: string;
+  };
   reporterEmail: string;
   reason: string;
   detailedReason: string;
@@ -53,10 +56,7 @@ async function processReportMessage(message: ReportMessage) {
         id: message.reportedTargetId
       },
       reportType: message.reportType,
-      reporterName: {
-        id: `reporter_${Date.now()}`,
-        name: message.reporterName
-      },
+      reporterName: message.reporterName,
       reporterEmail: message.reporterEmail,
       reason: message.reason,
       detailedReason: message.detailedReason,
@@ -95,7 +95,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1001',
         reportType: 'user',
-        reporterName: 'Nguyễn Văn An',
+        reporterName: {
+          id: 'reporter_1001',
+          name: 'Nguyễn Văn An'
+        },
         reporterEmail: 'an.nguyen@example.com',
         reason: 'Spam tin nhắn',
         detailedReason: 'Người dùng này liên tục gửi tin nhắn spam quảng cáo đến nhiều người dùng khác.',
@@ -106,7 +109,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1002',
         reportType: 'page',
-        reporterName: 'Trần Thị Bình',
+        reporterName: {
+          id: 'reporter_1002',
+          name: 'Trần Thị Bình'
+        },
         reporterEmail: 'binh.tran@example.com',
         reason: 'Vi phạm bản quyền',
         detailedReason: 'Trang này đăng tải nhiều hình ảnh có bản quyền mà không có sự cho phép.',
@@ -117,7 +123,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1003',
         reportType: 'group',
-        reporterName: 'Lê Minh Cường',
+        reporterName: {
+          id: 'reporter_1003',
+          name: 'Lê Minh Cường'
+        },
         reporterEmail: 'cuong.le@example.com',
         reason: 'Nội dung độc hại',
         detailedReason: 'Nhóm này chia sẻ các nội dung có tính chất bạo lực và kích động thù địch.',
@@ -128,7 +137,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1004',
         reportType: 'content',
-        reporterName: 'Phạm Thị Dung',
+        reporterName: {
+          id: 'reporter_1004',
+          name: 'Phạm Thị Dung'
+        },
         reporterEmail: 'dung.pham@example.com',
         reason: 'Lừa đảo tài chính',
         detailedReason: 'Bài đăng này quảng cáo các chương trình đầu tư lừa đảo với lợi nhuận hấp dẫn không thực tế.',
@@ -139,7 +151,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1005',
         reportType: 'comment',
-        reporterName: 'Hoàng Văn Em',
+        reporterName: {
+          id: 'reporter_1005',
+          name: 'Hoàng Văn Em'
+        },
         reporterEmail: 'em.hoang@example.com',
         reason: 'Quấy rối tình dục',
         detailedReason: 'Bình luận này chứa nội dung quấy rối tình dục và không phù hợp.',
@@ -150,7 +165,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1006',
         reportType: 'course',
-        reporterName: 'Võ Thị Giang',
+        reporterName: {
+          id: 'reporter_1006',
+          name: 'Võ Thị Giang'
+        },
         reporterEmail: 'giang.vo@education.vn',
         reason: 'Nội dung không phù hợp',
         detailedReason: 'Khóa học này chứa nội dung bạo lực và không phù hợp với độ tuổi được quảng cáo.',
@@ -161,7 +179,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1007',
         reportType: 'project',
-        reporterName: 'Đinh Văn Hải',
+        reporterName: {
+          id: 'reporter_1007',
+          name: 'Đinh Văn Hải'
+        },
         reporterEmail: 'hai.dinh@consumer.vn',
         reason: 'Dự án lừa đảo',
         detailedReason: 'Dự án này tuyên bố sai sự thật về tiến độ và kết quả để lừa đảo nhà đầu tư.',
@@ -172,7 +193,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1008',
         reportType: 'recruitment',
-        reporterName: 'Bùi Thị Lan',
+        reporterName: {
+          id: 'reporter_1008',
+          name: 'Bùi Thị Lan'
+        },
         reporterEmail: 'lan.bui@social.vn',
         reason: 'Phân biệt đối xử',
         detailedReason: 'Tin tuyển dụng này có yêu cầu phân biệt đối xử về giới tính và độ tuổi trái pháp luật.',
@@ -183,7 +207,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1009',
         reportType: 'song',
-        reporterName: 'Lý Văn Minh',
+        reporterName: {
+          id: 'reporter_1009',
+          name: 'Lý Văn Minh'
+        },
         reporterEmail: 'minh.ly@music.vn',
         reason: 'Vi phạm bản quyền âm nhạc',
         detailedReason: 'Bài hát này sử dụng beat và melody của tác phẩm có bản quyền mà không có giấy phép.',
@@ -194,7 +221,10 @@ async function simulate10ReportTypes() {
       {
         reportId: '1010',
         reportType: 'event',
-        reporterName: 'Ngô Thị Oanh',
+        reporterName: {
+          id: 'reporter_1010',
+          name: 'Ngô Thị Oanh'
+        },
         reporterEmail: 'oanh.ngo@protection.vn',
         reason: 'Thông tin sai lệch',
         detailedReason: 'Sự kiện này cung cấp thông tin sai lệch về địa điểm, thời gian và nội dung chương trình.',
