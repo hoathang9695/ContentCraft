@@ -61,13 +61,29 @@ export class CommentQueueProcessor {
     console.log('🗓️ Running initial cleanup check...');
     this.cleanupCompletedQueues();
     
-    // Then run every 24 hours (86400000 ms)
-    setInterval(async () => {
-      console.log('🗓️ Running scheduled cleanup check...');
-      await this.cleanupCompletedQueues();
-    }, 24 * 60 * 60 * 1000);
+    // Calculate next midnight for first scheduled run
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(2, 0, 0, 0); // Run at 2 AM to avoid peak hours
     
-    console.log('🗓️ Cleanup scheduled: immediate + every 24 hours');
+    const timeUntilFirstRun = tomorrow.getTime() - now.getTime();
+    
+    console.log(`🗓️ Next scheduled cleanup: ${tomorrow.toISOString()} (in ${Math.round(timeUntilFirstRun / (60 * 60 * 1000))} hours)`);
+    
+    // Set timeout for first run, then interval for daily
+    setTimeout(() => {
+      console.log('🗓️ Running first scheduled cleanup at 2 AM...');
+      this.cleanupCompletedQueues();
+      
+      // Then run every 24 hours
+      setInterval(async () => {
+        console.log('🗓️ Running daily scheduled cleanup...');
+        await this.cleanupCompletedQueues();
+      }, 24 * 60 * 60 * 1000);
+    }, timeUntilFirstRun);
+    
+    console.log('🗓️ Cleanup scheduled: immediate + daily at 2 AM');
   }
 
   stopProcessor() {
@@ -401,16 +417,36 @@ export class CommentQueueProcessor {
     try {
       console.log(`🧹 [${new Date().toISOString()}] Starting automatic queue cleanup...`);
       
-      // Xóa các queues đã completed/failed cách đây hơn 24 giờ
-      const cleanupResult = await storage.cleanupOldQueues(24); // 24 hours
+      // Production: 24 hours, Development: 1 hour (for testing)
+      const cleanupHours = process.env.NODE_ENV === 'production' ? 24 : 1;
+      
+      console.log(`🧹 [AUTO-CLEANUP] Cleaning queues older than ${cleanupHours} hours...`);
+      
+      const cleanupResult = await storage.cleanupOldQueues(cleanupHours);
       
       if (cleanupResult > 0) {
-        console.log(`🧹 [AUTO-CLEANUP] Successfully cleaned up ${cleanupResult} old completed queues`);
+        console.log(`🧹 [AUTO-CLEANUP] ✅ Successfully cleaned up ${cleanupResult} old completed queues`);
       } else {
-        console.log(`🧹 [AUTO-CLEANUP] No old queues found for cleanup`);
+        console.log(`🧹 [AUTO-CLEANUP] ℹ️ No old queues found for cleanup (${cleanupHours}h+ old)`);
       }
+      
+      // Report cleanup stats
+      const totalQueues = await storage.getQueueCount();
+      console.log(`📊 [AUTO-CLEANUP] Total queues remaining: ${totalQueues}`);
+      
     } catch (error) {
       console.error('❌ [AUTO-CLEANUP] Error during queue cleanup:', error);
+      
+      // Retry once after 5 minutes if failed
+      setTimeout(async () => {
+        try {
+          console.log('🔄 [AUTO-CLEANUP] Retrying cleanup after error...');
+          const retryResult = await storage.cleanupOldQueues(24);
+          console.log(`🔄 [AUTO-CLEANUP] Retry result: ${retryResult} queues cleaned`);
+        } catch (retryError) {
+          console.error('❌ [AUTO-CLEANUP] Retry also failed:', retryError);
+        }
+      }, 5 * 60 * 1000); // 5 minutes
     }
   }
 
