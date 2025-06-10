@@ -113,7 +113,6 @@ export interface ReportMessage {
   reporterEmail: string;
   reason: string;
   detailedReason?: string;
-  reportedTargetId: string;
 }
 
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
@@ -646,7 +645,7 @@ export async function setupKafkaConsumer() {
 
                         try {
                           // Validate required fields
-                          if (!reportMsg.reportId || !reportMsg.reportType || !reportMsg.reporterName || !reportMsg.reporterEmail || !reportMsg.reason || !reportMsg.reportedTargetId) {
+                          if (!reportMsg.reportId || !reportMsg.reportType || !reportMsg.reporterName || !reportMsg.reporterEmail || !reportMsg.reason) {
                             const error = `❌ Invalid report message format - missing required fields: ${JSON.stringify(reportMsg)}`;
                             log(error, "kafka-error");
                             throw new Error(error);
@@ -701,7 +700,7 @@ export async function setupKafkaConsumer() {
                           // Prepare insert data
                           const insertData = {
                             reportedId: {
-                              id: reportMsg.reportedTargetId
+                              id: reportMsg.reportId
                             },
                             reportType: reportMsg.reportType,
                             reporterName: reporterNameObj,
@@ -815,8 +814,8 @@ function parseMessage(
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
-    // Check for report message (has reportId, reportType, reporterName, reporterEmail, reason, reportedTargetId)
-    if ("reportId" in message && "reportType" in message && "reporterName" in message && "reporterEmail" in message && "reason" in message && "reportedTargetId" in message) {
+    // Check for report message (has reportId, reportType, reporterName, reporterEmail, reason)
+    if ("reportId" in message && "reportType" in message && "reporterName" in message && "reporterEmail" in message && "reason" in message) {
       return message as ReportMessage;
     }
     // Check for tick message first (has type: 'tick' and id)
