@@ -525,9 +525,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  // Function to broadcast report badge updates
+  const broadcastReportBadgeUpdate = async () => {
+    try {
+      const { reportManagement } = await import("../shared/schema");
+      
+      // Đếm report requests có status = 'pending'
+      const pendingReportRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(reportManagement)
+        .where(eq(reportManagement.status, "pending"));
+
+      console.log("Report badge update - Report requests:", {
+        count: pendingReportRequests[0]?.count || 0,
+        query: "status='pending'"
+      });
+
+      const pendingReports = pendingReportRequests[0]?.count || 0;
+
+      const badgeCounts = {
+        reportRequests: pendingReports,
+      };
+
+      const filteredBadgeCounts = {
+        reportRequests:
+          badgeCounts.reportRequests > 0
+            ? badgeCounts.reportRequests
+            : undefined,
+      };
+
+      // Broadcast to all connected clients
+      io.emit("badge-update", filteredBadgeCounts);
+      console.log("Broadcasted report badge update:", filteredBadgeCounts);
+    } catch (error) {
+      console.error("Error broadcasting report badge update:", error);
+    }
+  };
+
   // Make broadcastBadgeUpdate available globally
   (global as any).broadcastBadgeUpdate = broadcastBadgeUpdate;
   (global as any).broadcastFeedbackBadgeUpdate = broadcastFeedbackBadgeUpdate;
+  (global as any).broadcastReportBadgeUpdate = broadcastReportBadgeUpdate;
 
   // Start automatic file cleanup service
   const fileCleanupService = FileCleanupService.getInstance();
