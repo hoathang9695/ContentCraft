@@ -4,7 +4,7 @@ import { eq, ne, and } from 'drizzle-orm';
 
 interface ReportMessage {
   reportId: string;
-  reportType: 'user' | 'page' | 'group' | 'content' | 'comment';
+  reportType: 'user' | 'page' | 'group' | 'content' | 'comment' | 'course' | 'project' | 'recruitment' | 'song' | 'event';
   reporterName: string;
   reporterEmail: string;
   reason: string;
@@ -93,7 +93,7 @@ async function simulate10ReportTypes() {
     const testMessages: ReportMessage[] = [
       // 1. User Report - Spam
       {
-        reportId: '114652263781752001',
+        reportId: '1001',
         reportType: 'user',
         reporterName: 'Nguyễn Văn An',
         reporterEmail: 'an.nguyen@example.com',
@@ -104,7 +104,7 @@ async function simulate10ReportTypes() {
 
       // 2. Page Report - Copyright
       {
-        reportId: '114652263781752002',
+        reportId: '1002',
         reportType: 'page',
         reporterName: 'Trần Thị Bình',
         reporterEmail: 'binh.tran@example.com',
@@ -115,7 +115,7 @@ async function simulate10ReportTypes() {
 
       // 3. Group Report - Harmful Content
       {
-        reportId: '114652263781752003',
+        reportId: '1003',
         reportType: 'group',
         reporterName: 'Lê Minh Cường',
         reporterEmail: 'cuong.le@example.com',
@@ -126,7 +126,7 @@ async function simulate10ReportTypes() {
 
       // 4. Content Report - Financial Scam
       {
-        reportId: '114652263781752004',
+        reportId: '1004',
         reportType: 'content',
         reporterName: 'Phạm Thị Dung',
         reporterEmail: 'dung.pham@example.com',
@@ -137,7 +137,7 @@ async function simulate10ReportTypes() {
 
       // 5. Comment Report - Sexual Harassment
       {
-        reportId: '114652263781752005',
+        reportId: '1005',
         reportType: 'comment',
         reporterName: 'Hoàng Văn Em',
         reporterEmail: 'em.hoang@example.com',
@@ -146,59 +146,59 @@ async function simulate10ReportTypes() {
         reportedTargetId: 'COMMENT_789012345'
       },
 
-      // 6. User Report - Identity Theft
+      // 6. Course Report - Inappropriate Content
       {
-        reportId: '114652263781752006',
-        reportType: 'user',
+        reportId: '1006',
+        reportType: 'course',
         reporterName: 'Võ Thị Giang',
-        reporterEmail: 'giang.vo@business.vn',
-        reason: 'Mạo danh danh tính',
-        detailedReason: 'Người dùng này sử dụng hình ảnh và thông tin cá nhân của tôi mà không có sự cho phép.',
-        reportedTargetId: '114652263781752446'
+        reporterEmail: 'giang.vo@education.vn',
+        reason: 'Nội dung không phù hợp',
+        detailedReason: 'Khóa học này chứa nội dung bạo lực và không phù hợp với độ tuổi được quảng cáo.',
+        reportedTargetId: 'COURSE_111222333'
       },
 
-      // 7. Page Report - Fake Business
+      // 7. Project Report - Fraud
       {
-        reportId: '114652263781752007',
-        reportType: 'page',
+        reportId: '1007',
+        reportType: 'project',
         reporterName: 'Đinh Văn Hải',
         reporterEmail: 'hai.dinh@consumer.vn',
-        reason: 'Doanh nghiệp giả mạo',
-        detailedReason: 'Trang này giả mạo là doanh nghiệp hợp pháp để lừa đảo khách hàng mua hàng.',
-        reportedTargetId: 'PAGE_234567890'
+        reason: 'Dự án lừa đảo',
+        detailedReason: 'Dự án này tuyên bố sai sự thật về tiến độ và kết quả để lừa đảo nhà đầu tư.',
+        reportedTargetId: 'PROJECT_444555666'
       },
 
-      // 8. Group Report - Hate Speech
+      // 8. Recruitment Report - Discriminatory
       {
-        reportId: '114652263781752008',
-        reportType: 'group',
+        reportId: '1008',
+        reportType: 'recruitment',
         reporterName: 'Bùi Thị Lan',
         reporterEmail: 'lan.bui@social.vn',
-        reason: 'Phát ngôn thù địch',
-        detailedReason: 'Nhóm này thường xuyên đăng tải các nội dung kỳ thị chủng tộc và tôn giáo.',
-        reportedTargetId: 'GROUP_345678901'
+        reason: 'Phân biệt đối xử',
+        detailedReason: 'Tin tuyển dụng này có yêu cầu phân biệt đối xử về giới tính và độ tuổi trái pháp luật.',
+        reportedTargetId: 'JOB_777888999'
       },
 
-      // 9. Content Report - Fake News
+      // 9. Song Report - Copyright Violation
       {
-        reportId: '114652263781752009',
-        reportType: 'content',
+        reportId: '1009',
+        reportType: 'song',
         reporterName: 'Lý Văn Minh',
-        reporterEmail: 'minh.ly@news.vn',
-        reason: 'Tin tức giả mạo',
-        detailedReason: 'Bài viết này lan truyền thông tin sai lệch về tình hình dịch bệnh, gây hoang mang trong dư luận.',
-        reportedTargetId: 'ARTICLE_345678901'
+        reporterEmail: 'minh.ly@music.vn',
+        reason: 'Vi phạm bản quyền âm nhạc',
+        detailedReason: 'Bài hát này sử dụng beat và melody của tác phẩm có bản quyền mà không có giấy phép.',
+        reportedTargetId: 'SONG_123321123'
       },
 
-      // 10. Comment Report - Cyberbullying
+      // 10. Event Report - Misleading Information
       {
-        reportId: '114652263781752010',
-        reportType: 'comment',
+        reportId: '1010',
+        reportType: 'event',
         reporterName: 'Ngô Thị Oanh',
         reporterEmail: 'oanh.ngo@protection.vn',
-        reason: 'Bắt nạt trực tuyến',
-        detailedReason: 'Chuỗi bình luận này nhắm vào một cá nhân cụ thể với mục đích làm tổn hại danh tiếng và tinh thần của họ.',
-        reportedTargetId: 'COMMENT_901234567'
+        reason: 'Thông tin sai lệch',
+        detailedReason: 'Sự kiện này cung cấp thông tin sai lệch về địa điểm, thời gian và nội dung chương trình.',
+        reportedTargetId: 'EVENT_654987321'
       }
     ];
 

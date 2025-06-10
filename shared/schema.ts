@@ -304,7 +304,7 @@ export interface ContentMessage {
 export const reportManagement = pgTable("report_management", {
   id: serial("id").primaryKey(),
   reportedId: jsonb("reported_id").notNull(), // ID đối tượng bị báo cáo (JSON format)
-  reportType: varchar("report_type", { length: 50 }).notNull(), // 'user', 'content', 'page', 'group'
+  reportType: varchar("report_type", { length: 50 }).notNull(), // 'user', 'content', 'page', 'group', 'comment', 'course', 'project', 'recruitment', 'song', 'event'
   reporterName: jsonb("reporter_name").notNull(), // Tên người báo cáo (JSON format)
   reporterEmail: varchar("reporter_email", { length: 255 }).notNull(), // Email người báo cáo
   reason: varchar("reason", { length: 500 }).notNull(), // Lý do báo cáo
