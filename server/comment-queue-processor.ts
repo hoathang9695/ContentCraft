@@ -30,6 +30,7 @@ export class CommentQueueProcessor {
     // Check every 30 seconds for new queues (process only)
     this.processingInterval = setInterval(async () => {
       if (!this.isProcessing) {
+        await this.checkStuckQueues();
         await this.processNextQueue();
       }
     }, 30000);
@@ -86,11 +87,15 @@ export class CommentQueueProcessor {
   }
 
   async processQueue(queue: any) {
+    const startTime = Date.now();
+    const maxProcessingTime = 25 * 60 * 1000; // 25 minutes max
+    
     try {
-      // Mark as processing
+      // Mark as processing with started_at timestamp
       await storage.updateCommentQueueProgress(queue.session_id, {
         status: 'processing',
-        currentCommentIndex: queue.processed_count || 0
+        currentCommentIndex: queue.processed_count || 0,
+        startedAt: new Date()
       });
 
       // Comments are already parsed from DB (PostgreSQL JSONB automatically parses)
@@ -111,6 +116,12 @@ export class CommentQueueProcessor {
 
       // Process remaining comments
       for (let index = startIndex; index < comments.length; index++) {
+        // Check timeout
+        if (Date.now() - startTime > maxProcessingTime) {
+          console.log(`⏰ Queue ${queue.session_id} timeout after ${maxProcessingTime/60000} minutes`);
+          throw new Error('Processing timeout - queue took too long to process');
+        }
+
         const comment = comments[index];
         
         // Add delay between comments (except for first)
@@ -280,6 +291,32 @@ export class CommentQueueProcessor {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async checkStuckQueues() {
+    try {
+      // Reset queues that have been processing for more than 30 minutes
+      const stuckThreshold = new Date();
+      stuckThreshold.setMinutes(stuckThreshold.getMinutes() - 30);
+
+      const result = await storage.pool.query(`
+        UPDATE comment_queues 
+        SET status = 'pending', 
+            started_at = NULL,
+            error_info = CONCAT(COALESCE(error_info, ''), '; Reset from stuck state at ', NOW())
+        WHERE status = 'processing' 
+        AND started_at < $1
+        RETURNING session_id, external_id
+      `, [stuckThreshold.toISOString()]);
+
+      if (result.rows.length > 0) {
+        console.log(`🔧 Reset ${result.rows.length} stuck queues:`, 
+          result.rows.map(row => row.session_id)
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error checking stuck queues:', error);
+    }
   }
 
   async cleanupCompletedQueues() {
