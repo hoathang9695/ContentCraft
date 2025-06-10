@@ -16,6 +16,15 @@ app.use((req, res, next) => {
   // Set default content type for API routes
   if (req.originalUrl.startsWith('/api')) {
     res.setHeader('Content-Type', 'application/json');
+    
+    // Override res.send for API routes to ensure JSON
+    const originalSend = res.send;
+    res.send = function(data) {
+      if (req.originalUrl.startsWith('/api') && res.get('Content-Type') !== 'application/json') {
+        res.setHeader('Content-Type', 'application/json');
+      }
+      return originalSend.call(this, data);
+    };
   }
   next();
 });
@@ -216,3 +225,9 @@ app.use((req, res, next) => {
       console.error('❌ Failed to initialize CommentQueueProcessor:', error);
     });
 })();
+
+// Import routes
+import './routes.js';
+
+// Debug logging for routes
+console.log('Report management routes loaded');

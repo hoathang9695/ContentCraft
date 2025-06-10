@@ -43,6 +43,7 @@ import { FileCleanupService } from "./file-cleanup";
 import { feedbackRouter } from "./routes/feedback.router.js";
 import { supportRouter } from "./routes/support.router.js";
 import { infringingContentRouter } from "./routes/infringing-content.router.js";
+import reportManagementRouter from "./routes/report-management.router.js";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -184,10 +185,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ),
           );
 
+        // Đếm report requests có status = 'pending'
+        const { reportManagement } = await import("../shared/schema");
+        const pendingReportRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(reportManagement)
+          .where(eq(reportManagement.status, "pending"));
+
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
         const pendingVerification = pendingVerificationRequests[0]?.count || 0;
         const pendingTick = pendingTickRequests[0]?.count || 0;
+        const pendingReports = pendingReportRequests[0]?.count || 0;
 
         // Tổng số pending requests (support + feedback + verification + tick) cho menu cha "Xử lý phản hồi"
         const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
@@ -200,6 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           feedbackRequests: pendingFeedback,
           verificationRequests: pendingVerification,
           tickRequests: pendingTick,
+          reportRequests: pendingReports,
           totalRequests: totalPendingRequests, // Tổng cho menu cha
         };
 
@@ -223,6 +233,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tickRequests:
             badgeCounts.tickRequests > 0
               ? badgeCounts.tickRequests
+              : undefined,
+          reportRequests:
+            badgeCounts.reportRequests > 0
+              ? badgeCounts.reportRequests
               : undefined,
           totalRequests:
             badgeCounts.totalRequests > 0
@@ -441,10 +455,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query: "type='tick' AND status='pending'"
       });
 
+      // Đếm report requests có status = 'pending'
+      const { reportManagement } = await import("../shared/schema");
+      const pendingReportRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(reportManagement)
+        .where(eq(reportManagement.status, "pending"));
+
+      console.log("Badge count debug - Report requests:", {
+        count: pendingReportRequests[0]?.count || 0,
+        query: "status='pending'"
+      });
+
       const pendingSupport = pendingSupportRequests[0]?.count || 0;
       const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
       const pendingVerification = pendingVerificationRequests[0]?.count || 0;
       const pendingTick = pendingTickRequests[0]?.count || 0;
+      const pendingReports = pendingReportRequests[0]?.count || 0;
 
       // Tổng số pending requests (support + feedback + verification + tick) cho menu cha "Xử lý phản hồi"
       const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
@@ -457,6 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         feedbackRequests: pendingFeedback,
         verificationRequests: pendingVerification,
         tickRequests: pendingTick,
+        reportRequests: pendingReports,
         totalRequests: totalPendingRequests, // Tổng cho menu cha
       };
 
@@ -481,6 +509,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           badgeCounts.tickRequests > 0
             ? badgeCounts.tickRequests
             : undefined,
+        reportRequests:
+          badgeCounts.reportRequests > 0
+            ? badgeCounts.reportRequests
+            : undefined,
         totalRequests:
           badgeCounts.totalRequests > 0 ? badgeCounts.totalRequests : undefined,
       };
@@ -493,9 +525,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  // Function to broadcast report badge updates
+  const broadcastReportBadgeUpdate = async () => {
+    try {
+      const { reportManagement } = await import("../shared/schema");
+      
+      // Đếm report requests có status = 'pending'
+      const pendingReportRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(reportManagement)
+        .where(eq(reportManagement.status, "pending"));
+
+      console.log("Report badge update - Report requests:", {
+        count: pendingReportRequests[0]?.count || 0,
+        query: "status='pending'"
+      });
+
+      const pendingReports = pendingReportRequests[0]?.count || 0;
+
+      const badgeCounts = {
+        reportRequests: pendingReports,
+      };
+
+      const filteredBadgeCounts = {
+        reportRequests:
+          badgeCounts.reportRequests > 0
+            ? badgeCounts.reportRequests
+            : undefined,
+      };
+
+      // Broadcast to all connected clients
+      io.emit("badge-update", filteredBadgeCounts);
+      console.log("Broadcasted report badge update:", filteredBadgeCounts);
+    } catch (error) {
+      console.error("Error broadcasting report badge update:", error);
+    }
+  };
+
   // Make broadcastBadgeUpdate available globally
   (global as any).broadcastBadgeUpdate = broadcastBadgeUpdate;
   (global as any).broadcastFeedbackBadgeUpdate = broadcastFeedbackBadgeUpdate;
+  (global as any).broadcastReportBadgeUpdate = broadcastReportBadgeUpdate;
 
   // Start automatic file cleanup service
   const fileCleanupService = FileCleanupService.getInstance();
@@ -2805,6 +2875,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Infringing content routes
   app.use("/api/infringing-content", infringingContentRouter);
+
+  // Report management routes - with authentication middleware
+  app.use("/api/report-management", isAuthenticated, reportManagementRouter);
 
   // Import and mount tick router
   const { tickRouter } = await import("./routes/tick.router");

@@ -141,3 +141,21 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npx tsx simulate-new-feedback-format.ts"
+
+[[workflows.workflow]]
+name = "Simulate Report Kafka"
+author = 41108408
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx simulate-report-kafka.ts"
+
+[[workflows.workflow]]
+name = "Simulate 10 Report Types"
+author = 41108408
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx simulate-10-report-types.ts"

@@ -43,6 +43,7 @@ interface BadgeCounts {
   feedbackRequests?: number;
   totalRequests?: number;
   verificationRequests?: number;
+  reportRequests?: number;
 }
 
 function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: SidebarItemProps) {
@@ -138,6 +139,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               onClick={handleItemClick}
             >
               Xử lý nội dung vi phạm
+            </SidebarItem>
+
+            <SidebarItem
+              href="/report-management"
+              icon={FileText}
+              isActive={isActivePath('/report-management')}
+              onClick={handleItemClick}
+              badge={finalBadgeCounts?.reportRequests}
+            >
+              Xử lý báo cáo
             </SidebarItem>
 
             <SidebarItem

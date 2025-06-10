@@ -9,6 +9,7 @@ interface BadgeCounts {
   feedbackRequests?: number;
   verificationRequests?: number;
   tickRequests?: number;
+  reportRequests?: number;
   totalRequests?: number;
 }
 
