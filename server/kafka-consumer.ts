@@ -111,7 +111,6 @@ export interface ReportMessage {
   reason: string;
   detailedReason?: string;
   reportedTargetId: string;
-  reportedTargetName?: string;
 }
 
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {

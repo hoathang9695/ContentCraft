@@ -1,4 +1,3 @@
-
 import { db } from './server/db';
 import { users, reportManagement } from './shared/schema';
 import { eq, ne, and } from 'drizzle-orm';
@@ -11,12 +10,11 @@ interface ReportMessage {
   reason: string;
   detailedReason: string;
   reportedTargetId: string;
-  reportedTargetName?: string;
 }
 
 async function processReportMessage(message: ReportMessage) {
   console.log(`🔄 Processing report message: ${JSON.stringify(message)}`);
-  
+
   try {
     // Get active users for round-robin assignment
     const activeUsers = await db
@@ -84,7 +82,7 @@ async function processReportMessage(message: ReportMessage) {
 
 async function simulate10ReportTypes() {
   console.log('🚀 Starting comprehensive Report Management simulation with 10 types...\n');
-  
+
   try {
     // Clean existing reports for fresh test
     console.log('🧹 Cleaning existing reports...');
@@ -100,9 +98,8 @@ async function simulate10ReportTypes() {
         reporterName: 'Nguyễn Văn An',
         reporterEmail: 'an.nguyen@example.com',
         reason: 'Spam tin nhắn',
-        detailedReason: 'Người dùng này liên tục gửi tin nhắn spam quảng cáo đến nhiều người dùng khác trong hệ thống.',
-        reportedTargetId: '114652263781752445',
-        reportedTargetName: 'Spammer User'
+        detailedReason: 'Người dùng này liên tục gửi tin nhắn spam quảng cáo đến nhiều người dùng khác.',
+        reportedTargetId: '114652263781752445'
       },
 
       // 2. Page Report - Copyright
@@ -112,9 +109,8 @@ async function simulate10ReportTypes() {
         reporterName: 'Trần Thị Bình',
         reporterEmail: 'binh.tran@example.com',
         reason: 'Vi phạm bản quyền',
-        detailedReason: 'Trang này đăng tải nhiều hình ảnh, video có bản quyền mà không có sự cho phép của chủ sở hữu.',
-        reportedTargetId: 'PAGE_123456789',
-        reportedTargetName: 'Copyright Violator Page'
+        detailedReason: 'Trang này đăng tải nhiều hình ảnh có bản quyền mà không có sự cho phép.',
+        reportedTargetId: 'PAGE_123456789'
       },
 
       // 3. Group Report - Harmful Content
@@ -124,9 +120,8 @@ async function simulate10ReportTypes() {
         reporterName: 'Lê Minh Cường',
         reporterEmail: 'cuong.le@example.com',
         reason: 'Nội dung độc hại',
-        detailedReason: 'Nhóm này chia sẻ các nội dung có tính chất bạo lực, kích động thù địch và lan truyền thông tin sai lệch.',
-        reportedTargetId: 'GROUP_987654321',
-        reportedTargetName: 'Harmful Content Group'
+        detailedReason: 'Nhóm này chia sẻ các nội dung có tính chất bạo lực và kích động thù địch.',
+        reportedTargetId: 'GROUP_987654321'
       },
 
       // 4. Content Report - Financial Scam
@@ -136,9 +131,8 @@ async function simulate10ReportTypes() {
         reporterName: 'Phạm Thị Dung',
         reporterEmail: 'dung.pham@example.com',
         reason: 'Lừa đảo tài chính',
-        detailedReason: 'Bài viết này quảng cáo các gói đầu tư với lợi nhuận cao bất thường, có dấu hiệu lừa đảo người dùng.',
-        reportedTargetId: 'POST_456123789',
-        reportedTargetName: 'Scam Investment Post'
+        detailedReason: 'Bài đăng này quảng cáo các chương trình đầu tư lừa đảo với lợi nhuận hấp dẫn không thực tế.',
+        reportedTargetId: 'POST_456789123'
       },
 
       // 5. Comment Report - Sexual Harassment
@@ -148,9 +142,8 @@ async function simulate10ReportTypes() {
         reporterName: 'Hoàng Văn Em',
         reporterEmail: 'em.hoang@example.com',
         reason: 'Quấy rối tình dục',
-        detailedReason: 'Bình luận này chứa nội dung quấy rối tình dục và ngôn từ không phù hợp với chuẩn mực xã hội.',
-        reportedTargetId: 'COMMENT_789012345',
-        reportedTargetName: 'Harassment Comment'
+        detailedReason: 'Bình luận này chứa nội dung quấy rối tình dục và không phù hợp.',
+        reportedTargetId: 'COMMENT_789012345'
       },
 
       // 6. User Report - Identity Theft
@@ -159,10 +152,9 @@ async function simulate10ReportTypes() {
         reportType: 'user',
         reporterName: 'Võ Thị Giang',
         reporterEmail: 'giang.vo@business.vn',
-        reason: 'Đạo danh tính',
-        detailedReason: 'Người dùng này sử dụng hình ảnh và thông tin cá nhân của tôi để tạo tài khoản giả mạo.',
-        reportedTargetId: '114643521907832156',
-        reportedTargetName: 'Identity Thief'
+        reason: 'Mạo danh danh tính',
+        detailedReason: 'Người dùng này sử dụng hình ảnh và thông tin cá nhân của tôi mà không có sự cho phép.',
+        reportedTargetId: '114652263781752446'
       },
 
       // 7. Page Report - Fake Business
@@ -172,9 +164,8 @@ async function simulate10ReportTypes() {
         reporterName: 'Đinh Văn Hải',
         reporterEmail: 'hai.dinh@consumer.vn',
         reason: 'Doanh nghiệp giả mạo',
-        detailedReason: 'Trang này mạo danh doanh nghiệp có uy tín để lừa đảo khách hàng, bán hàng giả kém chất lượng.',
-        reportedTargetId: 'PAGE_567890123',
-        reportedTargetName: 'Fake Business Page'
+        detailedReason: 'Trang này giả mạo là doanh nghiệp hợp pháp để lừa đảo khách hàng mua hàng.',
+        reportedTargetId: 'PAGE_234567890'
       },
 
       // 8. Group Report - Hate Speech
@@ -184,9 +175,8 @@ async function simulate10ReportTypes() {
         reporterName: 'Bùi Thị Lan',
         reporterEmail: 'lan.bui@social.vn',
         reason: 'Phát ngôn thù địch',
-        detailedReason: 'Nhóm này thường xuyên đăng tải các nội dung kỳ thị, phân biệt đối xử dựa trên tôn giáo và sắc tộc.',
-        reportedTargetId: 'GROUP_234567890',
-        reportedTargetName: 'Hate Speech Group'
+        detailedReason: 'Nhóm này thường xuyên đăng tải các nội dung kỳ thị chủng tộc và tôn giáo.',
+        reportedTargetId: 'GROUP_345678901'
       },
 
       // 9. Content Report - Fake News
@@ -197,8 +187,7 @@ async function simulate10ReportTypes() {
         reporterEmail: 'minh.ly@news.vn',
         reason: 'Tin tức giả mạo',
         detailedReason: 'Bài viết này lan truyền thông tin sai lệch về tình hình dịch bệnh, gây hoang mang trong dư luận.',
-        reportedTargetId: 'ARTICLE_345678901',
-        reportedTargetName: 'Fake News Article'
+        reportedTargetId: 'ARTICLE_345678901'
       },
 
       // 10. Comment Report - Cyberbullying
@@ -209,8 +198,7 @@ async function simulate10ReportTypes() {
         reporterEmail: 'oanh.ngo@protection.vn',
         reason: 'Bắt nạt trực tuyến',
         detailedReason: 'Chuỗi bình luận này nhắm vào một cá nhân cụ thể với mục đích làm tổn hại danh tiếng và tinh thần của họ.',
-        reportedTargetId: 'COMMENT_901234567',
-        reportedTargetName: 'Cyberbullying Comments'
+        reportedTargetId: 'COMMENT_901234567'
       }
     ];
 
@@ -219,11 +207,11 @@ async function simulate10ReportTypes() {
     for (let i = 0; i < testMessages.length; i++) {
       const message = testMessages[i];
       console.log(`--- Processing report ${i + 1}/${testMessages.length}: ${message.reportType.toUpperCase()} ---`);
-      
+
       try {
         await processReportMessage(message);
         console.log(`✅ Report ${i + 1} processed successfully\n`);
-        
+
         // Wait 500ms between messages for better round-robin distribution
         await new Promise(resolve => setTimeout(resolve, 500));
       } catch (error) {
@@ -261,7 +249,7 @@ async function simulate10ReportTypes() {
     });
 
     console.log('\n🎉 Comprehensive Report Management simulation completed successfully!');
-    
+
   } catch (error) {
     console.error('❌ Simulation failed:', error);
     process.exit(1);
