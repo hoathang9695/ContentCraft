@@ -1194,7 +1194,7 @@ export class DatabaseStorage implements IStorage {
           session_id: row.session_id,
           status: row.status,
           hours_old: Math.round(row.hours_old * 10) / 10,
-          completed_at: row.completed_atmpleted_at: row.completed_at
+          completed_at: row.completed_at
         }))
       );
 
