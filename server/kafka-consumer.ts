@@ -1,6 +1,6 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
-import { users, supportRequests, contents, realUsers, pages, groups } from "../shared/schema";
+import { users, supportRequests, contents, realUsers, pages, groups, reportManagement } from "../shared/schema";
 import { eq, ne, and, sql } from "drizzle-orm";
 import { log } from "./vite";
 
