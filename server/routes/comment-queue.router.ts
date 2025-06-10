@@ -2,6 +2,7 @@ import express from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../middleware/auth";
 import { pool } from "../db";
+import { requireAdmin } from "../middleware/requireAdmin";
 
 const router = express.Router();
 
@@ -54,7 +55,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
       // Add comments to existing queue
       const updatedQueue = await storage.addCommentsToQueue(existingQueue.session_id, comments);
-      
+
       console.log("✅ Comments added to existing queue:", updatedQueue.session_id);
 
       const successResponse = {
@@ -188,33 +189,85 @@ router.get("/", isAuthenticated, async (req, res) => {
   }
 });
 
-// Manual cleanup for admin
-router.delete("/cleanup", isAuthenticated, async (req, res) => {
+// Manual cleanup endpoint
+router.post('/cleanup', requireAdmin, async (req, res) => {
   try {
-    const user = req.user as Express.User;
-    
-    // Only allow admin to cleanup
-    if (user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: "Only admin can perform cleanup"
+    const { hours = 24 } = req.body;
+
+    if (hours < 1 || hours > 168) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Hours must be between 1 and 168 (7 days)' 
       });
     }
 
-    const { hoursOld = 24 } = req.body;
-    const deletedCount = await storage.cleanupOldQueues(hoursOld);
+    console.log(`🧹 [MANUAL] Starting cleanup of queues older than ${hours} hours...`);
+
+    const deletedCount = await storage.cleanupOldQueues(hours);
+
+    console.log(`🧹 [MANUAL] Cleanup completed: ${deletedCount} queues deleted`);
 
     res.json({
       success: true,
-      message: `Cleaned up ${deletedCount} old queues`,
-      deletedCount
+      message: `Successfully cleaned up ${deletedCount} old queues`,
+      deletedCount,
+      hoursOld: hours,
+      timestamp: new Date().toISOString()
     });
-
   } catch (error) {
-    console.error("Error during manual cleanup:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to cleanup old queues"
+    console.error('❌ Manual cleanup error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to cleanup queues',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Test cleanup endpoint - check what would be deleted without deleting
+router.get('/cleanup/preview/:hours', requireAdmin, async (req, res) => {
+  try {
+    const hours = parseInt(req.params.hours) || 24;
+
+    if (hours < 1 || hours > 168) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Hours must be between 1 and 168 (7 days)' 
+      });
+    }
+
+    // Preview what would be deleted
+    const previewQuery = `
+      SELECT session_id, status, completed_at, 
+             EXTRACT(EPOCH FROM (NOW() - completed_at))/3600 as hours_old
+      FROM comment_queues 
+      WHERE status IN ('completed', 'failed') 
+      AND completed_at IS NOT NULL
+      AND completed_at < NOW() - INTERVAL $1
+      ORDER BY completed_at DESC
+      LIMIT 50
+    `;
+
+    const result = await storage.query(previewQuery, [`${hours} hours`]);
+
+    res.json({
+      success: true,
+      message: `Preview: ${result.rows.length} queues would be deleted`,
+      previewCount: result.rows.length,
+      hoursOld: hours,
+      queues: result.rows.map(row => ({
+        session_id: row.session_id,
+        status: row.status,
+        hours_old: Math.round(row.hours_old * 10) / 10,
+        completed_at: row.completed_at
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Cleanup preview error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to preview cleanup',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
