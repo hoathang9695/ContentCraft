@@ -16,20 +16,11 @@ interface ProcessingQueue {
 export class CommentQueueProcessor {
   private processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
   private processingInterval: NodeJS.Timeout | null = null;
-  private maxConcurrentQueues = process.env.NODE_ENV === 'production' ? 10 : 5; // Production: 10, Development: 5
+  private maxConcurrentQueues = 3; // Maximum concurrent queue processing
   private processingDelay = 10000; // 10 seconds between queue checks
 
   constructor() {
     console.log('🚀 CommentQueueProcessor constructor called (Multi-threaded)');
-    
-    // Configure based on environment
-    const envMaxQueues = parseInt(process.env.MAX_CONCURRENT_QUEUES || '0');
-    if (envMaxQueues > 0 && envMaxQueues <= 20) {
-      this.maxConcurrentQueues = envMaxQueues;
-    }
-    
-    console.log(`⚙️ Max concurrent queues set to: ${this.maxConcurrentQueues} (env: ${process.env.NODE_ENV})`);
-    
     try {
       this.startProcessor();
       console.log('✅ CommentQueueProcessor started successfully (Multi-threaded mode)');
@@ -58,32 +49,14 @@ export class CommentQueueProcessor {
 
   private scheduleCleanup() {
     // Run cleanup immediately on start
-    console.log('🗓️ Running initial cleanup check...');
     this.cleanupCompletedQueues();
     
-    // Calculate next midnight for first scheduled run
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(2, 0, 0, 0); // Run at 2 AM to avoid peak hours
+    // Then run every 24 hours (86400000 ms)
+    setInterval(async () => {
+      await this.cleanupCompletedQueues();
+    }, 24 * 60 * 60 * 1000);
     
-    const timeUntilFirstRun = tomorrow.getTime() - now.getTime();
-    
-    console.log(`🗓️ Next scheduled cleanup: ${tomorrow.toISOString()} (in ${Math.round(timeUntilFirstRun / (60 * 60 * 1000))} hours)`);
-    
-    // Set timeout for first run, then interval for daily
-    setTimeout(() => {
-      console.log('🗓️ Running first scheduled cleanup at 2 AM...');
-      this.cleanupCompletedQueues();
-      
-      // Then run every 24 hours
-      setInterval(async () => {
-        console.log('🗓️ Running daily scheduled cleanup...');
-        await this.cleanupCompletedQueues();
-      }, 24 * 60 * 60 * 1000);
-    }, timeUntilFirstRun);
-    
-    console.log('🗓️ Cleanup scheduled: immediate + daily at 2 AM');
+    console.log('🗓️ Cleanup scheduled: once daily');
   }
 
   stopProcessor() {
@@ -104,8 +77,21 @@ export class CommentQueueProcessor {
         return;
       }
 
-      // Get pending queues
-      const pendingQueues = await storage.getPendingCommentQueues();
+      // Get pending queues with database lock to prevent race conditions
+      const { pool } = await import('./db');
+      const lockResult = await pool.query(`
+        UPDATE comment_queues 
+        SET status = 'processing', started_at = NOW()
+        WHERE session_id IN (
+          SELECT session_id FROM comment_queues 
+          WHERE status = 'pending' 
+          ORDER BY created_at ASC 
+          LIMIT $1
+        )
+        RETURNING *
+      `, [this.maxConcurrentQueues - currentProcessingCount]);
+
+      const pendingQueues = lockResult.rows;
       
       if (pendingQueues.length === 0) {
         if (currentProcessingCount === 0) {
@@ -119,11 +105,6 @@ export class CommentQueueProcessor {
       const queuesToProcess = pendingQueues.slice(0, availableSlots);
 
       console.log(`🔄 Starting ${queuesToProcess.length} new queue(s) (${currentProcessingCount + queuesToProcess.length}/${this.maxConcurrentQueues} total)`);
-
-      // Production monitoring
-      if (process.env.NODE_ENV === 'production') {
-        console.log(`📊 [PROD] Queue utilization: ${Math.round((currentProcessingCount + queuesToProcess.length) / this.maxConcurrentQueues * 100)}%`);
-      }
 
       // Process queues in parallel
       const processingPromises = queuesToProcess.map(queue => 
@@ -158,6 +139,16 @@ export class CommentQueueProcessor {
       console.log(`✅ [${sessionId}] Queue completed successfully`);
     } catch (error) {
       console.error(`❌ [${sessionId}] Queue failed:`, error);
+      
+      // Mark queue as failed in database
+      try {
+        await storage.updateCommentQueueProgress(sessionId, {
+          status: 'failed',
+          errorInfo: error instanceof Error ? error.message : 'Unknown error'
+        });
+      } catch (updateError) {
+        console.error(`❌ [${sessionId}] Failed to update queue status:`, updateError);
+      }
     } finally {
       // Remove from processing map
       this.processingQueues.delete(sessionId);
@@ -174,8 +165,7 @@ export class CommentQueueProcessor {
       // Mark as processing with started_at timestamp
       await storage.updateCommentQueueProgress(sessionId, {
         status: 'processing',
-        currentCommentIndex: queue.processed_count || 0,
-        startedAt: new Date()
+        currentCommentIndex: queue.processed_count || 0
       });
 
       // Comments are already parsed from DB (PostgreSQL JSONB automatically parses)
@@ -352,9 +342,8 @@ export class CommentQueueProcessor {
   }
 
   private getAdaptiveDelay(attemptNumber: number): number {
-    // Production: faster delays, Development: safer delays
-    const baseMs = process.env.NODE_ENV === 'production' ? 30000 : 60000; // 30s vs 1 minute
-    const maxMs = process.env.NODE_ENV === 'production' ? 120000 : 180000; // 2 vs 3 minutes
+    const baseMs = 1 * 60000; // 1 minute base (reduced for multi-thread)
+    const maxMs = 3 * 60000; // 3 minutes max (reduced for multi-thread)
     const randomFactor = 0.5 + Math.random(); // 0.5 - 1.5
     return Math.min(baseMs * randomFactor, maxMs);
   }
@@ -375,6 +364,8 @@ export class CommentQueueProcessor {
       // Reset queues that have been processing for more than 30 minutes
       const stuckThreshold = new Date();
       stuckThreshold.setMinutes(stuckThreshold.getMinutes() - 30);
+      
+      console.log(`🔍 Checking for stuck queues before: ${stuckThreshold.toISOString()}`);
 
       const result = await pool.query(`
         UPDATE comment_queues 
@@ -415,38 +406,14 @@ export class CommentQueueProcessor {
 
   async cleanupCompletedQueues() {
     try {
-      console.log(`🧹 [${new Date().toISOString()}] Starting automatic queue cleanup...`);
-      
-      // Production: 24 hours, Development: 1 hour (for testing)
-      const cleanupHours = process.env.NODE_ENV === 'production' ? 24 : 1;
-      
-      console.log(`🧹 [AUTO-CLEANUP] Cleaning queues older than ${cleanupHours} hours...`);
-      
-      const cleanupResult = await storage.cleanupOldQueues(cleanupHours);
+      // Xóa các queues đã completed/failed cách đây hơn 24 giờ
+      const cleanupResult = await storage.cleanupOldQueues(24); // 24 hours
       
       if (cleanupResult > 0) {
-        console.log(`🧹 [AUTO-CLEANUP] ✅ Successfully cleaned up ${cleanupResult} old completed queues`);
-      } else {
-        console.log(`🧹 [AUTO-CLEANUP] ℹ️ No old queues found for cleanup (${cleanupHours}h+ old)`);
+        console.log(`🧹 Cleaned up ${cleanupResult} old completed queues`);
       }
-      
-      // Report cleanup stats
-      const totalQueues = await storage.getQueueCount();
-      console.log(`📊 [AUTO-CLEANUP] Total queues remaining: ${totalQueues}`);
-      
     } catch (error) {
-      console.error('❌ [AUTO-CLEANUP] Error during queue cleanup:', error);
-      
-      // Retry once after 5 minutes if failed
-      setTimeout(async () => {
-        try {
-          console.log('🔄 [AUTO-CLEANUP] Retrying cleanup after error...');
-          const retryResult = await storage.cleanupOldQueues(24);
-          console.log(`🔄 [AUTO-CLEANUP] Retry result: ${retryResult} queues cleaned`);
-        } catch (retryError) {
-          console.error('❌ [AUTO-CLEANUP] Retry also failed:', retryError);
-        }
-      }, 5 * 60 * 1000); // 5 minutes
+      console.error('❌ Error during queue cleanup:', error);
     }
   }
 
