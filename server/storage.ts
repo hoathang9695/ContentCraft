@@ -1143,19 +1143,47 @@ export class DatabaseStorage implements IStorage {
     cutoffTime.setHours(cutoffTime.getHours() - hoursOld);
 
     try {
+      // First, let's check what queues exist
+      const checkResult = await pool.query(`
+        SELECT session_id, status, completed_at, 
+               EXTRACT(EPOCH FROM (NOW() - completed_at))/3600 as hours_old
+        FROM comment_queues 
+        WHERE status IN ('completed', 'failed') 
+        AND completed_at IS NOT NULL
+        ORDER BY completed_at DESC
+        LIMIT 10
+      `);
+
+      console.log(`🔍 Found ${checkResult.rows.length} completed/failed queues:`, 
+        checkResult.rows.map(row => ({
+          session_id: row.session_id,
+          status: row.status,
+          hours_old: Math.round(row.hours_old * 10) / 10,
+          completed_at: row.completed_at
+        }))
+      );
+
+      // Delete queues older than specified hours
       const result = await pool.query(`
         DELETE FROM comment_queues 
         WHERE status IN ('completed', 'failed') 
-        AND completed_at < $1
-        RETURNING session_id
-      `, [cutoffTime.toISOString()]);
+        AND completed_at IS NOT NULL
+        AND completed_at < NOW() - INTERVAL '${hoursOld} hours'
+        RETURNING session_id, status, completed_at
+      `, []);
 
       const deletedCount = result.rows.length;
       
       if (deletedCount > 0) {
         console.log(`🧹 Successfully cleaned up ${deletedCount} old queues:`, 
-          result.rows.map(row => row.session_id)
+          result.rows.map(row => ({
+            session_id: row.session_id,
+            status: row.status,
+            completed_at: row.completed_at
+          }))
         );
+      } else {
+        console.log(`🧹 No queues found older than ${hoursOld} hours for cleanup`);
       }
 
       return deletedCount;

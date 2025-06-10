@@ -54,7 +54,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 
       // Add comments to existing queue
       const updatedQueue = await storage.addCommentsToQueue(existingQueue.session_id, comments);
-      
+
       console.log("✅ Comments added to existing queue:", updatedQueue.session_id);
 
       const successResponse = {
@@ -188,33 +188,43 @@ router.get("/", isAuthenticated, async (req, res) => {
   }
 });
 
-// Manual cleanup for admin
-router.delete("/cleanup", isAuthenticated, async (req, res) => {
+// Manual cleanup (Admin only)
+router.delete('/cleanup', isAuthenticated, async (req, res) => {
   try {
     const user = req.user as Express.User;
-    
-    // Only allow admin to cleanup
+
+    // Check if user is admin
     if (user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: "Only admin can perform cleanup"
+        message: 'Admin access required'
       });
     }
 
-    const { hoursOld = 24 } = req.body;
-    const deletedCount = await storage.cleanupOldQueues(hoursOld);
+    const { hoursOld } = req.body;
+    const cleanupHours = hoursOld || 24;
+
+    console.log(`🧹 [MANUAL-CLEANUP] Requested by admin: ${user.username}, hours: ${cleanupHours}`);
+    console.log(`🧹 [MANUAL-CLEANUP] Current time: ${new Date().toISOString()}`);
+
+    const deletedCount = await storage.cleanupOldQueues(cleanupHours);
+
+    console.log(`🧹 [MANUAL-CLEANUP] Completed: ${deletedCount} queues deleted`);
 
     res.json({
       success: true,
       message: `Cleaned up ${deletedCount} old queues`,
-      deletedCount
+      deletedCount,
+      cleanupHours,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error("Error during manual cleanup:", error);
+    console.error("❌ [MANUAL-CLEANUP] Error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to cleanup old queues"
+      message: "Failed to cleanup queues",
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
