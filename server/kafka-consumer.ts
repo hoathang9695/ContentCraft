@@ -158,22 +158,17 @@ async function initializeHealthCheck(kafka: Kafka, consumer: Consumer) {
 
 async function processMessageWithRetry(message: any, process: Function, maxRetries = 3) {
   let retryCount = 0;
-  const messageType = getMessageType(message);
 
   while (retryCount < maxRetries) {
     try {
-      log(`🔄 Processing ${messageType} message (attempt ${retryCount + 1}/${maxRetries})`, "kafka");
       await process(message);
-      log(`✅ Successfully processed ${messageType} message`, "kafka");
       return true;
     } catch (error) {
       retryCount++;
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      log(`❌ Processing error for ${messageType} (attempt ${retryCount}/${maxRetries}): ${errorMsg}`, "kafka-error");
+      log(`Processing error (attempt ${retryCount}/${maxRetries}): ${error}`, "kafka-error");
 
       if (retryCount === maxRetries) {
-        log(`💀 Max retries exceeded for ${messageType}, sending to DLQ`, "kafka-error");
-        await sendToDeadLetterQueue({ ...message, messageType, error: errorMsg });
+        await sendToDeadLetterQueue(message);
         return false;
       }
 
@@ -181,29 +176,10 @@ async function processMessageWithRetry(message: any, process: Function, maxRetri
         KAFKA_CONFIG.RETRY_INITIAL_TIME * Math.pow(KAFKA_CONFIG.RETRY_FACTOR, retryCount - 1),
         KAFKA_CONFIG.RETRY_MAX_TIME
       );
-      log(`⏳ Waiting ${delay}ms before retry ${retryCount + 1}`, "kafka");
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
   return false;
-}
-
-function getMessageType(message: any): string {
-  if ("reportId" in message) return "REPORT";
-  if ("externalId" in message) return "CONTENT";
-  if ("fullName" in message && "verified" in message) return "REAL_USER";
-  if ("pageId" in message) return "PAGE";
-  if ("groupId" in message) return "GROUP";
-  if ("type" in message) {
-    switch (message.type) {
-      case 'tick': return "TICK";
-      case 'feedback': return "FEEDBACK";
-      case 'verify': return "VERIFICATION";
-      default: return "SUPPORT";
-    }
-  }
-  if ("full_name" in message && "email" in message) return "SUPPORT";
-  return "UNKNOWN";
 }
 
 export async function setupKafkaConsumer() {
@@ -289,57 +265,483 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | FeedbackMessage | ReportMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage) => {
                   const startTime = Date.now();
-                  const messageType = getMessageType(msg);
-                  
                   try {
                     await db.transaction(async (tx) => {
-                      // Process by message type with proper validation
-                      if ("reportId" in msg && "reportType" in msg) {
-                        log(`🔄 Processing REPORT message: ${(msg as ReportMessage).reportId}`, "kafka");
-                        await processReportMessage(msg as ReportMessage, tx);
-                      } else if ("externalId" in msg && !("reportId" in msg)) {
-                        log(`🔄 Processing CONTENT message: ${(msg as ContentMessage).externalId}`, "kafka");
+                      if ("externalId" in msg) {
+                        log(`🔄 Processing content message: ${JSON.stringify(msg)}`, "kafka");
                         await processContentMessage(msg as ContentMessage, tx);
-                      } else if ("fullName" in msg && "verified" in msg) {
-                        log(`🔄 Processing REAL USER message: ${(msg as RealUsersMessage).id}`, "kafka");
-                        await processRealUserMessage(msg as RealUsersMessage, tx);
-                      } else if ("pageId" in msg && "pageName" in msg) {
-                        log(`🔄 Processing PAGE message: ${(msg as PageMessage).pageId}`, "kafka");
-                        await processPageMessage(msg as PageMessage, tx);
-                      } else if ("groupId" in msg && "groupName" in msg) {
-                        log(`🔄 Processing GROUP message: ${(msg as GroupMessage).groupId}`, "kafka");
-                        await processGroupMessage(msg as GroupMessage, tx);
-                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg) {
-                        const typeMsg = msg as any;
-                        switch (typeMsg.type) {
-                          case 'tick':
-                            log(`🔄 Processing TICK message: ${typeMsg.id}`, "kafka");
-                            await processTickMessage(typeMsg as TickMessage, tx);
-                            break;
-                          case 'feedback':
-                            log(`🔄 Processing FEEDBACK message: ${typeMsg.id}`, "kafka");
-                            await processFeedbackMessage(typeMsg as FeedbackMessage, tx);
-                            break;
-                          case 'verify':
-                            log(`🔄 Processing VERIFICATION message: ${typeMsg.id}`, "kafka");
-                            await processVerificationMessage(typeMsg as VerificationMessage, tx);
-                            break;
-                          default:
-                            log(`⚠️ Unknown support request type: ${typeMsg.type}`, "kafka-error");
-                            await processSupportMessage(typeMsg as SupportMessage, tx);
-                        }
-                      } else if ("full_name" in msg && "email" in msg && "subject" in msg && "content" in msg) {
-                        log(`🔄 Processing SUPPORT message: ${(msg as SupportMessage).email}`, "kafka");
-                        await processSupportMessage(msg as SupportMessage, tx);
+                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'tick') {
+                        log(`🔄 Processing tick message: ${JSON.stringify(msg)}`, "kafka");
+                        await processTickMessage(msg as TickMessage, tx);
+                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'verify') {
+                        log(`🔄 Processing verification message: ${JSON.stringify(msg)}`, "kafka");
+                        await processVerificationMessage(msg as VerificationMessage, tx);
+                      } else if ("id" in msg && "full_name" in msg && "email" in msg && "type" in msg && (msg as any).type === 'feedback') {
+                        log(`🔄 Processing feedback message: ${JSON.stringify(msg)}`, "kafka");
+                        await processFeedbackMessage(msg as FeedbackMessage, tx);
                       } else if ("full_name" in msg && "email" in msg && "subject" in msg && "content" in msg) {
                         log(`🔄 Processing contact/support message: ${JSON.stringify(msg)}`, "kafka");
                         await processSupportMessage(msg as SupportMessage, tx);
                       } else if ("name" in msg && "message" in msg) {
                         await processContactMessage(msg as ContactMessage, tx);
-                      } else {
-                        log(`⚠️ Unknown message format: ${JSON.stringify(msg)}`, "kafka-error");
+                      } else if ("id" in msg && "fullName" in msg && "email" in msg && "verified" in msg) {
+                        // Handle real user message from Kafka
+                        const now = new Date();
+
+                        // Get active users for round-robin assignment
+                        const activeUsers = await tx
+                          .select()
+                          .from(users)
+                          .where(eq(users.status, "active"));
+
+                        if (!activeUsers || activeUsers.length === 0) {
+                          throw new Error("No active users found for assignment");
+                        }
+
+                        // Get last assigned REAL USER for round-robin (specific to realUsers table)
+                        const lastAssignedRealUser = await tx.query.realUsers.findFirst({
+                          orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)]
+                        });
+
+                        // Calculate next assignee index based on realUsers table
+                        let nextAssigneeIndex = 0;
+                        if (lastAssignedRealUser && lastAssignedRealUser.assignedToId) {
+                          const lastAssigneeIndex = activeUsers.findIndex(
+                            user => user.id === lastAssignedRealUser.assignedToId
+                          );
+                          if (lastAssigneeIndex !== -1) {
+                            nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                          }
+                        }
+
+                        const assignedToId = activeUsers[nextAssigneeIndex].id;
+
+                        try {
+                          // Validate required fields
+                          if (!msg.id || !msg.fullName || !msg.email || !msg.verified) {
+                            throw new Error(`Invalid message format: ${JSON.stringify(msg)}`);
+                          }
+
+                          // Check if user already exists to avoid duplicates
+                          const existingUser = await tx
+                            .select()
+                            .from(realUsers)
+                            .where(eq(realUsers.email, msg.email))
+                            .limit(1);
+
+                          if (existingUser.length > 0) {
+                            log(`User with email ${msg.email} already exists, skipping...`, "kafka");
+                            return existingUser[0];
+                          }
+
+                          // Validate assigned user is still active
+                          const assignedUser = await tx
+                            .select()
+                            .from(users)
+                            .where(eq(users.id, assignedToId))
+                            .limit(1);
+
+                          if (!assignedUser.length || assignedUser[0].status !== 'active') {
+                            throw new Error(`Assigned user ${assignedToId} is not active`);
+                          }
+
+                          // Insert new real user with proper format
+                          const result = await tx.insert(realUsers).values({
+                            fullName: {
+                              id: msg.id.toString(), // Ensure ID is handled as string without number conversion
+                              name: msg.fullName
+                            },
+                            email: msg.email,
+                            verified: msg.verified,
+                            classification: 'new', // Default classification
+                            lastLogin: now,
+                            createdAt: now,
+                            updatedAt: now,
+                            assignedToId: assignedToId
+                          }).returning();
+
+                          log(`Successfully inserted real user: ${JSON.stringify(result[0])}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+                        } catch (error) {
+                          log(`Error processing real user: ${error}`, "kafka-error");
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
+                      } else if ("pageId" in msg && "pageName" in msg && "pageType" in msg) {
+                        // Handle page message from Kafka
+                        const pageMsg = msg as PageMessage;
+                        const now = new Date();
+
+                        log(`🔄 Processing page message: ${JSON.stringify(pageMsg)}`, "kafka");
+
+                        try {
+                          // Validate required fields first
+                          if (!pageMsg.pageId || !pageMsg.pageName || !pageMsg.pageType) {
+                            const error = `❌ Invalid page message format - missing required fields: ${JSON.stringify(pageMsg)}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Validate pageType enum
+                          if (!['business', 'community', 'personal'].includes(pageMsg.pageType)) {
+                            const error = `❌ Invalid pageType: ${pageMsg.pageType}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Check if page already exists to avoid duplicates
+                          log(`🔍 Checking for existing page with ID: ${pageMsg.pageId}`, "kafka");
+                          const existingPage = await tx
+                            .select()
+                            .from(pages)
+                            .where(eq(sql`${pages.pageName}::jsonb->>'id'`, pageMsg.pageId))
+                            .limit(1);
+
+                          if (existingPage.length > 0) {
+                            log(`⚠️ Page with ID ${pageMsg.pageId} already exists (DB ID: ${existingPage[0].id}), skipping...`, "kafka");
+                            return existingPage[0];
+                          }
+
+                          // Get active users for round-robin assignment (exclude admin)
+                          const activeUsers = await tx
+                            .select()
+                            .from(users)
+                            .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                          if (!activeUsers || activeUsers.length === 0) {
+                            const error = "❌ No active non-admin users found for assignment";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
+
+                          // Get last assigned PAGE for round-robin (specific to pages table)
+                          const lastAssignedPage = await tx.query.pages.findFirst({
+                            orderBy: (pages, { desc }) => [desc(pages.createdAt)]
+                          });
+
+                          // Calculate next assignee index based on pages table
+                          let nextAssigneeIndex = 0;
+                          if (lastAssignedPage && lastAssignedPage.assignedToId) {
+                            const lastAssigneeIndex = activeUsers.findIndex(
+                              user => user.id === lastAssignedPage.assignedToId
+                            );
+                            if (lastAssigneeIndex !== -1) {
+                              nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                            }
+                          }
+
+                          const assignedToId = activeUsers[nextAssigneeIndex].id;
+                          const assignedUser = activeUsers[nextAssigneeIndex];
+
+                          log(`👤 Assigning to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
+
+                          // Double-check assigned user is still active
+                          const userCheck = await tx
+                            .select()
+                            .from(users)
+                            .where(eq(users.id, assignedToId))
+                            .limit(1);
+
+                          if (!userCheck.length || userCheck[0].status !== 'active') {
+                            const error = `❌ Assigned user ${assignedToId} is not active or not found`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Safely handle managerId conversion
+                          let managerIdStr = null;
+                          if (pageMsg.managerId !== null && pageMsg.managerId !== undefined) {
+                            managerIdStr = String(pageMsg.managerId);
+                            log(`🔧 Converted managerId to string: ${managerIdStr}`, "kafka");
+                          }
+
+                          // Prepare insert data
+                          const insertData = {
+                            pageName: {
+                              id: pageMsg.pageId,
+                              page_name: pageMsg.pageName
+                            },
+                            pageType: pageMsg.pageType,
+                            classification: 'new',
+                            adminData: managerIdStr && pageMsg.adminName ? {
+                              id: managerIdStr,
+                              admin_name: pageMsg.adminName
+                            } : null,
+                            phoneNumber: pageMsg.phoneNumber || null,
+                            monetizationEnabled: pageMsg.monetizationEnabled || false,
+                            assignedToId: assignedToId,
+                            createdAt: now,
+                            updatedAt: now
+                          };
+
+                          log(`📝 Inserting page data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
+
+                          // Insert new page with proper error handling
+                          const result = await tx.insert(pages).values(insertData).returning();
+
+                          if (!result || result.length === 0) {
+                            const error = "❌ Failed to insert page - no result returned";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`✅ Successfully inserted page: ID ${result[0].id}, PageID: ${pageMsg.pageId}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+
+                        } catch (error) {
+                          const errorMsg = error instanceof Error ? error.message : String(error);
+                          const errorStack = error instanceof Error ? error.stack : '';
+                          log(`❌ Error processing page ${pageMsg.pageId}: ${errorMsg}`, "kafka-error");
+                          log(`📍 Error stack: ${errorStack}`, "kafka-error");
+
+                          // Log additional context for debugging
+                          log(`🔍 Page data that failed: ${JSON.stringify(pageMsg, null, 2)}`, "kafka-error");
+
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
+                      } else if ("groupId" in msg && "groupName" in msg && "groupType" in msg) {
+                        // Handle group message from Kafka
+                        const groupMsg = msg as GroupMessage;
+                        const now = new Date();
+
+                        log(`🔄 Processing group message: ${JSON.stringify(groupMsg)}`, "kafka");
+
+                        try {
+                          // Validate required fields first
+                          if (!groupMsg.groupId || !groupMsg.groupName || !groupMsg.groupType) {
+                            const error = `❌ Invalid group message format - missing required fields: ${JSON.stringify(groupMsg)}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Validate groupType enum
+                          if (!['public', 'private'].includes(groupMsg.groupType)) {
+                            const error = `❌ Invalid groupType: ${groupMsg.groupType}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Check if group already exists to avoid duplicates
+                          log(`🔍 Checking for existing group with ID: ${groupMsg.groupId}`, "kafka");
+                          const existingGroup = await tx
+                            .select()
+                            .from(groups)
+                            .where(eq(sql`${groups.groupName}::jsonb->>'id'`, groupMsg.groupId))
+                            .limit(1);
+
+                          if (existingGroup.length > 0) {
+                            log(`⚠️ Group with ID ${groupMsg.groupId} already exists (DB ID: ${existingGroup[0].id}), skipping...`, "kafka");
+                            return existingGroup[0];
+                          }
+
+                          // Get active users for round-robin assignment (exclude admin)
+                          const activeUsers = await tx
+                            .select()
+                            .from(users)
+                            .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                          if (!activeUsers || activeUsers.length === 0) {
+                            const error = "❌ No active non-admin users found for assignment";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
+
+                          // Get last assigned GROUP for round-robin (specific to groups table)
+                          const lastAssignedGroup = await tx.query.groups.findFirst({
+                            orderBy: (groups, { desc }) => [desc(groups.createdAt)]
+                          });
+
+                          // Calculate next assignee index based on groups table
+                          let nextAssigneeIndex = 0;
+                          if (lastAssignedGroup && lastAssignedGroup.assignedToId) {
+                            const lastAssigneeIndex = activeUsers.findIndex(
+                              user => user.id === lastAssignedGroup.assignedToId
+                            );
+                            if (lastAssigneeIndex !== -1) {
+                              nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                            }
+                          }
+
+                          const assignedToId = activeUsers[nextAssigneeIndex].id;
+                          const assignedUser = activeUsers[nextAssigneeIndex];
+
+                          log(`👤 Assigning to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
+
+                          // Double-check assigned user is still active
+                          const userCheck = await tx
+                            .select()
+                            .from(users)
+                            .where(eq(users.id, assignedToId))
+                            .limit(1);
+
+                          if (!userCheck.length || userCheck[0].status !== 'active') {
+                            const error = `❌ Assigned user ${assignedToId} is not active or not found`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Prepare insert data
+                          const insertData = {
+                            groupName: {
+                              id: groupMsg.groupId,
+                              group_name: groupMsg.groupName
+                            },
+                            groupType: groupMsg.groupType,
+                            categories: groupMsg.categories || null,
+                            classification: 'new',
+                            adminData: groupMsg.adminId && groupMsg.adminName ? {
+                              id: groupMsg.adminId,
+                              admin_name: groupMsg.adminName
+                            } : null,
+                            phoneNumber: groupMsg.phoneNumber || null,
+                            monetizationEnabled: groupMsg.monetizationEnabled || false,
+                            assignedToId: assignedToId,
+                            createdAt: now,
+                            updatedAt: now
+                          };
+
+                          log(`📝 Inserting group data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
+
+                          // Insert new group with proper error handling
+                          const result = await tx.insert(groups).values(insertData).returning();
+
+                          if (!result || result.length === 0) {
+                            const error = "❌ Failed to insert group - no result returned";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`✅ Successfully inserted group: ID ${result[0].id}, GroupID: ${groupMsg.groupId}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+
+                        } catch (error) {
+                          const errorMsg = error instanceof Error ? error.message : String(error);
+                          const errorStack = error instanceof Error ? error.stack : '';
+                          log(`❌ Error processing group ${groupMsg.groupId}: ${errorMsg}`, "kafka-error");
+                          log(`📍 Error stack: ${errorStack}`, "kafka-error");
+
+                          // Log additional context for debugging
+                          log(`🔍 Group data that failed: ${JSON.stringify(groupMsg, null, 2)}`, "kafka-error");
+
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
+                      } else if ("reportId" in msg && "reportType" in msg && "reporterName" in msg && "reporterEmail" in msg) {
+                        // Handle report message from Kafka
+                        const reportMsg = msg as ReportMessage;
+                        const now = new Date();
+
+                        log(`🔄 Processing report message: ${JSON.stringify(reportMsg)}`, "kafka");
+
+                        try {
+                          // Validate required fields
+                          if (!reportMsg.reportId || !reportMsg.reportType || !reportMsg.reporterName || !reportMsg.reporterEmail || !reportMsg.reason) {
+                            const error = `❌ Invalid report message format - missing required fields: ${JSON.stringify(reportMsg)}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Validate report type (expanded list)
+                          const validReportTypes = ['user', 'content', 'page', 'group', 'comment', 'course', 'project', 'video', 'song', 'event'];
+                          if (!validReportTypes.includes(reportMsg.reportType)) {
+                            const error = `❌ Invalid reportType: ${reportMsg.reportType}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Get active users for round-robin assignment (exclude admin)
+                          const activeUsers = await tx
+                            .select()
+                            .from(users)
+                            .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                          if (!activeUsers || activeUsers.length === 0) {
+                            const error = "❌ No active non-admin users found for assignment";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
+
+                          // Get last assigned REPORT for round-robin (specific to reportManagement table)
+                          const lastAssignedReport = await tx.query.reportManagement.findFirst({
+                            orderBy: (reportManagement, { desc }) => [desc(reportManagement.createdAt)]
+                          });
+
+                          // Calculate next assignee index based on reports table
+                          let nextAssigneeIndex = 0;
+                          if (lastAssignedReport && lastAssignedReport.assignedToId) {
+                            const lastAssigneeIndex = activeUsers.findIndex(
+                              user => user.id === lastAssignedReport.assignedToId
+                            );
+                            if (lastAssigneeIndex !== -1) {
+                              nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                            }
+                          }
+
+                          const assignedToId = activeUsers[nextAssigneeIndex].id;
+                          const assignedUser = activeUsers[nextAssigneeIndex];
+
+                          log(`👤 Assigned to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
+
+                          // Use reporterName as provided from Kafka message
+                          const reporterNameObj = reportMsg.reporterName;
+
+                          // Prepare insert data
+                          const insertData = {
+                            reportedId: {
+                              id: reportMsg.reportId
+                            },
+                            reportType: reportMsg.reportType,
+                            reporterName: reporterNameObj,
+                            reporterEmail: reportMsg.reporterEmail,
+                            reason: reportMsg.reason,
+                            detailedReason: reportMsg.detailedReason || null,
+                            status: 'pending',
+                            assignedToId: assignedToId,
+                            assignedToName: assignedUser.name,
+                            assignedAt: now,
+                            createdAt: now,
+                            updatedAt: now
+                          };
+
+                          log(`📝 Inserting report data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
+
+                          // Insert new report
+                          const result = await tx.insert(reportManagement).values(insertData).returning();
+
+                          if (!result || result.length === 0) {
+                            const error = "❌ Failed to insert report - no result returned";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`✅ Successfully inserted report: ID ${result[0].id}, ReportID: ${reportMsg.reportId}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+
+                        } catch (error) {
+                          const errorMsg = error instanceof Error ? error.message : String(error);
+                          const errorStack = error instanceof Error ? error.stack : '';
+                          log(`❌ Error processing report ${reportMsg.reportId}: ${errorMsg}`, "kafka-error");
+                          log(`📍 Error stack: ${errorStack}`, "kafka-error");
+
+                          // Log additional context for debugging
+                          log(`🔍 Report data that failed: ${JSON.stringify(reportMsg, null, 2)}`, "kafka-error");
+
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
@@ -412,68 +814,36 @@ function parseMessage(
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
-    log(`🔍 Parsing message: ${JSON.stringify(message)}`, "kafka");
-
-    // Priority order: specific fields first, then type-based checks
-    
-    // 1. Report message (most specific - has reportId, reportType, reporterName, reporterEmail, reason)
+    // Check for report message (has reportId, reportType, reporterName, reporterEmail, reason)
     if ("reportId" in message && "reportType" in message && "reporterName" in message && "reporterEmail" in message && "reason" in message) {
-      log(`📊 Detected REPORT message: ${message.reportId}`, "kafka");
       return message as ReportMessage;
     }
-    
-    // 2. Content message (has unique externalId field)
-    if ("externalId" in message && !("reportId" in message)) {
-      log(`📝 Detected CONTENT message: ${message.externalId}`, "kafka");
-      return message as ContentMessage;
+    // Check for tick message first (has type: 'tick' and id)
+    else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'tick') {
+      return message as TickMessage;
     }
-    
-    // 3. Real users message (has specific fullName + verified fields)
-    if ("fullName" in message && "id" in message && "email" in message && "verified" in message) {
-      log(`👤 Detected REAL USER message: ${message.id}`, "kafka");
-      return message as RealUsersMessage;
+    // Check for feedback message (has type: 'feedback' and id)
+    else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'feedback') {
+      return message as FeedbackMessage;
     }
-    
-    // 4. Page message (has pageId, pageName, pageType)
-    if ("pageId" in message && "pageName" in message && "pageType" in message) {
-      log(`📄 Detected PAGE message: ${message.pageId}`, "kafka");
-      return message as PageMessage;
-    }
-    
-    // 5. Group message (has groupId, groupName, groupType)
-    if ("groupId" in message && "groupName" in message && "groupType" in message) {
-      log(`👥 Detected GROUP message: ${message.groupId}`, "kafka");
-      return message as GroupMessage;
-    }
-    
-    // 6. Type-based messages (support requests family)
-    if ("id" in message && "full_name" in message && "email" in message && "type" in message) {
-      switch (message.type) {
-        case 'tick':
-          log(`✅ Detected TICK message: ${message.id}`, "kafka");
-          return message as TickMessage;
-        case 'feedback':
-          log(`💬 Detected FEEDBACK message: ${message.id}`, "kafka");
-          return message as FeedbackMessage;
-        case 'verify':
-          log(`🔐 Detected VERIFICATION message: ${message.id}`, "kafka");
-          return message as VerificationMessage;
-        default:
-          log(`⚠️ Unknown type in message: ${message.type}`, "kafka-error");
-          break;
-      }
-    }
-    
-    // 7. Generic support/contact message (fallback for support requests)
-    if ("full_name" in message && "email" in message && "subject" in message && "content" in message) {
-      log(`📧 Detected SUPPORT/CONTACT message: ${message.email}`, "kafka");
+    // Check for support/contact message (has full_name, email, subject, content)
+    else if ("full_name" in message && "email" in message && "subject" in message && "content" in message) {
       return message as SupportMessage;
+    } else if ("externalId" in message) {
+      return message as ContentMessage;
+    } else if ("fullName" in message && "id" in message&& "email" in message&& "verified" in message) {
+      return message as RealUsersMessage; 
+    } else if ("pageId" in message && "pageName" in message && "pageType" in message) {
+      return message as PageMessage;
+    } else if ("groupId" in message && "groupName" in message && "groupType" in message) {
+      return message as GroupMessage;
+    } else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'verify') {
+      return message as VerificationMessage;
     }
 
-    log(`❌ Unable to parse message - unknown format: ${JSON.stringify(message)}`, "kafka-error");
     return null;
   } catch (error) {
-    log(`❌ Error parsing message: ${error}`, "kafka-error");
+    log(`Error parsing message: ${error}`, "kafka-error");
     return null;
   }
 }
@@ -961,338 +1331,6 @@ async function processTickMessage(message: TickMessage, tx: any) {
         `Database error while inserting tick request: ${dbError}`,
         "kafka-error",
       );
-
-
-// Dedicated message processing functions for better organization and error handling
-
-async function processRealUserMessage(message: RealUsersMessage, tx: any) {
-  try {
-    const now = new Date();
-    
-    log(`👤 Processing real user: ${message.id} - ${message.fullName}`, "kafka");
-
-    // Validate required fields
-    if (!message.id || !message.fullName || !message.email || !message.verified) {
-      throw new Error(`Invalid real user message format: ${JSON.stringify(message)}`);
-    }
-
-    // Check if user already exists to avoid duplicates
-    const existingUser = await tx
-      .select()
-      .from(realUsers)
-      .where(eq(realUsers.email, message.email))
-      .limit(1);
-
-    if (existingUser.length > 0) {
-      log(`User with email ${message.email} already exists, skipping...`, "kafka");
-      return existingUser[0];
-    }
-
-    // Get active users for round-robin assignment
-    const activeUsers = await tx
-      .select()
-      .from(users)
-      .where(eq(users.status, "active"));
-
-    if (!activeUsers || activeUsers.length === 0) {
-      throw new Error("No active users found for assignment");
-    }
-
-    // Get last assigned REAL USER for round-robin (specific to realUsers table)
-    const lastAssignedRealUser = await tx.query.realUsers.findFirst({
-      orderBy: (realUsers, { desc }) => [desc(realUsers.createdAt)]
-    });
-
-    // Calculate next assignee index based on realUsers table
-    let nextAssigneeIndex = 0;
-    if (lastAssignedRealUser && lastAssignedRealUser.assignedToId) {
-      const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedRealUser.assignedToId
-      );
-      if (lastAssigneeIndex !== -1) {
-        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
-      }
-    }
-
-    const assignedToId = activeUsers[nextAssigneeIndex].id;
-
-    // Insert new real user with proper format
-    const result = await tx.insert(realUsers).values({
-      fullName: {
-        id: message.id.toString(),
-        name: message.fullName
-      },
-      email: message.email,
-      verified: message.verified,
-      classification: 'new',
-      lastLogin: now,
-      createdAt: now,
-      updatedAt: now,
-      assignedToId: assignedToId
-    }).returning();
-
-    log(`✅ Successfully inserted real user: ${result[0].id}`, "kafka");
-    metrics.processedMessages++;
-    return result[0];
-
-  } catch (error) {
-    log(`❌ Error processing real user: ${error}`, "kafka-error");
-    metrics.failedMessages++;
-    throw error;
-  }
-}
-
-async function processPageMessage(message: PageMessage, tx: any) {
-  try {
-    const now = new Date();
-    
-    log(`📄 Processing page: ${message.pageId} - ${message.pageName}`, "kafka");
-
-    // Validate required fields
-    if (!message.pageId || !message.pageName || !message.pageType) {
-      throw new Error(`Invalid page message format: ${JSON.stringify(message)}`);
-    }
-
-    // Validate pageType enum
-    if (!['business', 'community', 'personal'].includes(message.pageType)) {
-      throw new Error(`Invalid pageType: ${message.pageType}`);
-    }
-
-    // Check if page already exists
-    const existingPage = await tx
-      .select()
-      .from(pages)
-      .where(eq(sql`${pages.pageName}::jsonb->>'id'`, message.pageId))
-      .limit(1);
-
-    if (existingPage.length > 0) {
-      log(`Page with ID ${message.pageId} already exists, skipping...`, "kafka");
-      return existingPage[0];
-    }
-
-    // Get active users for assignment (exclude admin)
-    const activeUsers = await tx
-      .select()
-      .from(users)
-      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
-
-    if (!activeUsers || activeUsers.length === 0) {
-      throw new Error("No active non-admin users found for assignment");
-    }
-
-    // Round-robin assignment
-    const lastAssignedPage = await tx.query.pages.findFirst({
-      orderBy: (pages, { desc }) => [desc(pages.createdAt)]
-    });
-
-    let nextAssigneeIndex = 0;
-    if (lastAssignedPage && lastAssignedPage.assignedToId) {
-      const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedPage.assignedToId
-      );
-      if (lastAssigneeIndex !== -1) {
-        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
-      }
-    }
-
-    const assignedToId = activeUsers[nextAssigneeIndex].id;
-
-    // Prepare insert data
-    const insertData = {
-      pageName: {
-        id: message.pageId,
-        page_name: message.pageName
-      },
-      pageType: message.pageType,
-      classification: 'new',
-      adminData: message.managerId && message.adminName ? {
-        id: String(message.managerId),
-        admin_name: message.adminName
-      } : null,
-      phoneNumber: message.phoneNumber || null,
-      monetizationEnabled: message.monetizationEnabled || false,
-      assignedToId: assignedToId,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    const result = await tx.insert(pages).values(insertData).returning();
-
-    log(`✅ Successfully inserted page: ${result[0].id}`, "kafka");
-    metrics.processedMessages++;
-    return result[0];
-
-  } catch (error) {
-    log(`❌ Error processing page: ${error}`, "kafka-error");
-    metrics.failedMessages++;
-    throw error;
-  }
-}
-
-async function processGroupMessage(message: GroupMessage, tx: any) {
-  try {
-    const now = new Date();
-    
-    log(`👥 Processing group: ${message.groupId} - ${message.groupName}`, "kafka");
-
-    // Validate required fields
-    if (!message.groupId || !message.groupName || !message.groupType) {
-      throw new Error(`Invalid group message format: ${JSON.stringify(message)}`);
-    }
-
-    // Validate groupType enum
-    if (!['public', 'private'].includes(message.groupType)) {
-      throw new Error(`Invalid groupType: ${message.groupType}`);
-    }
-
-    // Check if group already exists
-    const existingGroup = await tx
-      .select()
-      .from(groups)
-      .where(eq(sql`${groups.groupName}::jsonb->>'id'`, message.groupId))
-      .limit(1);
-
-    if (existingGroup.length > 0) {
-      log(`Group with ID ${message.groupId} already exists, skipping...`, "kafka");
-      return existingGroup[0];
-    }
-
-    // Get active users for assignment (exclude admin)
-    const activeUsers = await tx
-      .select()
-      .from(users)
-      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
-
-    if (!activeUsers || activeUsers.length === 0) {
-      throw new Error("No active non-admin users found for assignment");
-    }
-
-    // Round-robin assignment
-    const lastAssignedGroup = await tx.query.groups.findFirst({
-      orderBy: (groups, { desc }) => [desc(groups.createdAt)]
-    });
-
-    let nextAssigneeIndex = 0;
-    if (lastAssignedGroup && lastAssignedGroup.assignedToId) {
-      const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedGroup.assignedToId
-      );
-      if (lastAssigneeIndex !== -1) {
-        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
-      }
-    }
-
-    const assignedToId = activeUsers[nextAssigneeIndex].id;
-
-    // Prepare insert data
-    const insertData = {
-      groupName: {
-        id: message.groupId,
-        group_name: message.groupName
-      },
-      groupType: message.groupType,
-      categories: message.categories || null,
-      classification: 'new',
-      adminData: message.adminId && message.adminName ? {
-        id: message.adminId,
-        admin_name: message.adminName
-      } : null,
-      phoneNumber: message.phoneNumber || null,
-      monetizationEnabled: message.monetizationEnabled || false,
-      assignedToId: assignedToId,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    const result = await tx.insert(groups).values(insertData).returning();
-
-    log(`✅ Successfully inserted group: ${result[0].id}`, "kafka");
-    metrics.processedMessages++;
-    return result[0];
-
-  } catch (error) {
-    log(`❌ Error processing group: ${error}`, "kafka-error");
-    metrics.failedMessages++;
-    throw error;
-  }
-}
-
-async function processReportMessage(message: ReportMessage, tx: any) {
-  try {
-    const now = new Date();
-    
-    log(`📊 Processing report: ${message.reportId} - ${message.reportType}`, "kafka");
-
-    // Validate required fields
-    if (!message.reportId || !message.reportType || !message.reporterName || !message.reporterEmail || !message.reason) {
-      throw new Error(`Invalid report message format: ${JSON.stringify(message)}`);
-    }
-
-    // Validate report type
-    const validReportTypes = ['user', 'content', 'page', 'group', 'comment', 'course', 'project', 'video', 'song', 'event'];
-    if (!validReportTypes.includes(message.reportType)) {
-      throw new Error(`Invalid reportType: ${message.reportType}`);
-    }
-
-    // Get active users for assignment (exclude admin)
-    const activeUsers = await tx
-      .select()
-      .from(users)
-      .where(and(eq(users.status, "active"), ne(users.role, "admin")));
-
-    if (!activeUsers || activeUsers.length === 0) {
-      throw new Error("No active non-admin users found for assignment");
-    }
-
-    // Round-robin assignment for reports
-    const lastAssignedReport = await tx.query.reportManagement.findFirst({
-      orderBy: (reportManagement, { desc }) => [desc(reportManagement.createdAt)]
-    });
-
-    let nextAssigneeIndex = 0;
-    if (lastAssignedReport && lastAssignedReport.assignedToId) {
-      const lastAssigneeIndex = activeUsers.findIndex(
-        user => user.id === lastAssignedReport.assignedToId
-      );
-      if (lastAssigneeIndex !== -1) {
-        nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
-      }
-    }
-
-    const assignedToId = activeUsers[nextAssigneeIndex].id;
-    const assignedUser = activeUsers[nextAssigneeIndex];
-
-    // Prepare insert data
-    const insertData = {
-      reportedId: {
-        id: message.reportId
-      },
-      reportType: message.reportType,
-      reporterName: message.reporterName,
-      reporterEmail: message.reporterEmail,
-      reason: message.reason,
-      detailedReason: message.detailedReason || null,
-      status: 'pending',
-      assignedToId: assignedToId,
-      assignedToName: assignedUser.name,
-      assignedAt: now,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    const result = await tx.insert(reportManagement).values(insertData).returning();
-
-    log(`✅ Successfully inserted report: ${result[0].id}`, "kafka");
-    metrics.processedMessages++;
-    return result[0];
-
-  } catch (error) {
-    log(`❌ Error processing report: ${error}`, "kafka-error");
-    metrics.failedMessages++;
-    throw error;
-  }
-}
-
       throw dbError;
     }
   } catch (error) {
