@@ -1,4 +1,3 @@
-
 import pg from 'pg';
 const { Pool } = pg;
 
@@ -22,13 +21,17 @@ async function insertReportData() {
       port: pool.options.port
     });
 
+    // Begin transaction
+    await client.query('BEGIN');
+    console.log('Transaction started');
+
     // Test connection
     const testResult = await client.query('SELECT NOW() as now');
     console.log('Database connection test successful:', testResult.rows[0]);
 
     // Clear existing data
-    await client.query('DELETE FROM report_management');
-    console.log('Cleared existing report data');
+    const deleteResult = await client.query('DELETE FROM report_management');
+    console.log('Cleared existing report data, rows affected:', deleteResult.rowCount);
 
     // Enable unaccent extension for Vietnamese text search
     try {
@@ -38,7 +41,7 @@ async function insertReportData() {
       console.log('Note: Unaccent extension might already exist');
     }
 
-    // Insert comprehensive sample data with simplified reported_id (only ID)
+    // Insert comprehensive sample data with all 10 report types
     const insertQuery = `
       INSERT INTO report_management (
         reported_id, report_type, reporter_name, reporter_email, 
@@ -58,7 +61,7 @@ async function insertReportData() {
 
     const values = [
       // 1. Người dùng
-      JSON.stringify({"id":"114652263781752445"}),
+      JSON.stringify({"id":"114652263781752445","target_id":"108277159419234302"}),
       'user',
       JSON.stringify({"id":"114643441906721003","name":"Nguyễn Văn Hưng"}),
       'hung.nguyen@office.vn',
@@ -67,7 +70,7 @@ async function insertReportData() {
       'pending',
 
       // 2. Trang
-      JSON.stringify({"id":"PAGE_123789456"}),
+      JSON.stringify({"id":"PAGE_123789456","target_id":"PAGE_654321789"}),
       'page',
       JSON.stringify({"id":"114643441906721004","name":"Trần Thị Mai"}),
       'mai.tran@company.vn',
@@ -76,7 +79,7 @@ async function insertReportData() {
       'processing',
 
       // 3. Nhóm
-      JSON.stringify({"id":"GROUP_987654321"}),
+      JSON.stringify({"id":"GROUP_987654321","target_id":"GROUP_111222333"}),
       'group',
       JSON.stringify({"id":"114643441906721005","name":"Lê Minh Tuấn"}),
       'tuan.le@enterprise.vn',
@@ -85,7 +88,7 @@ async function insertReportData() {
       'completed',
 
       // 4. Nội dung
-      JSON.stringify({"id":"CONTENT_555666777"}),
+      JSON.stringify({"id":"CONTENT_555666777","target_id":"POST_888999000"}),
       'content',
       JSON.stringify({"id":"114643441906721006","name":"Phạm Đức Anh"}),
       'anh.pham@business.vn',
@@ -94,7 +97,7 @@ async function insertReportData() {
       'pending',
 
       // 5. Bình luận
-      JSON.stringify({"id":"COMMENT_444555666"}),
+      JSON.stringify({"id":"COMMENT_444555666","target_id":"COMMENT_777888999"}),
       'comment',
       JSON.stringify({"id":"114643441906721007","name":"Hoàng Thị Lan"}),
       'lan.hoang@office.vn',
@@ -103,7 +106,7 @@ async function insertReportData() {
       'completed',
 
       // 6. Tuyển dụng
-      JSON.stringify({"id":"JOB_123456789"}),
+      JSON.stringify({"id":"JOB_123456789","target_id":"RECRUITMENT_987654321"}),
       'recruitment',
       JSON.stringify({"id":"114643441906721008","name":"Võ Minh Quang"}),
       'quang.vo@hr.vn',
@@ -112,7 +115,7 @@ async function insertReportData() {
       'processing',
 
       // 7. Dự án
-      JSON.stringify({"id":"PROJECT_789012345"}),
+      JSON.stringify({"id":"PROJECT_789012345","target_id":"PROJECT_456789012"}),
       'project',
       JSON.stringify({"id":"114643441906721009","name":"Đặng Thị Hoa"}),
       'hoa.dang@startup.vn',
@@ -121,7 +124,7 @@ async function insertReportData() {
       'pending',
 
       // 8. Khóa học
-      JSON.stringify({"id":"COURSE_345678901"}),
+      JSON.stringify({"id":"COURSE_345678901","target_id":"COURSE_234567890"}),
       'course',
       JSON.stringify({"id":"114643441906721010","name":"Bùi Văn Nam"}),
       'nam.bui@education.vn',
@@ -130,7 +133,7 @@ async function insertReportData() {
       'completed',
 
       // 9. Sự kiện
-      JSON.stringify({"id":"EVENT_567890123"}),
+      JSON.stringify({"id":"EVENT_567890123","target_id":"EVENT_678901234"}),
       'event',
       JSON.stringify({"id":"114643441906721011","name":"Trương Thị Linh"}),
       'linh.truong@events.vn',
@@ -139,7 +142,7 @@ async function insertReportData() {
       'processing',
 
       // 10. Bài hát
-      JSON.stringify({"id":"SONG_890123456"}),
+      JSON.stringify({"id":"SONG_890123456","target_id":"MUSIC_345678901"}),
       'song',
       JSON.stringify({"id":"114643441906721012","name":"Lý Văn Đức"}),
       'duc.ly@music.vn',
@@ -148,39 +151,41 @@ async function insertReportData() {
       'pending'
     ];
 
-    await client.query(insertQuery, values);
+    const insertResult = await client.query(insertQuery, values);
+    console.log('Insert query executed, rows affected:', insertResult.rowCount);
 
-    console.log('✅ Successfully inserted 10 sample reports with simplified reported_id:');
-    console.log('1. Người dùng - ID: 114652263781752445');
-    console.log('2. Trang - ID: PAGE_123789456');
-    console.log('3. Nhóm - ID: GROUP_987654321');
-    console.log('4. Nội dung - ID: CONTENT_555666777');
-    console.log('5. Bình luận - ID: COMMENT_444555666');
-    console.log('6. Tuyển dụng - ID: JOB_123456789');
-    console.log('7. Dự án - ID: PROJECT_789012345');
-    console.log('8. Khóa học - ID: COURSE_345678901');
-    console.log('9. Sự kiện - ID: EVENT_567890123');
-    console.log('10. Bài hát - ID: SONG_890123456');
+    // Commit transaction
+    await client.query('COMMIT');
+    console.log('Transaction committed successfully');
 
-    // Verify the data
-    const verifyResult = await client.query(`
-      SELECT id, reported_id, report_type, reason, status 
-      FROM report_management 
-      ORDER BY created_at DESC 
-      LIMIT 3
-    `);
+    // Verify data was inserted
+    const countResult = await client.query('SELECT COUNT(*) as count FROM report_management');
+    console.log('Total reports in database:', countResult.rows[0].count);
 
-    console.log('\n📋 Sample verification data:');
-    verifyResult.rows.forEach((row, index) => {
-      console.log(`${index + 1}. ID: ${row.id} | Reported: ${JSON.stringify(row.reported_id)} | Type: ${row.report_type}`);
-    });
+    console.log('✅ Successfully inserted 10 sample reports:');
+    console.log('1. Người dùng - Spam tin nhắn');
+    console.log('2. Trang - Vi phạm bản quyền');
+    console.log('3. Nhóm - Nội dung độc hại');
+    console.log('4. Nội dung - Lừa đảo tài chính');
+    console.log('5. Bình luận - Quấy rối tình dục');
+    console.log('6. Tuyển dụng - Thông tin tuyển dụng lừa đảo');
+    console.log('7. Dự án - Dự án lừa đảo đầu tư');
+    console.log('8. Khóa học - Khóa học kém chất lượng');
+    console.log('9. Sự kiện - Sự kiện lừa đảo');
+    console.log('10. Bài hát - Vi phạm bản quyền âm nhạc');
 
   } catch (error) {
     console.error('Error inserting report data:', error);
+    try {
+      await client.query('ROLLBACK');
+      console.log('Transaction rolled back');
+    } catch (rollbackError) {
+      console.error('Error rolling back transaction:', rollbackError);
+    }
   } finally {
     client.release();
     await pool.end();
-    console.log('Report data insertion completed');
+    console.log('Sample report data insertion completed');
   }
 }
 
