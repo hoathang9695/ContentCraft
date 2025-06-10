@@ -2,7 +2,6 @@ import express from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../middleware/auth";
 import { pool } from "../db";
-import { requireAdmin } from "../middleware/requireAdmin";
 
 const router = express.Router();
 
@@ -181,7 +180,7 @@ router.get("/", isAuthenticated, async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error getting user queues:", error);
+    console.error("❌ Error getting user queues:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get user queues"
@@ -189,85 +188,93 @@ router.get("/", isAuthenticated, async (req, res) => {
   }
 });
 
-// Manual cleanup endpoint
-router.post('/cleanup', requireAdmin, async (req, res) => {
+// Get processor status (Admin only)
+router.get('/status', isAuthenticated, async (req, res) => {
   try {
-    const { hours = 24 } = req.body;
+    const user = req.user as any;
 
-    if (hours < 1 || hours > 168) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Hours must be between 1 and 168 (7 days)' 
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể xem trạng thái processor'
       });
     }
 
-    console.log(`🧹 [MANUAL] Starting cleanup of queues older than ${hours} hours...`);
-
-    const deletedCount = await storage.cleanupOldQueues(hours);
-
-    console.log(`🧹 [MANUAL] Cleanup completed: ${deletedCount} queues deleted`);
+    const { commentQueueProcessor } = await import('../comment-queue-processor');
+    const status = commentQueueProcessor.getProcessingStatus();
 
     res.json({
       success: true,
-      message: `Successfully cleaned up ${deletedCount} old queues`,
-      deletedCount,
-      hoursOld: hours,
-      timestamp: new Date().toISOString()
+      status,
+      message: 'Trạng thái processor hiện tại'
     });
+
   } catch (error) {
-    console.error('❌ Manual cleanup error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to cleanup queues',
-      error: error instanceof Error ? error.message : 'Unknown error'
+    console.error('❌ Error getting processor status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy trạng thái processor'
     });
   }
 });
 
-// Test cleanup endpoint - check what would be deleted without deleting
-router.get('/cleanup/preview/:hours', requireAdmin, async (req, res) => {
+// Force cleanup stuck queues (Admin only)
+router.post('/force-cleanup', isAuthenticated, async (req, res) => {
   try {
-    const hours = parseInt(req.params.hours) || 24;
+    const user = req.user as any;
 
-    if (hours < 1 || hours > 168) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Hours must be between 1 and 168 (7 days)' 
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể force cleanup'
       });
     }
 
-    // Preview what would be deleted
-    const previewQuery = `
-      SELECT session_id, status, completed_at, 
-             EXTRACT(EPOCH FROM (NOW() - completed_at))/3600 as hours_old
-      FROM comment_queues 
-      WHERE status IN ('completed', 'failed') 
-      AND completed_at IS NOT NULL
-      AND completed_at < NOW() - INTERVAL $1
-      ORDER BY completed_at DESC
-      LIMIT 50
-    `;
-
-    const result = await storage.query(previewQuery, [`${hours} hours`]);
+    const { commentQueueProcessor } = await import('../comment-queue-processor');
+    const status = await commentQueueProcessor.forceCleanupStuckQueues();
 
     res.json({
       success: true,
-      message: `Preview: ${result.rows.length} queues would be deleted`,
-      previewCount: result.rows.length,
-      hoursOld: hours,
-      queues: result.rows.map(row => ({
-        session_id: row.session_id,
-        status: row.status,
-        hours_old: Math.round(row.hours_old * 10) / 10,
-        completed_at: row.completed_at
-      }))
+      status,
+      message: 'Đã force cleanup stuck queues'
     });
+
   } catch (error) {
-    console.error('❌ Cleanup preview error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to preview cleanup',
-      error: error instanceof Error ? error.message : 'Unknown error'
+    console.error('❌ Error forcing cleanup:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi force cleanup'
+    });
+  }
+});
+
+// Manual cleanup for admin
+router.delete("/cleanup", isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as Express.User;
+
+    // Only allow admin to cleanup
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Only admin can perform cleanup"
+      });
+    }
+
+    const { hoursOld = 24 } = req.body;
+    const deletedCount = await storage.cleanupOldQueues(hoursOld);
+
+    res.json({
+      success: true,
+      message: `Cleaned up ${deletedCount} old queues`,
+      deletedCount
+    });
+
+  } catch (error) {
+    console.error("Error during manual cleanup:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to cleanup old queues"
     });
   }
 });
