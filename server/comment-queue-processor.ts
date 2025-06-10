@@ -16,11 +16,20 @@ interface ProcessingQueue {
 export class CommentQueueProcessor {
   private processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
   private processingInterval: NodeJS.Timeout | null = null;
-  private maxConcurrentQueues = 5; // Maximum concurrent queue processing
+  private maxConcurrentQueues = process.env.NODE_ENV === 'production' ? 10 : 5; // Production: 10, Development: 5
   private processingDelay = 10000; // 10 seconds between queue checks
 
   constructor() {
     console.log('🚀 CommentQueueProcessor constructor called (Multi-threaded)');
+    
+    // Configure based on environment
+    const envMaxQueues = parseInt(process.env.MAX_CONCURRENT_QUEUES || '0');
+    if (envMaxQueues > 0 && envMaxQueues <= 20) {
+      this.maxConcurrentQueues = envMaxQueues;
+    }
+    
+    console.log(`⚙️ Max concurrent queues set to: ${this.maxConcurrentQueues} (env: ${process.env.NODE_ENV})`);
+    
     try {
       this.startProcessor();
       console.log('✅ CommentQueueProcessor started successfully (Multi-threaded mode)');
@@ -92,6 +101,11 @@ export class CommentQueueProcessor {
       const queuesToProcess = pendingQueues.slice(0, availableSlots);
 
       console.log(`🔄 Starting ${queuesToProcess.length} new queue(s) (${currentProcessingCount + queuesToProcess.length}/${this.maxConcurrentQueues} total)`);
+
+      // Production monitoring
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`📊 [PROD] Queue utilization: ${Math.round((currentProcessingCount + queuesToProcess.length) / this.maxConcurrentQueues * 100)}%`);
+      }
 
       // Process queues in parallel
       const processingPromises = queuesToProcess.map(queue => 
@@ -320,8 +334,9 @@ export class CommentQueueProcessor {
   }
 
   private getAdaptiveDelay(attemptNumber: number): number {
-    const baseMs = 1 * 60000; // 1 minute base (reduced for multi-thread)
-    const maxMs = 3 * 60000; // 3 minutes max (reduced for multi-thread)
+    // Production: faster delays, Development: safer delays
+    const baseMs = process.env.NODE_ENV === 'production' ? 30000 : 60000; // 30s vs 1 minute
+    const maxMs = process.env.NODE_ENV === 'production' ? 120000 : 180000; // 2 vs 3 minutes
     const randomFactor = 0.5 + Math.random(); // 0.5 - 1.5
     return Math.min(baseMs * randomFactor, maxMs);
   }
