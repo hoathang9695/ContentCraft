@@ -95,7 +95,7 @@ async function simulate10ReportTypes() {
     const testMessages: ReportMessage[] = [
       // 1. User Report - Spam
       {
-        reportId: 'RPT_' + Date.now() + '_001',
+        reportId: '114652263781752001',
         reportType: 'user',
         reporterName: 'Nguyễn Văn An',
         reporterEmail: 'an.nguyen@example.com',
@@ -107,7 +107,7 @@ async function simulate10ReportTypes() {
 
       // 2. Page Report - Copyright
       {
-        reportId: 'RPT_' + Date.now() + '_002',
+        reportId: '114652263781752002',
         reportType: 'page',
         reporterName: 'Trần Thị Bình',
         reporterEmail: 'binh.tran@example.com',
@@ -119,7 +119,7 @@ async function simulate10ReportTypes() {
 
       // 3. Group Report - Harmful Content
       {
-        reportId: 'RPT_' + Date.now() + '_003',
+        reportId: '114652263781752003',
         reportType: 'group',
         reporterName: 'Lê Minh Cường',
         reporterEmail: 'cuong.le@example.com',
@@ -131,7 +131,7 @@ async function simulate10ReportTypes() {
 
       // 4. Content Report - Financial Scam
       {
-        reportId: 'RPT_' + Date.now() + '_004',
+        reportId: '114652263781752004',
         reportType: 'content',
         reporterName: 'Phạm Thị Dung',
         reporterEmail: 'dung.pham@example.com',
@@ -143,7 +143,7 @@ async function simulate10ReportTypes() {
 
       // 5. Comment Report - Sexual Harassment
       {
-        reportId: 'RPT_' + Date.now() + '_005',
+        reportId: '114652263781752005',
         reportType: 'comment',
         reporterName: 'Hoàng Văn Em',
         reporterEmail: 'em.hoang@example.com',
@@ -155,7 +155,7 @@ async function simulate10ReportTypes() {
 
       // 6. User Report - Identity Theft
       {
-        reportId: 'RPT_' + Date.now() + '_006',
+        reportId: '114652263781752006',
         reportType: 'user',
         reporterName: 'Võ Thị Giang',
         reporterEmail: 'giang.vo@business.vn',
@@ -167,7 +167,7 @@ async function simulate10ReportTypes() {
 
       // 7. Page Report - Fake Business
       {
-        reportId: 'RPT_' + Date.now() + '_007',
+        reportId: '114652263781752007',
         reportType: 'page',
         reporterName: 'Đinh Văn Hải',
         reporterEmail: 'hai.dinh@consumer.vn',
@@ -179,7 +179,7 @@ async function simulate10ReportTypes() {
 
       // 8. Group Report - Hate Speech
       {
-        reportId: 'RPT_' + Date.now() + '_008',
+        reportId: '114652263781752008',
         reportType: 'group',
         reporterName: 'Bùi Thị Lan',
         reporterEmail: 'lan.bui@social.vn',
@@ -191,7 +191,7 @@ async function simulate10ReportTypes() {
 
       // 9. Content Report - Fake News
       {
-        reportId: 'RPT_' + Date.now() + '_009',
+        reportId: '114652263781752009',
         reportType: 'content',
         reporterName: 'Lý Văn Minh',
         reporterEmail: 'minh.ly@news.vn',
@@ -203,7 +203,7 @@ async function simulate10ReportTypes() {
 
       // 10. Comment Report - Cyberbullying
       {
-        reportId: 'RPT_' + Date.now() + '_010',
+        reportId: '114652263781752010',
         reportType: 'comment',
         reporterName: 'Ngô Thị Oanh',
         reporterEmail: 'oanh.ngo@protection.vn',
