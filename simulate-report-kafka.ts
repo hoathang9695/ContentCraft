@@ -36,25 +36,35 @@ async function processReportMessage(message: ReportMessage) {
 
     console.log(`👤 Assigned to user: ${assignedUser.name} (ID: ${assignedUser.id})`);
 
-    // Here we would normally insert into report_management table
-    // For now, just simulate the processing
-    const reportData = {
-      reportId: message.reportId,
+    // Insert into report_management table
+    const insertData = {
+      reportedId: {
+        id: message.reportedTargetId || message.reportId
+      },
       reportType: message.reportType,
-      reporterName: message.reporterName,
+      reporterName: {
+        id: `reporter_${Date.now()}`,
+        name: message.reporterName
+      },
       reporterEmail: message.reporterEmail,
       reason: message.reason,
       detailedReason: message.detailedReason,
-      status: 'pending',
+      status: 'pending' as const,
       assignedToId: assignedUser.id,
       assignedToName: assignedUser.name,
-      assignedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
+      assignedAt: new Date()
     };
 
-    console.log(`✅ Report processed successfully:`, reportData);
-    return reportData;
+    // Import the schema
+    const { reportManagement } = await import('./shared/schema');
+    
+    const insertedReport = await db
+      .insert(reportManagement)
+      .values(insertData)
+      .returning();
+
+    console.log(`✅ Report inserted into database:`, insertedReport[0]);
+    return insertedReport[0];
 
   } catch (error) {
     console.error(`❌ Error processing report message: ${error}`);
