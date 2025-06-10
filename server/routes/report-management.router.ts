@@ -52,10 +52,10 @@ router.get('/', async (req, res) => {
     if (search) {
       whereConditions.push(
         or(
-          ilike(reportManagement.reporterName, `%${search}%`),
+          sql`${reportManagement.reporterName}->>'name' ILIKE ${`%${search}%`}`,
           ilike(reportManagement.reporterEmail, `%${search}%`),
           ilike(reportManagement.reason, `%${search}%`),
-          ilike(reportManagement.reportedId, `%${search}%`)
+          sql`${reportManagement.reportedId}->>'id' ILIKE ${`%${search}%`}`
         )
       );
     }
