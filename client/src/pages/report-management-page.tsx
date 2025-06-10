@@ -878,7 +878,7 @@ export default function ReportManagementPage() {
                       <div className="text-sm">
                         <div>{row.assignedToName}</div>
                         <div className="text-muted-foreground">
-                          {format(new Date(row.assignedAt!, 'dd/MM/yyyy HH:mm'))}
+                          {row.assignedAt ? format(new Date(row.assignedAt), 'dd/MM/yyyy HH:mm') : 'N/A'}
                         </div>
                       </div>
                     ) : (
@@ -896,7 +896,7 @@ export default function ReportManagementPage() {
                       <div className="text-sm">
                         <div className="truncate max-w-[200px]">{row.responseContent}</div>
                         <div className="text-muted-foreground">
-                          {format(new Date(row.responseTime!), 'dd/MM/yyyy HH:mm')}
+                          {row.responseTime ? format(new Date(row.responseTime), 'dd/MM/yyyy HH:mm') : 'N/A'}
                         </div>
                       </div>
                     ) : (
@@ -1028,7 +1028,7 @@ export default function ReportManagementPage() {
                     <Label className="text-sm font-medium">Được phân công cho</Label>
                     <p>{selectedRequest.assignedToName}</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(selectedRequest.assignedAt!), 'dd/MM/yyyy HH:mm')}
+                      {selectedRequest.assignedAt ? format(new Date(selectedRequest.assignedAt), 'dd/MM/yyyy HH:mm') : 'N/A'}
                     </p>
                   </div>
                 )}
@@ -1038,7 +1038,7 @@ export default function ReportManagementPage() {
                     <Label className="text-sm font-medium">Phản hồi</Label>
                     <p className="text-sm bg-muted p-3 rounded">{selectedRequest.responseContent}</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {format(new Date(selectedRequest.responseTime!), 'dd/MM/yyyy HH:mm')}
+                      {selectedRequest.responseTime ? format(new Date(selectedRequest.responseTime), 'dd/MM/yyyy HH:mm') : 'N/A'}
                     </p>
                   </div>
                 )}
