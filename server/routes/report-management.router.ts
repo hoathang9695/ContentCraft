@@ -181,6 +181,11 @@ router.patch('/:id/assign', async (req, res) => {
     }
 
     res.json({ message: 'Report assigned successfully', report: updatedReport[0] });
+    
+    // Broadcast badge update after assignment
+    if (typeof (global as any).broadcastFeedbackBadgeUpdate === 'function') {
+      (global as any).broadcastFeedbackBadgeUpdate();
+    }
   } catch (error) {
     console.error('Error assigning report:', error);
     res.status(500).json({ error: 'Failed to assign report' });
@@ -208,6 +213,11 @@ router.patch('/:id/status', async (req, res) => {
     }
 
     res.json({ message: 'Report status updated successfully', report: updatedReport[0] });
+    
+    // Broadcast badge update after status change
+    if (typeof (global as any).broadcastFeedbackBadgeUpdate === 'function') {
+      (global as any).broadcastFeedbackBadgeUpdate();
+    }
   } catch (error) {
     console.error('Error updating report status:', error);
     res.status(500).json({ error: 'Failed to update report status' });
@@ -239,6 +249,11 @@ router.patch('/:id/respond', async (req, res) => {
     }
 
     res.json({ message: 'Response added successfully', report: updatedReport[0] });
+    
+    // Broadcast badge update after adding response
+    if (typeof (global as any).broadcastFeedbackBadgeUpdate === 'function') {
+      (global as any).broadcastFeedbackBadgeUpdate();
+    }
   } catch (error) {
     console.error('Error adding response:', error);
     res.status(500).json({ error: 'Failed to add response' });

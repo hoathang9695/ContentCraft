@@ -43,6 +43,7 @@ interface BadgeCounts {
   feedbackRequests?: number;
   totalRequests?: number;
   verificationRequests?: number;
+  reportRequests?: number;
 }
 
 function SidebarItem({ href, icon: Icon, children, isActive, onClick, badge }: SidebarItemProps) {
