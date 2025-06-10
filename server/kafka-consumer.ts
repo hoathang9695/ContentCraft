@@ -105,8 +105,11 @@ export interface TickMessage {
 
 export interface ReportMessage {
   reportId: string;
-  reportType: 'user' | 'content' | 'page' | 'group' | 'comment';
-  reporterName: string;
+  reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'course' | 'project' | 'video' | 'song' | 'event';
+  reporterName: {
+    id: string;
+    name: string;
+  } | string;
   reporterEmail: string;
   reason: string;
   detailedReason?: string;
@@ -649,8 +652,9 @@ export async function setupKafkaConsumer() {
                             throw new Error(error);
                           }
 
-                          // Validate report type
-                          if (!['user', 'content', 'page', 'group', 'comment'].includes(reportMsg.reportType)) {
+                          // Validate report type (expanded list)
+                          const validReportTypes = ['user', 'content', 'page', 'group', 'comment', 'course', 'project', 'video', 'song', 'event'];
+                          if (!validReportTypes.includes(reportMsg.reportType)) {
                             const error = `❌ Invalid reportType: ${reportMsg.reportType}`;
                             log(error, "kafka-error");
                             throw new Error(error);
@@ -671,7 +675,6 @@ export async function setupKafkaConsumer() {
                           log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
 
                           // Get last assigned REPORT for round-robin (specific to reportManagement table)
-                          const { reportManagement } = await import('../../shared/schema.js');
                           const lastAssignedReport = await tx.query.reportManagement.findFirst({
                             orderBy: (reportManagement, { desc }) => [desc(reportManagement.createdAt)]
                           });
@@ -692,16 +695,24 @@ export async function setupKafkaConsumer() {
 
                           log(`👤 Assigned to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
 
+                          // Handle reporterName format (support both string and object)
+                          let reporterNameObj;
+                          if (typeof reportMsg.reporterName === 'string') {
+                            reporterNameObj = {
+                              id: `reporter_${Date.now()}`,
+                              name: reportMsg.reporterName
+                            };
+                          } else {
+                            reporterNameObj = reportMsg.reporterName;
+                          }
+
                           // Prepare insert data
                           const insertData = {
                             reportedId: {
                               id: reportMsg.reportedTargetId
                             },
                             reportType: reportMsg.reportType,
-                            reporterName: {
-                              id: `reporter_${Date.now()}`,
-                              name: reportMsg.reporterName
-                            },
+                            reporterName: reporterNameObj,
                             reporterEmail: reportMsg.reporterEmail,
                             reason: reportMsg.reason,
                             detailedReason: reportMsg.detailedReason || null,
@@ -812,8 +823,8 @@ function parseMessage(
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
-    // Check for report message (has reportId, reportType, reporterName, reporterEmail)
-    if ("reportId" in message && "reportType" in message && "reporterName" in message && "reporterEmail" in message && "reason" in message) {
+    // Check for report message (has reportId, reportType, reporterName, reporterEmail, reason, reportedTargetId)
+    if ("reportId" in message && "reportType" in message && "reporterName" in message && "reporterEmail" in message && "reason" in message && "reportedTargetId" in message) {
       return message as ReportMessage;
     }
     // Check for tick message first (has type: 'tick' and id)
