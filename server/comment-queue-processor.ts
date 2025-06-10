@@ -295,11 +295,14 @@ export class CommentQueueProcessor {
 
   async checkStuckQueues() {
     try {
+      // Import pool directly from db module to avoid storage dependency issues
+      const { pool } = await import('./db');
+      
       // Reset queues that have been processing for more than 30 minutes
       const stuckThreshold = new Date();
       stuckThreshold.setMinutes(stuckThreshold.getMinutes() - 30);
 
-      const result = await storage.pool.query(`
+      const result = await pool.query(`
         UPDATE comment_queues 
         SET status = 'pending', 
             started_at = NULL,
