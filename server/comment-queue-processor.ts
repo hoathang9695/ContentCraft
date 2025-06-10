@@ -58,14 +58,16 @@ export class CommentQueueProcessor {
 
   private scheduleCleanup() {
     // Run cleanup immediately on start
+    console.log('🗓️ Running initial cleanup check...');
     this.cleanupCompletedQueues();
     
     // Then run every 24 hours (86400000 ms)
     setInterval(async () => {
+      console.log('🗓️ Running scheduled cleanup check...');
       await this.cleanupCompletedQueues();
     }, 24 * 60 * 60 * 1000);
     
-    console.log('🗓️ Cleanup scheduled: once daily');
+    console.log('🗓️ Cleanup scheduled: immediate + every 24 hours');
   }
 
   stopProcessor() {
@@ -397,14 +399,18 @@ export class CommentQueueProcessor {
 
   async cleanupCompletedQueues() {
     try {
+      console.log(`🧹 [${new Date().toISOString()}] Starting automatic queue cleanup...`);
+      
       // Xóa các queues đã completed/failed cách đây hơn 24 giờ
       const cleanupResult = await storage.cleanupOldQueues(24); // 24 hours
       
       if (cleanupResult > 0) {
-        console.log(`🧹 Cleaned up ${cleanupResult} old completed queues`);
+        console.log(`🧹 [AUTO-CLEANUP] Successfully cleaned up ${cleanupResult} old completed queues`);
+      } else {
+        console.log(`🧹 [AUTO-CLEANUP] No old queues found for cleanup`);
       }
     } catch (error) {
-      console.error('❌ Error during queue cleanup:', error);
+      console.error('❌ [AUTO-CLEANUP] Error during queue cleanup:', error);
     }
   }
 
