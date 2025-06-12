@@ -30,7 +30,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-debounce';
 import { queryClient } from '@/lib/queryClient';
-import { CommentQueueReportDialog } from '@/components/CommentQueueReportDialog';
+import CommentQueueReportDialog from '@/components/CommentQueueReportDialog';
 import { TrendingUp } from 'lucide-react';
 
 export default function ContentPage() {

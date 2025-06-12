@@ -189,7 +189,7 @@ router.get("/", isAuthenticated, async (req, res) => {
 });
 
 // Get processor status (Admin only)
-router.get('/status', isAuthenticated, async (req, res) => {
+router.get('/processor/status', isAuthenticated, async (req, res) => {
   try {
     const user = req.user as any;
 
