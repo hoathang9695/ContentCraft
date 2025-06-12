@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -12,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -25,7 +24,8 @@ import {
   MessageSquare,
   TrendingUp,
   RefreshCw,
-  Trash2
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
 
 interface CommentQueueReportDialogProps {
@@ -54,8 +54,12 @@ interface QueueItem {
   updated_at: string;
 }
 
-export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueReportDialogProps) {
+export default function CommentQueueReportDialog({ 
+  open, 
+  onOpenChange 
+}: CommentQueueReportDialogProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Reset auto refresh khi đóng dialog
@@ -158,6 +162,60 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
     }
   };
 
+    // Reset individual queue mutation
+  const resetQueueMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      return apiRequest(`/api/comment-queues/reset-queue/${sessionId}`, {
+        method: 'POST'
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Queue Reset Thành Công",
+        description: data.message || "Queue đã được reset về trạng thái pending",
+      });
+      // Refetch data
+      refetchQueues();
+      refetchStatus();
+      queryClient.invalidateQueries({ queryKey: ['/api/comment-queues/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/comment-queues'] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Lỗi Reset Queue",
+        description: error.message || "Không thể reset queue",
+      });
+    }
+  });
+
+  // Force cleanup mutation (enhanced)
+  const forceCleanupMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('/api/comment-queues/force-cleanup', {
+        method: 'POST'
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Force Cleanup Thành Công",
+        description: data.status?.message || "Đã reset tất cả queue bị stuck",
+      });
+      // Refetch all data
+      refetchQueues();
+      refetchStatus();
+      queryClient.invalidateQueries({ queryKey: ['/api/comment-queues/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/comment-queues'] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Lỗi Force Cleanup",
+        description: error.message || "Không thể thực hiện force cleanup",
+      });
+    }
+  });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -190,7 +248,7 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Làm mới
                 </Button>
-                
+
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -215,7 +273,7 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Force Cleanup
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -308,7 +366,7 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                   </div>
                   <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Activity className="h-4 w-4 text-blue-600" />
@@ -316,7 +374,7 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                   </div>
                   <p className="text-2xl font-bold text-blue-600">{stats.processing}</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
@@ -324,7 +382,7 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                   </div>
                   <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <XCircle className="h-4 w-4 text-red-600" />
@@ -372,7 +430,7 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-4 text-right">
                       <div>
                         <p className="text-sm font-medium">
@@ -382,7 +440,7 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                           ✓{queue.success_count || 0} ✗{queue.failure_count || 0}
                         </p>
                       </div>
-                      
+
                       <Badge variant="outline" className="flex items-center gap-1">
                         {getStatusIcon(queue.status)}
                         {queue.status}
@@ -415,7 +473,7 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                   {processorStatus.processingQueues.map((pq) => {
                     const startTime = new Date(pq.startTime);
                     const duration = Math.floor((Date.now() - pq.startTime) / 1000 / 60);
-                    
+
                     return (
                       <div key={pq.sessionId} className="flex items-center justify-between p-2 bg-blue-50 rounded">
                         <span className="text-sm font-mono">{pq.sessionId}</span>
@@ -425,6 +483,143 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
                       </div>
                     );
                   })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Đang Xử Lý</CardTitle>
+                <Activity className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {processorStatus?.currentProcessingCount || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Max: {processorStatus?.maxConcurrentQueues || 0}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tổng Queues</CardTitle>
+                <MessageSquare className="h-4 w-4 text-gray-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {userQueues?.length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Queue gần đây
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Hoàn Thành</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {userQueues?.filter((q: any) => q.status === 'completed').length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Queue thành công
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Thất Bại</CardTitle>
+                <XCircle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {userQueues?.filter((q: any) => q.status === 'failed').length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Queue lỗi
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Stuck Queues Section */}
+          {userQueues?.filter((q: any) => q.status === 'processing').length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                  Queues Đang Processing ({userQueues.filter((q: any) => q.status === 'processing').length})
+                </CardTitle>
+                <CardDescription>
+                  Các queue có thể bị stuck. Click "Reset" để reset từng queue hoặc "Force Cleanup" để reset tất cả.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {userQueues
+                    .filter((q: any) => q.status === 'processing')
+                    .map((queue: any) => (
+                      <div key={queue.session_id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="font-mono text-sm font-medium">
+                            {queue.session_id}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            External ID: {queue.external_id} | 
+                            Progress: {queue.processed_count || 0}/{queue.total_comments} |
+                            Success: {queue.success_count || 0} |
+                            Failed: {queue.failure_count || 0}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Created: {new Date(queue.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => resetQueueMutation.mutate(queue.session_id)}
+                          disabled={resetQueueMutation.isPending}
+                          className="ml-2"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-1" />
+                          Reset
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => forceCleanupMutation.mutate()}
+                    disabled={forceCleanupMutation.isPending}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    {forceCleanupMutation.isPending ? 'Đang Reset...' : 'Force Cleanup All'}
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      refetchQueues();
+                      refetchStatus();
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
                 </div>
               </CardContent>
             </Card>

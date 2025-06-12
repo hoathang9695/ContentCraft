@@ -539,22 +539,18 @@ export class CommentQueueProcessor {
       // Import pool directly from db module
       const { pool } = await import('./db');
       
-      // Reset queues that have been processing for more than 1 hour
-      const stuckThreshold = new Date();
-      stuckThreshold.setHours(stuckThreshold.getHours() - 1);
-      
-      console.log(`🔍 Force cleanup: Resetting queues stuck before: ${stuckThreshold.toISOString()}`);
+      // Reset ALL processing queues (more aggressive cleanup for force action)
+      console.log(`🔍 Force cleanup: Resetting ALL processing queues`);
 
-      // Reset stuck processing queues
+      // Reset ALL stuck processing queues (no time limit for force cleanup)
       const stuckResult = await pool.query(`
         UPDATE comment_queues 
         SET status = 'pending', 
             started_at = NULL,
-            error_info = CONCAT(COALESCE(error_info, ''), '; Force cleanup reset stuck processing at ', NOW())
-        WHERE status = 'processing' 
-        AND started_at < $1
-        RETURNING session_id, external_id, started_at, 'stuck_processing' as reset_reason
-      `, [stuckThreshold.toISOString()]);
+            error_info = CONCAT(COALESCE(error_info, ''), '; Force cleanup reset all processing queues at ', NOW())
+        WHERE status = 'processing'
+        RETURNING session_id, external_id, started_at, 'force_reset_processing' as reset_reason
+      `);
 
       // Reset failed queues to retry them
       const failedResult = await pool.query(`
@@ -570,13 +566,23 @@ export class CommentQueueProcessor {
       const totalResetCount = allResetQueues.length;
 
       if (totalResetCount > 0) {
-        console.log(`🔧 Force cleanup: Reset ${stuckResult.rows.length} stuck queues and ${failedResult.rows.length} failed queues`);
+        console.log(`🔧 Force cleanup: Reset ${stuckResult.rows.length} processing queues and ${failedResult.rows.length} failed queues`);
         
-        // Remove stuck queues from our local processing map
-        stuckResult.rows.forEach(row => {
-          this.processingQueues.delete(row.session_id);
-          console.log(`🔧 Removed locally tracked stuck queue: ${row.session_id}`);
-        });
+        // Clear ALL local processing map entries (force cleanup)
+        const localProcessingCount = this.processingQueues.size;
+        this.processingQueues.clear();
+        console.log(`🔧 Cleared ${localProcessingCount} locally tracked processing queues`);
+
+        // Log specific queues being reset
+        if (stuckResult.rows.length > 0) {
+          console.log(`🔧 Reset processing queues:`, 
+            stuckResult.rows.map(row => ({ 
+              sessionId: row.session_id, 
+              externalId: row.external_id,
+              wasProcessingSince: row.started_at 
+            }))
+          );
+        }
 
         // Log failed queues being reset
         if (failedResult.rows.length > 0) {
@@ -594,23 +600,35 @@ export class CommentQueueProcessor {
           resetCount: totalResetCount,
           stuckResetCount: stuckResult.rows.length,
           failedResetCount: failedResult.rows.length,
+          localProcessingCleared: localProcessingCount,
           resetQueues: allResetQueues.map(row => ({
             sessionId: row.session_id,
             externalId: row.external_id,
             resetReason: row.reset_reason,
             wasStuckSince: row.started_at || row.failed_at
           })),
-          message: `Reset ${stuckResult.rows.length} stuck queues and ${failedResult.rows.length} failed queues for retry`
+          message: `Force reset ${stuckResult.rows.length} processing queues and ${failedResult.rows.length} failed queues. Cleared ${localProcessingCount} local tracking entries.`
         };
       } else {
-        console.log('🔧 Force cleanup: No stuck or failed queues found to reset');
+        console.log('🔧 Force cleanup: No processing or failed queues found to reset');
+        
+        // Still clear local processing map in case of inconsistency
+        const localProcessingCount = this.processingQueues.size;
+        if (localProcessingCount > 0) {
+          this.processingQueues.clear();
+          console.log(`🔧 Cleared ${localProcessingCount} locally tracked processing queues for consistency`);
+        }
+        
         return {
           success: true,
           resetCount: 0,
           stuckResetCount: 0,
           failedResetCount: 0,
+          localProcessingCleared: localProcessingCount,
           resetQueues: [],
-          message: 'No stuck or failed queues found'
+          message: localProcessingCount > 0 
+            ? `No database queues to reset, but cleared ${localProcessingCount} local tracking entries`
+            : 'No stuck queues found'
         };
       }
 
