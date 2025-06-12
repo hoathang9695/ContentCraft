@@ -71,7 +71,7 @@ export default function CommentQueueReportDialog({
 
   // Fetch processor status - chỉ khi dialog mở
   const { data: processorStatus, refetch: refetchStatus } = useQuery<QueueStats>({
-    queryKey: ['/api/comment-queues/status'],
+    queryKey: ['/api/comment-queues/processor/status'],
     refetchInterval: open && autoRefresh ? 5000 : false,
     enabled: open,
     staleTime: 0, // Luôn fetch fresh data khi mở dialog
@@ -177,7 +177,7 @@ export default function CommentQueueReportDialog({
       // Refetch data
       refetchQueues();
       refetchStatus();
-      queryClient.invalidateQueries({ queryKey: ['/api/comment-queues/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/comment-queues/processor/status'] });
       queryClient.invalidateQueries({ queryKey: ['/api/comment-queues'] });
     },
     onError: (error: any) => {
@@ -204,7 +204,7 @@ export default function CommentQueueReportDialog({
       // Refetch all data
       refetchQueues();
       refetchStatus();
-      queryClient.invalidateQueries({ queryKey: ['/api/comment-queues/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/comment-queues/processor/status'] });
       queryClient.invalidateQueries({ queryKey: ['/api/comment-queues'] });
     },
     onError: (error: any) => {
