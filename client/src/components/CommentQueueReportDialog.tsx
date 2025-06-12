@@ -58,18 +58,29 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
   const { toast } = useToast();
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Fetch processor status
+  // Reset auto refresh khi đóng dialog
+  useEffect(() => {
+    if (!open) {
+      setAutoRefresh(true); // Reset về default khi đóng
+    }
+  }, [open]);
+
+  // Fetch processor status - chỉ khi dialog mở
   const { data: processorStatus, refetch: refetchStatus } = useQuery<QueueStats>({
     queryKey: ['/api/comment-queues/status'],
-    refetchInterval: autoRefresh ? 5000 : false,
+    refetchInterval: open && autoRefresh ? 5000 : false,
     enabled: open,
+    staleTime: 0, // Luôn fetch fresh data khi mở dialog
+    gcTime: 0, // Không cache data khi đóng dialog
   });
 
-  // Fetch user queues
+  // Fetch user queues - chỉ khi dialog mở
   const { data: userQueuesResponse, refetch: refetchQueues } = useQuery<{success: boolean, data: QueueItem[]}>({
     queryKey: ['/api/comment-queues'],
-    refetchInterval: autoRefresh ? 5000 : false,
+    refetchInterval: open && autoRefresh ? 5000 : false,
     enabled: open,
+    staleTime: 0, // Luôn fetch fresh data khi mở dialog
+    gcTime: 0, // Không cache data khi đóng dialog
   });
 
   const userQueues = userQueuesResponse?.data || [];
