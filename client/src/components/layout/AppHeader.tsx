@@ -24,9 +24,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 interface AppHeaderProps {
   onMenuClick: () => void;
   onSearch?: (query: string) => void;
+  onNewContent?: () => void;
+  onQueueReport?: () => void;
 }
 
-export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
+export function AppHeader({ onMenuClick, onSearch, onNewContent, onQueueReport }: AppHeaderProps) {
   const [, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,8 +74,23 @@ export function AppHeader({ onMenuClick, onSearch }: AppHeaderProps) {
           </div>
         </div>
         
-        {/* Right section: Search and user menu */}
+        {/* Right section: Buttons, Search and user menu */}
         <div className="flex items-center space-x-4">
+          {/* Action buttons */}
+          <div className="flex items-center space-x-2">
+            {onNewContent && (
+              <Button onClick={onNewContent} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                <FileText className="h-4 w-4 mr-2" />
+                New Content
+              </Button>
+            )}
+            {onQueueReport && (
+              <Button onClick={onQueueReport} variant="outline" size="sm">
+                Queue Report
+              </Button>
+            )}
+          </div>
+
           {/* Search */}
           <form onSubmit={handleSearch} className="hidden md:flex relative">
             <div className="relative">

@@ -46,7 +46,7 @@ export function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader onMenuClick={toggleSidebar} onSearch={onSearch}  onNewContent={onNewContent} onQueueReport={onQueueReport}/>
+      <AppHeader onMenuClick={toggleSidebar} onSearch={onSearch} onNewContent={onNewContent} onQueueReport={onQueueReport}/>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar for mobile - with overlay */}
