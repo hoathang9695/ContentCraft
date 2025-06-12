@@ -1325,6 +1325,24 @@ export class DatabaseStorage implements IStorage {
       }
 
       const updatedQueue = result.rows[0];
+      
+      // Validate data consistency after update
+      const actualProcessed = (updatedQueue.success_count || 0) + (updatedQueue.failure_count || 0);
+      if (updatedQueue.status === 'completed' && actualProcessed !== updatedQueue.total_comments) {
+        console.error(`❌ [${sessionId}] INCONSISTENCY DETECTED: status=completed but actualProcessed(${actualProcessed}) != totalComments(${updatedQueue.total_comments})`);
+        
+        // Auto-fix by setting status to failed
+        await pool.query(`
+          UPDATE comment_queues 
+          SET status = 'failed', 
+              error_info = CONCAT(COALESCE(error_info, ''), '; Auto-fixed inconsistent completion state at ', NOW()),
+              updated_at = NOW()
+          WHERE session_id = $1
+        `, [sessionId]);
+        
+        throw new Error(`Inconsistent queue state detected and auto-fixed for ${sessionId}`);
+      }
+
       console.log(`✅ [${sessionId}] Queue progress updated: status=${updatedQueue.status}, processed=${updatedQueue.processed_count}/${updatedQueue.total_comments}, success=${updatedQueue.success_count}, failed=${updatedQueue.failure_count}`);
 
       return updatedQueue;

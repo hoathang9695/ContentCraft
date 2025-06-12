@@ -14,9 +14,9 @@ interface ProcessingQueue {
 }
 
 export class CommentQueueProcessor {
-  private processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
+  public processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
   private processingInterval: NodeJS.Timeout | null = null;
-  private maxConcurrentQueues = 3; // Maximum concurrent queue processing
+  public maxConcurrentQueues = 5; // Maximum concurrent queue processing (optimized for Replit)
   private processingDelay = 10000; // 10 seconds between queue checks
 
   constructor() {
@@ -260,7 +260,7 @@ export class CommentQueueProcessor {
             
             // Update progress after successful send
             await storage.updateCommentQueueProgress(sessionId, {
-              processedCount: index + 1, // This comment is now successfully processed
+              processedCount: currentSuccessCount + currentFailureCount,
               successCount: currentSuccessCount
             });
 
@@ -279,7 +279,7 @@ export class CommentQueueProcessor {
               currentFailureCount++;
               
               await storage.updateCommentQueueProgress(sessionId, {
-                processedCount: index + 1, // This comment is processed (but failed)
+                processedCount: currentSuccessCount + currentFailureCount,
                 failureCount: currentFailureCount,
                 errorInfo: error instanceof Error ? error.message : 'Unknown error'
               });
@@ -291,31 +291,35 @@ export class CommentQueueProcessor {
       }
 
       // All comments processed - validate completion
-      const totalProcessed = currentSuccessCount + currentFailureCount;
-      const expectedProcessed = comments.length;
+      const totalCommentsInQueue = comments.length;
+      const commentsProcessedThisRun = currentSuccessCount + currentFailureCount - (queue.success_count || 0) - (queue.failure_count || 0);
+      const commentsExpectedThisRun = totalCommentsInQueue - startIndex;
+      const finalTotalProcessed = currentSuccessCount + currentFailureCount;
       
-      console.log(`📊 [${sessionId}] Processing finished: ${totalProcessed}/${expectedProcessed} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
-      console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${comments.length}, actualProcessed=${totalProcessed}`);
+      console.log(`📊 [${sessionId}] Processing finished: ${commentsProcessedThisRun}/${commentsExpectedThisRun} comments processed this run`);
+      console.log(`📊 [${sessionId}] Total progress: ${finalTotalProcessed}/${totalCommentsInQueue} comments (${currentSuccessCount} success, ${currentFailureCount} failed)`);
+      console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}`);
 
       // Strict validation before marking as completed
-      if (totalProcessed === expectedProcessed && (startIndex + totalProcessed) <= expectedProcessed) {
-        // Double-check: verify we actually processed all comments from startIndex to end
-        const actuallyProcessedCount = comments.length;
-        
+      // Check if we processed all remaining comments correctly
+      const allCommentsProcessed = finalTotalProcessed === totalCommentsInQueue;
+      const thisRunCompleted = commentsProcessedThisRun === commentsExpectedThisRun;
+      
+      if (allCommentsProcessed && thisRunCompleted) {
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'completed',
-          processedCount: actuallyProcessedCount,
+          processedCount: finalTotalProcessed,
           successCount: currentSuccessCount,
           failureCount: currentFailureCount
         });
-        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${actuallyProcessedCount} comments processed`);
+        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${finalTotalProcessed}/${totalCommentsInQueue} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
       } else {
         // Mark as failed if counts don't match
-        const errorMsg = `Processing incomplete: processed=${totalProcessed}, expected=${expectedProcessed}, startIndex=${startIndex}`;
+        const errorMsg = `Processing incomplete: totalProcessed=${finalTotalProcessed}, expectedTotal=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}, expectedThisRun=${commentsExpectedThisRun}, startIndex=${startIndex}, success=${currentSuccessCount}, failed=${currentFailureCount}`;
         
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'failed',
-          processedCount: totalProcessed,
+          processedCount: finalTotalProcessed,
           successCount: currentSuccessCount,
           failureCount: currentFailureCount,
           errorInfo: errorMsg
@@ -420,6 +424,17 @@ export class CommentQueueProcessor {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  getStatus() {
+    return {
+      currentProcessingCount: this.processingQueues.size,
+      maxConcurrentQueues: this.maxConcurrentQueues,
+      processingQueues: Array.from(this.processingQueues.entries()).map(([sessionId, queue]) => ({
+        sessionId,
+        startTime: queue.startTime || Date.now()
+      }))
+    };
+  }
+
   async checkStuckQueues() {
     try {
       // Import pool directly from db module to avoid storage dependency issues
@@ -513,6 +528,95 @@ export class CommentQueueProcessor {
       console.log(`⚙️ Max concurrent queues updated to: ${limit}`);
     } else {
       console.error('❌ Invalid concurrent limit. Must be between 1 and 10');
+    }
+  }
+
+  // Public method to force cleanup stuck queues
+  async forceCleanupStuckQueues() {
+    try {
+      console.log('🔧 Force cleanup stuck queues requested...');
+      
+      // Import pool directly from db module
+      const { pool } = await import('./db');
+      
+      // Reset queues that have been processing for more than 1 hour
+      const stuckThreshold = new Date();
+      stuckThreshold.setHours(stuckThreshold.getHours() - 1);
+      
+      console.log(`🔍 Force cleanup: Resetting queues stuck before: ${stuckThreshold.toISOString()}`);
+
+      // Reset stuck processing queues
+      const stuckResult = await pool.query(`
+        UPDATE comment_queues 
+        SET status = 'pending', 
+            started_at = NULL,
+            error_info = CONCAT(COALESCE(error_info, ''), '; Force cleanup reset stuck processing at ', NOW())
+        WHERE status = 'processing' 
+        AND started_at < $1
+        RETURNING session_id, external_id, started_at, 'stuck_processing' as reset_reason
+      `, [stuckThreshold.toISOString()]);
+
+      // Reset failed queues to retry them
+      const failedResult = await pool.query(`
+        UPDATE comment_queues 
+        SET status = 'pending', 
+            started_at = NULL,
+            error_info = CONCAT(COALESCE(error_info, ''), '; Force cleanup reset failed queue for retry at ', NOW())
+        WHERE status = 'failed'
+        RETURNING session_id, external_id, completed_at as failed_at, 'failed_retry' as reset_reason
+      `);
+
+      const allResetQueues = [...stuckResult.rows, ...failedResult.rows];
+      const totalResetCount = allResetQueues.length;
+
+      if (totalResetCount > 0) {
+        console.log(`🔧 Force cleanup: Reset ${stuckResult.rows.length} stuck queues and ${failedResult.rows.length} failed queues`);
+        
+        // Remove stuck queues from our local processing map
+        stuckResult.rows.forEach(row => {
+          this.processingQueues.delete(row.session_id);
+          console.log(`🔧 Removed locally tracked stuck queue: ${row.session_id}`);
+        });
+
+        // Log failed queues being reset
+        if (failedResult.rows.length > 0) {
+          console.log(`🔧 Reset failed queues for retry:`, 
+            failedResult.rows.map(row => ({ 
+              sessionId: row.session_id, 
+              externalId: row.external_id,
+              wasFailedAt: row.failed_at 
+            }))
+          );
+        }
+
+        return {
+          success: true,
+          resetCount: totalResetCount,
+          stuckResetCount: stuckResult.rows.length,
+          failedResetCount: failedResult.rows.length,
+          resetQueues: allResetQueues.map(row => ({
+            sessionId: row.session_id,
+            externalId: row.external_id,
+            resetReason: row.reset_reason,
+            wasStuckSince: row.started_at || row.failed_at
+          })),
+          message: `Reset ${stuckResult.rows.length} stuck queues and ${failedResult.rows.length} failed queues for retry`
+        };
+      } else {
+        console.log('🔧 Force cleanup: No stuck or failed queues found to reset');
+        return {
+          success: true,
+          resetCount: 0,
+          stuckResetCount: 0,
+          failedResetCount: 0,
+          resetQueues: [],
+          message: 'No stuck or failed queues found'
+        };
+      }
+
+    } catch (error) {
+      console.error('❌ Error in force cleanup stuck queues:', error);
+      throw error;
     }
   }
 }

@@ -200,13 +200,22 @@ router.get('/status', isAuthenticated, async (req, res) => {
       });
     }
 
-    const { commentQueueProcessor } = await import('../comment-queue-processor');
-    const status = commentQueueProcessor.getProcessingStatus();
+    const { CommentQueueProcessor } = await import('../comment-queue-processor');
+    
+    // Get current processor instance status
+    const processorInstance = CommentQueueProcessor.getInstance();
+    const status = {
+      currentProcessingCount: processorInstance.processingQueues?.size || 0,
+      maxConcurrentQueues: processorInstance.maxConcurrentQueues || 10,
+      processingQueues: Array.from(processorInstance.processingQueues?.entries() || []).map(([sessionId, queue]) => ({
+        sessionId,
+        startTime: queue.startTime || Date.now()
+      }))
+    };
 
     res.json({
       success: true,
-      status,
-      message: 'Trạng thái processor hiện tại'
+      ...status
     });
 
   } catch (error) {
@@ -331,7 +340,7 @@ router.get('/cleanup/status', isAuthenticated, async (req, res) => {
 
     // Get current queue statistics
     const totalCount = await storage.getQueueCount();
-    
+
     // Check queues that would be cleaned up
     const previewResult = await pool.query(`
       SELECT COUNT(*) as cleanup_eligible_count
@@ -401,7 +410,7 @@ router.get('/check-inconsistent', isAuthenticated, async (req, res) => {
         actual_processed: row.actual_processed,
         issue: row.status === 'completed' && row.processed_count < row.total_comments 
           ? 'Marked completed but not all processed'
-          : row.processed_count > row.total_comments
+          : row.processed_count > total_comments
           ? 'Processed count exceeds total'
           : 'Other inconsistency',
         created_at: row.created_at,
@@ -496,7 +505,7 @@ router.post('/fix-queue/:sessionId', isAuthenticated, async (req, res) => {
     }
 
     const { sessionId } = req.params;
-    
+
     // Get queue details first
     const queueResult = await pool.query(`
       SELECT session_id, status, total_comments, processed_count, success_count, failure_count, comments
@@ -515,11 +524,11 @@ router.post('/fix-queue/:sessionId', isAuthenticated, async (req, res) => {
     const comments = Array.isArray(queue.comments) ? queue.comments : JSON.parse(queue.comments);
     const actualTotalComments = comments.length;
     const actualProcessed = (queue.success_count || 0) + (queue.failure_count || 0);
-    
+
     // Determine correct status
     let newStatus = queue.status;
     let errorInfo = queue.error_info || '';
-    
+
     if (queue.status === 'completed' && actualProcessed < actualTotalComments) {
       newStatus = 'failed';
       errorInfo += `; Fixed: was marked completed but only ${actualProcessed}/${actualTotalComments} processed at ${new Date().toISOString()}`;
@@ -606,5 +615,7 @@ router.get('/cleanup/preview', isAuthenticated, async (req, res) => {
     });
   }
 });
+
+
 
 export default router;

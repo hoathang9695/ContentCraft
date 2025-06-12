@@ -8,19 +8,24 @@ import { Button } from '@/components/ui/button';
 interface DashboardLayoutProps {
   children: React.ReactNode;
   onSearch?: (query: string) => void;
+  onNewContent?: () => void;
 }
 
-export function DashboardLayout({ children, onSearch }: DashboardLayoutProps) {
+export function DashboardLayout({ 
+  children, 
+  onSearch, 
+  onNewContent
+}: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-  
+
   const closeSidebar = () => {
     setSidebarOpen(false);
   };
-  
+
   // Close sidebar when clicked outside on mobile
   useEffect(() => {
     const handleResize = () => {
@@ -29,18 +34,18 @@ export function DashboardLayout({ children, onSearch }: DashboardLayoutProps) {
         setSidebarOpen(true);
       }
     };
-    
+
     // Set initial state based on screen size
     handleResize();
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader onMenuClick={toggleSidebar} onSearch={onSearch} />
-      
+      <AppHeader onMenuClick={toggleSidebar} onSearch={onSearch} onNewContent={onNewContent}/>
+
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar for mobile - with overlay */}
         {sidebarOpen && (
@@ -58,10 +63,10 @@ export function DashboardLayout({ children, onSearch }: DashboardLayoutProps) {
             </Button>
           </div>
         )}
-        
+
         {/* Sidebar */}
         <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
-        
+
         {/* Main content */}
         <main className={cn(
           "flex-1 relative overflow-y-auto focus:outline-none transition-all duration-200",
