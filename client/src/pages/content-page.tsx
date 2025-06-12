@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-debounce';
 import { queryClient } from '@/lib/queryClient';
 import { CommentQueueReportDialog } from '@/components/CommentQueueReportDialog';
+import { TrendingUp } from 'lucide-react';
 
 export default function ContentPage() {
   const { user } = useAuth();
@@ -86,8 +87,21 @@ export default function ContentPage() {
   return (
     <DashboardLayout 
       onSearch={handleSearch}
-      onQueueReport={() => setShowQueueReport(true)}
     >
+      {/* Page header with Queue Report button */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-foreground">Content Management</h1>
+        <Button 
+          onClick={() => setShowQueueReport(true)} 
+          variant="outline" 
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <TrendingUp className="h-4 w-4" />
+          Queue Report
+        </Button>
+      </div>
+
       {/* Responsive filters layout - horizontal on desktop, vertical on mobile */}
       <div className="mb-4">
         {/* Mobile layout (< md) - vertical stack */}
