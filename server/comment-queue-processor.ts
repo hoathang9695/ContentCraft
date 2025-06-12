@@ -200,18 +200,32 @@ export class CommentQueueProcessor {
         if (Date.now() - startTime > maxProcessingTime) {
           console.log(`⏰ [${sessionId}] Timeout after ${maxProcessingTime/60000} minutes at comment ${index + 1}/${comments.length}`);
           
-          // Update progress before timeout
+          // Update progress before timeout with accurate counts
+          const currentTotalProcessed = currentSuccessCount + currentFailureCount;
           await storage.updateCommentQueueProgress(sessionId, {
             status: 'failed',
-            processedCount: index, // Current index, not +1 since this comment wasn't processed
-            errorInfo: `Processing timeout after ${maxProcessingTime/60000} minutes at comment ${index + 1}/${comments.length}`
+            processedCount: currentTotalProcessed,
+            successCount: currentSuccessCount,
+            failureCount: currentFailureCount,
+            errorInfo: `Processing timeout after ${maxProcessingTime/60000} minutes at comment ${index + 1}/${comments.length}. Processed: ${currentTotalProcessed}/${comments.length}`
           });
           
           throw new Error('Processing timeout - queue took too long to process');
         }
 
+        // Validate comment exists and is not empty
         const comment = comments[index];
-        
+        if (!comment || typeof comment !== 'string' || comment.trim() === '') {
+          console.log(`⚠️ [${sessionId}] Skipping empty comment at index ${index + 1}/${comments.length}`);
+          currentFailureCount++;
+          await storage.updateCommentQueueProgress(sessionId, {
+            processedCount: currentSuccessCount + currentFailureCount,
+            failureCount: currentFailureCount,
+            errorInfo: `Empty comment at index ${index + 1}`
+          });
+          continue;
+        }
+
         // Add delay between comments (except for first)
         if (index > startIndex) {
           const delayMs = this.getAdaptiveDelay(index);
@@ -276,24 +290,37 @@ export class CommentQueueProcessor {
         }
       }
 
-      // All comments processed - check if we should mark as completed
+      // All comments processed - validate completion
       const totalProcessed = currentSuccessCount + currentFailureCount;
-      console.log(`📊 [${sessionId}] Processing finished: ${totalProcessed}/${comments.length} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
+      const expectedProcessed = comments.length;
+      
+      console.log(`📊 [${sessionId}] Processing finished: ${totalProcessed}/${expectedProcessed} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
+      console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${comments.length}, actualProcessed=${totalProcessed}`);
 
-      if (totalProcessed === comments.length) {
-        // Mark as completed only if all comments were processed
+      // Strict validation before marking as completed
+      if (totalProcessed === expectedProcessed && (startIndex + totalProcessed) <= expectedProcessed) {
+        // Double-check: verify we actually processed all comments from startIndex to end
+        const actuallyProcessedCount = comments.length;
+        
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'completed',
-          processedCount: comments.length
+          processedCount: actuallyProcessedCount,
+          successCount: currentSuccessCount,
+          failureCount: currentFailureCount
         });
-        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${comments.length} comments processed`);
+        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${actuallyProcessedCount} comments processed`);
       } else {
-        // This shouldn't happen, but just in case
+        // Mark as failed if counts don't match
+        const errorMsg = `Processing incomplete: processed=${totalProcessed}, expected=${expectedProcessed}, startIndex=${startIndex}`;
+        
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'failed',
-          errorInfo: `Processing incomplete: ${totalProcessed}/${comments.length} comments processed`
+          processedCount: totalProcessed,
+          successCount: currentSuccessCount,
+          failureCount: currentFailureCount,
+          errorInfo: errorMsg
         });
-        console.error(`❌ [${sessionId}] Queue marked as failed - incomplete processing: ${totalProcessed}/${comments.length}`);
+        console.error(`❌ [${sessionId}] Queue marked as failed - ${errorMsg}`);
       }
 
     } catch (error) {
