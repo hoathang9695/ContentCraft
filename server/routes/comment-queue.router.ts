@@ -433,11 +433,11 @@ router.post('/fix-inconsistent', isAuthenticated, async (req, res) => {
     const fixResult1 = await pool.query(`
       UPDATE comment_queues 
       SET status = 'failed',
-          error_info = CONCAT(COALESCE(error_info, ''), '; Fixed inconsistent status - was marked completed but only ', processed_count, '/', total_comments, ' processed'),
+          error_info = CONCAT(COALESCE(error_info, ''), '; Fixed inconsistent status - was marked completed but only ', processed_count, '/', total_comments, ' processed at ', NOW()),
           updated_at = NOW()
       WHERE status = 'completed' 
       AND processed_count < total_comments
-      RETURNING session_id, total_comments, processed_count
+      RETURNING session_id, total_comments, processed_count, success_count, failure_count
     `);
 
     // Fix queues where success+failure count doesn't match processed count
@@ -450,14 +450,28 @@ router.post('/fix-inconsistent', isAuthenticated, async (req, res) => {
       RETURNING session_id, total_comments, processed_count, success_count, failure_count
     `);
 
+    // Reset stuck processing queues that haven't been updated in 1 hour
+    const fixResult3 = await pool.query(`
+      UPDATE comment_queues 
+      SET status = 'pending',
+          started_at = NULL,
+          error_info = CONCAT(COALESCE(error_info, ''), '; Reset stuck processing queue at ', NOW()),
+          updated_at = NOW()
+      WHERE status = 'processing' 
+      AND updated_at < NOW() - INTERVAL '1 hour'
+      RETURNING session_id, total_comments, processed_count
+    `);
+
     res.json({
       success: true,
       fixedStatusCount: fixResult1.rows.length,
       fixedCountCount: fixResult2.rows.length,
-      message: `Fixed ${fixResult1.rows.length} status inconsistencies and ${fixResult2.rows.length} count inconsistencies`,
+      resetStuckCount: fixResult3.rows.length,
+      message: `Fixed ${fixResult1.rows.length} status inconsistencies, ${fixResult2.rows.length} count inconsistencies, and reset ${fixResult3.rows.length} stuck queues`,
       details: {
         statusFixes: fixResult1.rows,
-        countFixes: fixResult2.rows
+        countFixes: fixResult2.rows,
+        stuckResets: fixResult3.rows
       }
     });
   } catch (error) {
@@ -465,6 +479,85 @@ router.post('/fix-inconsistent', isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fix inconsistent queues',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Fix specific queue by session ID (Admin only)
+router.post('/fix-queue/:sessionId', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể sửa queue cụ thể'
+      });
+    }
+
+    const { sessionId } = req.params;
+    
+    // Get queue details first
+    const queueResult = await pool.query(`
+      SELECT session_id, status, total_comments, processed_count, success_count, failure_count, comments
+      FROM comment_queues 
+      WHERE session_id = $1
+    `, [sessionId]);
+
+    if (queueResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Queue không tồn tại'
+      });
+    }
+
+    const queue = queueResult.rows[0];
+    const comments = Array.isArray(queue.comments) ? queue.comments : JSON.parse(queue.comments);
+    const actualTotalComments = comments.length;
+    const actualProcessed = (queue.success_count || 0) + (queue.failure_count || 0);
+    
+    // Determine correct status
+    let newStatus = queue.status;
+    let errorInfo = queue.error_info || '';
+    
+    if (queue.status === 'completed' && actualProcessed < actualTotalComments) {
+      newStatus = 'failed';
+      errorInfo += `; Fixed: was marked completed but only ${actualProcessed}/${actualTotalComments} processed at ${new Date().toISOString()}`;
+    } else if (actualProcessed === actualTotalComments && queue.status !== 'completed') {
+      newStatus = 'completed';
+      errorInfo += `; Fixed: all comments processed, updated status to completed at ${new Date().toISOString()}`;
+    }
+
+    // Update the queue
+    const updateResult = await pool.query(`
+      UPDATE comment_queues 
+      SET status = $1,
+          total_comments = $2,
+          processed_count = $3,
+          error_info = $4,
+          updated_at = NOW()
+      WHERE session_id = $5
+      RETURNING *
+    `, [newStatus, actualTotalComments, actualProcessed, errorInfo, sessionId]);
+
+    res.json({
+      success: true,
+      message: `Queue ${sessionId} đã được sửa`,
+      before: {
+        status: queue.status,
+        total_comments: queue.total_comments,
+        processed_count: queue.processed_count,
+        actual_comments_count: actualTotalComments,
+        actual_processed: actualProcessed
+      },
+      after: updateResult.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Error fixing specific queue:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fix queue',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
