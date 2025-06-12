@@ -66,11 +66,13 @@ export function CommentQueueReportDialog({ open, onOpenChange }: CommentQueueRep
   });
 
   // Fetch user queues
-  const { data: userQueues = [], refetch: refetchQueues } = useQuery<QueueItem[]>({
+  const { data: userQueuesResponse, refetch: refetchQueues } = useQuery<{success: boolean, data: QueueItem[]}>({
     queryKey: ['/api/comment-queues'],
     refetchInterval: autoRefresh ? 5000 : false,
     enabled: open,
   });
+
+  const userQueues = userQueuesResponse?.data || [];
 
   // Calculate statistics
   const stats = {
