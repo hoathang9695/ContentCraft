@@ -165,7 +165,9 @@ export default function CommentQueueReportDialog({
     // Reset individual queue mutation
   const resetQueueMutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      return apiRequest('POST', `/api/comment-queues/reset-queue/${sessionId}`, {});
+      return apiRequest(`/api/comment-queues/reset-queue/${sessionId}`, {
+        method: 'POST'
+      });
     },
     onSuccess: (data) => {
       toast({

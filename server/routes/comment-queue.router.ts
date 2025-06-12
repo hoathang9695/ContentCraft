@@ -200,13 +200,14 @@ router.get('/processor/status', isAuthenticated, async (req, res) => {
       });
     }
 
-    const { commentQueueProcessor } = await import('../comment-queue-processor');
+    const { CommentQueueProcessor } = await import('../comment-queue-processor');
     
     // Get current processor instance status
+    const processorInstance = CommentQueueProcessor.getInstance();
     const status = {
-      currentProcessingCount: commentQueueProcessor.processingQueues?.size || 0,
-      maxConcurrentQueues: commentQueueProcessor.maxConcurrentQueues || 5,
-      processingQueues: Array.from(commentQueueProcessor.processingQueues?.entries() || []).map(([sessionId, queue]) => ({
+      currentProcessingCount: processorInstance.processingQueues?.size || 0,
+      maxConcurrentQueues: processorInstance.maxConcurrentQueues || 10,
+      processingQueues: Array.from(processorInstance.processingQueues?.entries() || []).map(([sessionId, queue]) => ({
         sessionId,
         startTime: queue.startTime || Date.now()
       }))
