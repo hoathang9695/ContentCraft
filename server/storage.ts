@@ -1160,21 +1160,18 @@ export class DatabaseStorage implements IStorage {
   async cleanupOldQueues(hoursOld: number = 24): Promise<number> {
     console.log(`🧹 Cleaning up queues older than ${hoursOld} hours...`);
 
-    const cutoffTime = new Date();
-    cutoffTime.setHours(cutoffTime.getHours() - hoursOld);
-
     try {
       // First, let's check what queues exist and which ones should be deleted
       const checkResult = await pool.query(`
         SELECT session_id, status, completed_at, 
                EXTRACT(EPOCH FROM (NOW() - completed_at))/3600 as hours_old,
-               (completed_at < NOW() - INTERVAL $1) as should_delete
+               (completed_at < NOW() - INTERVAL '${hoursOld} hours') as should_delete
         FROM comment_queues 
         WHERE status IN ('completed', 'failed') 
         AND completed_at IS NOT NULL
         ORDER BY completed_at DESC
         LIMIT 20
-      `, [`${hoursOld} hours`]);
+      `);
 
       console.log(`🔍 Found ${checkResult.rows.length} completed/failed queues:`);
       
@@ -1189,23 +1186,14 @@ export class DatabaseStorage implements IStorage {
         console.log(`  ... and ${checkResult.rows.length - 5} more queues`);
       }
 
-      console.log(`🔍 Found ${checkResult.rows.length} completed/failed queues:`, 
-        checkResult.rows.slice(0, 3).map(row => ({
-          session_id: row.session_id,
-          status: row.status,
-          hours_old: Math.round(row.hours_old * 10) / 10,
-          completed_at: row.completed_at
-        }))
-      );
-
-      // Delete queues older than specified hours (using parameterized query for safety)
+      // Delete queues older than specified hours 
       const result = await pool.query(`
         DELETE FROM comment_queues 
         WHERE status IN ('completed', 'failed') 
         AND completed_at IS NOT NULL
-        AND completed_at < NOW() - INTERVAL $1
+        AND completed_at < NOW() - INTERVAL '${hoursOld} hours'
         RETURNING session_id, status, completed_at
-      `, [`${hoursOld} hours`]);
+      `);
 
       const deletedCount = result.rows.length;
       
@@ -1224,6 +1212,10 @@ export class DatabaseStorage implements IStorage {
       return deletedCount;
     } catch (error) {
       console.error('❌ Error cleaning up old queues:', error);
+      console.error('❌ Full error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return 0;
     }
   }
