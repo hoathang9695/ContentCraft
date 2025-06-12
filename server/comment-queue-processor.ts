@@ -298,24 +298,24 @@ export class CommentQueueProcessor {
       console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${comments.length}, actualProcessed=${totalProcessed}`);
 
       // Strict validation before marking as completed
-      if (totalProcessed === expectedProcessed && (startIndex + totalProcessed) <= expectedProcessed) {
-        // Double-check: verify we actually processed all comments from startIndex to end
-        const actuallyProcessedCount = comments.length;
-        
+      // Double-check: ensure actual success+failure counts match total processed
+      const actualTotalProcessed = currentSuccessCount + currentFailureCount;
+      
+      if (actualTotalProcessed === expectedProcessed && totalProcessed === expectedProcessed) {
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'completed',
-          processedCount: actuallyProcessedCount,
+          processedCount: actualTotalProcessed,
           successCount: currentSuccessCount,
           failureCount: currentFailureCount
         });
-        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${actuallyProcessedCount} comments processed`);
+        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${actualTotalProcessed}/${expectedProcessed} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
       } else {
         // Mark as failed if counts don't match
-        const errorMsg = `Processing incomplete: processed=${totalProcessed}, expected=${expectedProcessed}, startIndex=${startIndex}`;
+        const errorMsg = `Processing incomplete: actualProcessed=${actualTotalProcessed}, totalProcessed=${totalProcessed}, expected=${expectedProcessed}, success=${currentSuccessCount}, failed=${currentFailureCount}`;
         
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'failed',
-          processedCount: totalProcessed,
+          processedCount: actualTotalProcessed,
           successCount: currentSuccessCount,
           failureCount: currentFailureCount,
           errorInfo: errorMsg
