@@ -14,9 +14,9 @@ interface ProcessingQueue {
 }
 
 export class CommentQueueProcessor {
-  private processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
+  public processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
   private processingInterval: NodeJS.Timeout | null = null;
-  private maxConcurrentQueues = 10; // Maximum concurrent queue processing
+  public maxConcurrentQueues = 10; // Maximum concurrent queue processing
   private processingDelay = 10000; // 10 seconds between queue checks
 
   constructor() {
@@ -422,6 +422,17 @@ export class CommentQueueProcessor {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  getStatus() {
+    return {
+      currentProcessingCount: this.processingQueues.size,
+      maxConcurrentQueues: this.maxConcurrentQueues,
+      processingQueues: Array.from(this.processingQueues.entries()).map(([sessionId, queue]) => ({
+        sessionId,
+        startTime: queue.startTime || Date.now()
+      }))
+    };
   }
 
   async checkStuckQueues() {
