@@ -200,13 +200,22 @@ router.get('/status', isAuthenticated, async (req, res) => {
       });
     }
 
-    const { commentQueueProcessor } = await import('../comment-queue-processor');
-    const status = commentQueueProcessor.getProcessingStatus();
+    const { CommentQueueProcessor } = await import('../comment-queue-processor');
+    
+    // Get current processor instance status
+    const processorInstance = CommentQueueProcessor.getInstance();
+    const status = {
+      currentProcessingCount: processorInstance.processingQueues?.size || 0,
+      maxConcurrentQueues: processorInstance.maxConcurrentQueues || 10,
+      processingQueues: Array.from(processorInstance.processingQueues?.entries() || []).map(([sessionId, queue]) => ({
+        sessionId,
+        startTime: queue.startTime || Date.now()
+      }))
+    };
 
     res.json({
       success: true,
-      status,
-      message: 'Trạng thái processor hiện tại'
+      ...status
     });
 
   } catch (error) {
@@ -607,34 +616,6 @@ router.get('/cleanup/preview', isAuthenticated, async (req, res) => {
   }
 });
 
-// Get queue processor status for dashboard
-router.get('/status', isAuthenticated, async (req, res) => {
-  try {
-    const { CommentQueueProcessor } = await import('../comment-queue-processor');
 
-    // Get current processor instance status
-    const processorInstance = CommentQueueProcessor.getInstance();
-    const status = {
-      currentProcessingCount: processorInstance.processingQueues?.size || 0,
-      maxConcurrentQueues: processorInstance.maxConcurrentQueues || 10,
-      processingQueues: Array.from(processorInstance.processingQueues?.entries() || []).map(([sessionId, queue]) => ({
-        sessionId,
-        startTime: queue.startTime || Date.now()
-      }))
-    };
-
-    res.json({
-      success: true,
-      ...status
-    });
-  } catch (error) {
-    console.error('❌ Error getting queue processor status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get processor status',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
 
 export default router;
