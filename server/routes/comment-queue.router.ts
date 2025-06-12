@@ -189,7 +189,7 @@ router.get("/", isAuthenticated, async (req, res) => {
 });
 
 // Get processor status (Admin only)
-router.get('/status', isAuthenticated, async (req, res) => {
+router.get('/processor/status', isAuthenticated, async (req, res) => {
   try {
     const user = req.user as any;
 
@@ -200,14 +200,13 @@ router.get('/status', isAuthenticated, async (req, res) => {
       });
     }
 
-    const { CommentQueueProcessor } = await import('../comment-queue-processor');
+    const { commentQueueProcessor } = await import('../comment-queue-processor');
     
     // Get current processor instance status
-    const processorInstance = CommentQueueProcessor.getInstance();
     const status = {
-      currentProcessingCount: processorInstance.processingQueues?.size || 0,
-      maxConcurrentQueues: processorInstance.maxConcurrentQueues || 10,
-      processingQueues: Array.from(processorInstance.processingQueues?.entries() || []).map(([sessionId, queue]) => ({
+      currentProcessingCount: commentQueueProcessor.processingQueues?.size || 0,
+      maxConcurrentQueues: commentQueueProcessor.maxConcurrentQueues || 5,
+      processingQueues: Array.from(commentQueueProcessor.processingQueues?.entries() || []).map(([sessionId, queue]) => ({
         sessionId,
         startTime: queue.startTime || Date.now()
       }))
@@ -488,6 +487,75 @@ router.post('/fix-inconsistent', isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fix inconsistent queues',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Reset specific queue by session ID (Admin only)
+router.post('/reset-queue/:sessionId', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể reset queue cụ thể'
+      });
+    }
+
+    const { sessionId } = req.params;
+
+    // Check if queue exists
+    const queueResult = await pool.query(`
+      SELECT session_id, status, started_at
+      FROM comment_queues 
+      WHERE session_id = $1
+    `, [sessionId]);
+
+    if (queueResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Queue không tồn tại'
+      });
+    }
+
+    const queue = queueResult.rows[0];
+
+    // Reset the queue to pending
+    const updateResult = await pool.query(`
+      UPDATE comment_queues 
+      SET status = 'pending',
+          started_at = NULL,
+          error_info = CONCAT(COALESCE(error_info, ''), '; Admin reset queue at ', NOW()),
+          updated_at = NOW()
+      WHERE session_id = $1
+      RETURNING *
+    `, [sessionId]);
+
+    // Remove from local processing map if exists
+    const { commentQueueProcessor } = await import('../comment-queue-processor');
+    commentQueueProcessor.processingQueues.delete(sessionId);
+
+    console.log(`🔧 Admin reset queue: ${sessionId} from status ${queue.status} to pending`);
+
+    res.json({
+      success: true,
+      message: `Queue ${sessionId} đã được reset về pending`,
+      before: {
+        status: queue.status,
+        started_at: queue.started_at
+      },
+      after: {
+        status: updateResult.rows[0].status,
+        started_at: updateResult.rows[0].started_at
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error resetting specific queue:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset queue',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
