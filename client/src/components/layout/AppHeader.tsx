@@ -16,7 +16,8 @@ import {
   Search, 
   FileText,
   User as UserIcon, 
-  LogOut 
+  LogOut,
+  TrendingUp 
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -67,13 +68,13 @@ export function AppHeader({ onMenuClick, onSearch, onNewContent, onQueueReport }
           >
             <Menu className="h-5 w-5" />
           </Button>
-          
+
           <div className="ml-2 md:ml-0 flex items-center">
             <img src="/images/logo.jpg" alt="EMSO Logo" className="h-6 w-6 mr-2 rounded-full" />
             <span className="text-lg font-medium text-foreground">EMSO</span>
           </div>
         </div>
-        
+
         {/* Right section: Buttons, Search and user menu */}
         <div className="flex items-center space-x-4">
           {/* Action buttons */}
@@ -104,12 +105,12 @@ export function AppHeader({ onMenuClick, onSearch, onNewContent, onQueueReport }
               />
             </div>
           </form>
-          
+
           {/* Notifications */}
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
           </Button>
-          
+
           {/* User dropdown */}
           {user && (
             <DropdownMenu>
