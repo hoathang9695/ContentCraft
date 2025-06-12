@@ -260,7 +260,7 @@ export class CommentQueueProcessor {
             
             // Update progress after successful send
             await storage.updateCommentQueueProgress(sessionId, {
-              processedCount: index + 1, // This comment is now successfully processed
+              processedCount: currentSuccessCount + currentFailureCount,
               successCount: currentSuccessCount
             });
 
@@ -279,7 +279,7 @@ export class CommentQueueProcessor {
               currentFailureCount++;
               
               await storage.updateCommentQueueProgress(sessionId, {
-                processedCount: index + 1, // This comment is processed (but failed)
+                processedCount: currentSuccessCount + currentFailureCount,
                 failureCount: currentFailureCount,
                 errorInfo: error instanceof Error ? error.message : 'Unknown error'
               });
@@ -291,31 +291,35 @@ export class CommentQueueProcessor {
       }
 
       // All comments processed - validate completion
-      const totalProcessed = currentSuccessCount + currentFailureCount;
-      const expectedProcessed = comments.length;
+      const totalCommentsInQueue = comments.length;
+      const commentsProcessedThisRun = currentSuccessCount + currentFailureCount - (queue.success_count || 0) - (queue.failure_count || 0);
+      const commentsExpectedThisRun = totalCommentsInQueue - startIndex;
+      const finalTotalProcessed = currentSuccessCount + currentFailureCount;
       
-      console.log(`📊 [${sessionId}] Processing finished: ${totalProcessed}/${expectedProcessed} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
-      console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${comments.length}, actualProcessed=${totalProcessed}`);
+      console.log(`📊 [${sessionId}] Processing finished: ${commentsProcessedThisRun}/${commentsExpectedThisRun} comments processed this run`);
+      console.log(`📊 [${sessionId}] Total progress: ${finalTotalProcessed}/${totalCommentsInQueue} comments (${currentSuccessCount} success, ${currentFailureCount} failed)`);
+      console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}`);
 
       // Strict validation before marking as completed
-      // Double-check: ensure actual success+failure counts match total processed
-      const actualTotalProcessed = currentSuccessCount + currentFailureCount;
+      // Check if we processed all remaining comments correctly
+      const allCommentsProcessed = finalTotalProcessed === totalCommentsInQueue;
+      const thisRunCompleted = commentsProcessedThisRun === commentsExpectedThisRun;
       
-      if (actualTotalProcessed === expectedProcessed && totalProcessed === expectedProcessed) {
+      if (allCommentsProcessed && thisRunCompleted) {
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'completed',
-          processedCount: actualTotalProcessed,
+          processedCount: finalTotalProcessed,
           successCount: currentSuccessCount,
           failureCount: currentFailureCount
         });
-        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${actualTotalProcessed}/${expectedProcessed} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
+        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${finalTotalProcessed}/${totalCommentsInQueue} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
       } else {
         // Mark as failed if counts don't match
-        const errorMsg = `Processing incomplete: actualProcessed=${actualTotalProcessed}, totalProcessed=${totalProcessed}, expected=${expectedProcessed}, success=${currentSuccessCount}, failed=${currentFailureCount}`;
+        const errorMsg = `Processing incomplete: totalProcessed=${finalTotalProcessed}, expectedTotal=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}, expectedThisRun=${commentsExpectedThisRun}, startIndex=${startIndex}, success=${currentSuccessCount}, failed=${currentFailureCount}`;
         
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'failed',
-          processedCount: actualTotalProcessed,
+          processedCount: finalTotalProcessed,
           successCount: currentSuccessCount,
           failureCount: currentFailureCount,
           errorInfo: errorMsg
