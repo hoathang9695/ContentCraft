@@ -545,47 +545,72 @@ export class CommentQueueProcessor {
       
       console.log(`🔍 Force cleanup: Resetting queues stuck before: ${stuckThreshold.toISOString()}`);
 
-      const result = await pool.query(`
+      // Reset stuck processing queues
+      const stuckResult = await pool.query(`
         UPDATE comment_queues 
         SET status = 'pending', 
             started_at = NULL,
-            error_info = CONCAT(COALESCE(error_info, ''), '; Force cleanup reset at ', NOW())
+            error_info = CONCAT(COALESCE(error_info, ''), '; Force cleanup reset stuck processing at ', NOW())
         WHERE status = 'processing' 
         AND started_at < $1
-        RETURNING session_id, external_id, started_at
+        RETURNING session_id, external_id, started_at, 'stuck_processing' as reset_reason
       `, [stuckThreshold.toISOString()]);
 
-      if (result.rows.length > 0) {
-        console.log(`🔧 Force cleanup: Reset ${result.rows.length} stuck queues:`, 
-          result.rows.map(row => ({ 
-            sessionId: row.session_id, 
-            externalId: row.external_id,
-            wasStuckSince: row.started_at 
-          }))
-        );
+      // Reset failed queues to retry them
+      const failedResult = await pool.query(`
+        UPDATE comment_queues 
+        SET status = 'pending', 
+            started_at = NULL,
+            error_info = CONCAT(COALESCE(error_info, ''), '; Force cleanup reset failed queue for retry at ', NOW())
+        WHERE status = 'failed'
+        RETURNING session_id, external_id, completed_at as failed_at, 'failed_retry' as reset_reason
+      `);
+
+      const allResetQueues = [...stuckResult.rows, ...failedResult.rows];
+      const totalResetCount = allResetQueues.length;
+
+      if (totalResetCount > 0) {
+        console.log(`🔧 Force cleanup: Reset ${stuckResult.rows.length} stuck queues and ${failedResult.rows.length} failed queues`);
         
         // Remove stuck queues from our local processing map
-        result.rows.forEach(row => {
+        stuckResult.rows.forEach(row => {
           this.processingQueues.delete(row.session_id);
-          console.log(`🔧 Removed locally tracked queue: ${row.session_id}`);
+          console.log(`🔧 Removed locally tracked stuck queue: ${row.session_id}`);
         });
+
+        // Log failed queues being reset
+        if (failedResult.rows.length > 0) {
+          console.log(`🔧 Reset failed queues for retry:`, 
+            failedResult.rows.map(row => ({ 
+              sessionId: row.session_id, 
+              externalId: row.external_id,
+              wasFailedAt: row.failed_at 
+            }))
+          );
+        }
 
         return {
           success: true,
-          resetCount: result.rows.length,
-          resetQueues: result.rows.map(row => ({
+          resetCount: totalResetCount,
+          stuckResetCount: stuckResult.rows.length,
+          failedResetCount: failedResult.rows.length,
+          resetQueues: allResetQueues.map(row => ({
             sessionId: row.session_id,
             externalId: row.external_id,
-            wasStuckSince: row.started_at
-          }))
+            resetReason: row.reset_reason,
+            wasStuckSince: row.started_at || row.failed_at
+          })),
+          message: `Reset ${stuckResult.rows.length} stuck queues and ${failedResult.rows.length} failed queues for retry`
         };
       } else {
-        console.log('🔧 Force cleanup: No stuck queues found to reset');
+        console.log('🔧 Force cleanup: No stuck or failed queues found to reset');
         return {
           success: true,
           resetCount: 0,
+          stuckResetCount: 0,
+          failedResetCount: 0,
           resetQueues: [],
-          message: 'No stuck queues found'
+          message: 'No stuck or failed queues found'
         };
       }
 
