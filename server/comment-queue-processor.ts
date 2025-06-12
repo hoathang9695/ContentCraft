@@ -48,15 +48,21 @@ export class CommentQueueProcessor {
   }
 
   private scheduleCleanup() {
+    console.log('🗓️ Setting up cleanup schedule...');
+    
     // Run cleanup immediately on start
-    this.cleanupCompletedQueues();
+    setTimeout(async () => {
+      console.log('🧹 Running initial cleanup on startup...');
+      await this.cleanupCompletedQueues();
+    }, 5000); // Wait 5 seconds after startup
     
     // Then run every 24 hours (86400000 ms)
     setInterval(async () => {
+      console.log('🧹 Running scheduled daily cleanup...');
       await this.cleanupCompletedQueues();
     }, 24 * 60 * 60 * 1000);
     
-    console.log('🗓️ Cleanup scheduled: once daily');
+    console.log('🗓️ Cleanup scheduled: Initial cleanup in 5s, then every 24 hours');
   }
 
   stopProcessor() {
@@ -406,14 +412,30 @@ export class CommentQueueProcessor {
 
   async cleanupCompletedQueues() {
     try {
+      console.log('🧹 Starting automatic cleanup of old completed queues...');
+      
+      // Get queue count before cleanup
+      const beforeCount = await storage.getQueueCount();
+      
       // Xóa các queues đã completed/failed cách đây hơn 24 giờ
       const cleanupResult = await storage.cleanupOldQueues(24); // 24 hours
       
+      // Get queue count after cleanup
+      const afterCount = await storage.getQueueCount();
+      
       if (cleanupResult > 0) {
-        console.log(`🧹 Cleaned up ${cleanupResult} old completed queues`);
+        console.log(`🧹✅ Automatic cleanup completed: ${cleanupResult} old queues deleted`);
+        console.log(`📊 Queue count: ${beforeCount} → ${afterCount}`);
+      } else {
+        console.log(`🧹 Automatic cleanup completed: No old queues found to delete`);
+        console.log(`📊 Current queue count: ${afterCount}`);
       }
     } catch (error) {
-      console.error('❌ Error during queue cleanup:', error);
+      console.error('❌ Error during automatic queue cleanup:', error);
+      console.error('❌ Cleanup error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   }
 

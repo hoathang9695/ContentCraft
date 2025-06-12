@@ -279,4 +279,132 @@ router.delete("/cleanup", isAuthenticated, async (req, res) => {
   }
 });
 
+// Manual cleanup endpoint (Admin only)
+router.delete('/cleanup', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể thực hiện cleanup'
+      });
+    }
+    const { hoursOld = 24 } = req.body;
+
+    // Validate hoursOld parameter
+    if (typeof hoursOld !== 'number' || hoursOld < 1 || hoursOld > 8760) { // Max 1 year
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid hoursOld parameter. Must be between 1 and 8760 hours.'
+      });
+    }
+
+    console.log(`🧹 Manual cleanup requested by admin for queues older than ${hoursOld} hours`);
+
+    const deletedCount = await storage.cleanupOldQueues(hoursOld);
+
+    res.json({
+      success: true,
+      deletedCount,
+      message: `Successfully cleaned up ${deletedCount} old queues`
+    });
+  } catch (error) {
+    console.error('❌ Error in manual cleanup:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cleanup queues',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get cleanup schedule status (Admin only)
+router.get('/cleanup/status', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể xem trạng thái cleanup'
+      });
+    }
+
+    // Get current queue statistics
+    const totalCount = await storage.getQueueCount();
+    
+    // Check queues that would be cleaned up
+    const previewResult = await pool.query(`
+      SELECT COUNT(*) as cleanup_eligible_count
+      FROM comment_queues 
+      WHERE status IN ('completed', 'failed') 
+      AND completed_at IS NOT NULL
+      AND completed_at < NOW() - INTERVAL '24 hours'
+    `);
+
+    const cleanupEligibleCount = parseInt(previewResult.rows[0]?.cleanup_eligible_count || '0');
+
+    res.json({
+      success: true,
+      status: {
+        totalQueues: totalCount,
+        cleanupEligibleQueues: cleanupEligibleCount,
+        cleanupSchedule: 'Every 24 hours',
+        lastCleanupTime: 'Check server logs for last cleanup time',
+        nextCleanupTime: 'Within 24 hours of server start'
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error getting cleanup status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get cleanup status',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Test cleanup endpoint to check what would be deleted (Admin only)
+router.get('/cleanup/preview', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể xem preview cleanup'
+      });
+    }
+    const hoursOld = parseInt(req.query.hoursOld as string) || 24;
+
+    const result = await pool.query(`
+      SELECT session_id, status, completed_at, 
+             EXTRACT(EPOCH FROM (NOW() - completed_at))/3600 as hours_old
+      FROM comment_queues 
+      WHERE status IN ('completed', 'failed') 
+      AND completed_at IS NOT NULL
+      AND completed_at < NOW() - INTERVAL '${hoursOld} hours'
+      ORDER BY completed_at DESC
+      LIMIT 50
+    `, [hoursOld]);
+
+    res.json({
+      success: true,
+      previewCount: result.rows.length,
+      hoursOld,
+      queues: result.rows.map(row => ({
+        session_id: row.session_id,
+        status: row.status,
+        completed_at: row.completed_at,
+        hours_old: Math.round(row.hours_old * 10) / 10
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Error in cleanup preview:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to preview cleanup',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

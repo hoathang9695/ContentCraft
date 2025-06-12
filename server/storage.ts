@@ -1158,72 +1158,93 @@ export class DatabaseStorage implements IStorage {
   }
 
   async cleanupOldQueues(hoursOld: number = 24): Promise<number> {
-    console.log(`🧹 Cleaning up queues older than ${hoursOld} hours...`);
-
-    const cutoffTime = new Date();
-    cutoffTime.setHours(cutoffTime.getHours() - hoursOld);
+    const timestamp = new Date().toISOString();
+    console.log(`🧹 [${timestamp}] Starting cleanup: queues older than ${hoursOld} hours...`);
 
     try {
-      // First, let's check what queues exist and which ones should be deleted
+      // First, get total queue statistics
+      const totalStats = await pool.query(`
+        SELECT 
+          COUNT(*) as total_queues,
+          COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_queues,
+          COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_queues,
+          COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_queues,
+          COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing_queues
+        FROM comment_queues
+      `);
+
+      console.log(`📊 Current queue stats:`, totalStats.rows[0]);
+
+      // Check what queues exist and which ones should be deleted
       const checkResult = await pool.query(`
         SELECT session_id, status, completed_at, 
                EXTRACT(EPOCH FROM (NOW() - completed_at))/3600 as hours_old,
-               (completed_at < NOW() - INTERVAL $1) as should_delete
+               (completed_at < NOW() - INTERVAL '${hoursOld} hours') as should_delete
         FROM comment_queues 
         WHERE status IN ('completed', 'failed') 
         AND completed_at IS NOT NULL
         ORDER BY completed_at DESC
         LIMIT 20
-      `, [`${hoursOld} hours`]);
+      `);
 
-      console.log(`🔍 Found ${checkResult.rows.length} completed/failed queues:`);
-      
       const shouldDeleteCount = checkResult.rows.filter(row => row.should_delete).length;
-      console.log(`📝 Queues that should be deleted (older than ${hoursOld}h): ${shouldDeleteCount}`);
+      console.log(`🔍 Found ${checkResult.rows.length} completed/failed queues, ${shouldDeleteCount} eligible for deletion`);
       
-      checkResult.rows.slice(0, 5).forEach(row => {
-        console.log(`  - ${row.session_id}: ${row.status}, ${Math.round(row.hours_old * 10) / 10}h old, ${row.should_delete ? 'WILL DELETE' : 'KEEP'}`);
-      });
+      if (checkResult.rows.length > 0) {
+        console.log(`📝 Sample queues (showing first 5):`);
+        checkResult.rows.slice(0, 5).forEach(row => {
+          console.log(`  - ${row.session_id}: ${row.status}, ${Math.round(row.hours_old * 10) / 10}h old, ${row.should_delete ? '🗑️ WILL DELETE' : '✅ KEEP'}`);
+        });
 
-      if (checkResult.rows.length > 5) {
-        console.log(`  ... and ${checkResult.rows.length - 5} more queues`);
+        if (checkResult.rows.length > 5) {
+          console.log(`  ... and ${checkResult.rows.length - 5} more queues`);
+        }
       }
 
-      console.log(`🔍 Found ${checkResult.rows.length} completed/failed queues:`, 
-        checkResult.rows.slice(0, 3).map(row => ({
-          session_id: row.session_id,
-          status: row.status,
-          hours_old: Math.round(row.hours_old * 10) / 10,
-          completed_at: row.completed_at
-        }))
-      );
-
-      // Delete queues older than specified hours (using parameterized query for safety)
+      // Delete queues older than specified hours 
       const result = await pool.query(`
         DELETE FROM comment_queues 
         WHERE status IN ('completed', 'failed') 
         AND completed_at IS NOT NULL
-        AND completed_at < NOW() - INTERVAL $1
+        AND completed_at < NOW() - INTERVAL '${hoursOld} hours'
         RETURNING session_id, status, completed_at
-      `, [`${hoursOld} hours`]);
+      `);
 
       const deletedCount = result.rows.length;
+      const endTimestamp = new Date().toISOString();
       
       if (deletedCount > 0) {
-        console.log(`🧹 Successfully cleaned up ${deletedCount} old queues:`, 
-          result.rows.map(row => ({
+        console.log(`🧹✅ [${endTimestamp}] Successfully cleaned up ${deletedCount} old queues`);
+        console.log(`🗑️ Deleted queues:`, 
+          result.rows.slice(0, 10).map(row => ({
             session_id: row.session_id,
             status: row.status,
             completed_at: row.completed_at
           }))
         );
+        if (result.rows.length > 10) {
+          console.log(`  ... and ${result.rows.length - 10} more deleted queues`);
+        }
       } else {
-        console.log(`🧹 No queues found older than ${hoursOld} hours for cleanup`);
+        console.log(`🧹 [${endTimestamp}] No queues found older than ${hoursOld} hours for cleanup`);
       }
+
+      // Log final stats after cleanup
+      const finalStats = await pool.query(`
+        SELECT COUNT(*) as remaining_total,
+               COUNT(CASE WHEN status IN ('completed', 'failed') THEN 1 END) as remaining_completed_failed
+        FROM comment_queues
+      `);
+      
+      console.log(`📊 After cleanup: ${finalStats.rows[0].remaining_total} total queues, ${finalStats.rows[0].remaining_completed_failed} completed/failed remaining`);
 
       return deletedCount;
     } catch (error) {
       console.error('❌ Error cleaning up old queues:', error);
+      console.error('❌ Full error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return 0;
     }
   }
