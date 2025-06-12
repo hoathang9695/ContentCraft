@@ -30,6 +30,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-debounce';
 import { queryClient } from '@/lib/queryClient';
+import { CommentQueueReportDialog } from '@/components/CommentQueueReportDialog';
 
 export default function ContentPage() {
   const { user } = useAuth();
@@ -41,6 +42,7 @@ export default function ContentPage() {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const debouncedSearchQuery = useDebounce(searchQuery, 800);
+  const [showQueueReport, setShowQueueReport] = useState(false);
 
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
@@ -82,7 +84,10 @@ export default function ContentPage() {
   };
 
   return (
-    <DashboardLayout onSearch={handleSearch}>
+    <DashboardLayout 
+      onSearch={handleSearch}
+      onQueueReport={() => setShowQueueReport(true)}
+    >
       {/* Responsive filters layout - horizontal on desktop, vertical on mobile */}
       <div className="mb-4">
         {/* Mobile layout (< md) - vertical stack */}
@@ -471,6 +476,12 @@ export default function ContentPage() {
           endDate={endDate}
         />
       )}
+
+      {/* Comment Queue Report Dialog */}
+      <CommentQueueReportDialog
+        open={showQueueReport}
+        onOpenChange={setShowQueueReport}
+      />
     </DashboardLayout>
   );
 }
