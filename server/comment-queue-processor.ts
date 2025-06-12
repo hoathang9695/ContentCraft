@@ -178,6 +178,8 @@ export class CommentQueueProcessor {
       const comments = Array.isArray(queue.comments) ? queue.comments : JSON.parse(queue.comments);
       const startIndex = queue.processed_count || 0;
 
+      console.log(`📋 [${sessionId}] Processing queue: ${comments.length} total comments, starting from index ${startIndex}`);
+
       // Get fake users for the selected gender
       const allFakeUsers = await storage.getAllFakeUsers();
       const fakeUsers = queue.selected_gender === 'all' 
@@ -189,12 +191,22 @@ export class CommentQueueProcessor {
       }
 
       const usedUserIds = new Set<number>();
+      let currentSuccessCount = queue.success_count || 0;
+      let currentFailureCount = queue.failure_count || 0;
 
       // Process remaining comments
       for (let index = startIndex; index < comments.length; index++) {
         // Check timeout
         if (Date.now() - startTime > maxProcessingTime) {
-          console.log(`⏰ [${sessionId}] Timeout after ${maxProcessingTime/60000} minutes`);
+          console.log(`⏰ [${sessionId}] Timeout after ${maxProcessingTime/60000} minutes at comment ${index + 1}/${comments.length}`);
+          
+          // Update progress before timeout
+          await storage.updateCommentQueueProgress(sessionId, {
+            status: 'failed',
+            processedCount: index, // Current index, not +1 since this comment wasn't processed
+            errorInfo: `Processing timeout after ${maxProcessingTime/60000} minutes at comment ${index + 1}/${comments.length}`
+          });
+          
           throw new Error('Processing timeout - queue took too long to process');
         }
 
@@ -207,7 +219,7 @@ export class CommentQueueProcessor {
           await this.delay(delayMs);
         }
 
-        // Update current progress
+        // Update current progress (current comment being processed)
         await storage.updateCommentQueueProgress(sessionId, {
           currentCommentIndex: index
         });
@@ -230,12 +242,15 @@ export class CommentQueueProcessor {
             await this.sendCommentToAPI(queue.external_id, fakeUser.id, comment);
             
             success = true;
+            currentSuccessCount++;
+            
+            // Update progress after successful send
             await storage.updateCommentQueueProgress(sessionId, {
-              processedCount: index + 1,
-              successCount: (queue.success_count || 0) + 1
+              processedCount: index + 1, // This comment is now successfully processed
+              successCount: currentSuccessCount
             });
 
-            console.log(`✅ [${sessionId}] Comment ${index + 1} sent successfully`);
+            console.log(`✅ [${sessionId}] Comment ${index + 1}/${comments.length} sent successfully (Total success: ${currentSuccessCount})`);
 
           } catch (error) {
             retryCount++;
@@ -246,24 +261,40 @@ export class CommentQueueProcessor {
               console.log(`⏳ [${sessionId}] Retrying in ${retryDelay}ms...`);
               await this.delay(retryDelay);
             } else {
-              // Final failure
+              // Final failure - this comment failed permanently
+              currentFailureCount++;
+              
               await storage.updateCommentQueueProgress(sessionId, {
-                processedCount: index + 1,
-                failureCount: (queue.failure_count || 0) + 1,
+                processedCount: index + 1, // This comment is processed (but failed)
+                failureCount: currentFailureCount,
                 errorInfo: error instanceof Error ? error.message : 'Unknown error'
               });
-              console.error(`❌ [${sessionId}] Comment ${index + 1} failed permanently`);
+              console.error(`❌ [${sessionId}] Comment ${index + 1}/${comments.length} failed permanently (Total failures: ${currentFailureCount})`);
+              success = true; // Exit retry loop, move to next comment
             }
           }
         }
       }
 
-      // Mark as completed
-      await storage.updateCommentQueueProgress(sessionId, {
-        status: 'completed'
-      });
+      // All comments processed - check if we should mark as completed
+      const totalProcessed = currentSuccessCount + currentFailureCount;
+      console.log(`📊 [${sessionId}] Processing finished: ${totalProcessed}/${comments.length} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
 
-      console.log(`🎉 [${sessionId}] Queue completed successfully`);
+      if (totalProcessed === comments.length) {
+        // Mark as completed only if all comments were processed
+        await storage.updateCommentQueueProgress(sessionId, {
+          status: 'completed',
+          processedCount: comments.length
+        });
+        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${comments.length} comments processed`);
+      } else {
+        // This shouldn't happen, but just in case
+        await storage.updateCommentQueueProgress(sessionId, {
+          status: 'failed',
+          errorInfo: `Processing incomplete: ${totalProcessed}/${comments.length} comments processed`
+        });
+        console.error(`❌ [${sessionId}] Queue marked as failed - incomplete processing: ${totalProcessed}/${comments.length}`);
+      }
 
     } catch (error) {
       console.error(`❌ [${sessionId}] Queue failed:`, error);

@@ -363,6 +363,113 @@ router.get('/cleanup/status', isAuthenticated, async (req, res) => {
   }
 });
 
+// Check for inconsistent queue statuses (Admin only)
+router.get('/check-inconsistent', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể kiểm tra queue không nhất quán'
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT session_id, status, total_comments, processed_count, success_count, failure_count,
+             (success_count + failure_count) as actual_processed,
+             created_at, updated_at
+      FROM comment_queues 
+      WHERE 
+        (status = 'completed' AND processed_count < total_comments) OR
+        (status = 'completed' AND (success_count + failure_count) < total_comments) OR
+        (processed_count > total_comments) OR
+        (success_count + failure_count > total_comments)
+      ORDER BY created_at DESC
+      LIMIT 100
+    `);
+
+    res.json({
+      success: true,
+      inconsistentCount: result.rows.length,
+      queues: result.rows.map(row => ({
+        session_id: row.session_id,
+        status: row.status,
+        total_comments: row.total_comments,
+        processed_count: row.processed_count,
+        success_count: row.success_count,
+        failure_count: row.failure_count,
+        actual_processed: row.actual_processed,
+        issue: row.status === 'completed' && row.processed_count < row.total_comments 
+          ? 'Marked completed but not all processed'
+          : row.processed_count > row.total_comments
+          ? 'Processed count exceeds total'
+          : 'Other inconsistency',
+        created_at: row.created_at,
+        updated_at: row.updated_at
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Error checking inconsistent queues:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check inconsistent queues',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Fix inconsistent queue statuses (Admin only)
+router.post('/fix-inconsistent', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể sửa queue không nhất quán'
+      });
+    }
+
+    // Fix queues marked as completed but not fully processed
+    const fixResult1 = await pool.query(`
+      UPDATE comment_queues 
+      SET status = 'failed',
+          error_info = CONCAT(COALESCE(error_info, ''), '; Fixed inconsistent status - was marked completed but only ', processed_count, '/', total_comments, ' processed'),
+          updated_at = NOW()
+      WHERE status = 'completed' 
+      AND processed_count < total_comments
+      RETURNING session_id, total_comments, processed_count
+    `);
+
+    // Fix queues where success+failure count doesn't match processed count
+    const fixResult2 = await pool.query(`
+      UPDATE comment_queues 
+      SET processed_count = (success_count + failure_count),
+          updated_at = NOW()
+      WHERE (success_count + failure_count) != processed_count
+      AND (success_count + failure_count) <= total_comments
+      RETURNING session_id, total_comments, processed_count, success_count, failure_count
+    `);
+
+    res.json({
+      success: true,
+      fixedStatusCount: fixResult1.rows.length,
+      fixedCountCount: fixResult2.rows.length,
+      message: `Fixed ${fixResult1.rows.length} status inconsistencies and ${fixResult2.rows.length} count inconsistencies`,
+      details: {
+        statusFixes: fixResult1.rows,
+        countFixes: fixResult2.rows
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fixing inconsistent queues:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fix inconsistent queues',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Test cleanup endpoint to check what would be deleted (Admin only)
 router.get('/cleanup/preview', isAuthenticated, async (req, res) => {
   try {
