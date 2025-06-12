@@ -9,14 +9,12 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
   onSearch?: (query: string) => void;
   onNewContent?: () => void;
-  onQueueReport?: () => void;
 }
 
 export function DashboardLayout({ 
   children, 
   onSearch, 
-  onNewContent,
-  onQueueReport 
+  onNewContent
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -46,7 +44,7 @@ export function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader onMenuClick={toggleSidebar} onSearch={onSearch} onNewContent={onNewContent} onQueueReport={onQueueReport}/>
+      <AppHeader onMenuClick={toggleSidebar} onSearch={onSearch} onNewContent={onNewContent}/>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar for mobile - with overlay */}

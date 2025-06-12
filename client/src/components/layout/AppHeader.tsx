@@ -26,10 +26,9 @@ interface AppHeaderProps {
   onMenuClick: () => void;
   onSearch?: (query: string) => void;
   onNewContent?: () => void;
-  onQueueReport?: () => void;
 }
 
-export function AppHeader({ onMenuClick, onSearch, onNewContent, onQueueReport }: AppHeaderProps) {
+export function AppHeader({ onMenuClick, onSearch, onNewContent }: AppHeaderProps) {
   const [, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,11 +82,6 @@ export function AppHeader({ onMenuClick, onSearch, onNewContent, onQueueReport }
               <Button onClick={onNewContent} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                 <FileText className="h-4 w-4 mr-2" />
                 New Content
-              </Button>
-            )}
-            {onQueueReport && (
-              <Button onClick={onQueueReport} variant="outline" size="sm">
-                Queue Report
               </Button>
             )}
           </div>
