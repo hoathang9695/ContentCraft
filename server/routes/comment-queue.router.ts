@@ -318,6 +318,51 @@ router.delete('/cleanup', isAuthenticated, async (req, res) => {
   }
 });
 
+// Get cleanup schedule status (Admin only)
+router.get('/cleanup/status', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể xem trạng thái cleanup'
+      });
+    }
+
+    // Get current queue statistics
+    const totalCount = await storage.getQueueCount();
+    
+    // Check queues that would be cleaned up
+    const previewResult = await pool.query(`
+      SELECT COUNT(*) as cleanup_eligible_count
+      FROM comment_queues 
+      WHERE status IN ('completed', 'failed') 
+      AND completed_at IS NOT NULL
+      AND completed_at < NOW() - INTERVAL '24 hours'
+    `);
+
+    const cleanupEligibleCount = parseInt(previewResult.rows[0]?.cleanup_eligible_count || '0');
+
+    res.json({
+      success: true,
+      status: {
+        totalQueues: totalCount,
+        cleanupEligibleQueues: cleanupEligibleCount,
+        cleanupSchedule: 'Every 24 hours',
+        lastCleanupTime: 'Check server logs for last cleanup time',
+        nextCleanupTime: 'Within 24 hours of server start'
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error getting cleanup status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get cleanup status',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Test cleanup endpoint to check what would be deleted (Admin only)
 router.get('/cleanup/preview', isAuthenticated, async (req, res) => {
   try {
