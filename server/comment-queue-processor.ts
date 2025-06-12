@@ -530,6 +530,70 @@ export class CommentQueueProcessor {
       console.error('❌ Invalid concurrent limit. Must be between 1 and 10');
     }
   }
+
+  // Public method to force cleanup stuck queues
+  async forceCleanupStuckQueues() {
+    try {
+      console.log('🔧 Force cleanup stuck queues requested...');
+      
+      // Import pool directly from db module
+      const { pool } = await import('./db');
+      
+      // Reset queues that have been processing for more than 1 hour
+      const stuckThreshold = new Date();
+      stuckThreshold.setHours(stuckThreshold.getHours() - 1);
+      
+      console.log(`🔍 Force cleanup: Resetting queues stuck before: ${stuckThreshold.toISOString()}`);
+
+      const result = await pool.query(`
+        UPDATE comment_queues 
+        SET status = 'pending', 
+            started_at = NULL,
+            error_info = CONCAT(COALESCE(error_info, ''), '; Force cleanup reset at ', NOW())
+        WHERE status = 'processing' 
+        AND started_at < $1
+        RETURNING session_id, external_id, started_at
+      `, [stuckThreshold.toISOString()]);
+
+      if (result.rows.length > 0) {
+        console.log(`🔧 Force cleanup: Reset ${result.rows.length} stuck queues:`, 
+          result.rows.map(row => ({ 
+            sessionId: row.session_id, 
+            externalId: row.external_id,
+            wasStuckSince: row.started_at 
+          }))
+        );
+        
+        // Remove stuck queues from our local processing map
+        result.rows.forEach(row => {
+          this.processingQueues.delete(row.session_id);
+          console.log(`🔧 Removed locally tracked queue: ${row.session_id}`);
+        });
+
+        return {
+          success: true,
+          resetCount: result.rows.length,
+          resetQueues: result.rows.map(row => ({
+            sessionId: row.session_id,
+            externalId: row.external_id,
+            wasStuckSince: row.started_at
+          }))
+        };
+      } else {
+        console.log('🔧 Force cleanup: No stuck queues found to reset');
+        return {
+          success: true,
+          resetCount: 0,
+          resetQueues: [],
+          message: 'No stuck queues found'
+        };
+      }
+
+    } catch (error) {
+      console.error('❌ Error in force cleanup stuck queues:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance
