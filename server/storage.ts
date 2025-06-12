@@ -1049,7 +1049,7 @@ export class DatabaseStorage implements IStorage {
       return result.rows[0];
     } catch (error) {
       console.error('❌ Error in createCommentQueue:', error);
-      
+
       if (error && typeof error === 'object') {
         console.error('❌ Error details:', {
           message: error instanceof Error ? error.message : 'Unknown error',
@@ -1060,7 +1060,7 @@ export class DatabaseStorage implements IStorage {
           stack: error instanceof Error ? error.stack : 'No stack trace'
         });
       }
-      
+
       throw error;
     }
   }
@@ -1117,7 +1117,7 @@ export class DatabaseStorage implements IStorage {
 
     // Merge comments
     const allComments = [...existingComments, ...newComments];
-    
+
     console.log('🔧 Total comments after merge:', allComments.length);
 
     // Update queue
@@ -1146,10 +1146,10 @@ export class DatabaseStorage implements IStorage {
                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
         FROM comment_queues
       `);
-      
+
       const stats = result.rows[0];
       console.log(`📊 Queue stats: Total(${stats.total}) = Pending(${stats.pending}) + Processing(${stats.processing}) + Completed(${stats.completed}) + Failed(${stats.failed})`);
-      
+
       return parseInt(stats.total);
     } catch (error) {
       console.error('❌ Error getting queue count:', error);
@@ -1189,7 +1189,7 @@ export class DatabaseStorage implements IStorage {
 
       const shouldDeleteCount = checkResult.rows.filter(row => row.should_delete).length;
       console.log(`🔍 Found ${checkResult.rows.length} completed/failed queues, ${shouldDeleteCount} eligible for deletion`);
-      
+
       if (checkResult.rows.length > 0) {
         console.log(`📝 Sample queues (showing first 5):`);
         checkResult.rows.slice(0, 5).forEach(row => {
@@ -1212,7 +1212,7 @@ export class DatabaseStorage implements IStorage {
 
       const deletedCount = result.rows.length;
       const endTimestamp = new Date().toISOString();
-      
+
       if (deletedCount > 0) {
         console.log(`🧹✅ [${endTimestamp}] Successfully cleaned up ${deletedCount} old queues`);
         console.log(`🗑️ Deleted queues:`, 
@@ -1235,7 +1235,7 @@ export class DatabaseStorage implements IStorage {
                COUNT(CASE WHEN status IN ('completed', 'failed') THEN 1 END) as remaining_completed_failed
         FROM comment_queues
       `);
-      
+
       console.log(`📊 After cleanup: ${finalStats.rows[0].remaining_total} total queues, ${finalStats.rows[0].remaining_completed_failed} completed/failed remaining`);
 
       return deletedCount;
@@ -1255,87 +1255,81 @@ export class DatabaseStorage implements IStorage {
     successCount?: number;
     failureCount?: number;
     currentCommentIndex?: number;
-    totalComments?: number;
     errorInfo?: string;
   }) {
-    const fields = [];
-    const values = [];
-    let paramCount = 0;
+    console.log(`📝 [${sessionId}] Updating queue progress:`, updates);
 
-    // Add dynamic fields
+    const updateFields = [];
+    const values = [];
+    let paramCount = 1;
+
     if (updates.status !== undefined) {
-      fields.push(`status = $${++paramCount}`);
+      updateFields.push(`status = $${paramCount}`);
       values.push(updates.status);
+      paramCount++;
     }
 
     if (updates.processedCount !== undefined) {
-      fields.push(`processed_count = $${++paramCount}`);
+      updateFields.push(`processed_count = $${paramCount}`);
       values.push(updates.processedCount);
+      paramCount++;
     }
 
     if (updates.successCount !== undefined) {
-      fields.push(`success_count = $${++paramCount}`);
+      updateFields.push(`success_count = $${paramCount}`);
       values.push(updates.successCount);
+      paramCount++;
     }
 
     if (updates.failureCount !== undefined) {
-      fields.push(`failure_count = $${++paramCount}`);
+      updateFields.push(`failure_count = $${paramCount}`);
       values.push(updates.failureCount);
+      paramCount++;
     }
 
     if (updates.currentCommentIndex !== undefined) {
-      fields.push(`current_comment_index = $${++paramCount}`);
+      updateFields.push(`current_comment_index = $${paramCount}`);
       values.push(updates.currentCommentIndex);
-    }
-
-    if (updates.totalComments !== undefined) {
-      fields.push(`total_comments = $${++paramCount}`);
-      values.push(updates.totalComments);
+      paramCount++;
     }
 
     if (updates.errorInfo !== undefined) {
-      fields.push(`error_info = $${++paramCount}`);
+      updateFields.push(`error_info = $${paramCount}`);
       values.push(updates.errorInfo);
+      paramCount++;
     }
 
-    // Add timestamp fields based on status
-    if (updates.status === 'processing') {
-      fields.push(`started_at = $${++paramCount}`);
-      values.push(new Date().toISOString());
-    }
+    // Always update the updated_at timestamp
+    updateFields.push(`updated_at = NOW()`);
 
+    // Set completed_at if status is completed or failed
     if (updates.status === 'completed' || updates.status === 'failed') {
-      fields.push(`completed_at = $${++paramCount}`);
-      values.push(new Date().toISOString());
+      updateFields.push(`completed_at = NOW()`);
     }
 
-    if (fields.length === 0) {
-      return;
-    }
-
-    // Always update the updated_at field
-    fields.push(`updated_at = NOW()`);
-
-    // Add session_id as the last parameter
     values.push(sessionId);
 
     const query = `
       UPDATE comment_queues 
-      SET ${fields.join(', ')}
-      WHERE session_id = $${++paramCount}
+      SET ${updateFields.join(', ')}
+      WHERE session_id = $${paramCount}
       RETURNING *
     `;
 
-    console.log('🔧 Update query:', query);
-    console.log('🔧 Update values:', values);
-
     try {
       const result = await pool.query(query, values);
-      return result.rows[0];
+
+      if (result.rows.length === 0) {
+        console.error(`❌ [${sessionId}] Queue not found for update`);
+        throw new Error(`Queue ${sessionId} not found`);
+      }
+
+      const updatedQueue = result.rows[0];
+      console.log(`✅ [${sessionId}] Queue progress updated: status=${updatedQueue.status}, processed=${updatedQueue.processed_count}/${updatedQueue.total_comments}, success=${updatedQueue.success_count}, failed=${updatedQueue.failure_count}`);
+
+      return updatedQueue;
     } catch (error) {
-      console.error('❌ Error in updateCommentQueueProgress:', error);
-      console.error('❌ Query:', query);
-      console.error('❌ Values:', values);
+      console.error(`❌ [${sessionId}] Error updating queue progress:`, error);
       throw error;
     }
   }
