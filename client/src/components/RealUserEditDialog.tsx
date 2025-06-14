@@ -86,7 +86,7 @@ export function RealUserEditDialog({ open, user, onOpenChange }: RealUserEditDia
     values: {
       fullName: user?.fullName?.name || "",
       classification: user?.classification || "new",
-      assignedToId: user?.assignedToId?.toString() || "",
+      assignedToId: user?.assignedToId?.toString() || "unassigned",
       verified: user?.verified || "unverified",
     },
   });
@@ -125,13 +125,25 @@ export function RealUserEditDialog({ open, user, onOpenChange }: RealUserEditDia
       }
 
       // Update assignment
-      if (data.assignedToId) {
+      if (data.assignedToId && data.assignedToId !== "unassigned") {
         const assignmentResponse = await fetch(`/api/real-users/${user.id}/assign`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ assignedToId: parseInt(data.assignedToId) }),
+        });
+
+        if (!assignmentResponse.ok) {
+          throw new Error("Failed to update assignment");
+        }
+      } else if (data.assignedToId === "unassigned") {
+        const assignmentResponse = await fetch(`/api/real-users/${user.id}/assign`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ assignedToId: null }),
         });
 
         if (!assignmentResponse.ok) {
@@ -255,7 +267,7 @@ export function RealUserEditDialog({ open, user, onOpenChange }: RealUserEditDia
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Chưa phân công</SelectItem>
+                      <SelectItem value="unassigned">Chưa phân công</SelectItem>
                       {editorUsers?.map(editor => (
                         <SelectItem key={editor.id} value={editor.id.toString()}>
                           {editor.name}
