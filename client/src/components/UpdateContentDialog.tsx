@@ -369,6 +369,28 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     }
   }, [open]);
 
+  // Global function for adding category from search dropdown
+  useEffect(() => {
+    (window as any).addCategoryFromSearch = (categoryName: string) => {
+      setSelectedCategories(prev => {
+        const newCategories = [...prev, categoryName];
+        return Array.from(new Set(newCategories.map(c => c.trim()))).filter(Boolean);
+      });
+      
+      // Clear search input
+      const searchInput = document.getElementById('searchCategories') as HTMLInputElement;
+      if (searchInput) searchInput.value = '';
+      
+      // Hide dropdown
+      const dropdown = document.getElementById('categoryDropdown');
+      if (dropdown) dropdown.style.display = 'none';
+    };
+
+    return () => {
+      delete (window as any).addCategoryFromSearch;
+    };
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -424,46 +446,102 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     {selectedCategories.length} selected
                   </span>
                 </div>
-                <div>
-                  <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
-                    Thêm Categories mới
-                  </Label>
-                  <Textarea
-                    id="newCategories"
-                    placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
-                    className="min-h-[120px] text-sm mb-2"
-                    value={newCategories}
-                    onChange={(e) => {
-                      setNewCategories(e.target.value);
-                    }}
-                    onBlur={() => {
-                      const matches = newCategories.match(/\{([^}]+)\}/g);
-                      if (matches) {
-                        const newCats = matches.map(m => m.slice(1, -1).trim());
-                        setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
+                <div className="space-y-4">
+                  {/* Search Categories */}
+                  <div className="relative">
+                    <Label htmlFor="searchCategories" className="text-sm font-medium mb-2 block">
+                      Tìm và chọn Categories có sẵn
+                    </Label>
+                    <Input
+                      id="searchCategories"
+                      placeholder="Tìm kiếm categories..."
+                      className="mb-2"
+                      onChange={(e) => {
+                        const searchTerm = e.target.value.toLowerCase();
+                        const filteredCats = categories?.filter(cat => 
+                          cat.name.toLowerCase().includes(searchTerm)
+                        ) || [];
+                        
+                        // Show dropdown if there are matches and search term is not empty
+                        if (searchTerm && filteredCats.length > 0) {
+                          const dropdown = document.getElementById('categoryDropdown');
+                          if (dropdown) {
+                            dropdown.style.display = 'block';
+                            dropdown.innerHTML = filteredCats.slice(0, 8).map(cat => 
+                              `<div class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-b border-slate-200 dark:border-slate-700 text-sm" 
+                                   onclick="addCategoryFromSearch('${cat.name}')">${cat.name}</div>`
+                            ).join('');
+                          }
+                        } else {
+                          const dropdown = document.getElementById('categoryDropdown');
+                          if (dropdown) dropdown.style.display = 'none';
+                        }
+                      }}
+                      onBlur={() => {
+                        // Delay hiding dropdown to allow click events
+                        setTimeout(() => {
+                          const dropdown = document.getElementById('categoryDropdown');
+                          if (dropdown) dropdown.style.display = 'none';
+                        }, 200);
+                      }}
+                    />
+                    <div 
+                      id="categoryDropdown" 
+                      className="absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto"
+                      style={{ display: 'none' }}
+                    ></div>
+                  </div>
+
+                  {/* Manual Categories Input */}
+                  <div>
+                    <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
+                      Thêm Categories mới
+                    </Label>
+                    <Textarea
+                      id="newCategories"
+                      placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
+                      className="min-h-[120px] text-sm mb-2"
+                      value={newCategories}
+                      onChange={(e) => {
+                        setNewCategories(e.target.value);
+                      }}
+                      onBlur={() => {
                         const matches = newCategories.match(/\{([^}]+)\}/g);
                         if (matches) {
                           const newCats = matches.map(m => m.slice(1, -1).trim());
                           setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
-                          setNewCategories('');
                         }
-                      }
-                    }}
-                  />
-                  {selectedCategories.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {Array.from(new Set(selectedCategories)).map((cat) => (
-                        <span key={cat} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs">
-                          {cat}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const matches = newCategories.match(/\{([^}]+)\}/g);
+                          if (matches) {
+                            const newCats = matches.map(m => m.slice(1, -1).trim());
+                            setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
+                            setNewCategories('');
+                          }
+                        }
+                      }}
+                    />
+                    {selectedCategories.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {Array.from(new Set(selectedCategories)).map((cat) => (
+                          <span key={cat} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs flex items-center gap-1">
+                            {cat}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCategories(prev => prev.filter(c => c !== cat))}
+                              className="text-red-500 hover:text-red-700 ml-1"
+                              title="Xóa category"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
