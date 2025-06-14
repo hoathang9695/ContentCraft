@@ -913,14 +913,14 @@ export class DatabaseStorage implements IStorage {
       console.log(`Starting delete category ${id}`);
       
       // Xóa labels trước (vì có khóa ngoại)
-      const deletedLabels = await db.delete(labels).where(eq(labels.categoryId, id));
-      console.log(`Deleted labels for category ${id}:`, deletedLabels);
+      await db.delete(labels).where(eq(labels.categoryId, id));
+      console.log(`Deleted labels for category ${id}`);
 
       // Sau đó xóa category
       const result = await db
         .delete(categories)
         .where(eq(categories.id, id))
-        .returning({ id: categories.id });
+        .returning();
 
       console.log(`Delete category result:`, result);
       return result.length > 0;
