@@ -94,7 +94,7 @@ export interface IStorage {
   updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category | undefined>;
   deleteCategory(id: number): Promise<boolean>;
 
-  
+
 
   // Fake User operations
   getAllFakeUsers(): Promise<FakeUser[]>;
@@ -748,14 +748,14 @@ export class DatabaseStorage implements IStorage {
           like(contents.categories, `%${searchTerm}%`),
           like(contents.labels, `%${searchTerm}%`),
           // Basic text search in source field (works for both text and JSON)
-          sql`LOWER(${contents.source}::text) LIKE ${'%' + searchTermLower + '%'}`,
+          sql`LOWER(${contents.source}::text) LIKE '%' || LOWER(${searchTermLower}) || '%'`,
           // Try to extract 'name' from JSON if source is valid JSON
           sql`
             CASE 
               WHEN ${contents.source} ~ '^{.*}$' 
               THEN LOWER((${contents.source}::jsonb)->>'name') 
               ELSE LOWER(${contents.source}::text) 
-            END LIKE ${'%' + searchTermLower + '%'}
+            END LIKE '%' || LOWER(${searchTermLower}) || '%'
           `,
           // Search in JSON source id field
           sql`
@@ -771,7 +771,7 @@ export class DatabaseStorage implements IStorage {
               WHEN ${contents.source} ~ '^{.*}$' 
               THEN REPLACE(LOWER((${contents.source}::jsonb)->>'name'), ' ', '') 
               ELSE REPLACE(LOWER(${contents.source}::text), ' ', '') 
-            END LIKE ${'%' + searchTermLower.replace(/\s/g, '') + '%'}
+            END LIKE '%' || REPLACE(LOWER(${searchTermLower}), ' ', '') || '%'
           `
         )
       );
@@ -902,7 +902,7 @@ export class DatabaseStorage implements IStorage {
   async deleteCategory(id: number): Promise<boolean> {
     try {
       console.log(`Starting delete category ${id}`);
-      
+
       // Directly delete category
       const result = await db
         .delete(categories)
@@ -917,7 +917,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  
+
 
   // FakeUser management implementations
   async getAllFakeUsers(): Promise<FakeUser[]> {
@@ -1278,12 +1278,12 @@ export class DatabaseStorage implements IStorage {
       }
 
       const updatedQueue = result.rows[0];
-      
+
       // Validate data consistency after update
       const actualProcessed = (updatedQueue.success_count || 0) + (updatedQueue.failure_count || 0);
       if (updatedQueue.status === 'completed' && actualProcessed !== updatedQueue.total_comments) {
         console.error(`❌ [${sessionId}] INCONSISTENCY DETECTED: status=completed but actualProcessed(${actualProcessed}) != totalComments(${updatedQueue.total_comments})`);
-        
+
         // Auto-fix by setting status to failed
         await pool.query(`
           UPDATE comment_queues 
@@ -1292,7 +1292,7 @@ export class DatabaseStorage implements IStorage {
               updated_at = NOW()
           WHERE session_id = $1
         `, [sessionId]);
-        
+
         throw new Error(`Inconsistent queue state detected and auto-fixed for ${sessionId}`);
       }
 
