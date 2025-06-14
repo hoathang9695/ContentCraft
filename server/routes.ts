@@ -3411,14 +3411,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(groupsTable.classification, classification));
       }
 
-      // Search filter
-      // Add search condition - search in group name, phone number, and categories
-      if (search) {
+      // Search filter - search in group name, ID, phone number, and categories
+      if (search && search.trim()) {
+        const searchPattern = `%${search.toLowerCase()}%`;
         conditions.push(
           or(
-            sql`${groupsTable.groupName}->>'group_name' ILIKE ${`%${search}%`}`,
-            sql`${groupsTable.phoneNumber} ILIKE ${`%${search}%`}`,
-            sql`${groupsTable.categories} ILIKE ${`%${search}%`}`,
+            sql`LOWER(${groupsTable.groupName}::jsonb->>'group_name') LIKE ${searchPattern}`,
+            sql`LOWER(${groupsTable.groupName}::jsonb->>'name') LIKE ${searchPattern}`,
+            sql`${groupsTable.groupName}::jsonb->>'id' LIKE ${`%${search}%`}`,
+            sql`LOWER(${groupsTable.phoneNumber}) LIKE ${searchPattern}`,
+            sql`LOWER(${groupsTable.categories}) LIKE ${searchPattern}`,
           ),
         );
       }
