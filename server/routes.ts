@@ -3756,6 +3756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sql`LOWER(UNACCENT(${realUsers.fullName}::jsonb->>'name')) LIKE ${searchPattern}`,
             sql`LOWER(${realUsers.fullName}::jsonb->>'name') LIKE ${searchPattern}`,
             sql`LOWER(${realUsers.email}) LIKE ${searchPattern}`,
+            sql`${realUsers.fullName}::jsonb->>'id' LIKE ${searchPattern}`,
           ),
         );
       }
