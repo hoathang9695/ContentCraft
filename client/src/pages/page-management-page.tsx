@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PushPageLikesDialog } from "@/components/PushPageLikesDialog";
+import { PageEditDialog } from "@/components/PageEditDialog";
 
 export default function PageManagementPage() {
   const { user } = useAuth();
@@ -32,6 +33,8 @@ export default function PageManagementPage() {
 
   const [pushLikesOpen, setPushLikesOpen] = useState(false);
   const [pushLikesPage, setPushLikesPage] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editPage, setEditPage] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -744,6 +747,14 @@ export default function PageManagementPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
+                          setEditPage(row);
+                          setEditDialogOpen(true);
+                        }}
+                      >
+                        Cập nhật Trang
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
                           setPushLikesPage(row);
                           setPushLikesOpen(true);
                         }}
@@ -762,6 +773,12 @@ export default function PageManagementPage() {
           onOpenChange={setPushLikesOpen}
           targetPageId={pushLikesPage?.pageName?.id}
           targetPageName={pushLikesPage?.pageName?.page_name || pushLikesPage?.pageName?.name}
+        />
+        
+        <PageEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          page={editPage}
         />
       </div>
     </DashboardLayout>

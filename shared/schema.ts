@@ -189,7 +189,7 @@ export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
   pageName: jsonb("page_name").notNull(),
   pageType: varchar("page_type", { length: 100 }).notNull(),
-  classification: varchar("classification", { length: 50 }).default("new"),
+  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'non_potential', 'positive'
   adminData: jsonb("admin_data"), // Admin data in JSON format
   phoneNumber: varchar("phone_number", { length: 20 }),
   monetizationEnabled: boolean("monetization_enabled").default(false),
