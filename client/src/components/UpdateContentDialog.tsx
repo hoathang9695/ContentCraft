@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { Content, Category, Label as LabelType } from '@shared/schema';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Maximize2, Minimize2, X } from 'lucide-react';
 
 interface UpdateContentDialogProps {
   open: boolean;
@@ -24,6 +25,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [newCategories, setNewCategories] = useState<string>('');
   const [newLabels, setNewLabels] = useState<string>('');
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   // Tải dữ liệu content và metadata cần thiết chỉ khi dialog mở
   const { data: content, isLoading: contentLoading } = useQuery<any>({
@@ -359,8 +361,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     updateMutation.mutate(payload);
   };
 
-  // Kiểm tra trạng thái loading
-  const isLoading = contentLoading;
+  
 
   useEffect(() => {
     if (!open) {
@@ -369,24 +370,75 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     }
   }, [open]);
 
+  // Global function for adding category from search dropdown
+  useEffect(() => {
+    (window as any).addCategoryFromSearch = (categoryName: string) => {
+      setSelectedCategories(prev => {
+        const newCategories = [...prev, categoryName];
+        return Array.from(new Set(newCategories.map(c => c.trim()))).filter(Boolean);
+      });
+      
+      // Clear search input
+      const searchInput = document.getElementById('searchCategories') as HTMLInputElement;
+      if (searchInput) searchInput.value = '';
+      
+      // Hide dropdown
+      const dropdown = document.getElementById('categoryDropdown');
+      if (dropdown) dropdown.style.display = 'none';
+    };
+
+    return () => {
+      delete (window as any).addCategoryFromSearch;
+    };
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            Cập nhật thông tin: {content?.externalId}
-          </DialogTitle>
+      <DialogContent 
+        className={`update-content-dialog dialog-content ${
+          isExpanded 
+            ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' 
+            : 'max-w-[1000px] max-h-[80vh] w-[90vw]'
+        } p-0 gap-0 flex flex-col overflow-hidden`}
+      >
+        <DialogHeader className="p-6 pb-0 flex-shrink-0">
+          <div className="flex justify-between items-center">
+            <DialogTitle className="text-lg font-medium">
+              Cập nhật thông tin: {content?.externalId}
+            </DialogTitle>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="h-8 w-8"
+                title={isExpanded ? "Thu nhỏ" : "Mở rộng"}
+              >
+                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onOpenChange(false)}
+                className="h-8 w-8"
+                title="Đóng"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
-        {(contentLoading || !categories || !allLabels) ? (
-          <div className="flex justify-center items-center p-10">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            <span>Đang tải thông tin...</span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-6 overflow-hidden h-[70vh]">
-            {/* Left Column - Categories and Labels */}
-            <div className="flex flex-col h-full overflow-hidden space-y-6">
+        <div className="flex-1 min-h-0 flex flex-col">
+          {contentLoading ? (
+            <div className="flex justify-center items-center p-10">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+              <span>Đang tải thông tin...</span>
+            </div>
+          ) : (
+            <div className={`grid ${isExpanded ? 'grid-cols-3' : 'grid-cols-2'} gap-6 p-6 overflow-y-auto h-full`}>
+              {/* Left Column - Categories and Labels */}
+              <div className="flex flex-col h-full space-y-6">
               {/* Categories Section */}
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-4">
@@ -395,46 +447,102 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                     {selectedCategories.length} selected
                   </span>
                 </div>
-                <div>
-                  <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
-                    Thêm Categories mới
-                  </Label>
-                  <Textarea
-                    id="newCategories"
-                    placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
-                    className="min-h-[120px] text-sm mb-2"
-                    value={newCategories}
-                    onChange={(e) => {
-                      setNewCategories(e.target.value);
-                    }}
-                    onBlur={() => {
-                      const matches = newCategories.match(/\{([^}]+)\}/g);
-                      if (matches) {
-                        const newCats = matches.map(m => m.slice(1, -1).trim());
-                        setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
+                <div className="space-y-4">
+                  {/* Search Categories */}
+                  <div className="relative">
+                    <Label htmlFor="searchCategories" className="text-sm font-medium mb-2 block">
+                      Tìm và chọn Categories có sẵn
+                    </Label>
+                    <Input
+                      id="searchCategories"
+                      placeholder="Tìm kiếm categories..."
+                      className="mb-2"
+                      onChange={(e) => {
+                        const searchTerm = e.target.value.toLowerCase();
+                        const filteredCats = categories?.filter(cat => 
+                          cat.name.toLowerCase().includes(searchTerm)
+                        ) || [];
+                        
+                        // Show dropdown if there are matches and search term is not empty
+                        if (searchTerm && filteredCats.length > 0) {
+                          const dropdown = document.getElementById('categoryDropdown');
+                          if (dropdown) {
+                            dropdown.style.display = 'block';
+                            dropdown.innerHTML = filteredCats.slice(0, 8).map(cat => 
+                              `<div class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-b border-slate-200 dark:border-slate-700 text-sm" 
+                                   onclick="addCategoryFromSearch('${cat.name}')">${cat.name}</div>`
+                            ).join('');
+                          }
+                        } else {
+                          const dropdown = document.getElementById('categoryDropdown');
+                          if (dropdown) dropdown.style.display = 'none';
+                        }
+                      }}
+                      onBlur={() => {
+                        // Delay hiding dropdown to allow click events
+                        setTimeout(() => {
+                          const dropdown = document.getElementById('categoryDropdown');
+                          if (dropdown) dropdown.style.display = 'none';
+                        }, 200);
+                      }}
+                    />
+                    <div 
+                      id="categoryDropdown" 
+                      className="absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto"
+                      style={{ display: 'none' }}
+                    ></div>
+                  </div>
+
+                  {/* Manual Categories Input */}
+                  <div>
+                    <Label htmlFor="newCategories" className="text-sm font-medium mb-2 block">
+                      Thêm Categories mới
+                    </Label>
+                    <Textarea
+                      id="newCategories"
+                      placeholder="Nhập categories cách nhau bởi {}. Ví dụ: {AI}{Gaming}{Social}"
+                      className="min-h-[120px] text-sm mb-2"
+                      value={newCategories}
+                      onChange={(e) => {
+                        setNewCategories(e.target.value);
+                      }}
+                      onBlur={() => {
                         const matches = newCategories.match(/\{([^}]+)\}/g);
                         if (matches) {
                           const newCats = matches.map(m => m.slice(1, -1).trim());
                           setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
-                          setNewCategories('');
                         }
-                      }
-                    }}
-                  />
-                  {selectedCategories.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {Array.from(new Set(selectedCategories)).map((cat) => (
-                        <span key={cat} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs">
-                          {cat}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const matches = newCategories.match(/\{([^}]+)\}/g);
+                          if (matches) {
+                            const newCats = matches.map(m => m.slice(1, -1).trim());
+                            setSelectedCategories([...new Set([...selectedCategories, ...newCats])]);
+                            setNewCategories('');
+                          }
+                        }
+                      }}
+                    />
+                    {selectedCategories.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {Array.from(new Set(selectedCategories)).map((cat) => (
+                          <span key={cat} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs flex items-center gap-1">
+                            {cat}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCategories(prev => prev.filter(c => c !== cat))}
+                              className="text-red-500 hover:text-red-700 ml-1"
+                              title="Xóa category"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -491,7 +599,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             </div>
 
             {/* Right Column - Safety Status and Summary */}
-            <div className="flex flex-col h-full overflow-hidden space-y-6">
+            <div className="flex flex-col h-full space-y-6">
               {/* Safety Status Section */}
               <div>
                 <h3 className="font-bold text-lg mb-4">Trạng thái nội dung</h3>
@@ -611,13 +719,92 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        <DialogFooter className="mt-4">
+            {/* Third Column - Content Details (only visible when expanded) */}
+            {isExpanded && (
+              <div className="flex flex-col h-full space-y-6">
+                <div>
+                  <h3 className="font-bold text-lg mb-4">Chi tiết nội dung</h3>
+                  <div className="space-y-4 h-full overflow-y-auto">
+                    {/* Content Source Info */}
+                    <div className="p-4 border rounded-md bg-white dark:bg-slate-900">
+                      <div className="text-sm font-medium text-muted-foreground mb-2">Nguồn:</div>
+                      <div className="text-sm">
+                        {content?.source ? (
+                          (() => {
+                            try {
+                              const sourceObj = JSON.parse(content.source);
+                              return (
+                                <div className="space-y-1">
+                                  <div><strong>Tên:</strong> {sourceObj.name || 'N/A'}</div>
+                                  <div><strong>ID:</strong> {sourceObj.id || 'N/A'}</div>
+                                  <div><strong>Loại:</strong> {sourceObj.type || 'N/A'}</div>
+                                </div>
+                              );
+                            } catch {
+                              return <span className="text-slate-400">{content.source}</span>;
+                            }
+                          })()
+                        ) : (
+                          <span className="text-slate-400">Không có thông tin nguồn</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Content Status */}
+                    <div className="p-4 border rounded-md bg-white dark:bg-slate-900">
+                      <div className="text-sm font-medium text-muted-foreground mb-2">Trạng thái xử lý:</div>
+                      <div className="text-sm">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            content?.status === 'completed' ? 'bg-green-500' : 
+                            content?.status === 'pending' ? 'bg-yellow-500' : 
+                            'bg-gray-400'
+                          }`} />
+                          <span className="capitalize">{content?.status || 'N/A'}</span>
+                        </div>
+                        <div><strong>Người xử lý:</strong> {content?.processor?.name || 'N/A'}</div>
+                        <div><strong>Phân công:</strong> {content?.assignedAt ? new Date(content.assignedAt).toLocaleString('vi-VN') : 'N/A'}</div>
+                      </div>
+                    </div>
+
+                    {/* Content Metrics */}
+                    <div className="p-4 border rounded-md bg-white dark:bg-slate-900">
+                      <div className="text-sm font-medium text-muted-foreground mb-2">Thống kê:</div>
+                      <div className="text-sm space-y-1">
+                        <div><strong>Comments:</strong> {content?.comments || 0}</div>
+                        <div><strong>Reactions:</strong> {content?.reactions || 0}</div>
+                        <div><strong>Tạo lúc:</strong> {content?.createdAt ? new Date(content.createdAt).toLocaleString('vi-VN') : 'N/A'}</div>
+                        <div><strong>Cập nhật:</strong> {content?.updatedAt ? new Date(content.updatedAt).toLocaleString('vi-VN') : 'N/A'}</div>
+                      </div>
+                    </div>
+
+                    {/* Processing Result */}
+                    {content?.processingResult && (
+                      <div className="p-4 border rounded-md bg-white dark:bg-slate-900">
+                        <div className="text-sm font-medium text-muted-foreground mb-2">Kết quả xử lý:</div>
+                        <div className="text-sm">
+                          <pre className="whitespace-pre-wrap bg-slate-50 dark:bg-slate-800 p-2 rounded text-xs">
+                            {typeof content.processingResult === 'string' 
+                              ? content.processingResult 
+                              : JSON.stringify(content.processingResult, null, 2)
+                            }
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          )}
+        </div>
+
+        <DialogFooter className="p-6 border-t bg-gray-50 dark:bg-slate-900 flex-shrink-0">
           <Button 
             onClick={handleSubmit} 
-            disabled={isLoading || updateMutation.isPending || isSafe === null}
+            disabled={contentLoading || updateMutation.isPending || isSafe === null}
             className="bg-indigo-600 hover:bg-indigo-700"
           >
             {updateMutation.isPending 
@@ -628,6 +815,35 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             }
           </Button>
         </DialogFooter>
+        
+        <style>{`
+          /* Hide default dialog close button only for UpdateContentDialog */
+          .update-content-dialog .dialog-content > button[data-radix-dialog-close],
+          .update-content-dialog [data-radix-dialog-content] > button[data-radix-dialog-close],
+          .update-content-dialog button[data-radix-dialog-close],
+          .update-content-dialog [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+          }
+
+          /* Additional specific selector for the exact button structure */
+          .dialog-content button.absolute.right-4.top-4 {
+            display: none !important;
+          }
+
+          /* Ensure scrollable areas work properly */
+          .update-content-dialog .dialog-content {
+            display: flex;
+            flex-direction: column;
+          }
+        `}</style>
       </DialogContent>
     </Dialog>
   );

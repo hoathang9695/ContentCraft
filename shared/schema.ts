@@ -22,7 +22,6 @@ export const contents = pgTable("contents", {
   externalId: text("external_id").unique(), // ID nội dung từ service bên ngoài qua Kafka
   source: text("source"), // Nguồn cấp (có thể null)
   categories: text("categories"), // Danh mục
-  labels: text("labels"), // Nhãn
   status: text("status").notNull().default("pending"), // 'pending', 'processing', 'completed'
   sourceVerification: text("source_verification").notNull().default("unverified"), // 'verified', 'unverified'
   assigned_to_id: integer("assigned_to_id").references(() => users.id), // Người được phân công xử lý
@@ -82,24 +81,8 @@ export const categories = pgTable("categories", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// Bảng nhãn (Labels)
-export const labels = pgTable("labels", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(), // Tên nhãn
-  description: text("description"), // Mô tả nhãn (tùy chọn)
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
 // Schema để insert Category
 export const insertCategorySchema = createInsertSchema(categories).omit({ 
-  id: true, 
-  createdAt: true,
-  updatedAt: true
-});
-
-// Schema để insert Label
-export const insertLabelSchema = createInsertSchema(labels).omit({ 
   id: true, 
   createdAt: true,
   updatedAt: true
@@ -108,8 +91,7 @@ export const insertLabelSchema = createInsertSchema(labels).omit({
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Category = typeof categories.$inferSelect;
 
-export type InsertLabel = z.infer<typeof insertLabelSchema>;
-export type Label = typeof labels.$inferSelect;
+
 
 // Bảng người dùng ảo (FakeUsers) cho việc đẩy comment
 export const fakeUsers = pgTable("fake_users", {
@@ -178,7 +160,7 @@ export const realUsers = pgTable("real_users", {
   fullName: jsonb("full_name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   verified: varchar("verified", { length: 50 }).default("unverified"),
-  classification: varchar("classification", { length: 50 }).default("new"),
+  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'non_potential', 'positive'
   lastLogin: timestamp("last_login", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -189,7 +171,7 @@ export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
   pageName: jsonb("page_name").notNull(),
   pageType: varchar("page_type", { length: 100 }).notNull(),
-  classification: varchar("classification", { length: 50 }).default("new"),
+  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'non_potential', 'positive'
   adminData: jsonb("admin_data"), // Admin data in JSON format
   phoneNumber: varchar("phone_number", { length: 20 }),
   monetizationEnabled: boolean("monetization_enabled").default(false),
@@ -212,7 +194,7 @@ export const groups = pgTable("groups", {
   groupName: jsonb("group_name").notNull(),
   groupType: varchar("group_type", { length: 100 }).notNull(), // 'public' or 'private'
   categories: varchar("categories", { length: 100 }), // 'business', 'community', 'education', etc.
-  classification: varchar("classification", { length: 50 }).default("new"),
+  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'positive'
   adminData: jsonb("admin_data"), // Admin data in JSON format
   phoneNumber: varchar("phone_number", { length: 20 }),
   monetizationEnabled: boolean("monetization_enabled").default(false),

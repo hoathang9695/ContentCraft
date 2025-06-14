@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Mail, Eye, UserPlus } from "lucide-react";
+import { MoreHorizontal, Mail, Eye, UserPlus, Edit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { PushFollowDialog } from "@/components/PushFollowDialog";
 import { RealUserEmailDialog } from "@/components/RealUserEmailDialog";
+import { RealUserEditDialog } from "@/components/RealUserEditDialog";
 
 export default function RealUserPage() {
   const { user } = useAuth();
@@ -35,12 +36,14 @@ export default function RealUserPage() {
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailUser, setEmailUser] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editUser, setEditUser] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [verificationStatus, setVerificationStatus] = useState<'verified' | 'unverified'>('unverified');
-  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('all');
+  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'positive' | 'all'>('all');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -237,12 +240,13 @@ export default function RealUserPage() {
                 </Select>
               )}
 
-              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
+              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'positive' | 'all') => setClassificationFilter(value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue>
                     {classificationFilter === 'all' ? 'Tất cả phân loại' : 
                      classificationFilter === 'new' ? 'Mới' :
-                     classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
+                     classificationFilter === 'potential' ? 'Tiềm năng' :
+                     classificationFilter === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -250,6 +254,7 @@ export default function RealUserPage() {
                   <SelectItem value="new">Mới</SelectItem>
                   <SelectItem value="potential">Tiềm năng</SelectItem>
                   <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                  <SelectItem value="positive">Tích cực</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -425,12 +430,13 @@ export default function RealUserPage() {
                 </Select>
               )}
 
-              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
+              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'positive' | 'all') => setClassificationFilter(value)}>
                 <SelectTrigger className="w-full">
                   <SelectValue>
                     {classificationFilter === 'all' ? 'Tất cả phân loại' : 
                      classificationFilter === 'new' ? 'Mới' :
-                     classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
+                     classificationFilter === 'potential' ? 'Tiềm năng' :
+                     classificationFilter === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -438,6 +444,7 @@ export default function RealUserPage() {
                   <SelectItem value="new">Mới</SelectItem>
                   <SelectItem value="potential">Tiềm năng</SelectItem>
                   <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                  <SelectItem value="positive">Tích cực</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -570,7 +577,7 @@ export default function RealUserPage() {
             data={displayUsers}
             isLoading={isLoading}
             searchable={true}
-            searchPlaceholder="Tìm kiếm theo tên hoặc email..."
+            searchPlaceholder="Tìm kiếm theo tên, email hoặc ID user..."
             searchValue={searchQuery} 
             onSearch={setSearchQuery}
             pagination={{
@@ -633,6 +640,7 @@ export default function RealUserPage() {
                         <SelectItem value="new">Mới</SelectItem>
                         <SelectItem value="potential">Tiềm năng</SelectItem>
                         <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                        <SelectItem value="positive">Tích cực</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -742,6 +750,15 @@ export default function RealUserPage() {
                       )}
                       <DropdownMenuItem
                         onClick={() => {
+                          setEditUser(row);
+                          setEditDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Cập nhật User
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
                           setPushFollowUser(row);
                           setPushFollowOpen(true);
                         }}
@@ -773,6 +790,11 @@ export default function RealUserPage() {
               description: "Email đã được gửi thành công",
             });
           }}
+        />
+        <RealUserEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          user={editUser}
         />
       </div>
     </DashboardLayout>
