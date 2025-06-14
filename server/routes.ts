@@ -3625,6 +3625,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update group name
+  app.put(
+    "/api/groups/:id/name",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const groupId = parseInt(req.params.id);
+        const { name } = req.body;
+
+        if (!name || name.trim() === "") {
+          return res.status(400).json({
+            message: "Name is required",
+          });
+        }
+
+        // Import groups from schema
+        const { groups } = await import("../shared/schema");
+
+        // Get current group data
+        const group = await db
+          .select()
+          .from(groups)
+          .where(eq(groups.id, groupId))
+          .limit(1);
+
+        if (group.length === 0) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        const currentGroupName = group[0].groupName 
+          ? (typeof group[0].groupName === 'string' ? JSON.parse(group[0].groupName) : group[0].groupName)
+          : { id: group[0].id.toString(), group_name: '', name: '' };
+
+        const updatedGroupName = {
+          ...currentGroupName,
+          group_name: name.trim(),
+          name: name.trim()
+        };
+
+        const result = await db
+          .update(groups)
+          .set({
+            groupName: updatedGroupName,
+            updatedAt: new Date(),
+          })
+          .where(eq(groups.id, groupId))
+          .returning();
+
+        res.json({ message: "Group name updated successfully", group: result[0] });
+      } catch (error) {
+        console.error("Error updating group name:", error);
+        res.status(500).json({
+          message: "Error updating group name",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Update group assignment
+  app.put(
+    "/api/groups/:id/assign",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const groupId = parseInt(req.params.id);
+        const { assignedToId } = req.body;
+
+        // Import groups from schema
+        const { groups } = await import("../shared/schema");
+
+        const result = await db
+          .update(groups)
+          .set({
+            assignedToId: assignedToId || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(groups.id, groupId))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        res.json({ message: "Group assignment updated successfully", group: result[0] });
+      } catch (error) {
+        console.error("Error updating group assignment:", error);
+        res.status(500).json({
+          message: "Error updating group assignment",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Update group info (phone number and monetization)
+  app.put(
+    "/api/groups/:id/info",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const groupId = parseInt(req.params.id);
+        const { phoneNumber, monetizationEnabled } = req.body;
+
+        // Import groups from schema
+        const { groups } = await import("../shared/schema");
+
+        const result = await db
+          .update(groups)
+          .set({
+            phoneNumber: phoneNumber || null,
+            monetizationEnabled: monetizationEnabled || false,
+            updatedAt: new Date(),
+          })
+          .where(eq(groups.id, groupId))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        res.json({ message: "Group info updated successfully", group: result[0] });
+      } catch (error) {
+        console.error("Error updating group info:", error);
+        res.status(500).json({
+          message: "Error updating group info",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
   // Update group classification
   app.put(
     "/api/groups/:id/classification",
@@ -3635,7 +3767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { classification } = req.body;
 
         // Validate classification value
-        const validClassifications = ["new", "potential", "non_potential"];
+        const validClassifications = ["new", "potential", "non_potential", "positive"];
         if (!validClassifications.includes(classification)) {
           return res.status(400).json({
             message: "Invalid classification value",
