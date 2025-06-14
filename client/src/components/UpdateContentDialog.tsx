@@ -359,8 +359,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
     updateMutation.mutate(payload);
   };
 
-  // Kiểm tra trạng thái loading
-  const isLoading = contentLoading;
+  
 
   useEffect(() => {
     if (!open) {
@@ -371,20 +370,20 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             Cập nhật thông tin: {content?.externalId}
           </DialogTitle>
         </DialogHeader>
 
-        {(contentLoading || !categories || !allLabels) ? (
+        {contentLoading ? (
           <div className="flex justify-center items-center p-10">
             <Loader2 className="w-6 h-6 animate-spin mr-2" />
             <span>Đang tải thông tin...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-6 overflow-hidden h-[70vh]">
+          <div className="grid grid-cols-2 gap-6 overflow-hidden h-[75vh]">
             {/* Left Column - Categories and Labels */}
             <div className="flex flex-col h-full overflow-hidden space-y-6">
               {/* Categories Section */}
@@ -617,7 +616,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
         <DialogFooter className="mt-4">
           <Button 
             onClick={handleSubmit} 
-            disabled={isLoading || updateMutation.isPending || isSafe === null}
+            disabled={contentLoading || updateMutation.isPending || isSafe === null}
             className="bg-indigo-600 hover:bg-indigo-700"
           >
             {updateMutation.isPending 
