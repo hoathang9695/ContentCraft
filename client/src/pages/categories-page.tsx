@@ -20,6 +20,7 @@ interface Category {
 
 export default function CategoriesPage() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [categoryFormData, setCategoryFormData] = useState({
     name: "",
     description: "",
@@ -264,58 +265,60 @@ export default function CategoriesPage() {
             </CardContent>
           </Card>
         )}
-      </div>
 
         {/* Category Dialog */}
         <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCategory ? "Edit Category" : "Add New Category"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCategory 
-                ? "Make changes to the category here." 
-                : "Create a new category. Click save when you're done."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="category-name">Name</Label>
-              <Input
-                id="category-name"
-                value={categoryFormData.name}
-                onChange={(e) =>
-                  setCategoryFormData({ ...categoryFormData, name: e.target.value })
-                }
-                placeholder="Enter category name"
-              />
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                {editingCategory ? "Edit Category" : "Add New Category"}
+              </DialogTitle>
+              <DialogDescription>
+                {editingCategory 
+                  ? "Make changes to the category here." 
+                  : "Create a new category. Click save when you're done."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="category-name">Name</Label>
+                <Input
+                  id="category-name"
+                  value={categoryFormData.name}
+                  onChange={(e) =>
+                    setCategoryFormData({ ...categoryFormData, name: e.target.value })
+                  }
+                  placeholder="Enter category name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="category-description">Description</Label>
+                <Textarea
+                  id="category-description"
+                  value={categoryFormData.description}
+                  onChange={(e) =>
+                    setCategoryFormData({ ...categoryFormData, description: e.target.value })
+                  }
+                  placeholder="Enter category description (optional)"
+                  rows={3}
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="category-description">Description</Label>
-              <Textarea
-                id="category-description"
-                value={categoryFormData.description}
-                onChange={(e) =>
-                  setCategoryFormData({ ...categoryFormData, description: e.target.value })
-                }
-                placeholder="Enter category description (optional)"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={handleCategorySubmit}
-              disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}
-            >
-              {createCategoryMutation.isPending || updateCategoryMutation.isPending
-                ? "Saving..."
-                : editingCategory
-                ? "Update Category"
-                : "Create Category"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={handleCategorySubmit}
+                disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}
+              >
+                {createCategoryMutation.isPending || updateCategoryMutation.isPending
+                  ? "Saving..."
+                  : editingCategory
+                  ? "Update Category"
+                  : "Create Category"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
