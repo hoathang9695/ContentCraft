@@ -137,6 +137,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .where(eq(groups.classification, "new")),
           ]);
 
+        console.log('Real users badge count debug:', {
+          rawCount: realUsersNewCount[0]?.count,
+          countType: typeof realUsersNewCount[0]?.count,
+          finalCount: Number(realUsersNewCount[0]?.count || 0)
+        });
+
         // Đếm support requests có status = 'pending' và type = 'support' (hoặc không có type - backward compatibility)
         const pendingSupportRequests = await db
           .select({ count: sql`count(*)::int` })
@@ -201,15 +207,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
 
         const badgeCounts = {
-          realUsers: realUsersNewCount[0]?.count || 0,
-          pages: pagesNewCount[0]?.count || 0,
-          groups: groupsNewCount[0]?.count || 0,
-          supportRequests: pendingSupport,
-          feedbackRequests: pendingFeedback,
-          verificationRequests: pendingVerification,
-          tickRequests: pendingTick,
-          reportRequests: pendingReports,
-          totalRequests: totalPendingRequests, // Tổng cho menu cha
+          realUsers: Number(realUsersNewCount[0]?.count || 0),
+          pages: Number(pagesNewCount[0]?.count || 0),
+          groups: Number(groupsNewCount[0]?.count || 0),
+          supportRequests: Number(pendingSupport),
+          feedbackRequests: Number(pendingFeedback),
+          verificationRequests: Number(pendingVerification),
+          tickRequests: Number(pendingTick),
+          reportRequests: Number(pendingReports),
+          totalRequests: Number(totalPendingRequests), // Tổng cho menu cha
         };
 
         const filteredBadgeCounts = {
@@ -433,6 +439,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ),
         );
 
+      console.log("Badge count debug - Real users:", {
+        count: realUsersNewCount[0]?.count,
+        type: typeof realUsersNewCount[0]?.count,
+        finalCount: Number(realUsersNewCount[0]?.count || 0),
+        query: "classification='new'"
+      });
+
       console.log("Badge count debug - Verification requests:", {
         count: pendingVerificationRequests[0]?.count || 0,
         query: "type='verify' AND status='pending'"
@@ -476,15 +489,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
 
       const badgeCounts = {
-        realUsers: realUsersNewCount[0]?.count || 0,
-        pages: pagesNewCount[0]?.count || 0,
-        groups: groupsNewCount[0]?.count || 0,
-        supportRequests: pendingSupport,
-        feedbackRequests: pendingFeedback,
-        verificationRequests: pendingVerification,
-        tickRequests: pendingTick,
-        reportRequests: pendingReports,
-        totalRequests: totalPendingRequests, // Tổng cho menu cha
+        realUsers: Number(realUsersNewCount[0]?.count || 0),
+        pages: Number(pagesNewCount[0]?.count || 0),
+        groups: Number(groupsNewCount[0]?.count || 0),
+        supportRequests: Number(pendingSupport),
+        feedbackRequests: Number(pendingFeedback),
+        verificationRequests: Number(pendingVerification),
+        tickRequests: Number(pendingTick),
+        reportRequests: Number(pendingReports),
+        totalRequests: Number(totalPendingRequests), // Tổng cho menu cha
       };
 
       const filteredBadgeCounts = {
@@ -4235,6 +4248,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error refreshing badge counts:", error);
       res.status(500).json({ error: "Failed to refresh badge counts" });
+    }
+  });
+
+  // Debug endpoint to check actual counts (admin only)
+  app.get("/api/debug/real-users-count", isAdmin, async (req, res) => {
+    try {
+      const totalUsers = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(realUsers);
+
+      const newUsers = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(realUsers)
+        .where(eq(realUsers.classification, "new"));
+
+      const allUsers = await db
+        .select({ id: realUsers.id, classification: realUsers.classification })
+        .from(realUsers);
+
+      res.json({
+        total: Number(totalUsers[0]?.count || 0),
+        new: Number(newUsers[0]?.count || 0),
+        allUsers: allUsers,
+        newUsersDetail: allUsers.filter(u => u.classification === "new")
+      });
+    } catch (error) {
+      console.error("Error in debug endpoint:", error);
+      res.status(500).json({ error: "Failed to get debug info" });
     }
   });
 
