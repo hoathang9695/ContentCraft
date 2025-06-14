@@ -2021,7 +2021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update category (admin only)
-  app.put("/api/categories/:id", isAdmin, async (req, res) => {
+  app.put("/api/categories/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const categoryId = Number(req.params.id);
       const existingCategory = await storage.getCategory(categoryId);
@@ -2038,6 +2038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedCategory);
     } catch (error) {
+      console.error("Error updating category:", error);
       if (error instanceof ZodError) {
         return res.status(400).json({
           message: "Validation error",
@@ -2052,23 +2053,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete category (admin only)
-  app.delete("/api/categories/:id", isAdmin, async (req, res) => {
+  app.delete("/api/categories/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const categoryId = Number(req.params.id);
+      console.log(`Attempting to delete category ${categoryId}`);
+      
       const existingCategory = await storage.getCategory(categoryId);
 
       if (!existingCategory) {
+        console.log(`Category ${categoryId} not found`);
         return res.status(404).json({ message: "Category not found" });
       }
 
+      console.log(`Found category: ${existingCategory.name}`);
       const deleted = await storage.deleteCategory(categoryId);
 
       if (deleted) {
+        console.log(`Successfully deleted category ${categoryId}`);
         res.status(204).send();
       } else {
+        console.log(`Failed to delete category ${categoryId}`);
         res.status(500).json({ message: "Error deleting category" });
       }
     } catch (error) {
+      console.error("Error deleting category:", error);
       res.status(500).json({
         message: "Error deleting category",
         error: error instanceof Error ? error.message : String(error),

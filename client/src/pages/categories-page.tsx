@@ -200,12 +200,19 @@ export default function CategoriesPage() {
   // Delete category mutation
   const deleteCategoryMutation = useMutation({
     mutationFn: async (id: number) => {
+      console.log(`Attempting to delete category ${id}`);
       const response = await fetch(`/api/categories/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
+      console.log(`Delete response status: ${response.status}`);
+      
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Failed to delete category' }));
+        console.error('Delete error:', errorData);
         throw new Error(errorData.message || 'Failed to delete category');
       }
       
