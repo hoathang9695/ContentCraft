@@ -2322,7 +2322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const result = await db
           .update(realUsers)
           .set({
-            fullName: JSON.stringify(updatedFullName),
+            fullName: updatedFullName,
             updatedAt: new Date(),
           })
           .where(eq(realUsers.id, parseInt(id)))
