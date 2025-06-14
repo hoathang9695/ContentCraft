@@ -554,7 +554,7 @@ export default function PageManagementPage() {
             data={displayPages}
             isLoading={isLoading}
             searchable={true}
-            searchPlaceholder="Tìm kiếm theo tên trang hoặc số điện thoại..."
+            searchPlaceholder="Tìm kiếm theo tên trang, ID trang hoặc số điện thoại..."
             searchValue={searchQuery} 
             onSearch={setSearchQuery}
             pagination={{

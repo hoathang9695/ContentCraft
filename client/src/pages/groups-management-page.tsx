@@ -554,7 +554,7 @@ export default function GroupsManagementPage() {
             data={displayGroups}
             isLoading={isLoading}
             searchable={true}
-            searchPlaceholder="Tìm kiếm theo tên nhóm, số điện thoại hoặc danh mục..."
+            searchPlaceholder="Tìm kiếm theo tên nhóm, ID nhóm, số điện thoại hoặc danh mục..."
             searchValue={searchQuery} 
             onSearch={setSearchQuery}
             pagination={{
