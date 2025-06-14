@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Mail, Eye, UserPlus } from "lucide-react";
+import { MoreHorizontal, Mail, Eye, UserPlus, Edit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { PushFollowDialog } from "@/components/PushFollowDialog";
 import { RealUserEmailDialog } from "@/components/RealUserEmailDialog";
+import { RealUserEditDialog } from "@/components/RealUserEditDialog";
 
 export default function RealUserPage() {
   const { user } = useAuth();
@@ -35,6 +36,8 @@ export default function RealUserPage() {
   const [pushFollowUser, setPushFollowUser] = useState<any>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailUser, setEmailUser] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editUser, setEditUser] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -742,6 +745,15 @@ export default function RealUserPage() {
                       )}
                       <DropdownMenuItem
                         onClick={() => {
+                          setEditUser(row);
+                          setEditDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Cập nhật User
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
                           setPushFollowUser(row);
                           setPushFollowOpen(true);
                         }}
@@ -773,6 +785,11 @@ export default function RealUserPage() {
               description: "Email đã được gửi thành công",
             });
           }}
+        />
+        <RealUserEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          user={editUser}
         />
       </div>
     </DashboardLayout>
