@@ -746,33 +746,7 @@ export class DatabaseStorage implements IStorage {
           like(contents.externalId, `%${searchTerm}%`),
           // Search in categories and labels
           like(contents.categories, `%${searchTerm}%`),
-          like(contents.labels, `%${searchTerm}%`),
-          // Basic text search in source field (works for both text and JSON)
-          sql`LOWER(${contents.source}::text) LIKE ${'%' + searchTermLower + '%'}`,
-          // Try to extract 'name' from JSON if source is valid JSON
-          sql`
-            CASE 
-              WHEN ${contents.source} ~ '^{.*}$' 
-              THEN LOWER((${contents.source}::jsonb)->>'name') 
-              ELSE LOWER(${contents.source}::text) 
-            END LIKE ${'%' + searchTermLower + '%'}
-          `,
-          // Search in JSON source id field
-          sql`
-            CASE 
-              WHEN ${contents.source} ~ '^{.*}$' 
-              THEN (${contents.source}::jsonb)->>'id'
-              ELSE NULL
-            END = ${searchTerm}
-          `,
-          // Fuzzy search removing spaces
-          sql`
-            CASE 
-              WHEN ${contents.source} ~ '^{.*}$' 
-              THEN REPLACE(LOWER((${contents.source}::jsonb)->>'name'), ' ', '') 
-              ELSE REPLACE(LOWER(${contents.source}::text), ' ', '') 
-            END LIKE ${'%' + searchTermLower.replace(/\s/g, '') + '%'}
-          `
+          like(contents.labels, `%${searchTerm}%`)
         )
       );
     }
@@ -988,7 +962,7 @@ export class DatabaseStorage implements IStorage {
     ];
 
     console.log('✅ Executing query...');
-    console.log('Query:', query);
+    console.log('Query:', query:');
     console.log('Values:', values);
 
     try {
