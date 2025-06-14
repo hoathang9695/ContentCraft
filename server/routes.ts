@@ -2422,10 +2422,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { classification } = req.body;
 
         // Validate classification value
-        if (!["new", "potential", "non_potential"].includes(classification)) {
+        if (!["new", "potential", "non_potential", "positive"].includes(classification)) {
           return res.status(400).json({
             message: "Invalid classification value",
-            validValues: ["new", "potential", "non_potential"],
+            validValues: ["new", "potential", "non_potential", "positive"],
           });
         }
 

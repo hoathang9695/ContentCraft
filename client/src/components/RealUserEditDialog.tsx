@@ -244,6 +244,7 @@ export function RealUserEditDialog({ open, user, onOpenChange }: RealUserEditDia
                       <SelectItem value="new">Mới</SelectItem>
                       <SelectItem value="potential">Tiềm năng</SelectItem>
                       <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                      <SelectItem value="positive">Tích cực</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
