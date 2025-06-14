@@ -737,6 +737,8 @@ export class DatabaseStorage implements IStorage {
     if (searchQuery) {
       const searchTerm = searchQuery.trim();
       const searchTermLower = searchTerm.toLowerCase();
+      const searchPattern = `%${searchTermLower}%`;
+      const searchPatternNoSpaces = `%${searchTermLower.replace(/\s/g, '')}%`;
 
       whereConditions.push(
         or(
@@ -748,14 +750,14 @@ export class DatabaseStorage implements IStorage {
           like(contents.categories, `%${searchTerm}%`),
           like(contents.labels, `%${searchTerm}%`),
           // Basic text search in source field (works for both text and JSON)
-          sql`LOWER(${contents.source}::text) LIKE ${`%${searchTermLower}%`}`,
+          sql`LOWER(${contents.source}::text) LIKE ${searchPattern}`,
           // Try to extract 'name' from JSON if source is valid JSON
           sql`
             CASE 
               WHEN ${contents.source} ~ '^{.*}$' 
               THEN LOWER((${contents.source}::jsonb)->>'name') 
               ELSE LOWER(${contents.source}::text) 
-            END LIKE ${`%${searchTermLower}%`}
+            END LIKE ${searchPattern}
           `,
           // Search in JSON source id field
           sql`
@@ -771,7 +773,7 @@ export class DatabaseStorage implements IStorage {
               WHEN ${contents.source} ~ '^{.*}$' 
               THEN REPLACE(LOWER((${contents.source}::jsonb)->>'name'), ' ', '') 
               ELSE REPLACE(LOWER(${contents.source}::text), ' ', '') 
-            END LIKE ${`%${searchTermLower.replace(/\s/g, '')}%`}
+            END LIKE ${searchPatternNoSpaces}
           `
         )
       );
