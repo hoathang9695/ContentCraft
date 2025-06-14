@@ -3287,6 +3287,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update page name
+  app.put(
+    "/api/pages/:id/name",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const pageId = parseInt(req.params.id);
+        const { name } = req.body;
+
+        if (!name || name.trim() === "") {
+          return res.status(400).json({
+            message: "Name is required",
+          });
+        }
+
+        // Import pages from schema
+        const { pages } = await import("../shared/schema");
+
+        // Get current page data
+        const page = await db
+          .select()
+          .from(pages)
+          .where(eq(pages.id, pageId))
+          .limit(1);
+
+        if (page.length === 0) {
+          return res.status(404).json({ message: "Page not found" });
+        }
+
+        const currentPageName = page[0].pageName 
+          ? (typeof page[0].pageName === 'string' ? JSON.parse(page[0].pageName) : page[0].pageName)
+          : { id: page[0].id.toString(), page_name: '', name: '' };
+
+        const updatedPageName = {
+          ...currentPageName,
+          page_name: name.trim(),
+          name: name.trim()
+        };
+
+        const result = await db
+          .update(pages)
+          .set({
+            pageName: updatedPageName,
+            updatedAt: new Date(),
+          })
+          .where(eq(pages.id, pageId))
+          .returning();
+
+        res.json({ message: "Page name updated successfully", page: result[0] });
+      } catch (error) {
+        console.error("Error updating page name:", error);
+        res.status(500).json({
+          message: "Error updating page name",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Update page assignment
+  app.put(
+    "/api/pages/:id/assign",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const pageId = parseInt(req.params.id);
+        const { assignedToId } = req.body;
+
+        // Import pages from schema
+        const { pages } = await import("../shared/schema");
+
+        const result = await db
+          .update(pages)
+          .set({
+            assignedToId: assignedToId || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(pages.id, pageId))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "Page not found" });
+        }
+
+        res.json({ message: "Page assignment updated successfully", page: result[0] });
+      } catch (error) {
+        console.error("Error updating page assignment:", error);
+        res.status(500).json({
+          message: "Error updating page assignment",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Update page info (phone number and monetization)
+  app.put(
+    "/api/pages/:id/info",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const pageId = parseInt(req.params.id);
+        const { phoneNumber, monetizationEnabled } = req.body;
+
+        // Import pages from schema
+        const { pages } = await import("../shared/schema");
+
+        const result = await db
+          .update(pages)
+          .set({
+            phoneNumber: phoneNumber || null,
+            monetizationEnabled: monetizationEnabled || false,
+            updatedAt: new Date(),
+          })
+          .where(eq(pages.id, pageId))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "Page not found" });
+        }
+
+        res.json({ message: "Page info updated successfully", page: result[0] });
+      } catch (error) {
+        console.error("Error updating page info:", error);
+        res.status(500).json({
+          message: "Error updating page info",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
   // Update page classification
   app.put(
     "/api/pages/:id/classification",
@@ -3297,7 +3429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { classification } = req.body;
 
         // Validate classification value
-        const validClassifications = ["new", "potential", "non_potential"];
+        const validClassifications = ["new", "potential", "non_potential", "positive"];
         if (!validClassifications.includes(classification)) {
           return res.status(400).json({
             message: "Invalid classification value",
