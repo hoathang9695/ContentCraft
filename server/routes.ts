@@ -20,7 +20,6 @@ import {
 import {
   insertContentSchema,
   insertCategorySchema,
-  insertLabelSchema,
   insertFakeUserSchema,
   supportRequests,
   users,
@@ -2021,7 +2020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update category (admin only)
-  app.put("/api/categories/:id", isAdmin, async (req, res) => {
+  app.put("/api/categories/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const categoryId = Number(req.params.id);
       const existingCategory = await storage.getCategory(categoryId);
@@ -2038,6 +2037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedCategory);
     } catch (error) {
+      console.error("Error updating category:", error);
       if (error instanceof ZodError) {
         return res.status(400).json({
           message: "Validation error",
@@ -2052,23 +2052,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete category (admin only)
-  app.delete("/api/categories/:id", isAdmin, async (req, res) => {
+  app.delete("/api/categories/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const categoryId = Number(req.params.id);
+      console.log(`Attempting to delete category ${categoryId}`);
+      
       const existingCategory = await storage.getCategory(categoryId);
 
       if (!existingCategory) {
+        console.log(`Category ${categoryId} not found`);
         return res.status(404).json({ message: "Category not found" });
       }
 
+      console.log(`Found category: ${existingCategory.name}`);
       const deleted = await storage.deleteCategory(categoryId);
 
       if (deleted) {
+        console.log(`Successfully deleted category ${categoryId}`);
         res.status(204).send();
       } else {
+        console.log(`Failed to delete category ${categoryId}`);
         res.status(500).json({ message: "Error deleting category" });
       }
     } catch (error) {
+      console.error("Error deleting category:", error);
       res.status(500).json({
         message: "Error deleting category",
         error: error instanceof Error ? error.message : String(error),
@@ -2076,148 +2083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all labels
-  app.get("/api/labels", async (req, res) => {
-    try {
-      const allLabels = await storage.getAllLabels();
-      res.json(allLabels);
-    } catch (error) {
-      res.status(500).json({
-        message: "Error fetching labels",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  // Get labels by category
-  app.get("/api/categories/:categoryId/labels", async (req, res) => {
-    try {
-      const categoryId = Number(req.params.categoryId);
-      const category = await storage.getCategory(categoryId);
-
-      if (!category) {
-        return res.status(404).json({ message: "Category not found" });
-      }
-
-      const labels = await storage.getLabelsByCategory(categoryId);
-      res.json(labels);
-    } catch (error) {
-      res.status(500).json({
-        message: "Error fetching labels for category",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  // Get single label
-  app.get("/api/labels/:id", async (req, res) =>{
-    try {
-      const labelId = Number(req.params.id);
-      const label = await storage.getLabel(labelId);
-
-      if (!label) {
-        return res.status(404).json({ message: "Label not found" });
-      }
-
-      res.json(label);
-    } catch (error) {
-      res.status(500).json({
-        message: "Error fetching label",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  // Create new label (admin only)
-  app.post("/api/labels", isAdmin, async (req, res) => {
-    try {
-      const validatedData = insertLabelSchema.parse(req.body);
-
-      // Verify the category exists
-      const category = await storage.getCategory(validatedData.categoryId);
-      if (!category) {
-        return res.status(400).json({ message: "Category not found" });
-      }
-
-      const newLabel = await storage.createLabel(validatedData);
-      res.status(201).json(newLabel);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          message: "Validation error",
-          errors: error.errors,
-        });
-      }
-      res.status(500).json({
-        message: "Error creating label",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  // Update label (admin only)
-  app.put("/api/labels/:id", isAdmin, async (req, res) => {
-    try {
-      const labelId = Number(req.params.id);
-      const existingLabel = await storage.getLabel(labelId);
-
-      if (!existingLabel) {
-        return res.status(404).json({ message: "Label not found" });
-      }
-
-      const validatedData = insertLabelSchema.parse(req.body);
-
-      // Verify the category exists if categoryId is being changed
-      if (
-        validatedData.categoryId &&
-        validatedData.categoryId !== existingLabel.categoryId
-      ) {
-        const category = await storage.getCategory(validatedData.categoryId);
-        if (!category) {
-          return res.status(400).json({ message: "Category not found" });
-        }
-      }
-
-      const updatedLabel = await storage.updateLabel(labelId, validatedData);
-      res.json(updatedLabel);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          message: "Validation error",
-          errors: error.errors,
-        });
-      }
-      res.status(500).json({
-        message: "Error updating label",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  // Delete label (admin only)
-  app.delete("/api/labels/:id", isAdmin, async (req, res) => {
-    try {
-      const labelId = Number(req.params.id);
-      const existingLabel = await storage.getLabel(labelId);
-
-      if (!existingLabel) {
-        return res.status(404).json({ message: "Label not found" });
-      }
-
-      const deleted = await storage.deleteLabel(labelId);
-
-      if (deleted) {
-        res.status(204).send();
-      } else {
-        res.status(500).json({ message: "Error deleting label" });
-      }
-    } catch (error) {
-      res.status(500).json({
-        message: "Error deleting label",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
+  
 
   // Fake Users API
   // Get all fake users with pagination (available for all authenticated users for comment functionality)
@@ -2285,6 +2151,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Real user name update route
+  app.put(
+    "/api/real-users/:id/name",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { name } = req.body;
+
+        if (!name || name.trim() === "") {
+          return res.status(400).json({
+            message: "Name is required",
+          });
+        }
+
+        const user = await db
+          .select()
+          .from(realUsers)
+          .where(eq(realUsers.id, parseInt(id)))
+          .limit(1);
+
+        if (user.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        const currentFullName = user[0].fullName 
+          ? (typeof user[0].fullName === 'string' ? JSON.parse(user[0].fullName) : user[0].fullName)
+          : { id: user[0].id.toString(), name: '' };
+
+        const updatedFullName = {
+          ...currentFullName,
+          name: name.trim()
+        };
+
+        const result = await db
+          .update(realUsers)
+          .set({
+            fullName: updatedFullName,
+            updatedAt: new Date(),
+          })
+          .where(eq(realUsers.id, parseInt(id)))
+          .returning();
+
+        res.json({ message: "User name updated successfully", user: result[0] });
+      } catch (error) {
+        console.error("Error updating user name:", error);
+        res.status(500).json({
+          message: "Error updating user name",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Real user assignment route
+  app.put(
+    "/api/real-users/:id/assign",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { assignedToId } = req.body;
+
+        const result = await db
+          .update(realUsers)
+          .set({
+            assignedToId: assignedToId || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(realUsers.id, parseInt(id)))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "User assignment updated successfully", user: result[0] });
+      } catch (error) {
+        console.error("Error updating user assignment:", error);
+        res.status(500).json({
+          message: "Error updating user assignment",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Real user verification status route
+  app.put(
+    "/api/real-users/:id/verification",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { verified } = req.body;
+
+        if (!["verified", "unverified"].includes(verified)) {
+          return res.status(400).json({
+            message: "Invalid verification status",
+            validValues: ["verified", "unverified"],
+          });
+        }
+
+        const result = await db
+          .update(realUsers)
+          .set({
+            verified,
+            updatedAt: new Date(),
+          })
+          .where(eq(realUsers.id, parseInt(id)))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "User verification status updated successfully", user: result[0] });
+      } catch (error) {
+        console.error("Error updating verification status:", error);
+        res.status(500).json({
+          message: "Error updating verification status",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
   // Real user classification route
   app.put(
     "/api/real-users/:id/classification",
@@ -2295,10 +2288,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { classification } = req.body;
 
         // Validate classification value
-        if (!["new", "potential", "non_potential"].includes(classification)) {
+        if (!["new", "potential", "non_potential", "positive"].includes(classification)) {
           return res.status(400).json({
             message: "Invalid classification value",
-            validValues: ["new", "potential", "non_potential"],
+            validValues: ["new", "potential", "non_potential", "positive"],
           });
         }
 
@@ -3086,6 +3079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sql`LOWER(${pagesTable.pageName}::jsonb->>'page_name') LIKE ${searchPattern}`,
             sql`LOWER(${pagesTable.pageName}::jsonb->>'name') LIKE ${searchPattern}`,
             sql`LOWER(${pagesTable.phoneNumber}) LIKE ${searchPattern}`,
+            sql`${pagesTable.pageName}::jsonb->>'id' LIKE ${searchPattern}`,
           ),
         );
       }
@@ -3160,6 +3154,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update page name
+  app.put(
+    "/api/pages/:id/name",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const pageId = parseInt(req.params.id);
+        const { name } = req.body;
+
+        if (!name || name.trim() === "") {
+          return res.status(400).json({
+            message: "Name is required",
+          });
+        }
+
+        // Import pages from schema
+        const { pages } = await import("../shared/schema");
+
+        // Get current page data
+        const page = await db
+          .select()
+          .from(pages)
+          .where(eq(pages.id, pageId))
+          .limit(1);
+
+        if (page.length === 0) {
+          return res.status(404).json({ message: "Page not found" });
+        }
+
+        const currentPageName = page[0].pageName 
+          ? (typeof page[0].pageName === 'string' ? JSON.parse(page[0].pageName) : page[0].pageName)
+          : { id: page[0].id.toString(), page_name: '', name: '' };
+
+        const updatedPageName = {
+          ...currentPageName,
+          page_name: name.trim(),
+          name: name.trim()
+        };
+
+        const result = await db
+          .update(pages)
+          .set({
+            pageName: updatedPageName,
+            updatedAt: new Date(),
+          })
+          .where(eq(pages.id, pageId))
+          .returning();
+
+        res.json({ message: "Page name updated successfully", page: result[0] });
+      } catch (error) {
+        console.error("Error updating page name:", error);
+        res.status(500).json({
+          message: "Error updating page name",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Update page assignment
+  app.put(
+    "/api/pages/:id/assign",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const pageId = parseInt(req.params.id);
+        const { assignedToId } = req.body;
+
+        // Import pages from schema
+        const { pages } = await import("../shared/schema");
+
+        const result = await db
+          .update(pages)
+          .set({
+            assignedToId: assignedToId || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(pages.id, pageId))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "Page not found" });
+        }
+
+        res.json({ message: "Page assignment updated successfully", page: result[0] });
+      } catch (error) {
+        console.error("Error updating page assignment:", error);
+        res.status(500).json({
+          message: "Error updating page assignment",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Update page info (phone number and monetization)
+  app.put(
+    "/api/pages/:id/info",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const pageId = parseInt(req.params.id);
+        const { phoneNumber, monetizationEnabled } = req.body;
+
+        // Import pages from schema
+        const { pages } = await import("../shared/schema");
+
+        const result = await db
+          .update(pages)
+          .set({
+            phoneNumber: phoneNumber || null,
+            monetizationEnabled: monetizationEnabled || false,
+            updatedAt: new Date(),
+          })
+          .where(eq(pages.id, pageId))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "Page not found" });
+        }
+
+        res.json({ message: "Page info updated successfully", page: result[0] });
+      } catch (error) {
+        console.error("Error updating page info:", error);
+        res.status(500).json({
+          message: "Error updating page info",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
   // Update page classification
   app.put(
     "/api/pages/:id/classification",
@@ -3170,7 +3296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { classification } = req.body;
 
         // Validate classification value
-        const validClassifications = ["new", "potential", "non_potential"];
+        const validClassifications = ["new", "potential", "non_potential", "positive"];
         if (!validClassifications.includes(classification)) {
           return res.status(400).json({
             message: "Invalid classification value",
@@ -3285,14 +3411,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(groupsTable.classification, classification));
       }
 
-      // Search filter
-      // Add search condition - search in group name, phone number, and categories
-      if (search) {
+      // Search filter - search in group name, ID, phone number, and categories
+      if (search && search.trim()) {
+        const searchPattern = `%${search.toLowerCase()}%`;
         conditions.push(
           or(
-            sql`${groupsTable.groupName}->>'group_name' ILIKE ${`%${search}%`}`,
-            sql`${groupsTable.phoneNumber} ILIKE ${`%${search}%`}`,
-            sql`${groupsTable.categories} ILIKE ${`%${search}%`}`,
+            sql`LOWER(${groupsTable.groupName}::jsonb->>'group_name') LIKE ${searchPattern}`,
+            sql`LOWER(${groupsTable.groupName}::jsonb->>'name') LIKE ${searchPattern}`,
+            sql`${groupsTable.groupName}::jsonb->>'id' LIKE ${`%${search}%`}`,
+            sql`LOWER(${groupsTable.phoneNumber}) LIKE ${searchPattern}`,
+            sql`LOWER(${groupsTable.categories}) LIKE ${searchPattern}`,
           ),
         );
       }
@@ -3366,6 +3494,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update group name
+  app.put(
+    "/api/groups/:id/name",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const groupId = parseInt(req.params.id);
+        const { name } = req.body;
+
+        if (!name || name.trim() === "") {
+          return res.status(400).json({
+            message: "Name is required",
+          });
+        }
+
+        // Import groups from schema
+        const { groups } = await import("../shared/schema");
+
+        // Get current group data
+        const group = await db
+          .select()
+          .from(groups)
+          .where(eq(groups.id, groupId))
+          .limit(1);
+
+        if (group.length === 0) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        const currentGroupName = group[0].groupName 
+          ? (typeof group[0].groupName === 'string' ? JSON.parse(group[0].groupName) : group[0].groupName)
+          : { id: group[0].id.toString(), group_name: '', name: '' };
+
+        const updatedGroupName = {
+          ...currentGroupName,
+          group_name: name.trim(),
+          name: name.trim()
+        };
+
+        const result = await db
+          .update(groups)
+          .set({
+            groupName: updatedGroupName,
+            updatedAt: new Date(),
+          })
+          .where(eq(groups.id, groupId))
+          .returning();
+
+        res.json({ message: "Group name updated successfully", group: result[0] });
+      } catch (error) {
+        console.error("Error updating group name:", error);
+        res.status(500).json({
+          message: "Error updating group name",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Update group assignment
+  app.put(
+    "/api/groups/:id/assign",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const groupId = parseInt(req.params.id);
+        const { assignedToId } = req.body;
+
+        // Import groups from schema
+        const { groups } = await import("../shared/schema");
+
+        const result = await db
+          .update(groups)
+          .set({
+            assignedToId: assignedToId || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(groups.id, groupId))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        res.json({ message: "Group assignment updated successfully", group: result[0] });
+      } catch (error) {
+        console.error("Error updating group assignment:", error);
+        res.status(500).json({
+          message: "Error updating group assignment",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Update group info (phone number and monetization)
+  app.put(
+    "/api/groups/:id/info",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const groupId = parseInt(req.params.id);
+        const { phoneNumber, monetizationEnabled } = req.body;
+
+        // Import groups from schema
+        const { groups } = await import("../shared/schema");
+
+        const result = await db
+          .update(groups)
+          .set({
+            phoneNumber: phoneNumber || null,
+            monetizationEnabled: monetizationEnabled || false,
+            updatedAt: new Date(),
+          })
+          .where(eq(groups.id, groupId))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        res.json({ message: "Group info updated successfully", group: result[0] });
+      } catch (error) {
+        console.error("Error updating group info:", error);
+        res.status(500).json({
+          message: "Error updating group info",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
   // Update group classification
   app.put(
     "/api/groups/:id/classification",
@@ -3376,7 +3636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { classification } = req.body;
 
         // Validate classification value
-        const validClassifications = ["new", "potential", "non_potential"];
+        const validClassifications = ["new", "potential", "non_potential", "positive"];
         if (!validClassifications.includes(classification)) {
           return res.status(400).json({
             message: "Invalid classification value",
@@ -3499,6 +3759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sql`LOWER(UNACCENT(${realUsers.fullName}::jsonb->>'name')) LIKE ${searchPattern}`,
             sql`LOWER(${realUsers.fullName}::jsonb->>'name') LIKE ${searchPattern}`,
             sql`LOWER(${realUsers.email}) LIKE ${searchPattern}`,
+            sql`${realUsers.fullName}::jsonb->>'id' LIKE ${searchPattern}`,
           ),
         );
       }
