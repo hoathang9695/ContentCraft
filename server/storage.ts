@@ -3,7 +3,6 @@ import {
   contents, type Content, type InsertContent,
   userActivities, type UserActivity, type InsertUserActivity,
   categories, type Category, type InsertCategory,
-  labels, type Label, type InsertLabel,
   fakeUsers, type FakeUser, type InsertFakeUser,
   infringingContents, type InfringingContent, type InsertInfringingContent,
   commentQueues
@@ -19,8 +18,6 @@ import type {
   InsertUser,
   InsertCategory,
   Category,
-  InsertLabel,
-  Label,
   InsertFakeUser,
   FakeUser,
   InsertSupportRequest,
@@ -97,13 +94,7 @@ export interface IStorage {
   updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category | undefined>;
   deleteCategory(id: number): Promise<boolean>;
 
-  // Labels management operations
-  getAllLabels(): Promise<Label[]>;
-  getLabelsByCategory(categoryId: number): Promise<Label[]>;
-  getLabel(id: number): Promise<Label | undefined>;
-  createLabel(label: InsertLabel): Promise<Label>;
-  updateLabel(id: number, label: Partial<InsertLabel>): Promise<Label | undefined>;
-  deleteLabel(id: number): Promise<boolean>;
+  
 
   // Fake User operations
   getAllFakeUsers(): Promise<FakeUser[]>;
@@ -912,11 +903,7 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Starting delete category ${id}`);
       
-      // Xóa labels trước (vì có khóa ngoại)
-      await db.delete(labels).where(eq(labels.categoryId, id));
-      console.log(`Deleted labels for category ${id}`);
-
-      // Sau đó xóa category
+      // Directly delete category
       const result = await db
         .delete(categories)
         .where(eq(categories.id, id))
@@ -930,50 +917,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Labels management implementations
-  async getAllLabels(): Promise<Label[]> {
-    return await db.select().from(labels).orderBy(labels.name);
-  }
-
-  async getLabelsByCategory(categoryId: number): Promise<Label[]> {
-    return await db
-      .select()
-      .from(labels)
-      .where(eq(labels.categoryId, categoryId))
-      .orderBy(labels.name);
-  }
-
-  async getLabel(id: number): Promise<Label | undefined> {
-    const result = await db.select().from(labels).where(eq(labels.id, id));
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async createLabel(label: InsertLabel): Promise<Label> {
-    const result = await db.insert(labels).values(label).returning();
-    return result[0];
-  }
-
-  async updateLabel(id: number, labelUpdate: Partial<InsertLabel>): Promise<Label | undefined> {
-    const result = await db
-      .update(labels)
-      .set({
-        ...labelUpdate,
-        updatedAt: new Date(),
-      })
-      .where(eq(labels.id, id))
-      .returning();
-
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async deleteLabel(id: number): Promise<boolean> {
-    const result = await db
-      .delete(labels)
-      .where(eq(labels.id, id))
-      .returning({ id: labels.id });
-
-    return result.length > 0;
-  }
+  
 
   // FakeUser management implementations
   async getAllFakeUsers(): Promise<FakeUser[]> {
