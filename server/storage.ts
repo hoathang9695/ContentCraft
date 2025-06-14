@@ -962,7 +962,7 @@ export class DatabaseStorage implements IStorage {
     ];
 
     console.log('✅ Executing query...');
-    console.log('Query:', query:');
+    console.log('Query:', query);
     console.log('Values:', values);
 
     try {
