@@ -429,16 +429,16 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
           </div>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           {contentLoading ? (
             <div className="flex justify-center items-center p-10">
               <Loader2 className="w-6 h-6 animate-spin mr-2" />
               <span>Đang tải thông tin...</span>
             </div>
           ) : (
-            <div className={`grid ${isExpanded ? 'grid-cols-3' : 'grid-cols-2'} gap-6 p-6 overflow-hidden h-full`}>
+            <div className={`grid ${isExpanded ? 'grid-cols-3' : 'grid-cols-2'} gap-6 p-6 overflow-y-auto h-full`}>
               {/* Left Column - Categories and Labels */}
-              <div className="flex flex-col h-full overflow-hidden space-y-6">
+              <div className="flex flex-col h-full space-y-6">
               {/* Categories Section */}
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-4">
@@ -599,7 +599,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
             </div>
 
             {/* Right Column - Safety Status and Summary */}
-            <div className="flex flex-col h-full overflow-hidden space-y-6">
+            <div className="flex flex-col h-full space-y-6">
               {/* Safety Status Section */}
               <div>
                 <h3 className="font-bold text-lg mb-4">Trạng thái nội dung</h3>
@@ -722,7 +722,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
 
             {/* Third Column - Content Details (only visible when expanded) */}
             {isExpanded && (
-              <div className="flex flex-col h-full overflow-hidden space-y-6">
+              <div className="flex flex-col h-full space-y-6">
                 <div>
                   <h3 className="font-bold text-lg mb-4">Chi tiết nội dung</h3>
                   <div className="space-y-4 h-full overflow-y-auto">
@@ -840,7 +840,8 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
 
           /* Ensure scrollable areas work properly */
           .update-content-dialog .dialog-content {
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
           }
         `}</style>
       </DialogContent>
