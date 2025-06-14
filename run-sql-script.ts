@@ -1,45 +1,30 @@
-` tags.
-
-```typescript
 import { pool } from './server/db.js';
 import fs from 'fs';
 
 async function runSQLScript() {
   try {
-    console.log('Updating report_management table schema...');
+    // Get the SQL file from command line arguments
+    const sqlFile = process.argv[2];
 
-    // Read and execute the schema update script
-    const updateSchemaSQL = fs.readFileSync('./update-report-management-schema.sql', 'utf8');
+    if (!sqlFile) {
+      console.error('❌ Please provide a SQL file name as argument');
+      console.log('Usage: npx tsx run-sql-script.ts <sql-file>');
+      process.exit(1);
+    }
 
-    console.log('Executing schema update...');
-    await pool.query(updateSchemaSQL);
-    console.log('✅ Schema updated successfully');
+    if (!fs.existsSync(sqlFile)) {
+      console.error(`❌ SQL file '${sqlFile}' not found`);
+      process.exit(1);
+    }
 
-    // Read and execute the sample data insert script
-    const insertDataSQL = fs.readFileSync('./insert-sample-report-data.sql', 'utf8');
+    console.log(`Running SQL script: ${sqlFile}`);
 
-    console.log('Inserting sample data...');
-    await pool.query(insertDataSQL);
-    console.log('✅ Sample data inserted successfully');
+    // Read and execute the SQL script
+    const sqlContent = fs.readFileSync(sqlFile, 'utf8');
 
-    // Verify the changes
-    const checkData = await pool.query(`
-      SELECT id, reported_id, reporter_name, report_type, reason, status
-      FROM report_management 
-      ORDER BY created_at DESC 
-      LIMIT 3
-    `);
-
-    console.log('✅ Verification - Sample data from updated table:');
-    checkData.rows.forEach((row, index) => {
-      console.log(`${index + 1}. ID: ${row.id}`);
-      console.log(`   Reported ID: ${JSON.stringify(row.reported_id)}`);
-      console.log(`   Reporter: ${JSON.stringify(row.reporter_name)}`);
-      console.log(`   Type: ${row.report_type}`);
-      console.log(`   Reason: ${row.reason}`);
-      console.log(`   Status: ${row.status}`);
-      console.log('---');
-    });
+    console.log('Executing SQL...');
+    await pool.query(sqlContent);
+    console.log('✅ SQL script executed successfully');
 
   } catch (error) {
     console.error('❌ Error running SQL script:', error);
@@ -53,7 +38,7 @@ async function runSQLScript() {
 // Run the script
 runSQLScript()
   .then(() => {
-    console.log('🎉 All operations completed successfully!');
+    console.log('🎉 Script completed successfully!');
     process.exit(0);
   })
   .catch((error) => {
