@@ -16,7 +16,7 @@ interface ProcessingQueue {
 export class CommentQueueProcessor {
   public processingQueues = new Map<string, ProcessingQueue>(); // Track multiple processing queues
   private processingInterval: NodeJS.Timeout | null = null;
-  public maxConcurrentQueues = 5; // Maximum concurrent queue processing (optimized for Replit)
+  public maxConcurrentQueues = 5; // Maximum concurrent queue processing (increased for better throughput)
   private processingDelay = 10000; // 10 seconds between queue checks
 
   constructor() {
@@ -240,7 +240,7 @@ export class CommentQueueProcessor {
 
         let success = false;
         let retryCount = 0;
-        const maxRetries = 3;
+        const maxRetries = 5; // Tăng từ 3 lên 5 để có nhiều cơ hội hơn
 
         while (!success && retryCount < maxRetries) {
           try {
@@ -268,11 +268,25 @@ export class CommentQueueProcessor {
 
           } catch (error) {
             retryCount++;
-            console.error(`❌ [${sessionId}] Attempt ${retryCount}/${maxRetries} failed for comment ${index + 1}:`, error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`❌ [${sessionId}] Attempt ${retryCount}/${maxRetries} failed for comment ${index + 1}:`, errorMessage);
 
             if (retryCount < maxRetries) {
-              const retryDelay = this.getRetryDelay(retryCount);
-              console.log(`⏳ [${sessionId}] Retrying in ${retryDelay}ms...`);
+              let retryDelay = this.getRetryDelay(retryCount);
+              
+              // Special handling for different error types
+              if (errorMessage.includes('Rate limited')) {
+                retryDelay = Math.max(retryDelay, 10 * 60000); // At least 10 minutes for rate limit
+                console.log(`🚨 [${sessionId}] Rate limited detected, waiting ${Math.ceil(retryDelay / 60000)} minutes`);
+              } else if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT')) {
+                retryDelay = Math.max(retryDelay, 5 * 60000); // At least 5 minutes for timeout
+                console.log(`⏰ [${sessionId}] Timeout detected, waiting ${Math.ceil(retryDelay / 60000)} minutes`);
+              } else if (errorMessage.includes('Server error')) {
+                retryDelay = Math.max(retryDelay, 3 * 60000); // At least 3 minutes for server errors
+                console.log(`🔧 [${sessionId}] Server error detected, waiting ${Math.ceil(retryDelay / 60000)} minutes`);
+              }
+              
+              console.log(`⏳ [${sessionId}] Retrying in ${Math.ceil(retryDelay / 60000)} minutes...`);
               await this.delay(retryDelay);
             } else {
               // Final failure - this comment failed permanently
@@ -281,9 +295,9 @@ export class CommentQueueProcessor {
               await storage.updateCommentQueueProgress(sessionId, {
                 processedCount: currentSuccessCount + currentFailureCount,
                 failureCount: currentFailureCount,
-                errorInfo: error instanceof Error ? error.message : 'Unknown error'
+                errorInfo: `Final failure after ${maxRetries} attempts: ${errorMessage}`
               });
-              console.error(`❌ [${sessionId}] Comment ${index + 1}/${comments.length} failed permanently (Total failures: ${currentFailureCount})`);
+              console.error(`❌ [${sessionId}] Comment ${index + 1}/${comments.length} failed permanently after ${maxRetries} attempts (Total failures: ${currentFailureCount})`);
               success = true; // Exit retry loop, move to next comment
             }
           }
@@ -344,25 +358,58 @@ export class CommentQueueProcessor {
       throw new Error(`Fake user not found: ${fakeUserId}`);
     }
 
+    // Validate comment length and content
+    if (!comment || comment.trim().length === 0) {
+      throw new Error('Comment content is empty');
+    }
+    
+    if (comment.length > 2000) {
+      throw new Error('Comment too long (max 2000 characters)');
+    }
+
     // Send directly to emso.vn API
     const apiUrl = `https://prod-sn.emso.vn/api/v1/statuses/${externalId}/comments`;
     
     console.log(`🔗 Sending comment to external API: ${apiUrl}`);
 
     try {
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${fakeUser.token}`,
-          'User-Agent': 'Content-Queue-Processor/2.0-MultiThread'
+          'User-Agent': 'Content-Queue-Processor/2.0-Optimized',
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({
-          status: comment
-        })
+          status: comment.trim()
+        }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
       console.log(`📡 External API Response status: ${response.status}`);
+
+      // Handle specific error status codes with different strategies
+      if (response.status === 429) {
+        // Rate limited - throw special error for longer retry delay
+        throw new Error(`Rate limited (429) - need longer delay`);
+      }
+      
+      if (response.status === 401 || response.status === 403) {
+        // Auth issues - might be token expired
+        throw new Error(`Authentication error (${response.status}) - token may be invalid`);
+      }
+      
+      if (response.status >= 500) {
+        // Server errors - likely temporary
+        throw new Error(`Server error (${response.status}) - temporary issue`);
+      }
 
       if (!response.ok) {
         const responseText = await response.text();
@@ -384,6 +431,9 @@ export class CommentQueueProcessor {
       return result;
       
     } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout after 60 seconds');
+      }
       console.error(`❌ Error calling external API:`, error);
       throw error;
     }
@@ -410,14 +460,16 @@ export class CommentQueueProcessor {
   }
 
   private getAdaptiveDelay(attemptNumber: number): number {
-    const baseMs = 1 * 60000; // 1 minute base (reduced for multi-thread)
-    const maxMs = 3 * 60000; // 3 minutes max (reduced for multi-thread)
-    const randomFactor = 0.5 + Math.random(); // 0.5 - 1.5
+    const baseMs = 30 * 1000; // 30 seconds base (faster processing)
+    const maxMs = 90 * 1000; // 90 seconds max (faster processing)
+    const randomFactor = 0.8 + Math.random() * 0.4; // 0.8 - 1.2 (more stable range)
     return Math.min(baseMs * randomFactor, maxMs);
   }
 
   private getRetryDelay(retryCount: number): number {
-    return Math.min(1000 * Math.pow(2, retryCount), 15000); // Exponential backoff, max 15s
+    // Longer delays for better success rate: 5s, 15s, 45s, 90s, 180s
+    const delays = [5000, 15000, 45000, 90000, 180000];
+    return delays[retryCount - 1] || 180000;
   }
 
   private delay(ms: number): Promise<void> {
