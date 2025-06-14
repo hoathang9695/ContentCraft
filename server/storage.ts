@@ -909,16 +909,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCategory(id: number): Promise<boolean> {
-    // Xóa labels trước (vì có khóa ngoại)
-    await db.delete(labels).where(eq(labels.categoryId, id));
+    try {
+      console.log(`Starting delete category ${id}`);
+      
+      // Xóa labels trước (vì có khóa ngoại)
+      const deletedLabels = await db.delete(labels).where(eq(labels.categoryId, id));
+      console.log(`Deleted labels for category ${id}:`, deletedLabels);
 
-    // Sau đó xóa category
-    const result = await db
-      .delete(categories)
-      .where(eq(categories.id, id))
-      .returning({ id: categories.id });
+      // Sau đó xóa category
+      const result = await db
+        .delete(categories)
+        .where(eq(categories.id, id))
+        .returning({ id: categories.id });
 
-    return result.length > 0;
+      console.log(`Delete category result:`, result);
+      return result.length > 0;
+    } catch (error) {
+      console.error(`Error deleting category ${id}:`, error);
+      throw error;
+    }
   }
 
   // Labels management implementations
