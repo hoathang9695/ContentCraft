@@ -178,7 +178,7 @@ export const realUsers = pgTable("real_users", {
   fullName: jsonb("full_name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   verified: varchar("verified", { length: 50 }).default("unverified"),
-  classification: varchar("classification", { length: 50 }).default("new"),
+  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'non_potential', 'positive'
   lastLogin: timestamp("last_login", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
