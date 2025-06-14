@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 interface Category {
   id: number;
@@ -192,7 +193,8 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold tracking-tight">Categories Management</h1>
           <Button onClick={handleCreateCategory}>
@@ -320,5 +322,6 @@ export default function CategoriesPage() {
           </DialogContent>
         </Dialog>
       </div>
-    );
-  }
+    </DashboardLayout>
+  );
+}
