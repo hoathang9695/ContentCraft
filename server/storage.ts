@@ -733,10 +733,9 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(lte(contents.createdAt, endDate));
     }
 
-    // Search query - handle both text and JSON source columns
+    // Search query - only search in External ID and Source
     if (searchQuery) {
       const searchTerm = searchQuery.trim();
-      const searchTermLower = searchTerm.toLowerCase();
 
       whereConditions.push(
         or(
@@ -744,9 +743,8 @@ export class DatabaseStorage implements IStorage {
           eq(contents.externalId, searchTerm),
           // Partial match for external ID
           like(contents.externalId, `%${searchTerm}%`),
-          // Search in categories and labels
-          like(contents.categories, `%${searchTerm}%`),
-          like(contents.labels, `%${searchTerm}%`)
+          // Search in source field (text search)
+          like(contents.source, `%${searchTerm}%`)
         )
       );
     }
