@@ -460,8 +460,8 @@ export class CommentQueueProcessor {
   }
 
   private getAdaptiveDelay(attemptNumber: number): number {
-    const baseMs = 2 * 60000; // 2 minutes base (increased for stability)
-    const maxMs = 5 * 60000; // 5 minutes max (increased for stability)
+    const baseMs = 30 * 1000; // 30 seconds base (faster processing)
+    const maxMs = 90 * 1000; // 90 seconds max (faster processing)
     const randomFactor = 0.8 + Math.random() * 0.4; // 0.8 - 1.2 (more stable range)
     return Math.min(baseMs * randomFactor, maxMs);
   }
