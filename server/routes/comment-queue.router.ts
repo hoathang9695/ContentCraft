@@ -640,6 +640,110 @@ router.post('/fix-queue/:sessionId', isAuthenticated, async (req, res) => {
   }
 });
 
+// Get detailed queue information for debugging (Admin only)
+router.get('/debug/:sessionId', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể debug queue'
+      });
+    }
+
+    const { sessionId } = req.params;
+
+    // Get detailed queue information
+    const queueResult = await pool.query(`
+      SELECT session_id, external_id, comments, selected_gender, user_id,
+             total_comments, processed_count, success_count, failure_count,
+             current_comment_index, status, error_info,
+             created_at, updated_at, started_at, completed_at
+      FROM comment_queues 
+      WHERE session_id = $1
+    `, [sessionId]);
+
+    if (queueResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Queue không tồn tại'
+      });
+    }
+
+    const queue = queueResult.rows[0];
+    const comments = Array.isArray(queue.comments) ? queue.comments : JSON.parse(queue.comments);
+    const actualTotalComments = comments.length;
+    const actualProcessed = (queue.success_count || 0) + (queue.failure_count || 0);
+
+    // Calculate inconsistencies
+    const inconsistencies = [];
+    
+    if (queue.total_comments !== actualTotalComments) {
+      inconsistencies.push(`total_comments(${queue.total_comments}) != actual_comments_length(${actualTotalComments})`);
+    }
+    
+    if (queue.processed_count !== actualProcessed) {
+      inconsistencies.push(`processed_count(${queue.processed_count}) != success_count + failure_count(${actualProcessed})`);
+    }
+    
+    if (queue.status === 'completed' && actualProcessed < actualTotalComments) {
+      inconsistencies.push(`status=completed but only ${actualProcessed}/${actualTotalComments} comments processed`);
+    }
+
+    if (queue.current_comment_index >= actualTotalComments) {
+      inconsistencies.push(`current_comment_index(${queue.current_comment_index}) >= total_comments(${actualTotalComments})`);
+    }
+
+    res.json({
+      success: true,
+      queue: {
+        session_id: queue.session_id,
+        external_id: queue.external_id,
+        selected_gender: queue.selected_gender,
+        user_id: queue.user_id,
+        status: queue.status,
+        created_at: queue.created_at,
+        updated_at: queue.updated_at,
+        started_at: queue.started_at,
+        completed_at: queue.completed_at,
+        error_info: queue.error_info
+      },
+      statistics: {
+        total_comments_db: queue.total_comments,
+        actual_comments_length: actualTotalComments,
+        processed_count_db: queue.processed_count,
+        success_count: queue.success_count || 0,
+        failure_count: queue.failure_count || 0,
+        actual_processed: actualProcessed,
+        current_comment_index: queue.current_comment_index || 0,
+        completion_percentage: actualTotalComments > 0 ? Math.round((actualProcessed / actualTotalComments) * 100) : 0
+      },
+      analysis: {
+        has_inconsistencies: inconsistencies.length > 0,
+        inconsistencies,
+        comments_sample: comments.slice(0, 3).map((comment, index) => ({
+          index,
+          content: comment.substring(0, 100) + (comment.length > 100 ? '...' : ''),
+          length: comment.length
+        })),
+        processing_timeline: {
+          created_hours_ago: queue.created_at ? Math.round((Date.now() - new Date(queue.created_at).getTime()) / (1000 * 60 * 60) * 10) / 10 : null,
+          started_hours_ago: queue.started_at ? Math.round((Date.now() - new Date(queue.started_at).getTime()) / (1000 * 60 * 60) * 10) / 10 : null,
+          completed_hours_ago: queue.completed_at ? Math.round((Date.now() - new Date(queue.completed_at).getTime()) / (1000 * 60 * 60) * 10) / 10 : null
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error debugging queue:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to debug queue',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Test cleanup endpoint to check what would be deleted (Admin only)
 router.get('/cleanup/preview', isAuthenticated, async (req, res) => {
   try {
