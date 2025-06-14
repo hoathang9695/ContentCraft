@@ -94,7 +94,7 @@ export interface IStorage {
   updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category | undefined>;
   deleteCategory(id: number): Promise<boolean>;
 
-  
+
 
   // Fake User operations
   getAllFakeUsers(): Promise<FakeUser[]>;
@@ -733,10 +733,9 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(lte(contents.createdAt, endDate));
     }
 
-    // Search query - handle both text and JSON source columns
+    // Search query - only search in External ID and Source
     if (searchQuery) {
       const searchTerm = searchQuery.trim();
-      const searchTermLower = searchTerm.toLowerCase();
 
       whereConditions.push(
         or(
@@ -744,35 +743,8 @@ export class DatabaseStorage implements IStorage {
           eq(contents.externalId, searchTerm),
           // Partial match for external ID
           like(contents.externalId, `%${searchTerm}%`),
-          // Search in categories and labels
-          like(contents.categories, `%${searchTerm}%`),
-          like(contents.labels, `%${searchTerm}%`),
-          // Basic text search in source field (works for both text and JSON)
-          sql`LOWER(${contents.source}::text) LIKE ${`%${searchTermLower}%`}`,
-          // Try to extract 'name' from JSON if source is valid JSON
-          sql`
-            CASE 
-              WHEN ${contents.source} ~ '^{.*}$' 
-              THEN LOWER((${contents.source}::jsonb)->>'name') 
-              ELSE LOWER(${contents.source}::text) 
-            END LIKE ${`%${searchTermLower}%`}
-          `,
-          // Search in JSON source id field
-          sql`
-            CASE 
-              WHEN ${contents.source} ~ '^{.*}$' 
-              THEN (${contents.source}::jsonb)->>'id'
-              ELSE NULL
-            END = ${searchTerm}
-          `,
-          // Fuzzy search removing spaces
-          sql`
-            CASE 
-              WHEN ${contents.source} ~ '^{.*}$' 
-              THEN REPLACE(LOWER((${contents.source}::jsonb)->>'name'), ' ', '') 
-              ELSE REPLACE(LOWER(${contents.source}::text), ' ', '') 
-            END LIKE ${`%${searchTermLower.replace(/\s+/g, '')}%`}
-          `
+          // Search in source field (text search)
+          like(contents.source, `%${searchTerm}%`)
         )
       );
     }
@@ -902,7 +874,7 @@ export class DatabaseStorage implements IStorage {
   async deleteCategory(id: number): Promise<boolean> {
     try {
       console.log(`Starting delete category ${id}`);
-      
+
       // Directly delete category
       const result = await db
         .delete(categories)
@@ -917,7 +889,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  
+
 
   // FakeUser management implementations
   async getAllFakeUsers(): Promise<FakeUser[]> {
@@ -952,7 +924,7 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0] : undefined;
   }
 
-  // Comment Queue methods
+    // Comment Queue methods
   async createCommentQueue(data: {
     externalId: string;
     comments: string[];
@@ -1278,12 +1250,12 @@ export class DatabaseStorage implements IStorage {
       }
 
       const updatedQueue = result.rows[0];
-      
+
       // Validate data consistency after update
       const actualProcessed = (updatedQueue.success_count || 0) + (updatedQueue.failure_count || 0);
       if (updatedQueue.status === 'completed' && actualProcessed !== updatedQueue.total_comments) {
         console.error(`❌ [${sessionId}] INCONSISTENCY DETECTED: status=completed but actualProcessed(${actualProcessed}) != totalComments(${updatedQueue.total_comments})`);
-        
+
         // Auto-fix by setting status to failed
         await pool.query(`
           UPDATE comment_queues 
@@ -1292,7 +1264,7 @@ export class DatabaseStorage implements IStorage {
               updated_at = NOW()
           WHERE session_id = $1
         `, [sessionId]);
-        
+
         throw new Error(`Inconsistent queue state detected and auto-fixed for ${sessionId}`);
       }
 
