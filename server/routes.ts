@@ -2285,6 +2285,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Real user name update route
+  app.put(
+    "/api/real-users/:id/name",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { name } = req.body;
+
+        if (!name || name.trim() === "") {
+          return res.status(400).json({
+            message: "Name is required",
+          });
+        }
+
+        const user = await db
+          .select()
+          .from(realUsers)
+          .where(eq(realUsers.id, parseInt(id)))
+          .limit(1);
+
+        if (user.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        const currentFullName = user[0].fullName 
+          ? (typeof user[0].fullName === 'string' ? JSON.parse(user[0].fullName) : user[0].fullName)
+          : { id: user[0].id.toString(), name: '' };
+
+        const updatedFullName = {
+          ...currentFullName,
+          name: name.trim()
+        };
+
+        const result = await db
+          .update(realUsers)
+          .set({
+            fullName: JSON.stringify(updatedFullName),
+            updatedAt: new Date(),
+          })
+          .where(eq(realUsers.id, parseInt(id)))
+          .returning();
+
+        res.json({ message: "User name updated successfully", user: result[0] });
+      } catch (error) {
+        console.error("Error updating user name:", error);
+        res.status(500).json({
+          message: "Error updating user name",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Real user assignment route
+  app.put(
+    "/api/real-users/:id/assign",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { assignedToId } = req.body;
+
+        const result = await db
+          .update(realUsers)
+          .set({
+            assignedToId: assignedToId || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(realUsers.id, parseInt(id)))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "User assignment updated successfully", user: result[0] });
+      } catch (error) {
+        console.error("Error updating user assignment:", error);
+        res.status(500).json({
+          message: "Error updating user assignment",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
+  // Real user verification status route
+  app.put(
+    "/api/real-users/:id/verification",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { verified } = req.body;
+
+        if (!["verified", "unverified"].includes(verified)) {
+          return res.status(400).json({
+            message: "Invalid verification status",
+            validValues: ["verified", "unverified"],
+          });
+        }
+
+        const result = await db
+          .update(realUsers)
+          .set({
+            verified,
+            updatedAt: new Date(),
+          })
+          .where(eq(realUsers.id, parseInt(id)))
+          .returning();
+
+        if (result.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "User verification status updated successfully", user: result[0] });
+      } catch (error) {
+        console.error("Error updating verification status:", error);
+        res.status(500).json({
+          message: "Error updating verification status",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  );
+
   // Real user classification route
   app.put(
     "/api/real-users/:id/classification",
