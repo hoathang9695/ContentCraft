@@ -193,7 +193,6 @@ export default function ContentPage() {
                 </SelectContent>
               </Select>
             </div>
-            </div>
           </div>
 
           {/* Date filters - mobile */}
