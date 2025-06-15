@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -40,7 +39,7 @@ export default function PageManagementPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [pageTypeFilter, setPageTypeFilter] = useState<'personal' | 'business' | 'community' | 'all'>('all');
-  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('all');
+  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'positive' | 'all'>('all');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -219,12 +218,13 @@ export default function PageManagementPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
+              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'positive' | 'all') => setClassificationFilter(value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue>
                     {classificationFilter === 'all' ? 'Tất cả phân loại' : 
                      classificationFilter === 'new' ? 'Mới' :
-                     classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
+                     classificationFilter === 'potential' ? 'Tiềm năng' :
+                     classificationFilter === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -232,6 +232,7 @@ export default function PageManagementPage() {
                   <SelectItem value="new">Mới</SelectItem>
                   <SelectItem value="potential">Tiềm năng</SelectItem>
                   <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                  <SelectItem value="positive">Tích cực</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -336,6 +337,8 @@ export default function PageManagementPage() {
                     setClassificationFilter('all');
                     setActiveTab('all');
                     setSearchQuery('');
+                    setDebouncedSearchQuery('');
+                    setPage(1);
                     toast({
                       title: "Đã đặt lại bộ lọc",
                       description: "Hiển thị tất cả dữ liệu",
@@ -416,12 +419,13 @@ export default function PageManagementPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
+              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'positive' | 'all') => setClassificationFilter(value)}>
                 <SelectTrigger className="w-full">
                   <SelectValue>
                     {classificationFilter === 'all' ? 'Tất cả phân loại' : 
                      classificationFilter === 'new' ? 'Mới' :
-                     classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
+                     classificationFilter === 'potential' ? 'Tiềm năng' :
+                     classificationFilter === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -429,6 +433,7 @@ export default function PageManagementPage() {
                   <SelectItem value="new">Mới</SelectItem>
                   <SelectItem value="potential">Tiềm năng</SelectItem>
                   <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                  <SelectItem value="positive">Tích cực</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -535,6 +540,8 @@ export default function PageManagementPage() {
                     setClassificationFilter('all');
                     setActiveTab('all');
                     setSearchQuery('');
+                    setDebouncedSearchQuery('');
+                    setPage(1);
                     toast({
                       title: "Đã đặt lại bộ lọc",
                       description: "Hiển thị tất cả dữ liệu",
@@ -576,7 +583,7 @@ export default function PageManagementPage() {
                   const pageData = row.pageName;
                   const pageId = pageData?.id;
                   const pageName = pageData?.page_name || pageData?.name || "Không có tên";
-                  
+
                   return (
                     <div className="font-medium">
                       {pageId ? (
@@ -625,6 +632,7 @@ export default function PageManagementPage() {
                         <SelectItem value="new">Mới</SelectItem>
                         <SelectItem value="potential">Tiềm năng</SelectItem>
                         <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                        <SelectItem value="positive">Tích cực</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -635,7 +643,7 @@ export default function PageManagementPage() {
                 header: "Admin",
                 render: (row) => {
                   console.log('Row adminData in render:', row.adminData, typeof row.adminData);
-                  
+
                   // Parse adminData JSON data
                   let adminData = null;
                   try {
@@ -774,7 +782,7 @@ export default function PageManagementPage() {
           targetPageId={pushLikesPage?.pageName?.id}
           targetPageName={pushLikesPage?.pageName?.page_name || pushLikesPage?.pageName?.name}
         />
-        
+
         <PageEditDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
