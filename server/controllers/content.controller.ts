@@ -1,4 +1,3 @@
-
 import { Request, Response } from "express";
 import { storage } from "../storage";
 import { insertContentSchema } from "@shared/schema";
@@ -14,7 +13,7 @@ export class ContentController {
       }
 
       const user = req.user as Express.User;
-      
+
       // Parse query parameters
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
@@ -24,6 +23,7 @@ export class ContentController {
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
       const searchQuery = req.query.search as string;
+      const sourceClassification = req.query.sourceClassification as string;
 
       console.log("Paginated contents request:", {
         user: { id: user.id, role: user.role },
@@ -34,7 +34,8 @@ export class ContentController {
         assignedUserId,
         startDate,
         endDate,
-        searchQuery
+        searchQuery,
+        sourceClassification
       });
 
       // Get paginated data from storage
@@ -48,7 +49,8 @@ export class ContentController {
         assignedUserId,
         startDate,
         endDate,
-        searchQuery
+        searchQuery,
+        sourceClassification
       });
 
       console.log(`Returning paginated result: ${result.data.length} items of ${result.total} total`);
@@ -430,15 +432,15 @@ export class ContentController {
             // Parse categories and labels (handle PostgreSQL array format)
             const parsePostgreSQLArray = (str: string): string[] => {
               if (!str) return [];
-              
+
               const result: string[] = [];
               let current = '';
               let insidePostgreSQLArray = false;
               let depth = 0;
-              
+
               for (let i = 0; i < str.length; i++) {
                 const char = str[i];
-                
+
                 if (char === '{') {
                   depth++;
                   insidePostgreSQLArray = true;
@@ -459,19 +461,19 @@ export class ContentController {
                   current += char;
                 }
               }
-              
+
               // Add the last item
               if (current.trim()) {
                 result.push(current.trim());
               }
-              
+
               // Process each item to clean PostgreSQL array format
               return result.map(item => {
                 if (item.startsWith('{') && item.endsWith('}')) {
                   // Parse PostgreSQL array format
                   const inner = item.slice(1, -1);
                   if (!inner.trim()) return [];
-                  
+
                   return inner.split(',')
                     .map(subItem => {
                       return subItem.trim()

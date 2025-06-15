@@ -66,7 +66,8 @@ export function ContentTable({
   limit,
   assignedUserId,
   searchQuery,
-  onSearchChange
+  onSearchChange,
+  sourceClassification = 'all',
 }: ContentTableProps) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -106,7 +107,8 @@ export function ContentTable({
     ...(assignedUserId && { assignedUserId: assignedUserId.toString() }),
     ...(startDate && { startDate: startDate.toISOString() }),
     ...(endDate && { endDate: endDate.toISOString() }),
-    ...(searchQuery && { search: searchQuery })
+    ...(searchQuery && { search: searchQuery }),
+    ...(sourceClassification && sourceClassification !== 'all' && { sourceClassification }),
   });
 
   // Use paginated API instead of loading all data
