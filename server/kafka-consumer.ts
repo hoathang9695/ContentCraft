@@ -848,7 +848,7 @@ function parseMessage(
   }
 }
 
-async function processContentMessage(contentMessage: ContentMessage, tx: any) {
+export async function processContentMessage(contentMessage: ContentMessage, tx: any) {
   try {
     log(
       `Processing content message: ${JSON.stringify(contentMessage)}`,
