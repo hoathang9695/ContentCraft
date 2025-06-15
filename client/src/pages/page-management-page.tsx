@@ -40,7 +40,7 @@ export default function PageManagementPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [pageTypeFilter, setPageTypeFilter] = useState<'personal' | 'business' | 'community' | 'all'>('all');
-  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'all'>('all');
+  const [classificationFilter, setClassificationFilter] = useState<'new' | 'potential' | 'non_potential' | 'positive' | 'all'>('all');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -219,12 +219,13 @@ export default function PageManagementPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
+              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'positive' | 'all') => setClassificationFilter(value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue>
                     {classificationFilter === 'all' ? 'Tất cả phân loại' : 
                      classificationFilter === 'new' ? 'Mới' :
-                     classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
+                     classificationFilter === 'potential' ? 'Tiềm năng' :
+                     classificationFilter === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -232,6 +233,7 @@ export default function PageManagementPage() {
                   <SelectItem value="new">Mới</SelectItem>
                   <SelectItem value="potential">Tiềm năng</SelectItem>
                   <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                  <SelectItem value="positive">Tích cực</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -416,12 +418,13 @@ export default function PageManagementPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'all') => setClassificationFilter(value)}>
+              <Select value={classificationFilter} onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'positive' | 'all') => setClassificationFilter(value)}>
                 <SelectTrigger className="w-full">
                   <SelectValue>
                     {classificationFilter === 'all' ? 'Tất cả phân loại' : 
                      classificationFilter === 'new' ? 'Mới' :
-                     classificationFilter === 'potential' ? 'Tiềm năng' : 'Không tiềm năng'}
+                     classificationFilter === 'potential' ? 'Tiềm năng' :
+                     classificationFilter === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -429,6 +432,7 @@ export default function PageManagementPage() {
                   <SelectItem value="new">Mới</SelectItem>
                   <SelectItem value="potential">Tiềm năng</SelectItem>
                   <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                  <SelectItem value="positive">Tích cực</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -625,6 +629,7 @@ export default function PageManagementPage() {
                         <SelectItem value="new">Mới</SelectItem>
                         <SelectItem value="potential">Tiềm năng</SelectItem>
                         <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                        <SelectItem value="positive">Tích cực</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
