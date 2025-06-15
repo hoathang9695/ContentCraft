@@ -56,7 +56,11 @@ interface PageMessage {
 
 export interface ContentMessage {
   externalId: string;
-  source?: string;
+  source?: {
+    id: string;
+    name: string;
+    type: string;
+  };
   sourceVerification?: "verified" | "unverified";
   categories?: string[];
   labels?: string[];
@@ -950,9 +954,9 @@ export async function processContentMessage(contentMessage: ContentMessage, tx: 
 
     const insertData = {
       externalId: contentMessage.externalId,
-      source: contentMessage.source || null,
-      categories: contentMessage.categories || null,
-      labels: contentMessage.labels || null,
+      source: contentMessage.source ? JSON.stringify(contentMessage.source) : null,
+      categories: contentMessage.categories ? JSON.stringify(contentMessage.categories) : null,
+      labels: contentMessage.labels ? JSON.stringify(contentMessage.labels) : null,
       status: "pending",
       sourceVerification: contentMessage.sourceVerification || "unverified",
       assigned_to_id: assigned_to_id,
