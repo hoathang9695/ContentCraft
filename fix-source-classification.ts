@@ -1,3 +1,4 @@
+
 import { db } from "./server/db";
 import { contents, realUsers, pages, groups } from "./shared/schema";
 import { sql, eq, and } from "drizzle-orm";
@@ -31,13 +32,15 @@ async function fixSourceClassification() {
           continue;
         }
 
+        // Sử dụng cách so sánh JSON chính xác hơn
         const updateResult = await db
           .update(contents)
           .set({ sourceClassification: user.classification || 'new' })
           .where(
             and(
-              sql`source::json->>'type' = 'account'`,
-              sql`source::json->>'id' = ${userId}`
+              sql`source IS NOT NULL`,
+              sql`source::json->>'type' = 'Account'`,
+              sql`source::json->>'id' = ${userId.toString()}`
             )
           )
           .returning({ id: contents.id });
@@ -80,8 +83,9 @@ async function fixSourceClassification() {
           .set({ sourceClassification: page.classification || 'new' })
           .where(
             and(
+              sql`source IS NOT NULL`,
               sql`source::json->>'type' = 'page'`,
-              sql`source::json->>'id' = ${pageId}`
+              sql`source::json->>'id' = ${pageId.toString()}`
             )
           )
           .returning({ id: contents.id });
@@ -124,8 +128,9 @@ async function fixSourceClassification() {
           .set({ sourceClassification: group.classification || 'new' })
           .where(
             and(
+              sql`source IS NOT NULL`,
               sql`source::json->>'type' = 'group'`,
-              sql`source::json->>'id' = ${groupId}`
+              sql`source::json->>'id' = ${groupId.toString()}`
             )
           )
           .returning({ id: contents.id });
@@ -140,7 +145,23 @@ async function fixSourceClassification() {
       }
     }
 
-    // 4. Kiểm tra kết quả
+    // 4. Kiểm tra dữ liệu thực tế trong contents
+    console.log("\n🔍 Kiểm tra một số mẫu dữ liệu source trong contents:");
+    const sampleSources = await db
+      .select({
+        id: contents.id,
+        source: contents.source,
+        sourceClassification: contents.sourceClassification
+      })
+      .from(contents)
+      .where(sql`source IS NOT NULL`)
+      .limit(10);
+
+    sampleSources.forEach(content => {
+      console.log(`  📋 ID: ${content.id}, Source: ${content.source}, Classification: ${content.sourceClassification}`);
+    });
+
+    // 5. Kiểm tra kết quả
     console.log("\n📊 Kiểm tra kết quả sau khi cập nhật:");
     const stats = await db
       .select({
@@ -155,7 +176,7 @@ async function fixSourceClassification() {
       console.log(`📈 ${stat.source_classification}: ${stat.count} nội dung`);
     });
 
-    // 5. Kiểm tra một số ví dụ cụ thể
+    // 6. Kiểm tra một số ví dụ cụ thể
     console.log("\n🔍 Kiểm tra một số nội dung đã được cập nhật:");
     const sampleContents = await db
       .select({
