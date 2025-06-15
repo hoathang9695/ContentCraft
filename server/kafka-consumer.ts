@@ -56,11 +56,7 @@ interface PageMessage {
 
 export interface ContentMessage {
   externalId: string;
-  source?: {
-    id: string;
-    name: string;
-    type: string;
-  };
+  source?: string;
   sourceVerification?: "verified" | "unverified";
   categories?: string[];
   labels?: string[];
@@ -910,154 +906,53 @@ export async function processContentMessage(contentMessage: ContentMessage, tx: 
 
       try {
         if (contentMessage.source?.type && contentMessage.source?.id) {
-          log(`🔍 Looking up source classification for ${contentMessage.source.type} - ${contentMessage.source.id}`, "kafka");
-          
           if (contentMessage.source.type.toLowerCase() === 'account') {
             // Check real_users table
-            log(`🔍 Checking real_users table for ID: ${contentMessage.source.id}`, "kafka");
-            
-            // Try multiple approaches to find the user
-            let userResult = [];
-            
-            // Approach 1: Direct JSON field comparison 
-            try {
-              userResult = await tx
-                .select({ 
-                  id: realUsers.id,
-                  fullName: realUsers.fullName,
-                  classification: realUsers.classification 
-                })
-                .from(realUsers)
-                .where(sql`full_name::jsonb->>'id' = ${contentMessage.source.id.toString()}`)
-                .limit(1);
-              
-              log(`🔍 Approach 1 - JSONB query result: ${JSON.stringify(userResult)}`, "kafka");
-            } catch (e) {
-              log(`⚠️ Approach 1 failed: ${e}`, "kafka");
-            }
-
-            // Approach 2: If not found, try with LIKE pattern
-            if (userResult.length === 0) {
-              try {
-                userResult = await tx
-                  .select({ 
-                    id: realUsers.id,
-                    fullName: realUsers.fullName,
-                    classification: realUsers.classification 
-                  })
-                  .from(realUsers)
-                  .where(sql`full_name::text LIKE ${'%"id":"' + contentMessage.source.id + '"%'}`)
-                  .limit(1);
-                
-                log(`🔍 Approach 2 - LIKE query result: ${JSON.stringify(userResult)}`, "kafka");
-              } catch (e) {
-                log(`⚠️ Approach 2 failed: ${e}`, "kafka");
-              }
-            }
-
-            // Approach 3: Try exact string match on full_name column
-            if (userResult.length === 0) {
-              try {
-                const allUsers = await tx
-                  .select({ 
-                    id: realUsers.id,
-                    fullName: realUsers.fullName,
-                    classification: realUsers.classification 
-                  })
-                  .from(realUsers)
-                  .limit(100); // Limit to avoid performance issues
-
-                const foundUser = allUsers.find(user => {
-                  try {
-                    const fullNameObj = typeof user.fullName === 'string' 
-                      ? JSON.parse(user.fullName) 
-                      : user.fullName;
-                    return fullNameObj && fullNameObj.id === contentMessage.source.id;
-                  } catch (e) {
-                    return false;
-                  }
-                });
-
-                if (foundUser) {
-                  userResult = [foundUser];
-                  log(`🔍 Approach 3 - Manual search found: ${JSON.stringify(foundUser)}`, "kafka");
-                }
-              } catch (e) {
-                log(`⚠️ Approach 3 failed: ${e}`, "kafka");
-              }
-            }
+            const userResult = await tx
+              .select({ classification: realUsers.classification })
+              .from(realUsers)
+              .where(sql`full_name::json->>'id' = ${contentMessage.source.id.toString()}`)
+              .limit(1);
 
             if (userResult.length > 0 && userResult[0].classification) {
               sourceClassification = userResult[0].classification;
-              log(`✅ Found user classification: ${sourceClassification}`, "kafka");
-            } else {
-              log(`⚠️ No user found with ID ${contentMessage.source.id} in real_users table`, "kafka");
-              
-              // Log all users for debugging in production
-              try {
-                const sampleUsers = await tx
-                  .select({ 
-                    id: realUsers.id,
-                    fullName: realUsers.fullName,
-                    classification: realUsers.classification 
-                  })
-                  .from(realUsers)
-                  .limit(5);
-                log(`🔍 Sample users in database: ${JSON.stringify(sampleUsers)}`, "kafka");
-              } catch (e) {
-                log(`⚠️ Could not fetch sample users: ${e}`, "kafka");
-              }
             }
           } else if (contentMessage.source.type.toLowerCase() === 'page') {
             // Check pages table
-            log(`🔍 Checking pages table for ID: ${contentMessage.source.id}`, "kafka");
             const pageResult = await tx
               .select({ classification: pages.classification })
               .from(pages)
               .where(sql`page_name::json->>'id' = ${contentMessage.source.id.toString()}`)
               .limit(1);
 
-            log(`🔍 Page query result: ${JSON.stringify(pageResult)}`, "kafka");
-
             if (pageResult.length > 0 && pageResult[0].classification) {
               sourceClassification = pageResult[0].classification;
-              log(`✅ Found page classification: ${sourceClassification}`, "kafka");
-            } else {
-              log(`⚠️ No page found or no classification set`, "kafka");
             }
           } else if (contentMessage.source.type.toLowerCase() === 'group') {
             // Check groups table
-            log(`🔍 Checking groups table for ID: ${contentMessage.source.id}`, "kafka");
             const groupResult = await tx
               .select({ classification: groups.classification })
               .from(groups)
               .where(sql`group_name::json->>'id' = ${contentMessage.source.id.toString()}`)
               .limit(1);
 
-            log(`🔍 Group query result: ${JSON.stringify(groupResult)}`, "kafka");
-
             if (groupResult.length > 0 && groupResult[0].classification) {
               sourceClassification = groupResult[0].classification;
-              log(`✅ Found group classification: ${sourceClassification}`, "kafka");
-            } else {
-              log(`⚠️ No group found or no classification set`, "kafka");
             }
           }
-        } else {
-          log(`⚠️ Missing source type or ID in content message`, "kafka");
         }
       } catch (error) {
-        log(`❌ Error getting source classification: ${error}`, "kafka-error");
+        console.error("Error getting source classification:", error);
         // Keep default "new" value
       }
 
-      log(`📝 Creating content with source_classification: ${sourceClassification} for source: ${contentMessage.source?.type} - ${contentMessage.source?.id}`, "kafka");
+      console.log(`📝 Creating content with source_classification: ${sourceClassification} for source: ${contentMessage.source?.type} - ${contentMessage.source?.id}`);
 
     const insertData = {
       externalId: contentMessage.externalId,
-      source: contentMessage.source ? JSON.stringify(contentMessage.source) : null,
-      categories: contentMessage.categories ? JSON.stringify(contentMessage.categories) : null,
-      labels: contentMessage.labels ? JSON.stringify(contentMessage.labels) : null,
+      source: contentMessage.source || null,
+      categories: contentMessage.categories || null,
+      labels: contentMessage.labels || null,
       status: "pending",
       sourceVerification: contentMessage.sourceVerification || "unverified",
       assigned_to_id: assigned_to_id,
@@ -1066,8 +961,6 @@ export async function processContentMessage(contentMessage: ContentMessage, tx: 
       updatedAt: now,
       sourceClassification: sourceClassification,
     };
-
-    log(`📋 Insert data: ${JSON.stringify(insertData)}`, "kafka");
 
     const newContent = await tx.insert(contents).values(insertData).returning();
     log(`New content created with ID ${newContent[0].id}`, "kafka");

@@ -1,0 +1,71 @@
+~/workspace$ npx tsx run-sql-script.ts add-source-classification-column.sql
+Database connection config: {
+  host: undefined,
+  database: undefined,
+  user: undefined,
+  port: undefined
+}
+Running SQL script: add-source-classification-column.sql
+Executing SQL...
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+Database connection test successful: { now: 2025-06-15T11:41:50.566Z }
+❌ Error running SQL script: error: syntax error at or near "NOT"
+    at /home/runner/workspace/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runSQLScript (/home/runner/workspace/run-sql-script.ts:26:5) {
+  length: 93,
+  severity: 'ERROR',
+  code: '42601',
+  detail: undefined,
+  hint: undefined,
+  position: '534',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'scan.l',
+  line: '1244',
+  routine: 'scanner_yyerror'
+}
+Database connection closed
+✅ Unaccent extension enabled
+💥 Script failed: error: syntax error at or near "NOT"
+    at /home/runner/workspace/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runSQLScript (/home/runner/workspace/run-sql-script.ts:26:5) {
+  length: 93,
+  severity: 'ERROR',
+  code: '42601',
+  detail: undefined,
+  hint: undefined,
+  position: '534',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'scan.l',
+  line: '1244',
+  routine: 'scanner_yyerror'
+}
+~/workspace$ 
