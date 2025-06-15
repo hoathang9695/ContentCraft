@@ -2317,17 +2317,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const { contents } = await import("../shared/schema");
           
-          await db
+          // Get the user ID from fullName JSON
+          const userIdFromFullName = result[0].fullName ? 
+            (typeof result[0].fullName === 'string' ? 
+              JSON.parse(result[0].fullName).id : 
+              result[0].fullName.id) : 
+            result[0].id.toString();
+          
+          console.log(`Updating source_classification for user ID: ${userIdFromFullName} to ${classification}`);
+          
+          const updateResult = await db
             .update(contents)
             .set({ source_classification: classification })
             .where(
               and(
-                sql`source::json->>'type' = 'account'`,
-                sql`source::json->>'id' = ${result[0].fullName ? JSON.parse(result[0].fullName as string).id : result[0].id.toString()}`
+                sql`LOWER(source::json->>'type') = 'account'`,
+                sql`source::json->>'id' = ${userIdFromFullName}`
               )
-            );
+            )
+            .returning({ id: contents.id });
           
-          console.log(`Updated source_classification to ${classification} for real user contents`);
+          console.log(`Updated ${updateResult.length} contents with source_classification: ${classification} for real user ID: ${userIdFromFullName}`);
         } catch (error) {
           console.error("Error updating source_classification for real user:", error);
         }
