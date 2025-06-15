@@ -910,47 +910,73 @@ export async function processContentMessage(contentMessage: ContentMessage, tx: 
 
       try {
         if (contentMessage.source?.type && contentMessage.source?.id) {
+          log(`🔍 Looking up source classification for ${contentMessage.source.type} - ${contentMessage.source.id}`, "kafka");
+          
           if (contentMessage.source.type.toLowerCase() === 'account') {
             // Check real_users table
+            log(`🔍 Checking real_users table for ID: ${contentMessage.source.id}`, "kafka");
             const userResult = await tx
-              .select({ classification: realUsers.classification })
+              .select({ 
+                id: realUsers.id,
+                fullName: realUsers.fullName,
+                classification: realUsers.classification 
+              })
               .from(realUsers)
               .where(sql`full_name::json->>'id' = ${contentMessage.source.id.toString()}`)
               .limit(1);
 
+            log(`🔍 User query result: ${JSON.stringify(userResult)}`, "kafka");
+
             if (userResult.length > 0 && userResult[0].classification) {
               sourceClassification = userResult[0].classification;
+              log(`✅ Found user classification: ${sourceClassification}`, "kafka");
+            } else {
+              log(`⚠️ No user found or no classification set`, "kafka");
             }
           } else if (contentMessage.source.type.toLowerCase() === 'page') {
             // Check pages table
+            log(`🔍 Checking pages table for ID: ${contentMessage.source.id}`, "kafka");
             const pageResult = await tx
               .select({ classification: pages.classification })
               .from(pages)
               .where(sql`page_name::json->>'id' = ${contentMessage.source.id.toString()}`)
               .limit(1);
 
+            log(`🔍 Page query result: ${JSON.stringify(pageResult)}`, "kafka");
+
             if (pageResult.length > 0 && pageResult[0].classification) {
               sourceClassification = pageResult[0].classification;
+              log(`✅ Found page classification: ${sourceClassification}`, "kafka");
+            } else {
+              log(`⚠️ No page found or no classification set`, "kafka");
             }
           } else if (contentMessage.source.type.toLowerCase() === 'group') {
             // Check groups table
+            log(`🔍 Checking groups table for ID: ${contentMessage.source.id}`, "kafka");
             const groupResult = await tx
               .select({ classification: groups.classification })
               .from(groups)
               .where(sql`group_name::json->>'id' = ${contentMessage.source.id.toString()}`)
               .limit(1);
 
+            log(`🔍 Group query result: ${JSON.stringify(groupResult)}`, "kafka");
+
             if (groupResult.length > 0 && groupResult[0].classification) {
               sourceClassification = groupResult[0].classification;
+              log(`✅ Found group classification: ${sourceClassification}`, "kafka");
+            } else {
+              log(`⚠️ No group found or no classification set`, "kafka");
             }
           }
+        } else {
+          log(`⚠️ Missing source type or ID in content message`, "kafka");
         }
       } catch (error) {
-        console.error("Error getting source classification:", error);
+        log(`❌ Error getting source classification: ${error}`, "kafka-error");
         // Keep default "new" value
       }
 
-      console.log(`📝 Creating content with source_classification: ${sourceClassification} for source: ${contentMessage.source?.type} - ${contentMessage.source?.id}`);
+      log(`📝 Creating content with source_classification: ${sourceClassification} for source: ${contentMessage.source?.type} - ${contentMessage.source?.id}`, "kafka");
 
     const insertData = {
       externalId: contentMessage.externalId,
@@ -965,6 +991,8 @@ export async function processContentMessage(contentMessage: ContentMessage, tx: 
       updatedAt: now,
       sourceClassification: sourceClassification,
     };
+
+    log(`📋 Insert data: ${JSON.stringify(insertData)}`, "kafka");
 
     const newContent = await tx.insert(contents).values(insertData).returning();
     log(`New content created with ID ${newContent[0].id}`, "kafka");
