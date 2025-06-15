@@ -7,11 +7,11 @@ async function fixSourceClassification() {
   try {
     console.log("🔄 Bắt đầu cập nhật source_classification cho tất cả nội dung...");
 
+    let totalUpdated = 0;
+    
     // 1. Cập nhật cho real users (accounts)
     console.log("\n📱 Cập nhật cho accounts...");
     const realUsersData = await db.select().from(realUsers);
-    
-    let totalUpdated = 0;
     
     for (const user of realUsersData) {
       try {
@@ -22,7 +22,7 @@ async function fixSourceClassification() {
             const fullNameObj = typeof user.fullName === 'string' 
               ? JSON.parse(user.fullName) 
               : user.fullName;
-            userId = fullNameObj.id;
+            userId = fullNameObj.id || user.id.toString();
           } catch (e) {
             userId = user.id.toString();
           }
@@ -30,7 +30,6 @@ async function fixSourceClassification() {
           userId = user.id.toString();
         }
 
-        // Update contents for this user
         const updateResult = await db
           .update(contents)
           .set({ sourceClassification: user.classification || 'new' })
@@ -60,13 +59,14 @@ async function fixSourceClassification() {
     
     for (const page of pagesData) {
       try {
+        // Get page ID from pageName JSON or use direct id
         let pageId;
         if (page.pageName) {
           try {
             const pageNameObj = typeof page.pageName === 'string' 
               ? JSON.parse(page.pageName) 
               : page.pageName;
-            pageId = pageNameObj.id;
+            pageId = pageNameObj.id || page.id.toString();
           } catch (e) {
             pageId = page.id.toString();
           }
@@ -103,13 +103,14 @@ async function fixSourceClassification() {
     
     for (const group of groupsData) {
       try {
+        // Get group ID from groupName JSON or use direct id
         let groupId;
         if (group.groupName) {
           try {
             const groupNameObj = typeof group.groupName === 'string' 
               ? JSON.parse(group.groupName) 
               : group.groupName;
-            groupId = groupNameObj.id;
+            groupId = groupNameObj.id || group.id.toString();
           } catch (e) {
             groupId = group.id.toString();
           }
@@ -163,42 +164,46 @@ async function fixSourceClassification() {
       .from(contents)
       .groupBy(contents.sourceClassification)
       .orderBy(contents.sourceClassification);
-    
+
     stats.forEach(stat => {
-      console.log(`📈 ${stat.source_classification}: ${stat.count} nội dung`);
+      console.log(`  ${stat.source_classification}: ${stat.count} nội dung`);
     });
 
-    // 6. Kiểm tra cụ thể cho user "Dương Tôn Lữ"
-    console.log("\n🔍 Kiểm tra cụ thể cho user 'Dương Tôn Lữ':");
-    const duongTonUser = realUsersData.find(user => {
-      if (!user.fullName) return false;
-      try {
-        const fullNameObj = typeof user.fullName === 'string' 
-          ? JSON.parse(user.fullName) 
-          : user.fullName;
-        return fullNameObj.name && fullNameObj.name.includes("Dương Tôn Lữ");
-      } catch (e) {
-        return false;
+    // 6. Hiển thị một số ví dụ về user "Dương Tôn Lữ" nếu tồn tại
+    console.log("\n🔍 Kiểm tra user 'Dương Tôn Lữ':");
+    const duongTonLuUser = realUsersData.find(user => {
+      if (user.fullName) {
+        try {
+          const fullNameObj = typeof user.fullName === 'string' 
+            ? JSON.parse(user.fullName) 
+            : user.fullName;
+          return fullNameObj.name === 'Dương Tôn Lữ';
+        } catch (e) {
+          return false;
+        }
       }
+      return false;
     });
-    
-    if (duongTonUser) {
+
+    if (duongTonLuUser) {
+      console.log(`  Classification: ${duongTonLuUser.classification}`);
+      
+      // Tìm contents của user này
       let userId;
       try {
-        const fullNameObj = typeof duongTonUser.fullName === 'string' 
-          ? JSON.parse(duongTonUser.fullName) 
-          : duongTonUser.fullName;
+        const fullNameObj = typeof duongTonLuUser.fullName === 'string' 
+          ? JSON.parse(duongTonLuUser.fullName) 
+          : duongTonLuUser.fullName;
         userId = fullNameObj.id;
       } catch (e) {
-        userId = duongTonUser.id.toString();
+        userId = duongTonLuUser.id.toString();
       }
-      
+
       const userContents = await db
         .select({
           id: contents.id,
           externalId: contents.externalId,
-          sourceClassification: contents.sourceClassification,
-          source: contents.source
+          sourceClassification: contents.sourceClassification
         })
         .from(contents)
         .where(
@@ -206,18 +211,36 @@ async function fixSourceClassification() {
             sql`source::json->>'type' = 'account'`,
             sql`source::json->>'id' = ${userId}`
           )
-        );
-      
-      console.log(`👤 User "Dương Tôn Lữ" (ID: ${userId}, Classification: ${duongTonUser.classification}):`);
-      console.log(`📋 Có ${userContents.length} nội dung:`);
-      
+        )
+        .limit(5);
+
       if (userContents.length > 0) {
-        userContents.slice(0, 5).forEach(content => {
-          console.log(`   - External ID: ${content.externalId}, Source Classification: ${content.sourceClassification}`);
+        console.log(`  Có ${userContents.length} nội dung:`);
+        userContents.forEach(content => {
+          console.log(`    - External ID: ${content.externalId}, Classification: ${content.sourceClassification}`);
         });
-        if (userContents.length > 5) {
-          console.log(`   ... và ${userContents.length - 5} nội dung khác`);
-        }
+        
+        // Đếm theo classification
+        const userStats = await db
+          .select({
+            source_classification: contents.sourceClassification,
+            count: sql<number>`count(*)`
+          })
+          .from(contents)
+          .where(
+            and(
+              sql`source::json->>'type' = 'account'`,
+              sql`source::json->>'id' = ${userId}`
+            )
+          )
+          .groupBy(contents.sourceClassification);
+
+        console.log(`  Phân bố classification:`);
+        userStats.forEach(stat => {
+          console.log(`    ${stat.source_classification}: ${stat.count} nội dung`);
+        });
+      } else {
+        console.log("  Không tìm thấy nội dung nào");
       }
     } else {
       console.log("❌ Không tìm thấy user 'Dương Tôn Lữ'");
@@ -230,13 +253,4 @@ async function fixSourceClassification() {
   }
 }
 
-// Chạy script
-fixSourceClassification()
-  .then(() => {
-    console.log("🎉 Script hoàn thành!");
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error("💥 Script thất bại:", error);
-    process.exit(1);
-  });
+fixSourceClassification();
