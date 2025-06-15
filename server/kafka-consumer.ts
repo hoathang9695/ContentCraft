@@ -915,23 +915,98 @@ export async function processContentMessage(contentMessage: ContentMessage, tx: 
           if (contentMessage.source.type.toLowerCase() === 'account') {
             // Check real_users table
             log(`🔍 Checking real_users table for ID: ${contentMessage.source.id}`, "kafka");
-            const userResult = await tx
-              .select({ 
-                id: realUsers.id,
-                fullName: realUsers.fullName,
-                classification: realUsers.classification 
-              })
-              .from(realUsers)
-              .where(sql`full_name::json->>'id' = ${contentMessage.source.id.toString()}`)
-              .limit(1);
+            
+            // Try multiple approaches to find the user
+            let userResult = [];
+            
+            // Approach 1: Direct JSON field comparison 
+            try {
+              userResult = await tx
+                .select({ 
+                  id: realUsers.id,
+                  fullName: realUsers.fullName,
+                  classification: realUsers.classification 
+                })
+                .from(realUsers)
+                .where(sql`full_name::jsonb->>'id' = ${contentMessage.source.id.toString()}`)
+                .limit(1);
+              
+              log(`🔍 Approach 1 - JSONB query result: ${JSON.stringify(userResult)}`, "kafka");
+            } catch (e) {
+              log(`⚠️ Approach 1 failed: ${e}`, "kafka");
+            }
 
-            log(`🔍 User query result: ${JSON.stringify(userResult)}`, "kafka");
+            // Approach 2: If not found, try with LIKE pattern
+            if (userResult.length === 0) {
+              try {
+                userResult = await tx
+                  .select({ 
+                    id: realUsers.id,
+                    fullName: realUsers.fullName,
+                    classification: realUsers.classification 
+                  })
+                  .from(realUsers)
+                  .where(sql`full_name::text LIKE ${'%"id":"' + contentMessage.source.id + '"%'}`)
+                  .limit(1);
+                
+                log(`🔍 Approach 2 - LIKE query result: ${JSON.stringify(userResult)}`, "kafka");
+              } catch (e) {
+                log(`⚠️ Approach 2 failed: ${e}`, "kafka");
+              }
+            }
+
+            // Approach 3: Try exact string match on full_name column
+            if (userResult.length === 0) {
+              try {
+                const allUsers = await tx
+                  .select({ 
+                    id: realUsers.id,
+                    fullName: realUsers.fullName,
+                    classification: realUsers.classification 
+                  })
+                  .from(realUsers)
+                  .limit(100); // Limit to avoid performance issues
+
+                const foundUser = allUsers.find(user => {
+                  try {
+                    const fullNameObj = typeof user.fullName === 'string' 
+                      ? JSON.parse(user.fullName) 
+                      : user.fullName;
+                    return fullNameObj && fullNameObj.id === contentMessage.source.id;
+                  } catch (e) {
+                    return false;
+                  }
+                });
+
+                if (foundUser) {
+                  userResult = [foundUser];
+                  log(`🔍 Approach 3 - Manual search found: ${JSON.stringify(foundUser)}`, "kafka");
+                }
+              } catch (e) {
+                log(`⚠️ Approach 3 failed: ${e}`, "kafka");
+              }
+            }
 
             if (userResult.length > 0 && userResult[0].classification) {
               sourceClassification = userResult[0].classification;
               log(`✅ Found user classification: ${sourceClassification}`, "kafka");
             } else {
-              log(`⚠️ No user found or no classification set`, "kafka");
+              log(`⚠️ No user found with ID ${contentMessage.source.id} in real_users table`, "kafka");
+              
+              // Log all users for debugging in production
+              try {
+                const sampleUsers = await tx
+                  .select({ 
+                    id: realUsers.id,
+                    fullName: realUsers.fullName,
+                    classification: realUsers.classification 
+                  })
+                  .from(realUsers)
+                  .limit(5);
+                log(`🔍 Sample users in database: ${JSON.stringify(sampleUsers)}`, "kafka");
+              } catch (e) {
+                log(`⚠️ Could not fetch sample users: ${e}`, "kafka");
+              }
             }
           } else if (contentMessage.source.type.toLowerCase() === 'page') {
             // Check pages table
