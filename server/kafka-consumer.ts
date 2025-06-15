@@ -829,7 +829,7 @@ function parseMessage(
     // Check for support/contact message (has full_name, email, subject, content)
     else if ("full_name" in message && "email" in message && "subject" in message && "content" in message) {
       return message as SupportMessage;
-    } else if ("externalId" in message) {
+    } else if ("externalId" in message){
       return message as ContentMessage;
     } else if ("fullName" in message && "id" in message&& "email" in message&& "verified" in message) {
       return message as RealUsersMessage; 
@@ -901,6 +901,53 @@ async function processContentMessage(contentMessage: ContentMessage, tx: any) {
     const assigned_to_id = activeUsers[nextAssigneeIndex].id;
     const now = new Date();
 
+    // Auto-assign source classification based on source type and ID
+      let sourceClassification = "new"; // default value
+
+      try {
+        if (contentMessage.source?.type && contentMessage.source?.id) {
+          if (contentMessage.source.type.toLowerCase() === 'account') {
+            // Check real_users table
+            const userResult = await tx
+              .select({ classification: realUsers.classification })
+              .from(realUsers)
+              .where(sql`full_name::json->>'id' = ${contentMessage.source.id.toString()}`)
+              .limit(1);
+
+            if (userResult.length > 0 && userResult[0].classification) {
+              sourceClassification = userResult[0].classification;
+            }
+          } else if (contentMessage.source.type.toLowerCase() === 'page') {
+            // Check pages table
+            const pageResult = await tx
+              .select({ classification: pages.classification })
+              .from(pages)
+              .where(sql`page_name::json->>'id' = ${contentMessage.source.id.toString()}`)
+              .limit(1);
+
+            if (pageResult.length > 0 && pageResult[0].classification) {
+              sourceClassification = pageResult[0].classification;
+            }
+          } else if (contentMessage.source.type.toLowerCase() === 'group') {
+            // Check groups table
+            const groupResult = await tx
+              .select({ classification: groups.classification })
+              .from(groups)
+              .where(sql`group_name::json->>'id' = ${contentMessage.source.id.toString()}`)
+              .limit(1);
+
+            if (groupResult.length > 0 && groupResult[0].classification) {
+              sourceClassification = groupResult[0].classification;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error getting source classification:", error);
+        // Keep default "new" value
+      }
+
+      console.log(`📝 Creating content with source_classification: ${sourceClassification} for source: ${contentMessage.source?.type} - ${contentMessage.source?.id}`);
+
     const insertData = {
       externalId: contentMessage.externalId,
       source: contentMessage.source || null,
@@ -912,6 +959,7 @@ async function processContentMessage(contentMessage: ContentMessage, tx: any) {
       assignedAt: now,
       createdAt: now,
       updatedAt: now,
+      sourceClassification: sourceClassification,
     };
 
     const newContent = await tx.insert(contents).values(insertData).returning();
