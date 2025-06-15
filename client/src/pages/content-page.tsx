@@ -44,6 +44,7 @@ export default function ContentPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const debouncedSearchQuery = useDebounce(searchQuery, 800);
   const [showQueueReport, setShowQueueReport] = useState(false);
+  const [sourceClassification, setSourceClassification] = useState<'new' | 'potential' | 'non_potential' | 'positive' | 'all'>('all');
 
   const { data: editorUsers } = useQuery<Array<{id: number, username: string, name: string}>>({
     queryKey: ['/api/editors'],
@@ -167,6 +168,31 @@ export default function ContentPage() {
                   </SelectContent>
                 </Select>
               )}
+            </div>
+
+            {/* Source Classification Filter - Mobile */}
+            <div>
+              <Select 
+                value={sourceClassification} 
+                onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'positive' | 'all') => setSourceClassification(value)}
+              >
+                <SelectTrigger className="w-full h-9">
+                  <SelectValue>
+                    {sourceClassification === 'all' ? 'Tất cả phân loại' : 
+                     sourceClassification === 'new' ? 'Mới' :
+                     sourceClassification === 'potential' ? 'Tiềm năng' :
+                     sourceClassification === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả phân loại</SelectItem>
+                  <SelectItem value="new">Mới</SelectItem>
+                  <SelectItem value="potential">Tiềm năng</SelectItem>
+                  <SelectItem value="positive">Tích cực</SelectItem>
+                  <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             </div>
           </div>
 
@@ -345,6 +371,28 @@ export default function ContentPage() {
             </Select>
           )}
 
+          {/* Source Classification Filter */}
+          <Select 
+            value={sourceClassification} 
+            onValueChange={(value: 'new' | 'potential' | 'non_potential' | 'positive' | 'all') => setSourceClassification(value)}
+          >
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue>
+                {sourceClassification === 'all' ? 'Tất cả phân loại' : 
+                 sourceClassification === 'new' ? 'Mới' :
+                 sourceClassification === 'potential' ? 'Tiềm năng' :
+                 sourceClassification === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả phân loại</SelectItem>
+              <SelectItem value="new">Mới</SelectItem>
+              <SelectItem value="potential">Tiềm năng</SelectItem>
+              <SelectItem value="positive">Tích cực</SelectItem>
+              <SelectItem value="non_potential">Không tiềm năng</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Start date */}
           <div>
             <Label htmlFor="startDate" className="text-sm mb-1 block">Ngày bắt đầu</Label>
@@ -464,6 +512,7 @@ export default function ContentPage() {
           onSearchChange={handleSearch}
           startDate={startDate}
           endDate={endDate}
+          sourceClassification={sourceClassification}
         />
       )}
 
@@ -476,6 +525,7 @@ export default function ContentPage() {
           onSearchChange={handleSearch}
           startDate={startDate}
           endDate={endDate}
+          sourceClassification={sourceClassification}
         />
       )}
 
@@ -488,6 +538,7 @@ export default function ContentPage() {
           onSearchChange={handleSearch}
           startDate={startDate}
           endDate={endDate}
+          sourceClassification={sourceClassification}
         />
       )}
 
