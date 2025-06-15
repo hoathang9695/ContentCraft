@@ -12,7 +12,11 @@ WHERE source_classification IS NULL;
 CREATE INDEX IF NOT EXISTS idx_contents_source_classification 
 ON contents(source_classification);
 
+-- Drop existing constraint if it exists first
+ALTER TABLE contents 
+DROP CONSTRAINT IF EXISTS chk_source_classification;
+
 -- Add check constraint to ensure valid values
 ALTER TABLE contents 
-ADD CONSTRAINT IF NOT EXISTS chk_source_classification 
+ADD CONSTRAINT chk_source_classification 
 CHECK (source_classification IN ('new', 'potential', 'non_potential', 'positive'));
