@@ -2313,6 +2313,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: result[0],
         });
 
+        // Update source_classification in contents table for this real user
+        try {
+          const { contents } = await import("../shared/schema");
+          
+          // Get the user ID from fullName JSON
+          const userIdFromFullName = result[0].fullName ? 
+            (typeof result[0].fullName === 'string' ? 
+              JSON.parse(result[0].fullName).id : 
+              result[0].fullName.id) : 
+            result[0].id.toString();
+          
+          console.log(`Updating source_classification for user ID: ${userIdFromFullName} to ${classification}`);
+          
+          const updateResult = await db
+            .update(contents)
+            .set({ source_classification: classification })
+            .where(
+              and(
+                sql`LOWER(source::json->>'type') = 'account'`,
+                sql`source::json->>'id' = ${userIdFromFullName}`
+              )
+            )
+            .returning({ id: contents.id });
+          
+          console.log(`Updated ${updateResult.length} contents with source_classification: ${classification} for real user ID: ${userIdFromFullName}`);
+        } catch (error) {
+          console.error("Error updating source_classification for real user:", error);
+        }
+
         // Broadcast badge update to all clients
         if ((global as any).broadcastBadgeUpdate) {
           (global as any).broadcastBadgeUpdate();
@@ -3327,6 +3356,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: updatedPage[0],
         });
 
+        // Update source_classification in contents table for this page
+        try {
+          const { contents } = await import("../shared/schema");
+          
+          await db
+            .update(contents)
+            .set({ source_classification: classification })
+            .where(
+              and(
+                sql`source::json->>'type' = 'page'`,
+                sql`source::json->>'id' = ${updatedPage[0].pageName ? JSON.parse(updatedPage[0].pageName as string).id : pageId.toString()}`
+              )
+            );
+          
+          console.log(`Updated source_classification to ${classification} for page contents`);
+        } catch (error) {
+          console.error("Error updating source_classification for page:", error);
+        }
+
         // Broadcast badge update to all clients
         if ((global as any).broadcastBadgeUpdate) {
           (global as any).broadcastBadgeUpdate();
@@ -3666,6 +3714,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Classification updated successfully",
           data: updatedGroup[0],
         });
+
+        // Update source_classification in contents table for this group
+        try {
+          const { contents } = await import("../shared/schema");
+          
+          await db
+            .update(contents)
+            .set({ source_classification: classification })
+            .where(
+              and(
+                sql`source::json->>'type' = 'group'`,
+                sql`source::json->>'id' = ${updatedGroup[0].groupName ? JSON.parse(updatedGroup[0].groupName as string).id : groupId.toString()}`
+              )
+            );
+          
+          console.log(`Updated source_classification to ${classification} for group contents`);
+        } catch (error) {
+          console.error("Error updating source_classification for group:", error);
+        }
 
         // Broadcast badge update to all clients
         if ((global as any).broadcastBadgeUpdate) {
