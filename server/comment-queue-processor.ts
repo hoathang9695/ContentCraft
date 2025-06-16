@@ -314,12 +314,13 @@ export class CommentQueueProcessor {
       console.log(`📊 [${sessionId}] Total progress: ${finalTotalProcessed}/${totalCommentsInQueue} comments (${currentSuccessCount} success, ${currentFailureCount} failed)`);
       console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}`);
 
-      // Strict validation before marking as completed
-      // Check if we processed all remaining comments correctly
+      // Improved validation logic for queue completion
       const allCommentsProcessed = finalTotalProcessed === totalCommentsInQueue;
-      const thisRunCompleted = commentsProcessedThisRun === commentsExpectedThisRun;
+      const hasProcessedAtLeastOne = finalTotalProcessed > 0;
+      const progressedFromStartIndex = finalTotalProcessed >= startIndex;
       
-      if (allCommentsProcessed && thisRunCompleted) {
+      // More lenient validation - focus on whether we completed ALL comments, not just this run
+      if (allCommentsProcessed && hasProcessedAtLeastOne && progressedFromStartIndex) {
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'completed',
           processedCount: finalTotalProcessed,
@@ -328,7 +329,7 @@ export class CommentQueueProcessor {
         });
         console.log(`🎉 [${sessionId}] Queue completed successfully - all ${finalTotalProcessed}/${totalCommentsInQueue} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
       } else {
-        // Mark as failed if counts don't match
+        // Only mark as failed if we genuinely didn't process all comments
         const errorMsg = `Processing incomplete: totalProcessed=${finalTotalProcessed}, expectedTotal=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}, expectedThisRun=${commentsExpectedThisRun}, startIndex=${startIndex}, success=${currentSuccessCount}, failed=${currentFailureCount}`;
         
         await storage.updateCommentQueueProgress(sessionId, {
