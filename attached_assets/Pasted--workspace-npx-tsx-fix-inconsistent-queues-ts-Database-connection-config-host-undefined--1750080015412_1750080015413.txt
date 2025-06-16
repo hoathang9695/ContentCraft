@@ -1,0 +1,76 @@
+~/workspace$ npx tsx fix-inconsistent-queues.ts
+Database connection config: {
+  host: undefined,
+  database: undefined,
+  user: undefined,
+  port: undefined
+}
+🔧 Fixing inconsistent failed queues...
+
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+Database connection test successful: { now: 2025-06-16T13:14:25.428Z }
+📋 Analyzing Queue: queue_1750067617061_38ejk0bm4
+   Current Status: failed
+   Total Comments: 10
+   Success: 5, Failure: 0
+   Total Processed: 5
+   Processed Count: 5
+   ⚠️ Queue queue_1750067617061_38ejk0bm4 has genuine issues and should remain failed
+     Reason: processed=5, expected=10, failures=0
+
+✅ Unaccent extension enabled
+📋 Analyzing Queue: queue_1750066723037_n8uqlygpv
+   Current Status: failed
+   Total Comments: 6
+   Success: 3, Failure: 0
+   Total Processed: 3
+   Processed Count: 3
+   ⚠️ Queue queue_1750066723037_n8uqlygpv has genuine issues and should remain failed
+     Reason: processed=3, expected=6, failures=0
+
+📋 Analyzing Queue: queue_1750066473565_qaiwvmfvd
+   Current Status: failed
+   Total Comments: 6
+   Success: 3, Failure: 0
+   Total Processed: 3
+   Processed Count: 3
+   ⚠️ Queue queue_1750066473565_qaiwvmfvd has genuine issues and should remain failed
+     Reason: processed=3, expected=6, failures=0
+
+📋 Analyzing Queue: queue_1750064122424_kpoifyfma
+   Current Status: failed
+   Total Comments: 6
+   Success: 3, Failure: 0
+   Total Processed: 3
+   Processed Count: 3
+   ⚠️ Queue queue_1750064122424_kpoifyfma has genuine issues and should remain failed
+     Reason: processed=3, expected=6, failures=0
+
+📋 Analyzing Queue: queue_1750048924131_3g8yhqq1q
+   Current Status: failed
+   Total Comments: 6
+   Success: 3, Failure: 0
+   Total Processed: 3
+   Processed Count: 3
+   ⚠️ Queue queue_1750048924131_3g8yhqq1q has genuine issues and should remain failed
+     Reason: processed=3, expected=6, failures=0
+
+
+📊 Summary after fixes:
+   queue_1750067617061_38ejk0bm4: failed (5/10) ❌ LEGITIMATE FAIL
+   queue_1750066723037_n8uqlygpv: failed (3/6) ❌ LEGITIMATE FAIL
+   queue_1750066473565_qaiwvmfvd: failed (3/6) ❌ LEGITIMATE FAIL
+   queue_1750064122424_kpoifyfma: failed (3/6) ❌ LEGITIMATE FAIL
