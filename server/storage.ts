@@ -69,6 +69,7 @@ export interface IStorage {
     startDate?: Date | null;
     endDate?: Date | null;
     searchQuery?: string;
+    sourceClassification?: 'new' | 'potential' | 'non_potential' | 'positive' | 'all';
   }): Promise<{
     data: (Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[];
     total: number;
@@ -696,6 +697,7 @@ export class DatabaseStorage implements IStorage {
     startDate?: Date | null;
     endDate?: Date | null;
     searchQuery?: string;
+    sourceClassification?: 'new' | 'potential' | 'non_potential' | 'positive' | 'all';
   }): Promise<{
     data: (Content & { processor?: { username: string, name: string }, approver?: { username: string, name: string } })[];
     total: number;
@@ -703,7 +705,19 @@ export class DatabaseStorage implements IStorage {
     currentPage: number;
     itemsPerPage: number;
   }> {
-    const { userId, userRole, page, limit, statusFilter, sourceVerification, assignedUserId, startDate, endDate, searchQuery } = params;
+    const {
+      userId,
+      userRole,
+      page,
+      limit,
+      statusFilter,
+      sourceVerification,
+      assignedUserId,
+      startDate,
+      endDate,
+      searchQuery,
+      sourceClassification = 'all',
+    } = params;
 
     // Build where conditions
     let whereConditions: any[] = [];
@@ -747,6 +761,11 @@ export class DatabaseStorage implements IStorage {
           like(contents.source, `%${searchTerm}%`)
         )
       );
+    }
+
+    // Source classification filter
+    if (sourceClassification && sourceClassification !== 'all') {
+      whereConditions.push(eq(contents.sourceClassification, sourceClassification));
     }
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;

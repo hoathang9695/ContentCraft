@@ -34,6 +34,7 @@ export const contents = pgTable("contents", {
   safe: boolean("safe"), // Trạng thái an toàn (true: an toàn, false: không an toàn, null: chưa đánh giá)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  sourceClassification: text("source_classification").default("new"), // 'new', 'potential', 'non_potential', 'positive'
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
