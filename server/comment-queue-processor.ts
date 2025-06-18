@@ -314,22 +314,34 @@ export class CommentQueueProcessor {
       console.log(`📊 [${sessionId}] Total progress: ${finalTotalProcessed}/${totalCommentsInQueue} comments (${currentSuccessCount} success, ${currentFailureCount} failed)`);
       console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}`);
 
-      // Strict validation before marking as completed
-      // Check if we processed all remaining comments correctly
+      // Queue completion logic: Only complete when ALL comments are successfully processed
+      const allCommentsSuccessful = currentSuccessCount === totalCommentsInQueue;
       const allCommentsProcessed = finalTotalProcessed === totalCommentsInQueue;
-      const thisRunCompleted = commentsProcessedThisRun === commentsExpectedThisRun;
       
-      if (allCommentsProcessed && thisRunCompleted) {
+      // Queue is only completed when success_count equals total_comments
+      if (allCommentsSuccessful) {
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'completed',
           processedCount: finalTotalProcessed,
           successCount: currentSuccessCount,
           failureCount: currentFailureCount
         });
-        console.log(`🎉 [${sessionId}] Queue completed successfully - all ${finalTotalProcessed}/${totalCommentsInQueue} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed)`);
+        console.log(`🎉 [${sessionId}] Queue completed successfully - ALL ${currentSuccessCount}/${totalCommentsInQueue} comments sent successfully (${currentFailureCount} failed)`);
+      } else if (allCommentsProcessed) {
+        // All comments processed but not all successful - mark as failed
+        const errorMsg = `Processing finished but not all successful: ${currentSuccessCount}/${totalCommentsInQueue} successful, ${currentFailureCount} failed. Queue marked as failed because success_count != total_comments.`;
+        
+        await storage.updateCommentQueueProgress(sessionId, {
+          status: 'failed',
+          processedCount: finalTotalProcessed,
+          successCount: currentSuccessCount,
+          failureCount: currentFailureCount,
+          errorInfo: errorMsg
+        });
+        console.error(`❌ [${sessionId}] Queue marked as failed - ${errorMsg}`);
       } else {
-        // Mark as failed if counts don't match
-        const errorMsg = `Processing incomplete: totalProcessed=${finalTotalProcessed}, expectedTotal=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}, expectedThisRun=${commentsExpectedThisRun}, startIndex=${startIndex}, success=${currentSuccessCount}, failed=${currentFailureCount}`;
+        // Not all comments processed - also failed
+        const errorMsg = `Processing incomplete: only ${finalTotalProcessed}/${totalCommentsInQueue} comments processed (${currentSuccessCount} success, ${currentFailureCount} failed). Expected all ${totalCommentsInQueue} to be processed.`;
         
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'failed',

@@ -232,6 +232,9 @@ export default function CommentQueueReportDialog({
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Điều khiển</CardTitle>
+              <CardDescription className="text-xs">
+                <strong>Force Cleanup:</strong> Reset queue bị stuck về pending. <strong>Cleanup (24h):</strong> Xóa queue cũ đã hoàn thành.
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -267,6 +270,7 @@ export default function CommentQueueReportDialog({
                   size="sm"
                   onClick={handleForceCleanup}
                   className="text-orange-600 hover:text-orange-700"
+                  title="Reset tất cả queue đang bị stuck về trạng thái pending để xử lý lại"
                 >
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Force Cleanup
@@ -277,6 +281,7 @@ export default function CommentQueueReportDialog({
                   size="sm"
                   onClick={handleManualCleanup}
                   className="text-red-600 hover:text-red-700"
+                  title="Xóa vĩnh viễn các queue đã hoàn thành hoặc thất bại cách đây 24 giờ"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Cleanup (24h)
