@@ -240,22 +240,14 @@ export default function ReviewReportsPage() {
               render: (report: SavedReport) => {
                 const date = new Date(report.createdAt);
                 
-                const formatter = new Intl.DateTimeFormat('vi-VN', {
-                  timeZone: 'Asia/Ho_Chi_Minh',
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-                });
+                // Convert to Vietnam timezone
+                const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
                 
-                const parts = formatter.formatToParts(date);
-                const day = parts.find(part => part.type === 'day')?.value;
-                const month = parts.find(part => part.type === 'month')?.value;
-                const year = parts.find(part => part.type === 'year')?.value;
-                const hour = parts.find(part => part.type === 'hour')?.value;
-                const minute = parts.find(part => part.type === 'minute')?.value;
+                const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
+                const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
+                const year = vietnamTime.getUTCFullYear();
+                const hour = vietnamTime.getUTCHours().toString().padStart(2, '0');
+                const minute = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
                 
                 const displayDate = `${day}/${month}/${year} ${hour}:${minute}`;
                 
@@ -343,22 +335,14 @@ export default function ReviewReportsPage() {
                       {(() => {
                         const date = new Date(selectedReport.createdAt);
                         
-                        const formatter = new Intl.DateTimeFormat('vi-VN', {
-                          timeZone: 'Asia/Ho_Chi_Minh',
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false
-                        });
+                        // Convert to Vietnam timezone
+                        const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
                         
-                        const parts = formatter.formatToParts(date);
-                        const day = parts.find(part => part.type === 'day')?.value;
-                        const month = parts.find(part => part.type === 'month')?.value;
-                        const year = parts.find(part => part.type === 'year')?.value;
-                        const hour = parts.find(part => part.type === 'hour')?.value;
-                        const minute = parts.find(part => part.type === 'minute')?.value;
+                        const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
+                        const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
+                        const year = vietnamTime.getUTCFullYear();
+                        const hour = vietnamTime.getUTCHours().toString().padStart(2, '0');
+                        const minute = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
                         
                         return `${day}/${month}/${year} ${hour}:${minute}`;
                       })()} (GMT+7)
