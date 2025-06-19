@@ -43,6 +43,7 @@ import { feedbackRouter } from "./routes/feedback.router.js";
 import { supportRouter } from "./routes/support.router.js";
 import { infringingContentRouter } from "./routes/infringing-content.router.js";
 import reportManagementRouter from "./routes/report-management.router.js";
+import savedReportsRouter from "./routes/saved-reports.router.js";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -2900,6 +2901,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Report management routes - with authentication middleware
   app.use("/api/report-management", isAuthenticated, reportManagementRouter);
+
+  // Saved reports routes
+  app.use("/api/saved-reports", savedReportsRouter);
 
   // Import and mount tick router
   const { tickRouter } = await import("./routes/tick.router");

@@ -346,11 +346,6 @@ export const savedReports = pgTable('saved_reports', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export type SavedReport = typeof savedReports.$inferSelect;
-export type InsertSavedReport = typeof savedReports.$inferInsert;t: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
 export const insertSavedReportSchema = createInsertSchema(savedReports).omit({ 
   id: true, 
   createdAt: true,
