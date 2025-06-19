@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { savedReports, users } from '../../shared/schema.js';
-import { eq, and, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, ilike } from 'drizzle-orm';
 import { isAuthenticated } from '../middleware/auth';
 
 const router = Router();
@@ -20,7 +20,7 @@ router.get('/', isAuthenticated, async (req, res) => {
       query: req.query
     });
 
-    const { page = '1', pageSize = '10', sortBy = 'created_at', sortOrder = 'desc' } = req.query;
+    const { page = '1', pageSize = '10', sortBy = 'created_at', sortOrder = 'desc', search = '' } = req.query;
 
     const pageNum = parseInt(page as string);
     const pageSizeNum = parseInt(pageSize as string);
@@ -29,10 +29,18 @@ router.get('/', isAuthenticated, async (req, res) => {
     const orderByField = savedReports[sortBy as keyof typeof savedReports] || savedReports.createdAt;
     const orderDirection = sortOrder === 'asc' ? asc : desc;
 
+    // Build where conditions
+    let whereConditions = [eq(savedReports.createdBy, userId)];
+
+    // Add search if provided
+    if (search) {
+      whereConditions.push(ilike(savedReports.title, `%${search}%`));
+    }
+
     const reports = await db
       .select()
       .from(savedReports)
-      .where(eq(savedReports.createdBy, userId))
+      .where(and(...whereConditions))
       .orderBy(orderDirection(orderByField))
       .limit(pageSizeNum)
       .offset(offset);
@@ -43,7 +51,7 @@ router.get('/', isAuthenticated, async (req, res) => {
     const totalResult = await db
       .select({ count: sql`count(*)` })
       .from(savedReports)
-      .where(eq(savedReports.createdBy, userId));
+      .where(and(...whereConditions));
 
     const total = Number(totalResult[0].count);
 
