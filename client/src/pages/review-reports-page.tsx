@@ -237,14 +237,20 @@ export default function ReviewReportsPage() {
             {
               key: 'createdAt',
               header: 'Ngày tạo',
-              render: (report: SavedReport) => (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">
-                    {format(new Date(report.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}
-                  </span>
-                </div>
-              )
+              render: (report: SavedReport) => {
+                // Convert UTC to Vietnam time (GMT+7)
+                const utcDate = new Date(report.createdAt);
+                const vietnamTime = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                
+                return (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm">
+                      {format(vietnamTime, 'dd/MM/yyyy HH:mm', { locale: vi })} (GMT+7)
+                    </span>
+                  </div>
+                );
+              }
             },
             {
               key: 'actions',
