@@ -155,40 +155,30 @@ export default function ReviewReportsPage() {
         </div>
 
         {/* Search */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Tìm kiếm báo cáo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search">Tìm theo tiêu đề</Label>
-                <Input
-                  id="search"
-                  placeholder="Nhập tiêu đề báo cáo..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  onClick={() => {
-                    setCurrentPage(1);
-                    refetch();
-                  }}
-                  disabled={isLoading}
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  Tìm kiếm
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <Label htmlFor="search">Tìm theo tiêu đề</Label>
+            <Input
+              id="search"
+              placeholder="Nhập tiêu đề báo cáo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="flex items-end">
+            <Button
+              onClick={() => {
+                setCurrentPage(1);
+                refetch();
+              }}
+              disabled={isLoading}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Tìm kiếm
+            </Button>
+          </div>
+        </div>
 
         {/* Reports Table */}
         <DataTable
