@@ -177,6 +177,23 @@ export default function DashboardPage() {
       return;
     }
 
+    const requestData = {
+      title: reportTitle.trim(),
+      reportType: 'dashboard',
+      startDate: dateRange?.from?.toISOString(),
+      endDate: dateRange?.to?.toISOString(),
+      reportData: {
+        stats: currentStats,
+        dateRange: dateRange ? {
+          from: dateRange.from?.toISOString(),
+          to: dateRange.to?.toISOString()
+        } : null,
+        generatedAt: new Date().toISOString()
+      }
+    };
+
+    console.log('Saving report with data:', requestData);
+    
     setIsSaving(true);
     try {
       const response = await fetch('/api/saved-reports', {
@@ -185,24 +202,14 @@ export default function DashboardPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          title: reportTitle.trim(),
-          reportType: 'dashboard',
-          startDate: dateRange?.from?.toISOString(),
-          endDate: dateRange?.to?.toISOString(),
-          reportData: {
-            stats: currentStats,
-            dateRange: dateRange ? {
-              from: dateRange.from?.toISOString(),
-              to: dateRange.to?.toISOString()
-            } : null,
-            generatedAt: new Date().toISOString()
-          }
-        }),
+        body: JSON.stringify(requestData),
       });
 
+      const responseData = await response.json();
+      console.log('Save report response:', responseData);
+
       if (!response.ok) {
-        throw new Error('Failed to save report');
+        throw new Error(responseData.error || 'Failed to save report');
       }
 
       toast({

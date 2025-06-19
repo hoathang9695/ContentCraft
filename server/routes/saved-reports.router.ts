@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { savedReports, users } from '../../shared/schema.js';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import { authenticateUser } from '../middleware/auth.js';
 
 const router = Router();
@@ -70,32 +70,49 @@ router.post('/', authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
+      console.error('Unauthorized: No user ID found');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const { title, reportType = 'dashboard', startDate, endDate, reportData } = req.body;
 
+    console.log('Received save report request:', {
+      userId,
+      title,
+      reportType,
+      startDate,
+      endDate,
+      hasReportData: !!reportData
+    });
+
     if (!title || !reportData) {
+      console.error('Missing required fields:', { title: !!title, reportData: !!reportData });
       return res.status(400).json({ error: 'Title and report data are required' });
     }
 
+    const insertData = {
+      title,
+      reportType,
+      startDate: startDate ? new Date(startDate) : null,
+      endDate: endDate ? new Date(endDate) : null,
+      reportData,
+      createdBy: userId,
+    };
+
+    console.log('Inserting report data:', insertData);
+
     const newReport = await db
       .insert(savedReports)
-      .values({
-        title,
-        reportType,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
-        reportData,
-        createdBy: userId,
-      })
+      .values(insertData)
       .returning();
+
+    console.log('Report saved successfully:', newReport[0]);
 
     res.status(201).json({ message: 'Report saved successfully', report: newReport[0] });
 
   } catch (error) {
     console.error('Error saving report:', error);
-    res.status(500).json({ error: 'Failed to save report' });
+    res.status(500).json({ error: 'Failed to save report', details: error.message });
   }
 });
 
