@@ -160,6 +160,9 @@ app.use((req, res, next) => {
     // DO NOT throw error here as it will crash the application
   });
 
+  // Ensure API routes are registered BEFORE any static file serving
+  console.log('API routes registered, setting up static serving...');
+  
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
