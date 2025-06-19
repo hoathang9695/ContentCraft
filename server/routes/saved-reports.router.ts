@@ -38,8 +38,21 @@ router.get('/', isAuthenticated, async (req, res) => {
     }
 
     const reports = await db
-      .select()
+      .select({
+        id: savedReports.id,
+        title: savedReports.title,
+        reportType: savedReports.reportType,
+        startDate: savedReports.startDate,
+        endDate: savedReports.endDate,
+        reportData: savedReports.reportData,
+        createdBy: savedReports.createdBy,
+        createdAt: savedReports.createdAt,
+        updatedAt: savedReports.updatedAt,
+        creatorName: users.name,
+        creatorUsername: users.username
+      })
       .from(savedReports)
+      .leftJoin(users, eq(savedReports.createdBy, users.id))
       .where(and(...whereConditions))
       .orderBy(orderDirection(orderByField))
       .limit(pageSizeNum)

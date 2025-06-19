@@ -42,6 +42,8 @@ interface SavedReport {
   };
   createdAt: string;
   updatedAt: string;
+  creatorName?: string;
+  creatorUsername?: string;
 }
 
 export default function ReviewReportsPage() {
@@ -219,6 +221,19 @@ export default function ReviewReportsPage() {
               )
             },
             {
+              key: 'creator',
+              header: 'Người tạo',
+              render: (report: SavedReport) => (
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <div className="font-medium">{report.creatorName || 'N/A'}</div>
+                    <div className="text-sm text-gray-500">@{report.creatorUsername || 'unknown'}</div>
+                  </div>
+                </div>
+              )
+            },
+            {
               key: 'dateRange',
               header: 'Khoảng thời gian',
               render: (report: SavedReport) => (
@@ -323,10 +338,15 @@ export default function ReviewReportsPage() {
             {selectedReport && (
               <div className="space-y-6">
                 {/* Report Info */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div>
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Loại báo cáo</label>
                     <p className="font-medium">Dashboard</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Người tạo</label>
+                    <p className="font-medium">{selectedReport.creatorName || 'N/A'}</p>
+                    <p className="text-sm text-gray-500">@{selectedReport.creatorUsername || 'unknown'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Khoảng thời gian</label>
