@@ -240,14 +240,11 @@ export default function ReviewReportsPage() {
               render: (report: SavedReport) => {
                 const date = new Date(report.createdAt);
                 
-                // Convert to Vietnam timezone
-                const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
-                
-                const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
-                const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
-                const year = vietnamTime.getUTCFullYear();
-                const hour = vietnamTime.getUTCHours().toString().padStart(2, '0');
-                const minute = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear();
+                const hour = date.getHours().toString().padStart(2, '0');
+                const minute = date.getMinutes().toString().padStart(2, '0');
                 
                 const displayDate = `${day}/${month}/${year} ${hour}:${minute}`;
                 
@@ -335,14 +332,11 @@ export default function ReviewReportsPage() {
                       {(() => {
                         const date = new Date(selectedReport.createdAt);
                         
-                        // Convert to Vietnam timezone
-                        const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
-                        
-                        const day = vietnamTime.getUTCDate().toString().padStart(2, '0');
-                        const month = (vietnamTime.getUTCMonth() + 1).toString().padStart(2, '0');
-                        const year = vietnamTime.getUTCFullYear();
-                        const hour = vietnamTime.getUTCHours().toString().padStart(2, '0');
-                        const minute = vietnamTime.getUTCMinutes().toString().padStart(2, '0');
+                        const day = date.getDate().toString().padStart(2, '0');
+                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                        const year = date.getFullYear();
+                        const hour = date.getHours().toString().padStart(2, '0');
+                        const minute = date.getMinutes().toString().padStart(2, '0');
                         
                         return `${day}/${month}/${year} ${hour}:${minute}`;
                       })()} (GMT+7)
