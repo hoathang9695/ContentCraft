@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey, varchar, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -230,9 +230,8 @@ export const smtpConfig = pgTable("smtp_config", {
 
 export const emailTemplates = pgTable("email_templates", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  type: varchar("type", { length: 100 }).notNull(), // feedback_confirmation, support_confirmation, welcome, etc.
-  subject: varchar("subject", { length: 500 }).notNull(),
+  name: text("name").notNull(),
+  subject: text("subject").notNull(),
   htmlContent: text("html_content").notNull(),
   variables: text("variables").notNull(), // JSON array of variable names used in template
   description: text("description"),
@@ -334,3 +333,15 @@ export const commentQueues = pgTable("comment_queues", {
 
 export type CommentQueue = typeof commentQueues.$inferSelect;
 export type InsertCommentQueue = typeof commentQueues.$inferInsert;
+
+export const savedReports = pgTable('saved_reports', {
+  id: serial('id').primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  reportType: varchar('report_type', { length: 50 }).notNull().default('dashboard'),
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  reportData: jsonb('report_data').notNull(),
+  createdBy: integer('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});

@@ -27,6 +27,7 @@ import SettingsPage from "@/pages/settings-page";
 import EmailTemplatesPage from "./pages/email-templates-page";
 import FeedbackPage from "@/pages/user-feedback/feedback-page";
 import ReportManagementPage from "@/pages/report-management-page";
+import ReviewReportsPage from "@/pages/review-reports-page";
 
 function Router() {
   return (
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/page-management" component={PageManagementPage} />
       <Route path="/groups-management" component={GroupsManagementPage} />
       <ProtectedRoute path="/report-management" component={ReportManagementPage} adminOnly={false} />
+      <Route path="/review-reports" component={ReviewReportsPage} />
       <Route path="/user-feedback/support" component={SupportPage} />
       <Route path="/user-feedback/verification" component={VerificationPage} />
       <Route path="/user-feedback/tick" component={TickPage} />

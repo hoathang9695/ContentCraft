@@ -6,6 +6,11 @@ import { DataTable } from '@/components/ui/data-table';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from "@/components/ui/button";
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from '@/hooks/use-toast';
 import {
   LayoutDashboard,
   Eye,
@@ -14,15 +19,31 @@ import {
   Users,
   FilePenLine,
   UserPlus,
-  UserCheck
+  UserCheck,
+  Save,
+  History,
+  CalendarDays
 } from 'lucide-react';
 import { Content } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { AssignmentPieChart } from '@/components/AssignmentPieChart';
+import { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+
+  // Date filter state
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [isApplyingFilter, setIsApplyingFilter] = useState(false);
+  const [filteredStats, setFilteredStats] = useState<any>(null);
+  
+  // Save report state
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [reportTitle, setReportTitle] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Sử dụng ngày 1 tháng hiện tại làm giá trị mặc định cho ngày bắt đầu
   const today = new Date();
@@ -83,15 +104,241 @@ export default function DashboardPage() {
     refetchOnWindowFocus: false
   });
 
+  // Apply date filter
+  const handleApplyDateFilter = async () => {
+    if (!dateRange?.from || !dateRange?.to) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng chọn khoảng thời gian",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsApplyingFilter(true);
+    try {
+      const params = new URLSearchParams({
+        startDate: dateRange.from.toISOString(),
+        endDate: dateRange.to.toISOString(),
+      });
+
+      const response = await fetch(`/api/stats?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch filtered stats');
+      }
+      
+      const data = await response.json();
+      setFilteredStats(data);
+      
+      toast({
+        title: "Thành công",
+        description: `Đã áp dụng bộ lọc từ ${format(dateRange.from, 'dd/MM/yyyy')} đến ${format(dateRange.to, 'dd/MM/yyyy')}`,
+      });
+    } catch (error) {
+      console.error('Error applying date filter:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể áp dụng bộ lọc thời gian",
+        variant: "destructive",
+      });
+    } finally {
+      setIsApplyingFilter(false);
+    }
+  };
+
+  // Clear date filter
+  const handleClearDateFilter = () => {
+    setDateRange(undefined);
+    setFilteredStats(null);
+    toast({
+      title: "Thành công",
+      description: "Đã xóa bộ lọc thời gian",
+    });
+  };
+
+  // Save report
+  const handleSaveReport = async () => {
+    if (!reportTitle.trim()) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập tiêu đề báo cáo",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const currentStats = filteredStats || stats;
+    if (!currentStats) {
+      toast({
+        title: "Lỗi",
+        description: "Không có dữ liệu để lưu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/saved-reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: reportTitle.trim(),
+          reportType: 'dashboard',
+          startDate: dateRange?.from?.toISOString(),
+          endDate: dateRange?.to?.toISOString(),
+          reportData: {
+            stats: currentStats,
+            dateRange: dateRange ? {
+              from: dateRange.from?.toISOString(),
+              to: dateRange.to?.toISOString()
+            } : null,
+            generatedAt: new Date().toISOString()
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save report');
+      }
+
+      toast({
+        title: "Thành công",
+        description: "Báo cáo đã được lưu thành công",
+      });
+
+      setIsSaveDialogOpen(false);
+      setReportTitle('');
+    } catch (error) {
+      console.error('Error saving report:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể lưu báo cáo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Hàm xử lý khi người dùng muốn xem tất cả nội dung
   const handleViewAllContent = () => {
     navigate('/contents');
   };
 
+  // Use filtered stats if available, otherwise use original stats
+  const displayStats = filteredStats || stats;
+
   return (
     <DashboardLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/review-reports')}
+          >
+            <History className="h-4 w-4 mr-2" />
+            Xem lại báo cáo
+          </Button>
+        </div>
+      </div>
+
+      {/* Date Filter Section */}
+      <div className="mb-6 p-4 bg-card rounded-lg border">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-muted-foreground" />
+            <h3 className="text-lg font-medium">Bộ lọc thời gian</h3>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-4">
+            <DatePickerWithRange
+              date={dateRange}
+              onDateChange={setDateRange}
+              className="w-auto"
+            />
+            
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleApplyDateFilter}
+                disabled={isApplyingFilter || !dateRange?.from || !dateRange?.to}
+                variant="default"
+              >
+                {isApplyingFilter ? 'Đang áp dụng...' : 'Áp dụng bộ lọc'}
+              </Button>
+              
+              <Button
+                onClick={handleClearDateFilter}
+                disabled={!dateRange && !filteredStats}
+                variant="outline"
+              >
+                Xóa bộ lọc
+              </Button>
+            </div>
+          </div>
+
+          {filteredStats && (
+            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                <span className="text-sm font-medium">
+                  Đang hiển thị dữ liệu từ {dateRange?.from && format(dateRange.from, 'dd/MM/yyyy')} đến {dateRange?.to && format(dateRange.to, 'dd/MM/yyyy')}
+                </span>
+              </div>
+              
+              <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="default">
+                    <Save className="h-4 w-4 mr-2" />
+                    Lưu báo cáo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Lưu báo cáo Dashboard</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="reportTitle">Tiêu đề báo cáo</Label>
+                      <Input
+                        id="reportTitle"
+                        value={reportTitle}
+                        onChange={(e) => setReportTitle(e.target.value)}
+                        placeholder="Nhập tiêu đề báo cáo..."
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground">
+                      <p>Khoảng thời gian: {dateRange?.from && format(dateRange.from, 'dd/MM/yyyy')} - {dateRange?.to && format(dateRange.to, 'dd/MM/yyyy')}</p>
+                      <p>Dữ liệu sẽ được lưu để xem lại mà không cần tính toán lại từ database</p>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsSaveDialogOpen(false)}
+                        disabled={isSaving}
+                      >
+                        Hủy
+                      </Button>
+                      <Button
+                        onClick={handleSaveReport}
+                        disabled={isSaving || !reportTitle.trim()}
+                      >
+                        {isSaving ? 'Đang lưu...' : 'Lưu báo cáo'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* User Reports Section */}
@@ -100,7 +347,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <StatCard
             title="Tổng số người dùng thật"
-            value={isLoadingStats ? '...' : stats?.totalRealUsers || 0}
+            value={isLoadingStats ? '...' : displayStats?.totalRealUsers || 0}
             icon={Users}
             iconBgColor="bg-purple-500"
             onViewAll={() => navigate('/real-user')}
@@ -108,7 +355,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Người dùng mới (7 ngày)"
-            value={isLoadingStats ? '...' : stats?.newRealUsers || 0}
+            value={isLoadingStats ? '...' : displayStats?.newRealUsers || 0}
             icon={UserPlus}
             iconBgColor="bg-cyan-500"
             onViewAll={() => navigate('/real-user')}
@@ -122,7 +369,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <StatCard
             title="Tổng số Trang"
-            value={isLoadingStats ? '...' : stats?.totalPages || 0}
+            value={isLoadingStats ? '...' : displayStats?.totalPages || 0}
             icon={LayoutDashboard}
             iconBgColor="bg-indigo-500"
             onViewAll={() => navigate('/page-management')}
@@ -130,7 +377,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Trang mới tạo (7 ngày)"
-            value={isLoadingStats ? '...' : stats?.newPages || 0}
+            value={isLoadingStats ? '...' : displayStats?.newPages || 0}
             icon={FilePenLine}
             iconBgColor="bg-teal-500"
             onViewAll={() => navigate('/page-management')}
@@ -144,7 +391,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <StatCard
             title="Tổng số Nhóm"
-            value={isLoadingStats ? '...' : stats?.totalGroups || 0}
+            value={isLoadingStats ? '...' : displayStats?.totalGroups || 0}
             icon={Users}
             iconBgColor="bg-violet-500"
             onViewAll={() => navigate('/groups-management')}
@@ -152,7 +399,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Nhóm mới tạo (7 ngày)"
-            value={isLoadingStats ? '...' : stats?.newGroups || 0}
+            value={isLoadingStats ? '...' : displayStats?.newGroups || 0}
             icon={UserPlus}
             iconBgColor="bg-emerald-500"
             onViewAll={() => navigate('/groups-management')}
@@ -184,7 +431,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl font-bold">{stats?.totalSupportRequests?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold">{displayStats?.totalSupportRequests?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
               Tổng số yêu cầu hỗ trợ
             </p>
@@ -209,7 +456,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl font-bold text-orange-600">{stats?.pendingSupportRequests?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold text-orange-600">{displayStats?.pendingSupportRequests?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
               Yêu cầu chưa được xử lý
             </p>
@@ -236,7 +483,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl font-bold text-blue-600">{stats?.processingSupportRequests?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold text-blue-600">{displayStats?.processingSupportRequests?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
               Yêu cầu đang được xử lý
             </p>
@@ -260,7 +507,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl font-bold text-green-600">{stats?.completedSupportRequests?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold text-green-600">{displayStats?.completedSupportRequests?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
               Yêu cầu đã hoàn thành
             </p>
@@ -290,7 +537,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl font-bold">{stats?.totalFeedbackRequests?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold">{displayStats?.totalFeedbackRequests?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
               Tổng số đóng góp và báo lỗi
             </p>
@@ -315,7 +562,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl font-bold text-orange-600">{stats?.pendingFeedbackRequests?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold text-orange-600">{displayStats?.pendingFeedbackRequests?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
               Đóng góp chưa được xử lý
             </p>
@@ -342,7 +589,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl font-bold text-blue-600">{stats?.processingFeedbackRequests?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold text-blue-600">{displayStats?.processingFeedbackRequests?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
               Đóng góp đang được xử lý
             </p>
@@ -366,7 +613,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl font-bold text-green-600">{stats?.completedFeedbackRequests?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold text-green-600">{displayStats?.completedFeedbackRequests?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
               Đóng góp đã hoàn thành
             </p>
@@ -382,7 +629,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           <StatCard
             title="Tổng số nội dung"
-            value={isLoadingStats ? '...' : stats?.totalContent || 0}
+            value={isLoadingStats ? '...' : displayStats?.totalContent || 0}
             icon={LayoutDashboard}
             iconBgColor="bg-primary"
             onViewAll={handleViewAllContent}
@@ -390,7 +637,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Đã xử lý"
-            value={isLoadingStats ? '...' : stats?.completed || 0}
+            value={isLoadingStats ? '...' : displayStats?.completed || 0}
             icon={CheckCircle}
             iconBgColor="bg-green-500"
             onViewAll={() => navigate('/contents?status=completed')}
@@ -398,7 +645,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Chưa xử lý"
-            value={isLoadingStats ? '...' : stats?.pending || 0}
+            value={isLoadingStats ? '...' : displayStats?.pending || 0}
             icon={FilePenLine}
             iconBgColor="bg-amber-500"
             onViewAll={() => navigate('/contents?status=pending')}
@@ -406,7 +653,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Phân công hoạt động"
-            value={isLoadingStats ? '...' : stats?.assigned || 0}
+            value={isLoadingStats ? '...' : displayStats?.assigned || 0}
             icon={Users}
             iconBgColor="bg-blue-500"
             onViewAll={() => navigate('/contents')}
@@ -417,7 +664,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           <StatCard
             title="Đã xác minh"
-            value={isLoadingStats ? '...' : stats?.verified || 0}
+            value={isLoadingStats ? '...' : displayStats?.verified || 0}
             icon={CheckCircle}
             iconBgColor="bg-emerald-500"
             onViewAll={() => navigate('/contents?sourceVerification=verified')}
@@ -425,7 +672,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Chưa xác minh"
-            value={isLoadingStats ? '...' : stats?.unverified || 0}
+            value={isLoadingStats ? '...' : displayStats?.unverified || 0}
             icon={FileEdit}
             iconBgColor="bg-orange-500"
             onViewAll={() => navigate('/contents?sourceVerification=unverified')}
@@ -433,7 +680,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Nội dung an toàn"
-            value={isLoadingStats ? '...' : stats?.safe || 0}
+            value={isLoadingStats ? '...' : displayStats?.safe || 0}
             icon={CheckCircle}
             iconBgColor="bg-green-600"
             onViewAll={() => navigate('/contents?result=safe')}
@@ -441,7 +688,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="Nội dung không an toàn"
-            value={isLoadingStats ? '...' : stats?.unsafe || 0}
+            value={isLoadingStats ? '...' : displayStats?.unsafe || 0}
             icon={FileEdit}
             iconBgColor="bg-red-500"
             onViewAll={() => navigate('/contents?result=unsafe')}
@@ -455,7 +702,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-8">
           <AssignmentPieChart
             title="Phân bổ dữ liệu theo người xử lý"
-            data={stats?.assignedPerUser || []}
+            data={displayStats?.assignedPerUser || []}
             isLoading={isLoadingStats}
             onViewAll={() => navigate('/contents')}
           />
@@ -469,15 +716,15 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between">
                   <span>Tổng số nội dung đã phân công:</span>
-                  <span className="font-medium">{stats?.assigned || 0}</span>
+                  <span className="font-medium">{displayStats?.assigned || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tổng số nội dung chưa phân công:</span>
-                  <span className="font-medium">{stats?.unassigned || 0}</span>
+                  <span className="font-medium">{displayStats?.unassigned || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tổng số người dùng tham gia xử lý:</span>
-                  <span className="font-medium">{stats?.assignedPerUser?.length || 0}</span>
+                  <span className="font-medium">{displayStats?.assignedPerUser?.length || 0}</span>
                 </div>
               </div>
             </div>
