@@ -238,15 +238,26 @@ export default function ReviewReportsPage() {
               key: 'createdAt',
               header: 'Ngày tạo',
               render: (report: SavedReport) => {
-                const date = new Date(report.createdAt);
+                // Parse directly from string to avoid timezone conversion issues
+                // Format: 2025-06-19T17:47:15.585Z or 2025-06-19 17:47:15.585+07
+                const dateStr = report.createdAt;
+                let displayDate = '';
                 
-                const day = date.getDate().toString().padStart(2, '0');
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                const year = date.getFullYear();
-                const hour = date.getHours().toString().padStart(2, '0');
-                const minute = date.getMinutes().toString().padStart(2, '0');
-                
-                const displayDate = `${day}/${month}/${year} ${hour}:${minute}`;
+                if (dateStr.includes('T')) {
+                  // ISO format with T
+                  const [datePart, timePart] = dateStr.split('T');
+                  const [year, month, day] = datePart.split('-');
+                  const time = timePart.split('.')[0]; // Remove milliseconds and timezone
+                  displayDate = `${day}/${month}/${year} ${time}`;
+                } else {
+                  // Format: 2025-06-19 17:47:15.585+07
+                  const parts = dateStr.split(' ');
+                  if (parts.length >= 2) {
+                    const [year, month, day] = parts[0].split('-');
+                    const time = parts[1].split('.')[0]; // Remove milliseconds
+                    displayDate = `${day}/${month}/${year} ${time}`;
+                  }
+                }
                 
                 return (
                   <div className="flex items-center gap-2">
@@ -330,15 +341,25 @@ export default function ReviewReportsPage() {
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Ngày tạo</label>
                     <p className="font-medium">
                       {(() => {
-                        const date = new Date(selectedReport.createdAt);
+                        // Parse directly from string to avoid timezone conversion issues
+                        const dateStr = selectedReport.createdAt;
                         
-                        const day = date.getDate().toString().padStart(2, '0');
-                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                        const year = date.getFullYear();
-                        const hour = date.getHours().toString().padStart(2, '0');
-                        const minute = date.getMinutes().toString().padStart(2, '0');
-                        
-                        return `${day}/${month}/${year} ${hour}:${minute}`;
+                        if (dateStr.includes('T')) {
+                          // ISO format with T
+                          const [datePart, timePart] = dateStr.split('T');
+                          const [year, month, day] = datePart.split('-');
+                          const time = timePart.split('.')[0]; // Remove milliseconds and timezone
+                          return `${day}/${month}/${year} ${time}`;
+                        } else {
+                          // Format: 2025-06-19 17:47:15.585+07
+                          const parts = dateStr.split(' ');
+                          if (parts.length >= 2) {
+                            const [year, month, day] = parts[0].split('-');
+                            const time = parts[1].split('.')[0]; // Remove milliseconds
+                            return `${day}/${month}/${year} ${time}`;
+                          }
+                        }
+                        return dateStr;
                       })()} (GMT+7)
                     </p>
                   </div>
