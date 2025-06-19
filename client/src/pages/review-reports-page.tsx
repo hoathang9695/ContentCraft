@@ -162,12 +162,10 @@ export default function ReviewReportsPage() {
               id="search"
               placeholder="Nhập tiêu đề báo cáo..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
+                  setCurrentPage(1);
                   refetch();
                 }
               }}
@@ -177,13 +175,13 @@ export default function ReviewReportsPage() {
           <div className="flex items-end">
             <Button
               onClick={() => {
-                setSearchTerm('');
                 setCurrentPage(1);
+                refetch();
               }}
-              variant="outline"
               disabled={isLoading}
             >
-              Xóa bộ lọc
+              <Search className="h-4 w-4 mr-2" />
+              Tìm kiếm
             </Button>
           </div>
         </div>
