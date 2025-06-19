@@ -239,13 +239,25 @@ export default function ReviewReportsPage() {
               header: 'Ngày tạo',
               render: (report: SavedReport) => {
                 const date = new Date(report.createdAt);
-                // Convert to Vietnam timezone using toLocaleString
-                const vietnamTime = date.toLocaleString("sv-SE", {
-                  timeZone: "Asia/Ho_Chi_Minh"
+                
+                const formatter = new Intl.DateTimeFormat('vi-VN', {
+                  timeZone: 'Asia/Ho_Chi_Minh',
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
                 });
-                const [datePart, timePart] = vietnamTime.split(' ');
-                const [year, month, day] = datePart.split('-');
-                const displayDate = `${day}/${month}/${year} ${timePart}`;
+                
+                const parts = formatter.formatToParts(date);
+                const day = parts.find(part => part.type === 'day')?.value;
+                const month = parts.find(part => part.type === 'month')?.value;
+                const year = parts.find(part => part.type === 'year')?.value;
+                const hour = parts.find(part => part.type === 'hour')?.value;
+                const minute = parts.find(part => part.type === 'minute')?.value;
+                
+                const displayDate = `${day}/${month}/${year} ${hour}:${minute}`;
                 
                 return (
                   <div className="flex items-center gap-2">
@@ -330,12 +342,25 @@ export default function ReviewReportsPage() {
                     <p className="font-medium">
                       {(() => {
                         const date = new Date(selectedReport.createdAt);
-                        const vietnamTime = date.toLocaleString("sv-SE", {
-                          timeZone: "Asia/Ho_Chi_Minh"
+                        
+                        const formatter = new Intl.DateTimeFormat('vi-VN', {
+                          timeZone: 'Asia/Ho_Chi_Minh',
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false
                         });
-                        const [datePart, timePart] = vietnamTime.split(' ');
-                        const [year, month, day] = datePart.split('-');
-                        return `${day}/${month}/${year} ${timePart}`;
+                        
+                        const parts = formatter.formatToParts(date);
+                        const day = parts.find(part => part.type === 'day')?.value;
+                        const month = parts.find(part => part.type === 'month')?.value;
+                        const year = parts.find(part => part.type === 'year')?.value;
+                        const hour = parts.find(part => part.type === 'hour')?.value;
+                        const minute = parts.find(part => part.type === 'minute')?.value;
+                        
+                        return `${day}/${month}/${year} ${hour}:${minute}`;
                       })()} (GMT+7)
                     </p>
                   </div>
