@@ -238,9 +238,9 @@ export default function ReviewReportsPage() {
               key: 'createdAt',
               header: 'Ngày tạo',
               render: (report: SavedReport) => {
-                // Convert UTC to Vietnam time (GMT+7)
-                const utcDate = new Date(report.createdAt);
-                const vietnamTime = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                // Convert to Vietnam timezone
+                const date = new Date(report.createdAt);
+                const vietnamTime = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Ho_Chi_Minh"}));
                 
                 return (
                   <div className="flex items-center gap-2">
@@ -323,7 +323,7 @@ export default function ReviewReportsPage() {
                   <div>
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Ngày tạo</label>
                     <p className="font-medium">
-                      {format(new Date(selectedReport.createdAt), 'dd/MM/yyyy HH:mm')}
+                      {format(new Date(new Date(selectedReport.createdAt).toLocaleString("en-US", {timeZone: "Asia/Ho_Chi_Minh"})), 'dd/MM/yyyy HH:mm')} (GMT+7)
                     </p>
                   </div>
                 </div>
