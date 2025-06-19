@@ -3,12 +3,12 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { savedReports, users } from '../../shared/schema.js';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
-import { authenticateUser } from '../middleware/auth.js';
+import { isAuthenticated } from '../middleware/auth.js';
 
 const router = Router();
 
 // Get all saved reports for current user
-router.get('/', authenticateUser, async (req, res) => {
+router.get('/', isAuthenticated, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -66,7 +66,7 @@ router.get('/', authenticateUser, async (req, res) => {
 });
 
 // Save a new report
-router.post('/', authenticateUser, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -206,7 +206,7 @@ router.post('/', authenticateUser, async (req, res) => {
 });
 
 // Get a specific saved report
-router.get('/:id', authenticateUser, async (req, res) => {
+router.get('/:id', isAuthenticated, async (req, res) => {
   try {
     const userId = req.user?.id;
     const reportId = parseInt(req.params.id);
@@ -234,7 +234,7 @@ router.get('/:id', authenticateUser, async (req, res) => {
 });
 
 // Delete a saved report
-router.delete('/:id', authenticateUser, async (req, res) => {
+router.delete('/:id', isAuthenticated, async (req, res) => {
   try {
     const userId = req.user?.id;
     const reportId = parseInt(req.params.id);
