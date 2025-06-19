@@ -10,6 +10,9 @@ const router = Router();
 // Get all saved reports for current user
 router.get('/', isAuthenticated, async (req, res) => {
   try {
+    // Ensure JSON response headers
+    res.setHeader('Content-Type', 'application/json');
+    
     const userId = req.user?.id;
     if (!userId) {
       console.error('GET saved-reports: No user ID found');
@@ -68,6 +71,9 @@ router.get('/', isAuthenticated, async (req, res) => {
 // Save a new report
 router.post('/', isAuthenticated, async (req, res) => {
   try {
+    // Ensure JSON response headers
+    res.setHeader('Content-Type', 'application/json');
+    
     const userId = req.user?.id;
     if (!userId) {
       console.error('POST saved-reports: Unauthorized - No user ID found');
@@ -179,9 +185,11 @@ router.post('/', isAuthenticated, async (req, res) => {
 
     console.log('POST saved-reports: Sending success response:', successResponse);
     
+    // Force JSON content type and end response properly
     res.setHeader('Content-Type', 'application/json');
-    console.log('POST saved-reports: Response headers before send:', res.getHeaders());
-    return res.status(201).json(successResponse);
+    res.status(201);
+    res.json(successResponse);
+    return;
 
   } catch (error) {
     console.error('POST saved-reports: Error saving report:', {
@@ -201,9 +209,11 @@ router.post('/', isAuthenticated, async (req, res) => {
 
     console.log('POST saved-reports: Sending error response:', errorResponse);
     
+    // Force JSON content type and end response properly
     res.setHeader('Content-Type', 'application/json');
-    console.log('POST saved-reports: Error response headers before send:', res.getHeaders());
-    return res.status(500).json(errorResponse);
+    res.status(500);
+    res.json(errorResponse);
+    return;
   }
 });
 
