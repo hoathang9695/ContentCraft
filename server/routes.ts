@@ -43,6 +43,7 @@ import { feedbackRouter } from "./routes/feedback.router.js";
 import { supportRouter } from "./routes/support.router.js";
 import { infringingContentRouter } from "./routes/infringing-content.router.js";
 import reportManagementRouter from "./routes/report-management.router.js";
+import savedReportsRouter from "./routes/saved-reports.router.js";
 
 // Setup multer for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -773,6 +774,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Real users stats với aggregation
       const { pages, groups } = await import("../shared/schema");
 
+      // Build date filter conditions for each table
+      let realUsersDateFilter = undefined;
+      let pagesDateFilter = undefined;
+      let groupsDateFilter = undefined;
+      let supportRequestsDateFilter = undefined;
+
+      if (startDate && endDate) {
+        const start = new Date(startDate as string);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+
+        realUsersDateFilter = and(
+          gte(realUsers.createdAt, start),
+          lte(realUsers.createdAt, end)
+        );
+
+        pagesDateFilter = and(
+          gte(pages.createdAt, start),
+          lte(pages.createdAt, end)
+        );
+
+        groupsDateFilter = and(
+          gte(groups.createdAt, start),
+          lte(groups.createdAt, end)
+        );
+
+        supportRequestsDateFilter = and(
+          gte(supportRequests.created_at, start),
+          lte(supportRequests.created_at, end)
+        );
+      }
+
       const [
         realUsersStats,
         pagesStats,
@@ -780,31 +814,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         supportRequestsStats,
         feedbackRequestsStats,
       ] = await Promise.all([
-        // Real users aggregation
+        // Real users aggregation with date filter
         db
           .select({
             total: sql<number>`count(distinct ${realUsers.id})`,
             new: sql<number>`count(distinct ${realUsers.id}) filter (where ${realUsers.createdAt} >= ${sevenDaysAgo})`,
           })
-          .from(realUsers),
+          .from(realUsers)
+          .where(realUsersDateFilter),
 
-        // Pages aggregation
+        // Pages aggregation with date filter
         db
           .select({
             total: sql<number>`count(*)`,
             new: sql<number>`count(*) filter (where ${pages.createdAt} >= ${sevenDaysAgo})`,
           })
-          .from(pages),
+          .from(pages)
+          .where(pagesDateFilter),
 
-        // Groups aggregation
+        // Groups aggregation with date filter
         db
           .select({
             total: sql<number>`count(*)`,
             new: sql<number>`count(*) filter (where ${groups.createdAt} >= ${sevenDaysAgo})`,
           })
-          .from(groups),
+          .from(groups)
+          .where(groupsDateFilter),
 
-        // Support requests aggregation (only type = 'support' or null for backward compatibility)
+        // Support requests aggregation with date filter (only type = 'support' or null for backward compatibility)
         db
           .select({
             total: sql<number>`count(*) filter (where type = 'support' OR type IS NULL)`,
@@ -812,9 +849,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             processing: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'processing')`,
             completed: sql<number>`count(*) filter (where (type = 'support' OR type IS NULL) AND status = 'completed')`,
           })
-          .from(supportRequests),
+          .from(supportRequests)
+          .where(supportRequestsDateFilter),
 
-        // Feedback requests aggregation (only type = 'feedback')
+        // Feedback requests aggregation with date filter (only type = 'feedback')
         db
           .select({
             total: sql<number>`count(*) filter (where type = 'feedback')`,
@@ -822,7 +860,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             processing: sql<number>`count(*) filter (where type = 'feedback' AND status = 'processing')`,
             completed: sql<number>`count(*) filter (where type = 'feedback' AND status = 'completed')`,
           })
-          .from(supportRequests),
+          .from(supportRequests)
+          .where(supportRequestsDateFilter),
       ]);
 
       const totalRealUsers = Number(realUsersStats[0]?.total || 0);
@@ -2900,6 +2939,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Report management routes - with authentication middleware
   app.use("/api/report-management", isAuthenticated, reportManagementRouter);
+
+  // Saved reports routes
+  app.use("/api/saved-reports", savedReportsRouter);
 
   // Import and mount tick router
   const { tickRouter } = await import("./routes/tick.router");
