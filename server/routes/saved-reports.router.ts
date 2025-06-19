@@ -12,8 +12,14 @@ router.get('/', authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
+      console.error('GET saved-reports: No user ID found');
       return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    console.log('GET saved-reports request:', {
+      userId,
+      query: req.query
+    });
 
     const { page = '1', pageSize = '10', sortBy = 'created_at', sortOrder = 'desc' } = req.query;
 
@@ -25,21 +31,15 @@ router.get('/', authenticateUser, async (req, res) => {
     const orderDirection = sortOrder === 'asc' ? asc : desc;
 
     const reports = await db
-      .select({
-        id: savedReports.id,
-        title: savedReports.title,
-        reportType: savedReports.reportType,
-        startDate: savedReports.startDate,
-        endDate: savedReports.endDate,
-        reportData: savedReports.reportData,
-        createdAt: savedReports.createdAt,
-        updatedAt: savedReports.updatedAt,
-      })
+      .select()
       .from(savedReports)
       .where(eq(savedReports.createdBy, userId))
       .orderBy(orderDirection(orderByField))
       .limit(pageSizeNum)
       .offset(offset);
+
+    console.log('Found saved reports:', reports.length);
+    console.log('Sample report:', reports[0]);
 
     // Get total count
     const totalResult = await db

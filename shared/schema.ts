@@ -342,6 +342,15 @@ export const savedReports = pgTable('saved_reports', {
   endDate: date('end_date'),
   reportData: jsonb('report_data').notNull(),
   createdBy: integer('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+export const insertSavedReportSchema = createInsertSchema(savedReports).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertSavedReport = z.infer<typeof insertSavedReportSchema>;
+export type SavedReport = typeof savedReports.$inferSelect;
