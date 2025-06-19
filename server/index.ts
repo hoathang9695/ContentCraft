@@ -16,15 +16,6 @@ app.use((req, res, next) => {
   // Set default content type for API routes
   if (req.originalUrl.startsWith('/api')) {
     res.setHeader('Content-Type', 'application/json');
-
-    // Override res.send for API routes to ensure JSON
-    const originalSend = res.send;
-    res.send = function(data) {
-      if (req.originalUrl.startsWith('/api') && res.get('Content-Type') !== 'application/json') {
-        res.setHeader('Content-Type', 'application/json');
-      }
-      return originalSend.call(this, data);
-    };
   }
   next();
 });
@@ -96,12 +87,18 @@ app.use((req, res, next) => {
   // Define routes FIRST (before static middleware)
   const server = await registerRoutes(app);
 
-  // Ensure API routes are properly configured
-  app.use((req, res, next) => {
-    if (req.originalUrl.startsWith('/api/')) {
-      console.log(`API Request: ${req.method} ${req.originalUrl}`);
-      res.setHeader('Content-Type', 'application/json');
-    }
+  // API middleware to ensure JSON responses
+  app.use('/api', (req, res, next) => {
+    console.log(`API Request: ${req.method} ${req.originalUrl}`);
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Override res.send to ensure JSON for API routes
+    const originalSend = res.send;
+    res.send = function(data) {
+      this.setHeader('Content-Type', 'application/json');
+      return originalSend.call(this, data);
+    };
+    
     next();
   });
 
