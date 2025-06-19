@@ -180,6 +180,7 @@ router.post('/', isAuthenticated, async (req, res) => {
     console.log('POST saved-reports: Sending success response:', successResponse);
     
     res.setHeader('Content-Type', 'application/json');
+    console.log('POST saved-reports: Response headers before send:', res.getHeaders());
     return res.status(201).json(successResponse);
 
   } catch (error) {
@@ -201,6 +202,7 @@ router.post('/', isAuthenticated, async (req, res) => {
     console.log('POST saved-reports: Sending error response:', errorResponse);
     
     res.setHeader('Content-Type', 'application/json');
+    console.log('POST saved-reports: Error response headers before send:', res.getHeaders());
     return res.status(500).json(errorResponse);
   }
 });
