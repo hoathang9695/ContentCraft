@@ -70,49 +70,81 @@ router.post('/', authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      console.error('Unauthorized: No user ID found');
+      console.error('POST saved-reports: Unauthorized - No user ID found');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const { title, reportType = 'dashboard', startDate, endDate, reportData } = req.body;
 
-    console.log('Received save report request:', {
+    console.log('POST saved-reports: Received save report request:', {
       userId,
       title,
       reportType,
       startDate,
       endDate,
-      hasReportData: !!reportData
+      hasReportData: !!reportData,
+      reportDataType: typeof reportData,
+      bodyKeys: Object.keys(req.body)
     });
 
-    if (!title || !reportData) {
-      console.error('Missing required fields:', { title: !!title, reportData: !!reportData });
-      return res.status(400).json({ error: 'Title and report data are required' });
+    // Validate required fields
+    if (!title || !title.trim()) {
+      console.error('POST saved-reports: Missing or empty title');
+      return res.status(400).json({ error: 'Title is required and cannot be empty' });
     }
 
+    if (!reportData) {
+      console.error('POST saved-reports: Missing report data');
+      return res.status(400).json({ error: 'Report data is required' });
+    }
+
+    // Prepare insert data with proper date handling
     const insertData = {
-      title,
+      title: title.trim(),
       reportType,
-      startDate: startDate ? new Date(startDate) : null,
-      endDate: endDate ? new Date(endDate) : null,
-      reportData,
+      startDate: startDate ? startDate : null, // Keep as string, drizzle will handle conversion
+      endDate: endDate ? endDate : null, // Keep as string, drizzle will handle conversion
+      reportData: typeof reportData === 'string' ? JSON.parse(reportData) : reportData,
       createdBy: userId,
     };
 
-    console.log('Inserting report data:', insertData);
+    console.log('POST saved-reports: Prepared insert data:', {
+      ...insertData,
+      reportData: '[REPORT_DATA_OBJECT]' // Don't log the full data object
+    });
 
+    // Insert into database
     const newReport = await db
       .insert(savedReports)
       .values(insertData)
       .returning();
 
-    console.log('Report saved successfully:', newReport[0]);
+    console.log('POST saved-reports: Successfully inserted report:', {
+      id: newReport[0]?.id,
+      title: newReport[0]?.title,
+      reportType: newReport[0]?.reportType,
+      createdBy: newReport[0]?.createdBy,
+      createdAt: newReport[0]?.createdAt
+    });
 
-    res.status(201).json({ message: 'Report saved successfully', report: newReport[0] });
+    res.status(201).json({ 
+      success: true,
+      message: 'Report saved successfully', 
+      report: newReport[0] 
+    });
 
   } catch (error) {
-    console.error('Error saving report:', error);
-    res.status(500).json({ error: 'Failed to save report', details: error.message });
+    console.error('POST saved-reports: Error saving report:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to save report', 
+      details: error.message 
+    });
   }
 });
 
