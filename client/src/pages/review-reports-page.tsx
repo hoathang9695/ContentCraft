@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -191,136 +191,105 @@ export default function ReviewReportsPage() {
         </Card>
 
         {/* Reports Table */}
-        <div className="rounded-md border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table className="min-w-full">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tiêu đề</TableHead>
-                  <TableHead>Loại báo cáo</TableHead>
-                  <TableHead>Khoảng thời gian</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead>Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      <div className="flex justify-center items-center">
-                        <div className="text-gray-500">Đang tải dữ liệu...</div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : reports.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      <div className="flex flex-col items-center">
-                        <History className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <div className="text-gray-500">Chưa có báo cáo nào được lưu</div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+        <DataTable
+          data={reports}
+          isLoading={isLoading}
+          pagination={{
+            currentPage: currentPage,
+            totalPages: pagination?.totalPages || 1,
+            total: pagination?.total || 0,
+            pageSize: pagination?.pageSize || 10,
+            onPageChange: setCurrentPage,
+            onPageSizeChange: (newSize) => {
+              setCurrentPage(1);
+              refetch();
+            }
+          }}
+          columns={[
+            {
+              key: 'title',
+              header: 'Tiêu đề',
+              render: (report: SavedReport) => (
+                <div className="font-medium">{report.title}</div>
+              )
+            },
+            {
+              key: 'reportType',
+              header: 'Loại báo cáo',
+              render: (report: SavedReport) => (
+                <Badge variant="secondary">
+                  {report.reportType === 'dashboard' ? 'Dashboard' : report.reportType}
+                </Badge>
+              )
+            },
+            {
+              key: 'dateRange',
+              header: 'Khoảng thời gian',
+              render: (report: SavedReport) => (
+                report.startDate && report.endDate ? (
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm">
+                      {format(new Date(report.startDate), 'dd/MM/yyyy', { locale: vi })} - {format(new Date(report.endDate), 'dd/MM/yyyy', { locale: vi })}
+                    </span>
+                  </div>
                 ) : (
-                  reports.map((report) => (
-                    <TableRow key={report.id} className="hover:bg-muted/50">
-                      <TableCell className="font-medium">{report.title}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {report.reportType === 'dashboard' ? 'Dashboard' : report.reportType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {report.startDate && report.endDate ? (
-                          <div className="flex items-center gap-2">
-                            <CalendarDays className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm">
-                              {format(new Date(report.startDate), 'dd/MM/yyyy', { locale: vi })} - {format(new Date(report.endDate), 'dd/MM/yyyy', { locale: vi })}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">Tất cả thời gian</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm">
-                            {format(new Date(report.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewReport(report)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Xem
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="outline">
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Xóa
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Bạn có chắc chắn muốn xóa báo cáo "{report.title}"? Hành động này không thể hoàn tác.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Hủy</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteReport(report.id)}>
-                                  Xóa
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination */}
-          {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t">
-              <div className="text-sm text-gray-500">
-                Hiển thị {((pagination.page - 1) * pagination.pageSize) + 1} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} trong tổng số {pagination.total} báo cáo
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(pagination.page - 1)}
-                  disabled={pagination.page <= 1}
-                >
-                  Trước
-                </Button>
-                <span className="text-sm">
-                  Trang {pagination.page} / {pagination.totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.totalPages}
-                >
-                  Sau
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+                  <span className="text-gray-500">Tất cả thời gian</span>
+                )
+              )
+            },
+            {
+              key: 'createdAt',
+              header: 'Ngày tạo',
+              render: (report: SavedReport) => (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm">
+                    {format(new Date(report.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}
+                  </span>
+                </div>
+              )
+            },
+            {
+              key: 'actions',
+              header: 'Thao tác',
+              render: (report: SavedReport) => (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleViewReport(report)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Xem
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Xóa
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Bạn có chắc chắn muốn xóa báo cáo "{report.title}"? Hành động này không thể hoàn tác.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteReport(report.id)}>
+                          Xóa
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )
+            }
+          ]}
+        />
 
         {/* View Report Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
