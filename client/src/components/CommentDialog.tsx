@@ -16,6 +16,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import { Maximize2, Minimize2, X } from 'lucide-react';
 
 interface CommentDialogProps {
   open: boolean;
@@ -38,6 +39,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   const [extractedComments, setExtractedComments] = useState<string[]>([]);
   const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female' | 'other'>('all');
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch fake users
@@ -72,7 +74,13 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
   }, [commentText]);
 
   // Handle emoji click
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
+  const handleEmojiClick = (emojiData: EmojiClickData, event?: any) => {
+    // Prevent event from bubbling up and closing the popover
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     if (textareaRef.current) {
       const textarea = textareaRef.current;
       const start = textarea.selectionStart;
@@ -81,11 +89,11 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       const newText = currentText.substring(0, start) + emojiData.emoji + currentText.substring(end);
 
       setCommentText(newText);
-      setShowEmojiPicker(false);
+      // Keep popup open by not calling setShowEmojiPicker(false)
 
-      // Focus back to textarea and set cursor position after emoji
+      // Don't focus back to textarea to prevent popup from closing
+      // Just update cursor position without focusing
       setTimeout(() => {
-        textarea.focus();
         const newCursorPosition = start + emojiData.emoji.length;
         textarea.setSelectionRange(newCursorPosition, newCursorPosition);
       }, 0);
@@ -98,6 +106,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
       setCommentText('');
       setSelectedGender('all');
       setShowEmojiPicker(false);
+      setIsExpanded(true); // Reset về default khi đóng
     }
   }, [open]);
 
@@ -245,10 +254,34 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-hidden flex flex-col w-[90vw]">
+      <DialogContent className={`comment-dialog dialog-content ${isExpanded ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] m-0' : 'sm:max-w-[800px] max-h-[80vh] w-[90vw]'} overflow-hidden flex flex-col`}>
         <DialogHeader>
-          <DialogTitle>Comment</DialogTitle>
-          <DialogDescription>Cách nhau bởi dấu {'{}'}</DialogDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle>Comment</DialogTitle>
+              <DialogDescription>Cách nhau bởi dấu {'{}'}</DialogDescription>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="h-8 w-8"
+                title={isExpanded ? "Thu nhỏ" : "Mở rộng"}
+              >
+                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onOpenChange(false)}
+                className="h-8 w-8"
+                title="Đóng"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4 my-4 flex-1 overflow-y-auto pr-2">
@@ -345,21 +378,43 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
               placeholder="Nhập nội dung comment hoặc nhiều comment cách nhau bởi dấu ngoặc nhọn {comment1} {comment2}"
               className="min-h-[200px] pr-12"
             />
-            <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+            <Popover 
+              open={showEmojiPicker} 
+              onOpenChange={(open) => {
+                // Only allow closing if explicitly requested (clicking outside or escape)
+                setShowEmojiPicker(open);
+              }}
+            >
               <PopoverTrigger asChild>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-gray-100"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowEmojiPicker(!showEmojiPicker);
+                  }}
                 >
                   😀
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
+              <PopoverContent 
+                className="w-auto p-0" 
+                align="end"
+                onInteractOutside={(e) => {
+                  // Prevent closing when clicking inside the emoji picker
+                  const target = e.target as Element;
+                  if (target.closest('.epr-emoji-category, .epr-emoji-container, .epr-search, .epr-skin-tones')) {
+                    e.preventDefault();
+                  }
+                }}
+              >
                 <EmojiPicker
-                  onEmojiClick={handleEmojiClick}
+                  onEmojiClick={(emojiData, event) => {
+                    handleEmojiClick(emojiData, event);
+                  }}
                   width={350}
                   height={400}
                   searchDisabled={false}
@@ -406,6 +461,35 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             {commentMutation.isPending ? "Đang gửi..." : "Gửi"}
           </Button>
         </DialogFooter>
+        
+        <style>{`
+          /* Hide default dialog close button only for CommentDialog */
+          .comment-dialog .dialog-content > button[data-radix-dialog-close],
+          .comment-dialog [data-radix-dialog-content] > button[data-radix-dialog-close],
+          .comment-dialog button[data-radix-dialog-close],
+          .comment-dialog [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+          }
+
+          /* Additional specific selector for the exact button structure */
+          .dialog-content button.absolute.right-4.top-4 {
+            display: none !important;
+          }
+
+          /* Ensure scrollable areas work properly */
+          .comment-dialog .dialog-content {
+            display: flex;
+            flex-direction: column;
+          }
+        `}</style>
       </DialogContent>
     </Dialog>
   );
