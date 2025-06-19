@@ -25,7 +25,7 @@ export function UpdateContentDialog({ open, onOpenChange, contentId }: UpdateCon
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [newCategories, setNewCategories] = useState<string>('');
   const [newLabels, setNewLabels] = useState<string>('');
-  const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
   // Tải dữ liệu content và metadata cần thiết chỉ khi dialog mở
   const { data: content, isLoading: contentLoading } = useQuery<any>({
