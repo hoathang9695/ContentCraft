@@ -16,7 +16,7 @@ app.use((req, res, next) => {
   // Set default content type for API routes
   if (req.originalUrl.startsWith('/api')) {
     res.setHeader('Content-Type', 'application/json');
-    
+
     // Override res.send for API routes to ensure JSON
     const originalSend = res.send;
     res.send = function(data) {
@@ -95,6 +95,15 @@ app.use((req, res, next) => {
 (async () => {
   // Define routes FIRST (before static middleware)
   const server = await registerRoutes(app);
+
+  // Ensure API routes are properly configured
+  app.use((req, res, next) => {
+    if (req.originalUrl.startsWith('/api/')) {
+      console.log(`API Request: ${req.method} ${req.originalUrl}`);
+      res.setHeader('Content-Type', 'application/json');
+    }
+    next();
+  });
 
   // Debug middleware for tick routes - AFTER routes are registered
   app.use('/api/tick-requests*', (req, res, next) => {
