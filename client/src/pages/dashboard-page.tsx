@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isApplyingFilter, setIsApplyingFilter] = useState(false);
   const [filteredStats, setFilteredStats] = useState<any>(null);
-  
+
   // Save report state
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [reportTitle, setReportTitle] = useState('');
@@ -126,10 +126,10 @@ export default function DashboardPage() {
       if (!response.ok) {
         throw new Error('Failed to fetch filtered stats');
       }
-      
+
       const data = await response.json();
       setFilteredStats(data);
-      
+
       toast({
         title: "Thành công",
         description: `Đã áp dụng bộ lọc từ ${format(dateRange.from, 'dd/MM/yyyy')} đến ${format(dateRange.to, 'dd/MM/yyyy')}`,
@@ -167,63 +167,78 @@ export default function DashboardPage() {
       return;
     }
 
-    const currentStats = filteredStats || stats;
-    if (!currentStats) {
+    if (!stats) {
       toast({
-        title: "Lỗi",
-        description: "Không có dữ liệu để lưu",
+        title: "Lỗi", 
+        description: "Không có dữ liệu báo cáo để lưu",
         variant: "destructive",
       });
       return;
     }
 
-    const requestData = {
-      title: reportTitle.trim(),
-      reportType: 'dashboard',
-      startDate: dateRange?.from?.toISOString(),
-      endDate: dateRange?.to?.toISOString(),
-      reportData: {
-        stats: currentStats,
-        dateRange: dateRange ? {
-          from: dateRange.from?.toISOString(),
-          to: dateRange.to?.toISOString()
-        } : null,
-        generatedAt: new Date().toISOString()
-      }
-    };
-
-    console.log('Saving report with data:', requestData);
-    
     setIsSaving(true);
+
     try {
+      console.log('Saving report with data:', {
+        title: reportTitle,
+        reportType: 'dashboard',
+        startDate: dateRange?.from?.toISOString().split('T')[0],
+        endDate: dateRange?.to?.toISOString().split('T')[0],
+        hasStats: !!stats
+      });
+
+      const reportPayload = {
+        title: reportTitle.trim(),
+        reportType: 'dashboard',
+        startDate: dateRange?.from?.toISOString().split('T')[0] || null,
+        endDate: dateRange?.to?.toISOString().split('T')[0] || null,
+        reportData: {
+          stats,
+          dateRange: {
+            from: dateRange?.from?.toISOString() || null,
+            to: dateRange?.to?.toISOString() || null
+          },
+          savedAt: new Date().toISOString(),
+          version: '1.0'
+        }
+      };
+
+      console.log('Sending POST request to /api/saved-reports');
+
       const response = await fetch('/api/saved-reports', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
-        body: JSON.stringify(requestData),
+        body: JSON.stringify(reportPayload),
       });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
 
       const responseData = await response.json();
-      console.log('Save report response:', responseData);
+      console.log('Response data:', responseData);
 
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to save report');
+      if (response.ok && responseData.success) {
+        toast({
+          title: "Thành công",
+          description: "Báo cáo đã được lưu thành công",
+        });
+        setIsSaveDialogOpen(false);
+        setReportTitle('');
+      } else {
+        console.error('Save report failed:', responseData);
+        toast({
+          title: "Lỗi",
+          description: responseData.error || responseData.details || "Không thể lưu báo cáo",
+          variant: "destructive",
+        });
       }
-
-      toast({
-        title: "Thành công",
-        description: "Báo cáo đã được lưu thành công",
-      });
-
-      setIsSaveDialogOpen(false);
-      setReportTitle('');
     } catch (error) {
       console.error('Error saving report:', error);
       toast({
         title: "Lỗi",
-        description: "Không thể lưu báo cáo",
+        description: `Lỗi kết nối: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -261,14 +276,14 @@ export default function DashboardPage() {
             <CalendarDays className="h-5 w-5 text-muted-foreground" />
             <h3 className="text-lg font-medium">Bộ lọc thời gian</h3>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-4">
             <DatePickerWithRange
               date={dateRange}
               onDateChange={setDateRange}
               className="w-auto"
             />
-            
+
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleApplyDateFilter}
@@ -277,7 +292,7 @@ export default function DashboardPage() {
               >
                 {isApplyingFilter ? 'Đang áp dụng...' : 'Áp dụng bộ lọc'}
               </Button>
-              
+
               <Button
                 onClick={handleClearDateFilter}
                 disabled={!dateRange && !filteredStats}
@@ -296,7 +311,7 @@ export default function DashboardPage() {
                   Đang hiển thị dữ liệu từ {dateRange?.from && format(dateRange.from, 'dd/MM/yyyy')} đến {dateRange?.to && format(dateRange.to, 'dd/MM/yyyy')}
                 </span>
               </div>
-              
+
               <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="default">
@@ -319,12 +334,12 @@ export default function DashboardPage() {
                         className="mt-1"
                       />
                     </div>
-                    
+
                     <div className="text-sm text-muted-foreground">
                       <p>Khoảng thời gian: {dateRange?.from && format(dateRange.from, 'dd/MM/yyyy')} - {dateRange?.to && format(dateRange.to, 'dd/MM/yyyy')}</p>
                       <p>Dữ liệu sẽ được lưu để xem lại mà không cần tính toán lại từ database</p>
                     </div>
-                    
+
                     <div className="flex justify-end gap-2">
                       <Button
                         variant="outline"
