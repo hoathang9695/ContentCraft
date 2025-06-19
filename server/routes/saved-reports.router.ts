@@ -10,9 +10,6 @@ const router = Router();
 // Get all saved reports for current user
 router.get('/', isAuthenticated, async (req, res) => {
   try {
-    // Ensure JSON response headers
-    res.setHeader('Content-Type', 'application/json');
-    
     const userId = req.user?.id;
     if (!userId) {
       console.error('GET saved-reports: No user ID found');
@@ -42,7 +39,6 @@ router.get('/', isAuthenticated, async (req, res) => {
       .offset(offset);
 
     console.log('Found saved reports:', reports.length);
-    console.log('Sample report:', reports[0]);
 
     // Get total count
     const totalResult = await db
@@ -52,7 +48,7 @@ router.get('/', isAuthenticated, async (req, res) => {
     
     const total = Number(totalResult[0].count);
 
-    res.json({
+    return res.json({
       reports,
       pagination: {
         page: pageNum,
@@ -64,16 +60,13 @@ router.get('/', isAuthenticated, async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching saved reports:', error);
-    res.status(500).json({ error: 'Failed to fetch saved reports' });
+    return res.status(500).json({ error: 'Failed to fetch saved reports' });
   }
 });
 
 // Save a new report
 router.post('/', isAuthenticated, async (req, res) => {
   try {
-    // Ensure JSON response headers
-    res.setHeader('Content-Type', 'application/json');
-    
     const userId = req.user?.id;
     if (!userId) {
       console.error('POST saved-reports: Unauthorized - No user ID found');
@@ -94,9 +87,7 @@ router.post('/', isAuthenticated, async (req, res) => {
       endDate,
       hasReportData: !!reportData,
       reportDataType: typeof reportData,
-      bodyKeys: Object.keys(req.body),
-      userAgent: req.headers['user-agent'],
-      contentType: req.headers['content-type']
+      bodyKeys: Object.keys(req.body)
     });
 
     // Validate required fields
@@ -149,10 +140,6 @@ router.post('/', isAuthenticated, async (req, res) => {
       reportData: '[REPORT_DATA_OBJECT]' // Don't log the full data object
     });
 
-    // Test database connection before inserting
-    await db.select().from(savedReports).limit(1);
-    console.log('POST saved-reports: Database connection verified');
-
     // Insert into database
     const newReport = await db
       .insert(savedReports)
@@ -171,7 +158,7 @@ router.post('/', isAuthenticated, async (req, res) => {
       createdAt: newReport[0]?.createdAt
     });
 
-    // Ensure response is JSON and send success response
+    // Send success response
     const successResponse = { 
       success: true,
       message: 'Report saved successfully', 
@@ -185,35 +172,24 @@ router.post('/', isAuthenticated, async (req, res) => {
 
     console.log('POST saved-reports: Sending success response:', successResponse);
     
-    // Force JSON content type and end response properly
-    res.setHeader('Content-Type', 'application/json');
-    res.status(201);
-    res.json(successResponse);
-    return;
+    return res.status(201).json(successResponse);
 
   } catch (error) {
     console.error('POST saved-reports: Error saving report:', {
       message: error.message,
       stack: error.stack,
-      name: error.name,
-      code: error.code
+      name: error.name
     });
     
-    // Ensure response is JSON even on error
     const errorResponse = { 
       success: false,
       error: 'Failed to save report', 
-      details: error.message,
-      code: error.code || 'UNKNOWN_ERROR'
+      details: error.message
     };
 
     console.log('POST saved-reports: Sending error response:', errorResponse);
     
-    // Force JSON content type and end response properly
-    res.setHeader('Content-Type', 'application/json');
-    res.status(500);
-    res.json(errorResponse);
-    return;
+    return res.status(500).json(errorResponse);
   }
 });
 
@@ -237,11 +213,11 @@ router.get('/:id', isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    res.json(report[0]);
+    return res.json(report[0]);
 
   } catch (error) {
     console.error('Error fetching saved report:', error);
-    res.status(500).json({ error: 'Failed to fetch saved report' });
+    return res.status(500).json({ error: 'Failed to fetch saved report' });
   }
 });
 
@@ -264,11 +240,11 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    res.json({ message: 'Report deleted successfully' });
+    return res.json({ message: 'Report deleted successfully' });
 
   } catch (error) {
     console.error('Error deleting saved report:', error);
-    res.status(500).json({ error: 'Failed to delete saved report' });
+    return res.status(500).json({ error: 'Failed to delete saved report' });
   }
 });
 
