@@ -226,6 +226,17 @@ export default function DashboardPage() {
       const responseText = await response.text();
       console.log('Raw response text:', responseText);
 
+      // First check if response is empty
+      if (!responseText || responseText.trim() === '') {
+        console.error('Empty response from server');
+        toast({
+          title: "Lỗi",
+          description: "Server trả về phản hồi trống",
+          variant: "destructive",
+        });
+        return;
+      }
+
       try {
         responseData = JSON.parse(responseText);
         console.log('Parsed response data:', responseData);
@@ -233,36 +244,45 @@ export default function DashboardPage() {
         console.error('Failed to parse JSON response:', parseError);
         console.error('Response was not JSON:', responseText);
         
-        // If response is HTML, it might be a login page or error page
-        if (responseText.includes('<!DOCTYPE') || responseText.includes('<html>')) {
+        // Check for authentication error based on response content
+        if (responseText.includes('<!DOCTYPE') || responseText.includes('<html>') || 
+            responseText.includes('Unauthorized') || response.status === 401) {
           toast({
             title: "Lỗi xác thực",
-            description: "Phiên đăng nhập có thể đã hết hạn. Vui lòng đăng nhập lại.",
+            description: "Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang và đăng nhập lại.",
             variant: "destructive",
           });
+          // Optionally reload the page after a delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
           return;
         }
         
         toast({
           title: "Lỗi",
-          description: "Server trả về dữ liệu không hợp lệ",
+          description: `Server trả về dữ liệu không hợp lệ: ${parseError.message}`,
           variant: "destructive",
         });
         return;
       }
 
-      if (response.ok && responseData.success) {
+      if (response.ok && responseData?.success) {
         toast({
           title: "Thành công",
           description: "Báo cáo đã được lưu thành công",
         });
         setIsSaveDialogOpen(false);
         setReportTitle('');
+        
+        // Optionally refresh the page or data
+        console.log('Report saved successfully:', responseData.report);
       } else {
         console.error('Save report failed:', responseData);
+        const errorMessage = responseData?.error || responseData?.details || responseData?.message || "Không thể lưu báo cáo";
         toast({
           title: "Lỗi",
-          description: responseData.error || responseData.details || "Không thể lưu báo cáo",
+          description: errorMessage,
           variant: "destructive",
         });
       }

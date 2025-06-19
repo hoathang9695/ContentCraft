@@ -2,7 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  console.log(`Session check for ${req.path}:`, {
+  console.log(`Auth check for ${req.method} ${req.path}:`, {
     sessionID: req.sessionID,
     hasSession: !!req.session,
     isAuthenticated: req.isAuthenticated(),
@@ -10,14 +10,24 @@ export const isAuthenticated = (req: Request, res: Response, next: NextFunction)
       id: (req.user as Express.User)?.id,
       username: (req.user as Express.User)?.username,
       role: (req.user as Express.User)?.role
-    } : 'Not authenticated'
+    } : 'Not authenticated',
+    headers: {
+      contentType: req.headers['content-type'],
+      userAgent: req.headers['user-agent']?.substring(0, 100),
+      cookie: req.headers.cookie ? 'present' : 'missing'
+    }
   });
   
   if (req.isAuthenticated()) {
     return next();
   }
   
-  res.status(401).json({ message: "Unauthorized" });
+  console.log(`Authentication failed for ${req.method} ${req.path} - returning 401`);
+  return res.status(401).json({ 
+    success: false,
+    error: "Unauthorized",
+    message: "User authentication required" 
+  });
 };
 
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
