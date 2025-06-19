@@ -59,6 +59,7 @@ export function DatePickerWithRange({
             selected={date}
             onSelect={onDateChange}
             numberOfMonths={2}
+            disabled={(date) => date > new Date()}
           />
         </PopoverContent>
       </Popover>
@@ -113,6 +114,7 @@ export function DateRangePicker({
             selected={dateRange}
             onSelect={onDateRangeChange}
             numberOfMonths={2}
+            disabled={(date) => date > new Date()}
           />
         </PopoverContent>
       </Popover>
@@ -149,6 +151,7 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
           selected={value}
           onSelect={onChange}
           initialFocus
+          disabled={(date) => date > new Date()}
         />
       </PopoverContent>
     </Popover>
