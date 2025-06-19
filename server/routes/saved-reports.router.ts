@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { savedReports, users } from '../../shared/schema.js';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
-import { isAuthenticated } from '../middleware/auth.js';
+import { isAuthenticated } from '../middleware/auth';
 
 const router = Router();
 
