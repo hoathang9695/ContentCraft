@@ -165,9 +165,8 @@ router.post('/', authenticateUser, async (req, res) => {
       createdAt: newReport[0]?.createdAt
     });
 
-    // Ensure response is JSON
-    res.setHeader('Content-Type', 'application/json');
-    res.status(201).json({ 
+    // Ensure response is JSON and send success response
+    const successResponse = { 
       success: true,
       message: 'Report saved successfully', 
       report: {
@@ -176,7 +175,12 @@ router.post('/', authenticateUser, async (req, res) => {
         reportType: newReport[0].reportType,
         createdAt: newReport[0].createdAt
       }
-    });
+    };
+
+    console.log('POST saved-reports: Sending success response:', successResponse);
+    
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(201).json(successResponse);
 
   } catch (error) {
     console.error('POST saved-reports: Error saving report:', {
@@ -187,13 +191,17 @@ router.post('/', authenticateUser, async (req, res) => {
     });
     
     // Ensure response is JSON even on error
-    res.setHeader('Content-Type', 'application/json');
-    res.status(500).json({ 
+    const errorResponse = { 
       success: false,
       error: 'Failed to save report', 
       details: error.message,
       code: error.code || 'UNKNOWN_ERROR'
-    });
+    };
+
+    console.log('POST saved-reports: Sending error response:', errorResponse);
+    
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(500).json(errorResponse);
   }
 });
 
