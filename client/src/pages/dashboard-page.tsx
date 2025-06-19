@@ -226,6 +226,19 @@ export default function DashboardPage() {
       const responseText = await response.text();
       console.log('Raw response text:', responseText);
 
+      // Check for authentication error first
+      if (response.status === 401) {
+        console.error('Authentication error - 401 status');
+        toast({
+          title: "Lỗi xác thực",
+          description: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+          variant: "destructive",
+        });
+        // Don't reload automatically, just close dialog
+        setIsSaveDialogOpen(false);
+        return;
+      }
+
       // First check if response is empty
       if (!responseText || responseText.trim() === '') {
         console.error('Empty response from server');
@@ -246,16 +259,13 @@ export default function DashboardPage() {
         
         // Check for authentication error based on response content
         if (responseText.includes('<!DOCTYPE') || responseText.includes('<html>') || 
-            responseText.includes('Unauthorized') || response.status === 401) {
+            responseText.includes('Unauthorized')) {
           toast({
-            title: "Lỗi xác thực",
-            description: "Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang và đăng nhập lại.",
+            title: "Lỗi xác thực", 
+            description: "Có vấn đề với phiên đăng nhập. Vui lòng thử lại.",
             variant: "destructive",
           });
-          // Optionally reload the page after a delay
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
+          setIsSaveDialogOpen(false);
           return;
         }
         
