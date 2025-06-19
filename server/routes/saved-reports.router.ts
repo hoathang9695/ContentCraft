@@ -132,10 +132,7 @@ router.post('/', isAuthenticated, async (req, res) => {
       });
     }
 
-    // Prepare insert data with proper date handling (Vietnam timezone GMT+7)
-    const now = new Date();
-    const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // Add 7 hours for GMT+7
-    
+    // Prepare insert data - let database handle timezone automatically
     const insertData = {
       title: title.trim(),
       reportType,
@@ -143,8 +140,8 @@ router.post('/', isAuthenticated, async (req, res) => {
       endDate: endDate ? endDate : null,
       reportData: parsedReportData,
       createdBy: userId,
-      createdAt: vietnamTime,
-      updatedAt: vietnamTime,
+      createdAt: new Date(), // Use current UTC time, will be converted on display
+      updatedAt: new Date(),
     };
 
     console.log('POST saved-reports: Prepared insert data:', {
