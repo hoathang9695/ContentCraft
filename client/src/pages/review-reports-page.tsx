@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
@@ -332,7 +331,7 @@ export default function ReviewReportsPage() {
                 {selectedReport?.title}
               </DialogTitle>
             </DialogHeader>
-            
+
             {selectedReport && (
               <div className="space-y-6">
                 {/* Report Info */}

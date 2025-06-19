@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { db } from '../db.js';
 import { savedReports, users } from '../../shared/schema.js';
@@ -45,7 +44,7 @@ router.get('/', isAuthenticated, async (req, res) => {
       .select({ count: sql`count(*)` })
       .from(savedReports)
       .where(eq(savedReports.createdBy, userId));
-    
+
     const total = Number(totalResult[0].count);
 
     return res.json({
@@ -171,7 +170,7 @@ router.post('/', isAuthenticated, async (req, res) => {
     };
 
     console.log('POST saved-reports: Sending success response:', successResponse);
-    
+
     return res.status(201).json(successResponse);
 
   } catch (error) {
@@ -180,7 +179,7 @@ router.post('/', isAuthenticated, async (req, res) => {
       stack: error.stack,
       name: error.name
     });
-    
+
     const errorResponse = { 
       success: false,
       error: 'Failed to save report', 
@@ -188,7 +187,7 @@ router.post('/', isAuthenticated, async (req, res) => {
     };
 
     console.log('POST saved-reports: Sending error response:', errorResponse);
-    
+
     return res.status(500).json(errorResponse);
   }
 });
