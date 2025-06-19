@@ -16,15 +16,6 @@ app.use((req, res, next) => {
   // Set default content type for API routes
   if (req.originalUrl.startsWith('/api')) {
     res.setHeader('Content-Type', 'application/json');
-    
-    // Override res.send for API routes to ensure JSON
-    const originalSend = res.send;
-    res.send = function(data) {
-      if (req.originalUrl.startsWith('/api') && res.get('Content-Type') !== 'application/json') {
-        res.setHeader('Content-Type', 'application/json');
-      }
-      return originalSend.call(this, data);
-    };
   }
   next();
 });
@@ -96,6 +87,21 @@ app.use((req, res, next) => {
   // Define routes FIRST (before static middleware)
   const server = await registerRoutes(app);
 
+  // API middleware to ensure JSON responses
+  app.use('/api', (req, res, next) => {
+    console.log(`API Request: ${req.method} ${req.originalUrl}`);
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Override res.send to ensure JSON for API routes
+    const originalSend = res.send;
+    res.send = function(data) {
+      this.setHeader('Content-Type', 'application/json');
+      return originalSend.call(this, data);
+    };
+    
+    next();
+  });
+
   // Debug middleware for tick routes - AFTER routes are registered
   app.use('/api/tick-requests*', (req, res, next) => {
     console.log('🎯 TICK API REQUEST INTERCEPTED:');
@@ -154,6 +160,9 @@ app.use((req, res, next) => {
     // DO NOT throw error here as it will crash the application
   });
 
+  // Ensure API routes are registered BEFORE any static file serving
+  console.log('API routes registered, setting up static serving...');
+  
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
