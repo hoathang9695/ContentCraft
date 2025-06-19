@@ -239,14 +239,19 @@ export default function ReviewReportsPage() {
               header: 'Ngày tạo',
               render: (report: SavedReport) => {
                 const date = new Date(report.createdAt);
-                // Add 7 hours for Vietnam timezone (GMT+7)
-                const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
+                // Convert to Vietnam timezone using toLocaleString
+                const vietnamTime = date.toLocaleString("sv-SE", {
+                  timeZone: "Asia/Ho_Chi_Minh"
+                });
+                const [datePart, timePart] = vietnamTime.split(' ');
+                const [year, month, day] = datePart.split('-');
+                const displayDate = `${day}/${month}/${year} ${timePart}`;
                 
                 return (
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-gray-500" />
                     <span className="text-sm">
-                      {format(vietnamTime, 'dd/MM/yyyy HH:mm', { locale: vi })} (GMT+7)
+                      {displayDate} (GMT+7)
                     </span>
                   </div>
                 );
@@ -323,7 +328,15 @@ export default function ReviewReportsPage() {
                   <div>
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Ngày tạo</label>
                     <p className="font-medium">
-                      {format(new Date(new Date(selectedReport.createdAt).getTime() + (7 * 60 * 60 * 1000)), 'dd/MM/yyyy HH:mm')} (GMT+7)
+                      {(() => {
+                        const date = new Date(selectedReport.createdAt);
+                        const vietnamTime = date.toLocaleString("sv-SE", {
+                          timeZone: "Asia/Ho_Chi_Minh"
+                        });
+                        const [datePart, timePart] = vietnamTime.split(' ');
+                        const [year, month, day] = datePart.split('-');
+                        return `${day}/${month}/${year} ${timePart}`;
+                      })()} (GMT+7)
                     </p>
                   </div>
                 </div>
