@@ -410,10 +410,11 @@ export function ContentTable({
         {showActions && (
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-medium">{title}</h2>
-            <Button onClick={handleCreateContent}>
+            {/* Tạm ẩn button New Content */}
+            {/* <Button onClick={handleCreateContent}>
               <Plus className="h-4 w-4 mr-2" />
               New Content
-            </Button>
+            </Button> */}
           </div>
         )}
 
