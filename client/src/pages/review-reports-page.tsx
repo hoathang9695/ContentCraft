@@ -66,7 +66,7 @@ export default function ReviewReportsPage() {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         pageSize: '10',
-        ...(searchTerm && { search: searchTerm }),
+        ...(searchTerm.trim() && { search: searchTerm.trim() }),
       });
 
       const response = await fetch(`/api/saved-reports?${params}`, {
@@ -162,20 +162,28 @@ export default function ReviewReportsPage() {
               id="search"
               placeholder="Nhập tiêu đề báo cáo..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  refetch();
+                }
+              }}
               className="mt-1"
             />
           </div>
           <div className="flex items-end">
             <Button
               onClick={() => {
+                setSearchTerm('');
                 setCurrentPage(1);
-                refetch();
               }}
+              variant="outline"
               disabled={isLoading}
             >
-              <Search className="h-4 w-4 mr-2" />
-              Tìm kiếm
+              Xóa bộ lọc
             </Button>
           </div>
         </div>
