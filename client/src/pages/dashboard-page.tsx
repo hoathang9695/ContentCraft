@@ -210,14 +210,46 @@ export default function DashboardPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Add credentials for authentication
         body: JSON.stringify(reportPayload),
       });
 
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
-      const responseData = await response.json();
-      console.log('Response data:', responseData);
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
+
+      let responseData;
+      const responseText = await response.text();
+      console.log('Raw response text:', responseText);
+
+      try {
+        responseData = JSON.parse(responseText);
+        console.log('Parsed response data:', responseData);
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', parseError);
+        console.error('Response was not JSON:', responseText);
+        
+        // If response is HTML, it might be a login page or error page
+        if (responseText.includes('<!DOCTYPE') || responseText.includes('<html>')) {
+          toast({
+            title: "Lỗi xác thực",
+            description: "Phiên đăng nhập có thể đã hết hạn. Vui lòng đăng nhập lại.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        toast({
+          title: "Lỗi",
+          description: "Server trả về dữ liệu không hợp lệ",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (response.ok && responseData.success) {
         toast({

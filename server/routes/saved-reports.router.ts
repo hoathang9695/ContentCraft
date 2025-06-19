@@ -71,7 +71,11 @@ router.post('/', authenticateUser, async (req, res) => {
     const userId = req.user?.id;
     if (!userId) {
       console.error('POST saved-reports: Unauthorized - No user ID found');
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ 
+        success: false,
+        error: 'Unauthorized',
+        details: 'User not authenticated'
+      });
     }
 
     const { title, reportType = 'dashboard', startDate, endDate, reportData } = req.body;
@@ -84,27 +88,53 @@ router.post('/', authenticateUser, async (req, res) => {
       endDate,
       hasReportData: !!reportData,
       reportDataType: typeof reportData,
-      bodyKeys: Object.keys(req.body)
+      bodyKeys: Object.keys(req.body),
+      userAgent: req.headers['user-agent'],
+      contentType: req.headers['content-type']
     });
 
     // Validate required fields
     if (!title || !title.trim()) {
       console.error('POST saved-reports: Missing or empty title');
-      return res.status(400).json({ error: 'Title is required and cannot be empty' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Title is required and cannot be empty',
+        details: 'Please provide a valid title for the report'
+      });
     }
 
     if (!reportData) {
       console.error('POST saved-reports: Missing report data');
-      return res.status(400).json({ error: 'Report data is required' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Report data is required',
+        details: 'Report data cannot be empty'
+      });
+    }
+
+    // Validate reportData structure
+    let parsedReportData;
+    try {
+      parsedReportData = typeof reportData === 'string' ? JSON.parse(reportData) : reportData;
+      if (!parsedReportData || typeof parsedReportData !== 'object') {
+        throw new Error('Report data must be a valid object');
+      }
+    } catch (parseError) {
+      console.error('POST saved-reports: Invalid report data format:', parseError);
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid report data format',
+        details: parseError.message
+      });
     }
 
     // Prepare insert data with proper date handling
     const insertData = {
       title: title.trim(),
       reportType,
-      startDate: startDate ? startDate : null, // Keep as string, drizzle will handle conversion
-      endDate: endDate ? endDate : null, // Keep as string, drizzle will handle conversion
-      reportData: typeof reportData === 'string' ? JSON.parse(reportData) : reportData,
+      startDate: startDate ? startDate : null,
+      endDate: endDate ? endDate : null,
+      reportData: parsedReportData,
       createdBy: userId,
     };
 
@@ -113,11 +143,19 @@ router.post('/', authenticateUser, async (req, res) => {
       reportData: '[REPORT_DATA_OBJECT]' // Don't log the full data object
     });
 
+    // Test database connection before inserting
+    await db.select().from(savedReports).limit(1);
+    console.log('POST saved-reports: Database connection verified');
+
     // Insert into database
     const newReport = await db
       .insert(savedReports)
       .values(insertData)
       .returning();
+
+    if (!newReport || newReport.length === 0) {
+      throw new Error('Failed to insert report - no data returned');
+    }
 
     console.log('POST saved-reports: Successfully inserted report:', {
       id: newReport[0]?.id,
@@ -127,23 +165,34 @@ router.post('/', authenticateUser, async (req, res) => {
       createdAt: newReport[0]?.createdAt
     });
 
+    // Ensure response is JSON
+    res.setHeader('Content-Type', 'application/json');
     res.status(201).json({ 
       success: true,
       message: 'Report saved successfully', 
-      report: newReport[0] 
+      report: {
+        id: newReport[0].id,
+        title: newReport[0].title,
+        reportType: newReport[0].reportType,
+        createdAt: newReport[0].createdAt
+      }
     });
 
   } catch (error) {
     console.error('POST saved-reports: Error saving report:', {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
+      code: error.code
     });
     
+    // Ensure response is JSON even on error
+    res.setHeader('Content-Type', 'application/json');
     res.status(500).json({ 
       success: false,
       error: 'Failed to save report', 
-      details: error.message 
+      details: error.message,
+      code: error.code || 'UNKNOWN_ERROR'
     });
   }
 });
