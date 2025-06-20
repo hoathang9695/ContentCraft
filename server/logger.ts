@@ -61,14 +61,31 @@ export class Logger {
     const levelName = LogLevel[level];
 
     if (this.config.logFormat === 'json') {
-      return JSON.stringify({
-        timestamp,
-        level: levelName,
-        category,
-        message,
-        metadata,
-        pid: process.pid
-      });
+      // ELK/Fluentd standard JSON format
+      const logEntry = {
+        '@timestamp': timestamp,
+        '@version': '1',
+        level: levelName.toLowerCase(),
+        logger_name: category,
+        message: message,
+        thread_name: `pid-${process.pid}`,
+        host: process.env.HOSTNAME || 'localhost',
+        application: 'emso-content-management',
+        environment: process.env.NODE_ENV || 'development',
+        pid: process.pid,
+        ...metadata && { fields: metadata }
+      };
+
+      // Add stack trace for ERROR level
+      if (level === LogLevel.ERROR && metadata?.error instanceof Error) {
+        logEntry.stack_trace = metadata.error.stack;
+        logEntry.exception = {
+          class: metadata.error.constructor.name,
+          message: metadata.error.message
+        };
+      }
+
+      return JSON.stringify(logEntry);
     } else {
       return `[${timestamp}] ${levelName} [${category}] ${message}${metadata ? ` ${JSON.stringify(metadata)}` : ''}`;
     }
@@ -125,11 +142,79 @@ export class Logger {
   // API-specific logging methods
   apiRequest(method: string, path: string, statusCode: number, duration: number, response?: any) {
     this.info(`${method} ${path} ${statusCode} in ${duration}ms`, 'API', {
-      method,
-      path,
-      statusCode,
-      duration,
-      response: response ? JSON.stringify(response).substring(0, 200) : undefined
+      http: {
+        method,
+        path,
+        status_code: statusCode,
+        response_time_ms: duration,
+        response_size: response ? JSON.stringify(response).length : 0
+      },
+      user_agent: process.env.USER_AGENT,
+      response_preview: response ? JSON.stringify(response).substring(0, 200) : undefined
+    });
+  }
+
+  // Database-specific logging
+  dbQuery(query: string, duration: number, rowCount?: number, error?: Error) {
+    const logData = {
+      database: {
+        query_type: query.split(' ')[0]?.toUpperCase(),
+        duration_ms: duration,
+        row_count: rowCount,
+        query_preview: query.substring(0, 100)
+      }
+    };
+
+    if (error) {
+      this.error(`Database query failed: ${error.message}`, 'DATABASE', {
+        ...logData,
+        error: {
+          message: error.message,
+          stack: error.stack,
+          query: query
+        }
+      });
+    } else {
+      this.info(`Database query executed successfully`, 'DATABASE', logData);
+    }
+  }
+
+  // Kafka-specific structured logging
+  kafkaEvent(event: string, topic?: string, partition?: number, offset?: string, metadata?: any) {
+    this.info(`Kafka ${event}`, 'KAFKA', {
+      kafka: {
+        event,
+        topic,
+        partition,
+        offset,
+        ...metadata
+      }
+    });
+  }
+
+  // Security/Auth logging
+  securityEvent(event: string, userId?: string, ip?: string, details?: any) {
+    this.warn(`Security event: ${event}`, 'SECURITY', {
+      security: {
+        event,
+        user_id: userId,
+        ip_address: ip,
+        timestamp: new Date().toISOString(),
+        ...details
+      }
+    });
+  }
+
+  // Performance monitoring
+  performanceMetric(metric: string, value: number, unit: string, tags?: any) {
+    this.info(`Performance metric: ${metric}`, 'PERFORMANCE', {
+      metrics: {
+        name: metric,
+        value,
+        unit,
+        tags: tags || {},
+        timestamp: new Date().toISOString()
+      }
     });
   }
 
@@ -164,11 +249,14 @@ export class Logger {
   }
 }
 
-// Export singleton instance
+// Export singleton instance with ELK-optimized defaults
 export const logger = Logger.getInstance({
   level: process.env.LOG_LEVEL === 'DEBUG' ? LogLevel.DEBUG : LogLevel.INFO,
   enableFileLogging: process.env.ENABLE_FILE_LOGGING !== 'false',
-  logFormat: process.env.LOG_FORMAT as 'json' | 'text' || 'json'
+  logFormat: 'json', // Always use JSON for structured logging
+  enableConsoleLogging: process.env.NODE_ENV !== 'production', // Disable console in production
+  maxLogFiles: parseInt(process.env.MAX_LOG_FILES || '7'), // Keep 7 days of logs
+  maxLogSize: process.env.MAX_LOG_SIZE || '100MB'
 });
 
 // Backward compatibility function
