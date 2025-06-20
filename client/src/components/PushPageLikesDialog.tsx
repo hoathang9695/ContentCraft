@@ -1,8 +1,9 @@
-
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
@@ -21,12 +22,18 @@ export function PushPageLikesDialog({
 }: PushPageLikesDialogProps) {
   const { toast } = useToast();
   const [count, setCount] = useState<string>('');
+  const [selectedGender, setSelectedGender] = useState<'all' | 'male_adult' | 'male_young' | 'male_teen' | 'female_adult' | 'female_young' | 'female_teen' | 'other'>('all');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch fake users
-  const { data: fakeUsers = [] } = useQuery({
+  const { data: allFakeUsers = [] } = useQuery({
     queryKey: ["/api/fake-users"],
   });
+
+  // Filter fake users by selected gender
+  const fakeUsers = selectedGender === 'all' 
+    ? allFakeUsers 
+    : allFakeUsers.filter(user => user.gender === selectedGender);
 
   const handleSubmit = () => {
     const likeCount = parseInt(count, 10);
@@ -47,14 +54,14 @@ export function PushPageLikesDialog({
     // Process likes in background
     const processPushLikesInBackground = async () => {
       let successCount = 0;
-      
+
       try {
         const shuffledUsers = [...fakeUsers].sort(() => Math.random() - 0.5);
         const selectedUsers = shuffledUsers.slice(0, likeCount);
 
         for (let i = 0; i < selectedUsers.length; i++) {
           const fakeUser = selectedUsers[i];
-          
+
           try {
             // Call page likes API
             const response = await fetch(
@@ -128,6 +135,24 @@ export function PushPageLikesDialog({
             placeholder="Nhập số lượng"
             disabled={isProcessing}
           />
+           <div className="space-y-2">
+              <Label htmlFor="gender">Giới tính</Label>
+              <Select onValueChange={setSelectedGender} defaultValue={selectedGender}>
+                <SelectTrigger id="gender">
+                  <SelectValue placeholder="Chọn giới tính" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="male_adult">Nam (Trưởng thành)</SelectItem>
+                  <SelectItem value="male_young">Nam (Thanh niên)</SelectItem>
+                  <SelectItem value="male_teen">Nam (Vị thành niên)</SelectItem>
+                  <SelectItem value="female_adult">Nữ (Trưởng thành)</SelectItem>
+                  <SelectItem value="female_young">Nữ (Thanh niên)</SelectItem>
+                  <SelectItem value="female_teen">Nữ (Vị thành niên)</SelectItem>
+                  <SelectItem value="other">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isProcessing}>

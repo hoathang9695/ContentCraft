@@ -1,8 +1,9 @@
-
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
@@ -21,12 +22,18 @@ export function PushGroupJoinDialog({
 }: PushGroupJoinDialogProps) {
   const { toast } = useToast();
   const [count, setCount] = useState<string>('');
+  const [selectedGender, setSelectedGender] = useState<'all' | 'male_adult' | 'male_young' | 'male_teen' | 'female_adult' | 'female_young' | 'female_teen' | 'other'>('all');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch fake users
-  const { data: fakeUsers = [] } = useQuery({
+  const { data: allFakeUsers = [] } = useQuery({
     queryKey: ["/api/fake-users"],
   });
+
+  // Filter fake users by selected gender
+  const fakeUsers = selectedGender === 'all' 
+    ? allFakeUsers 
+    : allFakeUsers.filter(user => user.gender === selectedGender);
 
   const handleSubmit = () => {
     const joinCount = parseInt(count, 10);
@@ -47,17 +54,17 @@ export function PushGroupJoinDialog({
     // Process join requests in background
     const processPushJoinInBackground = async () => {
       let successCount = 0;
-      
+
       try {
         const shuffledUsers = [...fakeUsers].sort(() => Math.random() - 0.5);
         const selectedUsers = shuffledUsers.slice(0, joinCount);
 
         for (let i = 0; i < selectedUsers.length; i++) {
           const fakeUser = selectedUsers[i];
-          
+
           try {
             console.log(`Sending join request for user ${fakeUser.name} to group ${targetGroupId}`);
-            
+
             // Call group join API
             const response = await fetch(
               `https://prod-sn.emso.vn/api/v1/groups/${targetGroupId}/accounts`,
@@ -143,6 +150,24 @@ export function PushGroupJoinDialog({
             placeholder="Nhập số lượng"
             disabled={isProcessing}
           />
+          <div>
+            <Label htmlFor="gender">Giới tính</Label>
+            <Select value={selectedGender} onValueChange={(value) => setSelectedGender(value as any)}>
+              <SelectTrigger id="gender">
+                <SelectValue placeholder="Chọn giới tính" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="male_adult">Nam (trưởng thành)</SelectItem>
+                <SelectItem value="male_young">Nam (thanh niên)</SelectItem>
+                <SelectItem value="male_teen">Nam (thiếu niên)</SelectItem>
+                <SelectItem value="female_adult">Nữ (trưởng thành)</SelectItem>
+                <SelectItem value="female_young">Nữ (thanh niên)</SelectItem>
+                <SelectItem value="female_teen">Nữ (thiếu niên)</SelectItem>
+                <SelectItem value="other">Khác</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isProcessing}>
