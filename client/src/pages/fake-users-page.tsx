@@ -74,7 +74,7 @@ const fakeUserSchema = z.object({
   token: z.string().min(1, "Token là bắt buộc"),
   email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   password: z.string().min(1, "Password là bắt buộc").optional().or(z.literal("")),
-  gender: z.enum(["male", "female", "other"]).default("male"),
+  gender: z.enum(["male_adult", "male_young", "male_teen", "female_adult", "female_young", "female_teen", "other"]).default("male_adult"),
   status: z.enum(["active", "inactive"]).default("active"),
   description: z.string().optional(),
 });
@@ -85,7 +85,7 @@ type FakeUser = {
   token: string;
   email?: string;
   password?: string;
-  gender: "male" | "female" | "other";
+  gender: "male_adult" | "male_young" | "male_teen" | "female_adult" | "female_young" | "female_teen" | "other";
   status: "active" | "inactive";
   description?: string;
   createdAt: string;
@@ -265,7 +265,7 @@ export default function FakeUsersPage() {
 
   // Mutation để cập nhật giới tính người dùng ảo
   const updateGenderMutation = useMutation({
-    mutationFn: async ({ id, gender }: { id: number; gender: "male" | "female" | "other" }) => {
+    mutationFn: async ({ id, gender }: { id: number; gender: "male_adult" | "male_young" | "male_teen" | "female_adult" | "female_young" | "female_teen" | "other" }) => {
       const user = fakeUsers?.find(u => u.id === id);
       if (!user) throw new Error("User not found");
 
@@ -327,7 +327,7 @@ export default function FakeUsersPage() {
       token: "",
       email: "",
       password: "",
-      gender: "male",
+      gender: "male_adult",
       status: "active",
       description: "",
     },
@@ -342,7 +342,7 @@ export default function FakeUsersPage() {
         token: user.token,
         email: user.email || "",
         password: user.password || "",
-        gender: user.gender as "male" | "female" | "other",
+        gender: user.gender as "male_adult" | "male_young" | "male_teen" | "female_adult" | "female_young" | "female_teen" | "other",
         status: user.status as "active" | "inactive",
         description: user.description || "",
       });
@@ -354,7 +354,7 @@ export default function FakeUsersPage() {
         token: "",
         email: "",
         password: "",
-        gender: "male",
+        gender: "male_adult",
         status: "active",
         description: "",
       });
@@ -660,7 +660,7 @@ export default function FakeUsersPage() {
                                   title="Copy email"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002 2h2a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                   </svg>
                                 </button>
                               </>
@@ -701,7 +701,7 @@ export default function FakeUsersPage() {
                         <TableCell>
                           <Select
                             value={user.gender}
-                            onValueChange={(value: "male" | "female" | "other") => {
+                            onValueChange={(value: "male_adult" | "male_young" | "male_teen" | "female_adult" | "female_young" | "female_teen" | "other") => {
                               updateGenderMutation.mutate({ id: user.id, gender: value });
                             }}
                             disabled={updatingUserId === user.id}
@@ -710,8 +710,12 @@ export default function FakeUsersPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="male">Nam</SelectItem>
-                              <SelectItem value="female">Nữ</SelectItem>
+                              <SelectItem value="male_adult">Nam trung niên</SelectItem>
+                              <SelectItem value="male_young">Nam thanh niên</SelectItem>
+                              <SelectItem value="male_teen">Nam thiếu niên</SelectItem>
+                              <SelectItem value="female_adult">Nữ trung niên</SelectItem>
+                              <SelectItem value="female_young">Nữ thanh niên</SelectItem>
+                              <SelectItem value="female_teen">Nữ thiếu niên</SelectItem>
                               <SelectItem value="other">Khác</SelectItem>
                             </SelectContent>
                           </Select>
@@ -927,8 +931,12 @@ export default function FakeUsersPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="male">Nam</SelectItem>
-                        <SelectItem value="female">Nữ</SelectItem>
+                        <SelectItem value="male_adult">Nam trung niên</SelectItem>
+                        <SelectItem value="male_young">Nam thanh niên</SelectItem>
+                        <SelectItem value="male_teen">Nam thiếu niên</SelectItem>
+                        <SelectItem value="female_adult">Nữ trung niên</SelectItem>
+                        <SelectItem value="female_young">Nữ thanh niên</SelectItem>
+                        <SelectItem value="female_teen">Nữ thiếu niên</SelectItem>
                         <SelectItem value="other">Khác</SelectItem>
                       </SelectContent>
                     </Select>
