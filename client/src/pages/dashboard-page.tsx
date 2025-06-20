@@ -167,7 +167,7 @@ export default function DashboardPage() {
       return;
     }
 
-    if (!stats) {
+    if (!displayStats) {
       toast({
         title: "Lỗi", 
         description: "Không có dữ liệu báo cáo để lưu",
@@ -184,7 +184,8 @@ export default function DashboardPage() {
         reportType: 'dashboard',
         startDate: dateRange?.from?.toISOString().split('T')[0],
         endDate: dateRange?.to?.toISOString().split('T')[0],
-        hasStats: !!stats
+        hasStats: !!displayStats,
+        isFiltered: !!filteredStats
       });
 
       const reportPayload = {
@@ -193,7 +194,7 @@ export default function DashboardPage() {
         startDate: dateRange?.from?.toISOString().split('T')[0] || null,
         endDate: dateRange?.to?.toISOString().split('T')[0] || null,
         reportData: {
-          stats,
+          stats: displayStats, // Use displayStats instead of stats to include filtered data
           dateRange: {
             from: dateRange?.from?.toISOString() || null,
             to: dateRange?.to?.toISOString() || null
