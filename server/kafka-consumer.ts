@@ -120,7 +120,9 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
     await consumer.disconnect();
     await new Promise(resolve => setTimeout(resolve, KAFKA_CONFIG.RECONNECT_TIMEOUT));
     await consumer.connect();
-    log("Successfully reconnected to Kafka", "kafka");
+    logger.kafkaEvent("reconnected", undefined, undefined, undefined, { 
+      reconnect_timeout: KAFKA_CONFIG.RECONNECT_TIMEOUT 
+    });
 
     // Resubscribe to topics after reconnect
     // Ensure all required topics are explicitly defined
@@ -131,7 +133,7 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
     for (const topic of topics) {
       try {
         await consumer.subscribe({ topic, fromBeginning: false }); // Set fromBeginning false to avoid processing old messages
-        log(`Resubscribed to topic: ${topic}`, "kafka");
+        logger.kafkaEvent("resubscribed", topic);
       } catch (error) {
         log(`Failed to resubscribe to topic ${topic}: ${error}`, "kafka-error");
       }
