@@ -7,7 +7,26 @@ async function migrateGenderData() {
   try {
     console.log("🔄 Bắt đầu migrate dữ liệu gender...");
 
-    // Kiểm tra dữ liệu hiện tại
+    // Bước 1: Cập nhật constraint trước
+    console.log("\n🔧 Bước 1: Cập nhật constraint cho phép các giá trị mới...");
+    
+    // Drop constraint cũ
+    await db.execute(sql`
+      ALTER TABLE fake_users 
+      DROP CONSTRAINT IF EXISTS check_gender_valid
+    `);
+    console.log("✅ Đã xóa constraint cũ");
+
+    // Thêm constraint mới
+    await db.execute(sql`
+      ALTER TABLE fake_users 
+      ADD CONSTRAINT check_gender_valid 
+      CHECK (gender IN ('male_adult', 'male_young', 'male_teen', 'female_adult', 'female_young', 'female_teen', 'other', 'male', 'female'))
+    `);
+    console.log("✅ Đã thêm constraint mới cho phép cả giá trị cũ và mới");
+
+    // Bước 2: Kiểm tra dữ liệu hiện tại
+    console.log("\n🔍 Bước 2: Kiểm tra dữ liệu hiện tại...");
     const currentData = await db
       .select({
         id: fakeUsers.id,
@@ -30,10 +49,11 @@ async function migrateGenderData() {
       console.log(`  - ID ${user.id}: ${user.name} (${user.gender})`);
     });
 
-    // Migrate dữ liệu từng loại
+    // Bước 3: Migrate dữ liệu từng loại
+    console.log("\n🔄 Bước 3: Migrate dữ liệu...");
     let totalUpdated = 0;
 
-    // 1. Migrate 'male', 'nam', 'Nam' -> 'male_adult'
+    // 3.1. Migrate 'male', 'nam', 'Nam' -> 'male_adult'
     console.log("\n🔄 Migrate Nam -> Nam trung niên...");
     const maleResult = await db
       .update(fakeUsers)
@@ -44,7 +64,7 @@ async function migrateGenderData() {
     console.log(`✅ Đã cập nhật ${maleResult.length} người dùng Nam`);
     totalUpdated += maleResult.length;
 
-    // 2. Migrate 'female', 'nữ', 'Nữ' -> 'female_adult'
+    // 3.2. Migrate 'female', 'nữ', 'Nữ' -> 'female_adult'
     console.log("\n🔄 Migrate Nữ -> Nữ trung niên...");
     const femaleResult = await db
       .update(fakeUsers)
@@ -55,8 +75,25 @@ async function migrateGenderData() {
     console.log(`✅ Đã cập nhật ${femaleResult.length} người dùng Nữ`);
     totalUpdated += femaleResult.length;
 
-    // Kiểm tra kết quả sau khi migrate
-    console.log("\n📊 Kiểm tra kết quả sau migrate:");
+    // Bước 4: Cập nhật constraint cuối cùng (chỉ cho phép giá trị mới)
+    console.log("\n🔧 Bước 4: Cập nhật constraint cuối cùng...");
+    
+    // Drop constraint tạm thời
+    await db.execute(sql`
+      ALTER TABLE fake_users 
+      DROP CONSTRAINT IF EXISTS check_gender_valid
+    `);
+
+    // Thêm constraint cuối cùng (chỉ giá trị mới)
+    await db.execute(sql`
+      ALTER TABLE fake_users 
+      ADD CONSTRAINT check_gender_valid 
+      CHECK (gender IN ('male_adult', 'male_young', 'male_teen', 'female_adult', 'female_young', 'female_teen', 'other'))
+    `);
+    console.log("✅ Đã cập nhật constraint cuối cùng - chỉ cho phép giá trị mới");
+
+    // Bước 5: Kiểm tra kết quả sau khi migrate
+    console.log("\n📊 Bước 5: Kiểm tra kết quả sau migrate:");
     const afterMigration = await db
       .select({
         gender: fakeUsers.gender,
