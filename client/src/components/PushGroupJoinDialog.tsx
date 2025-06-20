@@ -1,8 +1,9 @@
-
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
@@ -21,12 +22,18 @@ export function PushGroupJoinDialog({
 }: PushGroupJoinDialogProps) {
   const { toast } = useToast();
   const [count, setCount] = useState<string>('');
+  const [selectedGender, setSelectedGender] = useState<'all' | 'male_adult' | 'male_young' | 'male_teen' | 'female_adult' | 'female_young' | 'female_teen' | 'other'>('all');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch fake users
-  const { data: fakeUsers = [] } = useQuery({
+  const { data: allFakeUsers = [] } = useQuery({
     queryKey: ["/api/fake-users"],
   });
+
+  // Filter fake users by selected gender
+  const fakeUsers = selectedGender === 'all' 
+    ? allFakeUsers 
+    : allFakeUsers.filter(user => user.gender === selectedGender);
 
   const handleSubmit = () => {
     const joinCount = parseInt(count, 10);
@@ -34,9 +41,37 @@ export function PushGroupJoinDialog({
       return;
     }
 
+    // Kiểm tra nếu không có người dùng ảo nào với giới tính đã chọn
+    if (fakeUsers.length === 0) {
+      const getGenderDisplayName = (gender: string) => {
+        switch (gender) {
+          case 'male_adult': return 'Nam trung niên';
+          case 'male_young': return 'Nam thanh niên';
+          case 'male_teen': return 'Nam thiếu niên';
+          case 'female_adult': return 'Nữ trung niên';
+          case 'female_young': return 'Nữ thanh niên';
+          case 'female_teen': return 'Nữ thiếu niên';
+          case 'other': return 'Khác';
+          default: return 'Tất cả giới tính';
+        }
+      };
+
+      const errorMessage = allFakeUsers.length === 0 
+        ? 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.'
+        : `Không có người dùng ảo nào với giới tính "${getGenderDisplayName(selectedGender)}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`;
+
+      toast({
+        title: 'Lỗi',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Close dialog immediately
     onOpenChange(false);
     setCount('');
+    setSelectedGender('all');
 
     // Show initial toast
     toast({
@@ -47,17 +82,17 @@ export function PushGroupJoinDialog({
     // Process join requests in background
     const processPushJoinInBackground = async () => {
       let successCount = 0;
-      
+
       try {
         const shuffledUsers = [...fakeUsers].sort(() => Math.random() - 0.5);
         const selectedUsers = shuffledUsers.slice(0, joinCount);
 
         for (let i = 0; i < selectedUsers.length; i++) {
           const fakeUser = selectedUsers[i];
-          
+
           try {
             console.log(`Sending join request for user ${fakeUser.name} to group ${targetGroupId}`);
-            
+
             // Call group join API
             const response = await fetch(
               `https://prod-sn.emso.vn/api/v1/groups/${targetGroupId}/accounts`,
@@ -135,6 +170,74 @@ export function PushGroupJoinDialog({
           <DialogTitle>Push Tham gia cho {targetGroupName}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {/* Gender selection */}
+          <div className="space-y-2">
+            <Label htmlFor="gender-select" className="text-sm font-medium">
+              Lọc theo giới tính người dùng ảo
+            </Label>
+            <Select value={selectedGender} onValueChange={(value: 'all' | 'male_adult' | 'male_young' | 'male_teen' | 'female_adult' | 'female_young' | 'female_teen' | 'other') => setSelectedGender(value)}>
+              <SelectTrigger id="gender-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả giới tính</SelectItem>
+                <SelectItem value="male_adult">Nam trung niên</SelectItem>
+                <SelectItem value="male_young">Nam thanh niên</SelectItem>
+                <SelectItem value="male_teen">Nam thiếu niên</SelectItem>
+                <SelectItem value="female_adult">Nữ trung niên</SelectItem>
+                <SelectItem value="female_young">Nữ thanh niên</SelectItem>
+                <SelectItem value="female_teen">Nữ thiếu niên</SelectItem>
+                <SelectItem value="other">Khác</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* User count display */}
+          <div className="bg-yellow-50 text-yellow-800 p-3 rounded-md text-sm">
+            <p className="font-medium">Thông tin người dùng ảo</p>
+            <p className="mt-1">
+              {fakeUsers.length > 0 
+                ? "Hệ thống sẽ tự động chọn ngẫu nhiên một người dùng ảo khác nhau để gửi mỗi yêu cầu tham gia" 
+                : selectedGender === 'all' 
+                  ? "Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý."
+                  : `Không có người dùng ảo nào với giới tính "${(() => {
+                      switch (selectedGender) {
+                        case 'male_adult': return 'Nam trung niên';
+                        case 'male_young': return 'Nam thanh niên';
+                        case 'male_teen': return 'Nam thiếu niên';
+                        case 'female_adult': return 'Nữ trung niên';
+                        case 'female_young': return 'Nữ thanh niên';
+                        case 'female_teen': return 'Nữ thiếu niên';
+                        case 'other': return 'Khác';
+                        default: return 'Tất cả giới tính';
+                      }
+                    })()}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`}
+            </p>
+            {fakeUsers.length > 0 && (
+              <p className="mt-1 text-xs">
+                {selectedGender === 'all' 
+                  ? `Có tổng cộng ${fakeUsers.length} người dùng ảo có thể sử dụng để gửi yêu cầu tham gia`
+                  : `Có ${fakeUsers.length} người dùng ảo ${(() => {
+                      switch (selectedGender) {
+                        case 'male_adult': return 'nam trung niên';
+                        case 'male_young': return 'nam thanh niên';
+                        case 'male_teen': return 'nam thiếu niên';
+                        case 'female_adult': return 'nữ trung niên';
+                        case 'female_young': return 'nữ thanh niên';
+                        case 'female_teen': return 'nữ thiếu niên';
+                        case 'other': return 'giới tính khác';
+                        default: return 'tất cả giới tính';
+                      }
+                    })()} có thể sử dụng để gửi yêu cầu tham gia`}
+              </p>
+            )}
+            {allFakeUsers.length > 0 && fakeUsers.length === 0 && selectedGender !== 'all' && (
+              <p className="mt-1 text-xs text-orange-600">
+                Tổng cộng có {allFakeUsers.length} người dùng ảo, nhưng không có ai với giới tính đã chọn.
+              </p>
+            )}
+          </div>
+
           <Input
             type="number"
             min="1"
