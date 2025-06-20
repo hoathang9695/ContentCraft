@@ -1,0 +1,85 @@
+
+> rest-express@1.0.0 dev
+> tsx server/index.ts
+
+Database connection config: {
+  host: undefined,
+  database: undefined,
+  user: undefined,
+  port: undefined
+}
+PostgreSQL session store initialized
+Starting automatic file cleanup service (daily at midnight)...
+Session settings configured with: {
+  secret: '800...',
+  resave: true,
+  saveUninitialized: true,
+  store: true,
+  cookie: {
+    maxAge: 86400000,
+    sameSite: 'lax',
+    secure: false,
+    httpOnly: true,
+    path: '/'
+  }
+}
+Report management routes loaded
+API routes registered, setting up static serving...
+8:34:58 AM [express] serving on port 5000
+Starting automatic file cleanup service (daily at midnight)...
+8:34:58 AM [express] File cleanup service started
+8:34:58 AM [kafka] Initializing Kafka connection to brokers: 172.16.0.199:9093, 172.16.0.104:9093, 172.16.0.226:9093, 172.16.0.106:9093, 172.16.0.146:9093
+🚀 CommentQueueProcessor constructor called (Multi-threaded)
+🚀 Comment Queue Processor started (Max 5 concurrent queues)
+🗓️ Setting up cleanup schedule...
+🗓️ Cleanup scheduled: Initial cleanup in 5s, then every 24 hours
+✅ CommentQueueProcessor started successfully (Multi-threaded mode)
+🚀 CommentQueueProcessor initialized and started
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+SMTP config loaded from database (ID: 5) with encrypted password
+SMTP transporter initialized: { host: 'smtp.gmail.com', port: 587, user: 'marketing@emso.vn' }
+Database connection test successful: { now: 2025-06-20T08:34:59.590Z }
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+✅ Unaccent extension enabled
+Database connected successfully
+Connection config: {
+  host: '42.96.40.138',
+  database: 'content',
+  user: 'postgres',
+  port: 5432
+}
+8:35:02 AM [vite] Pre-transform error: /home/runner/workspace/client/src/pages/fake-users-page.tsx: Unexpected token, expected "}" (904:72)
+
+  902 |                     <FormLabel>Token</FormLabel>
+  903 |                     <FormControl>
+> 904 |                       <Input placeholder="Nhập token xác thực" {...This code modifies the default gender for the fake user form using react-hook-form.
+      |                                                                         ^
+  905 |
+  906 | field} />
+  907 |                     </FormControl>
