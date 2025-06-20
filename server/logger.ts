@@ -249,13 +249,13 @@ export class Logger {
   }
 }
 
-// Export singleton instance with ELK-optimized defaults
+// Export singleton instance with stdout-only configuration
 export const logger = Logger.getInstance({
   level: process.env.LOG_LEVEL === 'DEBUG' ? LogLevel.DEBUG : LogLevel.INFO,
-  enableFileLogging: process.env.ENABLE_FILE_LOGGING !== 'false',
+  enableFileLogging: false, // Disable file logging - use stdout only
   logFormat: 'json', // Always use JSON for structured logging
-  enableConsoleLogging: process.env.NODE_ENV !== 'production', // Disable console in production
-  maxLogFiles: parseInt(process.env.MAX_LOG_FILES || '7'), // Keep 7 days of logs
+  enableConsoleLogging: true, // Always enable console/stdout logging
+  maxLogFiles: parseInt(process.env.MAX_LOG_FILES || '7'), // Keep for compatibility
   maxLogSize: process.env.MAX_LOG_SIZE || '100MB'
 });
 

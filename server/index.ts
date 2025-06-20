@@ -9,6 +9,7 @@ import { setupKafkaConsumer, disconnectKafkaConsumer } from "./kafka-consumer";
 import { emailService, SMTPConfig } from "./email";
 import { simulateKafkaMessage } from "./kafka-simulator";
 import { FileCleanupService } from "./file-cleanup";
+import { logger } from "./logger";
 
 const app = express();
 // Improved JSON parsing with error handling
