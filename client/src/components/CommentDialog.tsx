@@ -299,8 +299,12 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tất cả giới tính</SelectItem>
-                    <SelectItem value="male">Nam</SelectItem>
-                    <SelectItem value="female">Nữ</SelectItem>
+                    <SelectItem value="male_adult">Nam trung niên</SelectItem>
+                    <SelectItem value="male_young">Nam thanh niên</SelectItem>
+                    <SelectItem value="male_teen">Nam thiếu niên</SelectItem>
+                    <SelectItem value="female_adult">Nữ trung niên</SelectItem>
+                    <SelectItem value="female_young">Nữ thanh niên</SelectItem>
+                    <SelectItem value="female_teen">Nữ thiếu niên</SelectItem>
                     <SelectItem value="other">Khác</SelectItem>
                   </SelectContent>
                 </Select>
