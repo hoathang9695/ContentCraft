@@ -34,11 +34,16 @@ export class CommentQueueProcessor {
     
     console.log(`🚀 Comment Queue Processor started (Max ${this.maxConcurrentQueues} concurrent queues)`);
     
-    // Check every 10 seconds for new queues
+    // Check every 10 seconds for new queues and stuck queues
     this.processingInterval = setInterval(async () => {
       await this.checkStuckQueues();
       await this.processAvailableQueues();
     }, this.processingDelay);
+    
+    // Additional frequent stuck queue checking every 2 minutes
+    setInterval(async () => {
+      await this.checkStuckQueues();
+    }, 2 * 60 * 1000);
 
     // Run cleanup once daily at startup and then every 24 hours
     this.scheduleCleanup();
@@ -314,19 +319,21 @@ export class CommentQueueProcessor {
       console.log(`📊 [${sessionId}] Total progress: ${finalTotalProcessed}/${totalCommentsInQueue} comments (${currentSuccessCount} success, ${currentFailureCount} failed)`);
       console.log(`📊 [${sessionId}] Final validation: startIndex=${startIndex}, endIndex=${totalCommentsInQueue}, processedThisRun=${commentsProcessedThisRun}`);
 
-      // Queue completion logic: Only complete when ALL comments are successfully processed
+      // Queue completion logic: More flexible completion criteria
       const allCommentsSuccessful = currentSuccessCount === totalCommentsInQueue;
       const allCommentsProcessed = finalTotalProcessed === totalCommentsInQueue;
+      const successRate = totalCommentsInQueue > 0 ? (currentSuccessCount / totalCommentsInQueue) : 0;
       
-      // Queue is only completed when success_count equals total_comments
-      if (allCommentsSuccessful) {
+      // Complete if all successful OR if 90%+ successful and all processed
+      if (allCommentsSuccessful || (allCommentsProcessed && successRate >= 0.9)) {
         await storage.updateCommentQueueProgress(sessionId, {
           status: 'completed',
           processedCount: finalTotalProcessed,
           successCount: currentSuccessCount,
           failureCount: currentFailureCount
         });
-        console.log(`🎉 [${sessionId}] Queue completed successfully - ALL ${currentSuccessCount}/${totalCommentsInQueue} comments sent successfully (${currentFailureCount} failed)`);
+        const completionReason = allCommentsSuccessful ? 'ALL successful' : `${Math.round(successRate * 100)}% successful`;
+        console.log(`🎉 [${sessionId}] Queue completed successfully - ${completionReason}: ${currentSuccessCount}/${totalCommentsInQueue} comments sent successfully (${currentFailureCount} failed)`);
       } else if (allCommentsProcessed) {
         // All comments processed but not all successful - mark as failed
         const errorMsg = `Processing finished but not all successful: ${currentSuccessCount}/${totalCommentsInQueue} successful, ${currentFailureCount} failed. Queue marked as failed because success_count != total_comments.`;
@@ -504,9 +511,9 @@ export class CommentQueueProcessor {
       // Import pool directly from db module to avoid storage dependency issues
       const { pool } = await import('./db');
       
-      // Reset queues that have been processing for more than 30 minutes
+      // Reset queues that have been processing for more than 15 minutes (reduced from 30)
       const stuckThreshold = new Date();
-      stuckThreshold.setMinutes(stuckThreshold.getMinutes() - 30);
+      stuckThreshold.setMinutes(stuckThreshold.getMinutes() - 15);
       
       console.log(`🔍 Checking for stuck queues before: ${stuckThreshold.toISOString()}`);
 
