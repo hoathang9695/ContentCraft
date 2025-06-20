@@ -43,13 +43,8 @@ export class Logger {
   }
 
   private ensureLogDirectory() {
-    const fs = require('fs');
-    const path = require('path');
-    const logDir = path.dirname(this.logFile);
-    
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
+    // Skip creating log directory since we're using stdout only
+    // This method is kept for compatibility but does nothing
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -96,10 +91,7 @@ export class Logger {
       console.log(formattedMessage);
     }
 
-    if (this.config.enableFileLogging) {
-      const fs = require('fs');
-      fs.appendFileSync(this.logFile, formattedMessage + '\n');
-    }
+    // File logging is disabled - using stdout only
   }
 
   debug(message: string, category: string = 'APP', metadata?: any) {
@@ -220,32 +212,8 @@ export class Logger {
 
   // Cleanup old log files
   async cleanupLogs() {
-    const fs = require('fs').promises;
-    const path = require('path');
-    
-    try {
-      const logDir = path.dirname(this.logFile);
-      const files = await fs.readdir(logDir);
-      const logFiles = files
-        .filter(file => file.startsWith('app-') && file.endsWith('.log'))
-        .map(file => ({
-          name: file,
-          path: path.join(logDir, file),
-          stat: require('fs').statSync(path.join(logDir, file))
-        }))
-        .sort((a, b) => b.stat.mtime.getTime() - a.stat.mtime.getTime());
-
-      // Keep only the most recent files
-      if (logFiles.length > this.config.maxLogFiles) {
-        const filesToDelete = logFiles.slice(this.config.maxLogFiles);
-        for (const file of filesToDelete) {
-          await fs.unlink(file.path);
-          this.info(`Deleted old log file: ${file.name}`, 'CLEANUP');
-        }
-      }
-    } catch (error) {
-      this.error(`Failed to cleanup logs: ${error}`, 'CLEANUP');
-    }
+    // No cleanup needed for stdout-only logging
+    this.info('Log cleanup skipped - using stdout only', 'CLEANUP');
   }
 }
 
