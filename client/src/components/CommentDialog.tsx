@@ -53,7 +53,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     ? allFakeUsers 
     : allFakeUsers.filter(user => user.gender === selectedGender);
 
-  
+
 
   // Extract comments inside {} brackets
   const extractComments = (text: string): string[] => {
@@ -110,7 +110,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
     }
   }, [open]);
 
-  
+
 
   // Mutation để cập nhật số lượng comment trong DB nội bộ
   const commentMutation = useMutation({
@@ -210,9 +210,9 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
       } else {
         console.error('❌ Error in comment queue creation:', responseData);
-        
+
         const errorMessage = responseData?.message || responseData?.error || 'Không thể tạo queue comment';
-        
+
         toast({
           title: "Lỗi tạo queue",
           description: errorMessage,
@@ -232,7 +232,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
       if (error instanceof Error) {
         console.log('Error message content:', error.message);
-        
+
         if (error.message.includes('DOCTYPE') || error.message.includes('HTML')) {
           errorMessage = 'Server đang gặp lỗi nội bộ. Vui lòng thử lại sau.';
         } else if (error.message.includes('Failed to fetch')) {
@@ -465,7 +465,7 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
             {commentMutation.isPending ? "Đang gửi..." : "Gửi"}
           </Button>
         </DialogFooter>
-        
+
         <style>{`
           /* Hide default dialog close button only for CommentDialog */
           .comment-dialog .dialog-content > button[data-radix-dialog-close],
