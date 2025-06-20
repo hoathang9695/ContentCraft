@@ -166,9 +166,22 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
 
     // Kiểm tra nếu không có người dùng ảo nào khi có externalId
     if (fakeUsers.length === 0) {
+      const getGenderDisplayName = (gender: string) => {
+        switch (gender) {
+          case 'male_adult': return 'Nam trung niên';
+          case 'male_young': return 'Nam thanh niên';
+          case 'male_teen': return 'Nam thiếu niên';
+          case 'female_adult': return 'Nữ trung niên';
+          case 'female_young': return 'Nữ thanh niên';
+          case 'female_teen': return 'Nữ thiếu niên';
+          case 'other': return 'Khác';
+          default: return 'Tất cả giới tính';
+        }
+      };
+
       const errorMessage = allFakeUsers.length === 0 
         ? 'Không tìm thấy người dùng ảo nào. Vui lòng tạo người dùng ảo trước.'
-        : `Không có người dùng ảo nào với giới tính "${selectedGender === 'male' ? 'Nam' : selectedGender === 'female' ? 'Nữ' : 'Khác'}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`;
+        : `Không có người dùng ảo nào với giới tính "${getGenderDisplayName(selectedGender)}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`;
 
       toast({
         title: 'Lỗi',
@@ -317,13 +330,35 @@ export function CommentDialog({ open, onOpenChange, contentId, externalId }: Com
                     ? "Hệ thống sẽ tự động chọn ngẫu nhiên một người dùng ảo khác nhau để gửi mỗi comment" 
                     : selectedGender === 'all' 
                       ? "Không có người dùng ảo nào. Vui lòng tạo người dùng ảo trong phần quản lý."
-                      : `Không có người dùng ảo nào với giới tính "${selectedGender === 'male' ? 'Nam' : selectedGender === 'female' ? 'Nữ' : 'Khác'}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`}
+                      : `Không có người dùng ảo nào với giới tính "${(() => {
+                          switch (selectedGender) {
+                            case 'male_adult': return 'Nam trung niên';
+                            case 'male_young': return 'Nam thanh niên';
+                            case 'male_teen': return 'Nam thiếu niên';
+                            case 'female_adult': return 'Nữ trung niên';
+                            case 'female_young': return 'Nữ thanh niên';
+                            case 'female_teen': return 'Nữ thiếu niên';
+                            case 'other': return 'Khác';
+                            default: return 'Tất cả giới tính';
+                          }
+                        })()}". Hãy chọn giới tính khác hoặc tạo thêm người dùng ảo.`}
                 </p>
                 {fakeUsers.length > 0 && (
                   <p className="mt-1 text-xs">
                     {selectedGender === 'all' 
                       ? `Có tổng cộng ${fakeUsers.length} người dùng ảo có thể sử dụng để gửi comment`
-                      : `Có ${fakeUsers.length} người dùng ảo ${selectedGender === 'male' ? 'nam' : selectedGender === 'female' ? 'nữ' : 'giới tính khác'} có thể sử dụng để gửi comment`}
+                      : `Có ${fakeUsers.length} người dùng ảo ${(() => {
+                          switch (selectedGender) {
+                            case 'male_adult': return 'nam trung niên';
+                            case 'male_young': return 'nam thanh niên';
+                            case 'male_teen': return 'nam thiếu niên';
+                            case 'female_adult': return 'nữ trung niên';
+                            case 'female_young': return 'nữ thanh niên';
+                            case 'female_teen': return 'nữ thiếu niên';
+                            case 'other': return 'giới tính khác';
+                            default: return 'tất cả giới tính';
+                          }
+                        })()} có thể sử dụng để gửi comment`}
                   </p>
                 )}
                 {allFakeUsers.length > 0 && fakeUsers.length === 0 && selectedGender !== 'all' && (
