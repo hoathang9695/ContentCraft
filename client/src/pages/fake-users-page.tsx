@@ -74,7 +74,7 @@ const fakeUserSchema = z.object({
   token: z.string().min(1, "Token là bắt buộc"),
   email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   password: z.string().min(1, "Password là bắt buộc").optional().or(z.literal("")),
-  gender: z.enum(["male", "female", "other"]).default("male"),
+  gender: z.enum(["male_adult", "male_young", "male_teen", "female_adult", "female_young", "female_teen", "other"]).default("male_adult"),
   status: z.enum(["active", "inactive"]).default("active"),
   description: z.string().optional(),
 });
@@ -85,7 +85,7 @@ type FakeUser = {
   token: string;
   email?: string;
   password?: string;
-  gender: "male" | "female" | "other";
+  gender: "male_adult" | "male_young" | "male_teen" | "female_adult" | "female_young" | "female_teen" | "other";
   status: "active" | "inactive";
   description?: string;
   createdAt: string;
@@ -265,7 +265,7 @@ export default function FakeUsersPage() {
 
   // Mutation để cập nhật giới tính người dùng ảo
   const updateGenderMutation = useMutation({
-    mutationFn: async ({ id, gender }: { id: number; gender: "male" | "female" | "other" }) => {
+    mutationFn: async ({ id, gender }: { id: number; gender: "male_adult" | "male_young" | "male_teen" | "female_adult" | "female_young" | "female_teen" | "other" }) => {
       const user = fakeUsers?.find(u => u.id === id);
       if (!user) throw new Error("User not found");
 
@@ -342,7 +342,7 @@ export default function FakeUsersPage() {
         token: user.token,
         email: user.email || "",
         password: user.password || "",
-        gender: user.gender as "male" | "female" | "other",
+        gender: user.gender as "male_adult" | "male_young" | "male_teen" | "female_adult" | "female_young" | "female_teen" | "other",
         status: user.status as "active" | "inactive",
         description: user.description || "",
       });
@@ -701,7 +701,7 @@ export default function FakeUsersPage() {
                         <TableCell>
                           <Select
                             value={user.gender}
-                            onValueChange={(value: "male" | "female" | "other") => {
+                            onValueChange={(value: "male_adult" | "male_young" | "male_teen" | "female_adult" | "female_young" | "female_teen" | "other") => {
                               updateGenderMutation.mutate({ id: user.id, gender: value });
                             }}
                             disabled={updatingUserId === user.id}
@@ -710,8 +710,12 @@ export default function FakeUsersPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="male">Nam</SelectItem>
-                              <SelectItem value="female">Nữ</SelectItem>
+                              <SelectItem value="male_adult">Nam trung niên</SelectItem>
+                              <SelectItem value="male_young">Nam thanh niên</SelectItem>
+                              <SelectItem value="male_teen">Nam thiếu niên</SelectItem>
+                              <SelectItem value="female_adult">Nữ trung niên</SelectItem>
+                              <SelectItem value="female_young">Nữ thanh niên</SelectItem>
+                              <SelectItem value="female_teen">Nữ thiếu niên</SelectItem>
                               <SelectItem value="other">Khác</SelectItem>
                             </SelectContent>
                           </Select>
@@ -901,9 +905,7 @@ export default function FakeUsersPage() {
                   <FormItem>
                     <FormLabel>Token</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nhập token xác thực" {...This code modifies the default gender for the fake user form using react-hook-form.
-
-field} />
+                      <Input placeholder="Nhập token xác thực" {...field} />
                     </FormControl>
                     <FormDescription>
                       Token này được sử dụng để xác thực với hệ thống bên ngoài.
@@ -929,8 +931,12 @@ field} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="male">Nam</SelectItem>
-                        <SelectItem value="female">Nữ</SelectItem>
+                        <SelectItem value="male_adult">Nam trung niên</SelectItem>
+                        <SelectItem value="male_young">Nam thanh niên</SelectItem>
+                        <SelectItem value="male_teen">Nam thiếu niên</SelectItem>
+                        <SelectItem value="female_adult">Nữ trung niên</SelectItem>
+                        <SelectItem value="female_young">Nữ thanh niên</SelectItem>
+                        <SelectItem value="female_teen">Nữ thiếu niên</SelectItem>
                         <SelectItem value="other">Khác</SelectItem>
                       </SelectContent>
                     </Select>
