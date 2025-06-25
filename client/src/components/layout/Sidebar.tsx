@@ -281,18 +281,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <div className={cn("pl-6 ml-2 border-l border-border overflow-hidden transition-all", 
                   isCampaignExpanded ? "max-h-48" : "max-h-0")}>
                   <SidebarItem
-                    href="/campaign/send-notification"
+                    href="/list-noti"
                     icon={Send}
-                    isActive={isActivePath('/campaign/send-notification')}
+                    isActive={isActivePath('/list-noti')}
                     onClick={handleItemClick}
                   >
                     Gửi Noti
                   </SidebarItem>
 
                   <SidebarItem
-                    href="/campaign/email-marketing"
+                    href="/list-email"
                     icon={Mail}
-                    isActive={isActivePath('/campaign/email-marketing')}
+                    isActive={isActivePath('/list-email')}
                     onClick={handleItemClick}
                   >
                     Gửi Email marketing
