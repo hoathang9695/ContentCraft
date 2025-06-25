@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Eye, Edit, Trash2, Send } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, Send, MoreHorizontal } from 'lucide-react';
 import { SendNotificationDialog } from '@/components/SendNotificationDialog';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DataTable } from '@/components/ui/data-table';
@@ -20,6 +20,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 
 interface Notification {
@@ -236,32 +242,40 @@ export function ListNotificationPage() {
     },
     {
       key: 'actions',
-      header: 'Thao tác',
+      header: 'Hành động',
+      className: 'text-right sticky right-0 bg-background',
       render: (row: Notification) => (
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm">
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
-            <Edit className="h-4 w-4" />
-          </Button>
-          {(row.status === 'approved' || row.status === 'draft') && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              title="Chỉ Admin mới có thể gửi thông báo"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          )}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-red-600"
-            onClick={() => openDeleteDialog(row.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Eye className="mr-2 h-4 w-4" />
+                <span>Xem</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Edit className="mr-2 h-4 w-4" />
+                <span>Sửa</span>
+              </DropdownMenuItem>
+              {(row.status === 'approved' || row.status === 'draft') && (
+                <DropdownMenuItem title="Chỉ Admin mới có thể gửi thông báo">
+                  <Send className="mr-2 h-4 w-4" />
+                  <span>Gửi</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem 
+                onClick={() => openDeleteDialog(row.id)}
+                className="text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-950"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Xóa</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
