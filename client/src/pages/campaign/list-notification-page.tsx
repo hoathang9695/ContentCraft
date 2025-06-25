@@ -9,6 +9,18 @@ import { SendNotificationDialog } from '@/components/SendNotificationDialog';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DataTable } from '@/components/ui/data-table';
 import { format } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface Notification {
   id: number;
@@ -37,6 +49,9 @@ export function ListNotificationPage() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [deleteNotificationId, setDeleteNotificationId] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleDialogClose = () => {
     setIsDialogOpen(false);
@@ -75,6 +90,46 @@ export function ListNotificationPage() {
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
+  };
+
+  const handleDeleteNotification = async (id: number) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Thành công",
+          description: "Xóa thông báo thành công",
+        });
+        
+        // Refresh the notifications list
+        fetchNotifications();
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Lỗi",
+          description: errorData.message || "Có lỗi xảy ra khi xóa thông báo",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      toast({
+        title: "Lỗi kết nối",
+        description: "Có lỗi kết nối. Vui lòng thử lại!",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeleteNotificationId(null);
+    }
+  };
+
+  const openDeleteDialog = (id: number) => {
+    setDeleteNotificationId(id);
+    setIsDeleteDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -177,7 +232,12 @@ export function ListNotificationPage() {
               <Send className="h-4 w-4" />
             </Button>
           )}
-          <Button variant="ghost" size="sm" className="text-red-600">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-red-600"
+            onClick={() => openDeleteDialog(row.id)}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -238,6 +298,28 @@ export function ListNotificationPage() {
           open={isDialogOpen} 
           onClose={handleDialogClose}
         />
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xác nhận xóa thông báo</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn có chắc chắn muốn xóa thông báo này? Hành động này không thể hoàn tác.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>
+                Hủy
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteNotificationId && handleDeleteNotification(deleteNotificationId)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Xóa
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
