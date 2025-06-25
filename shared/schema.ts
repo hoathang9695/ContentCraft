@@ -355,3 +355,31 @@ export const insertSavedReportSchema = createInsertSchema(savedReports).omit({
 
 export type InsertSavedReport = z.infer<typeof insertSavedReportSchema>;
 export type SavedReport = typeof savedReports.$inferSelect;
+
+// Bảng thông báo (Notifications)
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  targetAudience: varchar("target_audience", { length: 100 }).notNull().default("all"), // 'all', 'new', 'potential', 'positive', 'non_potential'
+  status: varchar("status", { length: 50 }).notNull().default("draft"), // 'draft', 'approved', 'sent'
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  approvedBy: integer("approved_by").references(() => users.id),
+  sentBy: integer("sent_by").references(() => users.id),
+  sentAt: timestamp("sent_at"),
+  approvedAt: timestamp("approved_at"),
+  recipientCount: integer("recipient_count").default(0),
+  successCount: integer("success_count").default(0),
+  failureCount: integer("failure_count").default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
