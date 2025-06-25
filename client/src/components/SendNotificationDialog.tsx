@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface SendNotificationDialogProps {
   open: boolean;
-  onClose: () => void;
+  onClose: (newNotification?: any) => void;
 }
 
 export function SendNotificationDialog({ open, onClose }: SendNotificationDialogProps) {
@@ -57,14 +57,14 @@ export function SendNotificationDialog({ open, onClose }: SendNotificationDialog
           urgency: 'draft'
         });
 
-        // Close dialog first
-        onClose();
-
         // Show success toast
         toast({
           title: "Thành công",
           description: "Lưu chiến dịch thành công",
         });
+
+        // Close dialog and pass new notification data
+        onClose(result.data);
       } else {
         console.error('❌ Error creating notification:', result);
         toast({
@@ -171,7 +171,7 @@ export function SendNotificationDialog({ open, onClose }: SendNotificationDialog
                 targetAudience: 'all',
                 urgency: 'draft'
               });
-              onClose();
+              onClose(); // Don't pass any data when cancelling
             }}>
               Hủy
             </Button>
