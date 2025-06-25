@@ -92,7 +92,7 @@ const COMMON_VARIABLES = [
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
-export function EmailTemplatesPage() {
+export default function EmailTemplatesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
