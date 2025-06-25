@@ -40,6 +40,7 @@ interface Notification {
   sentAt?: string;
   recipientCount?: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface NotificationData {
@@ -260,7 +261,7 @@ export function ListNotificationPage() {
     },
     {
       key: 'sentAt',
-      header: 'Thời gian',
+      header: 'Thời gian gửi',
       render: (row: Notification) => (
         <div>
           {row.status === 'sent' && row.sentAt ? (
@@ -271,6 +272,24 @@ export function ListNotificationPage() {
           ) : (
             <span className="text-muted-foreground">Chưa gửi</span>
           )}
+        </div>
+      ),
+    },
+    {
+      key: 'createdAt',
+      header: 'Ngày tạo',
+      render: (row: Notification) => (
+        <div className="text-sm">
+          {format(new Date(row.createdAt), 'dd/MM/yyyy HH:mm')}
+        </div>
+      ),
+    },
+    {
+      key: 'updatedAt',
+      header: 'Ngày cập nhật',
+      render: (row: Notification) => (
+        <div className="text-sm">
+          {format(new Date(row.updatedAt), 'dd/MM/yyyy HH:mm')}
         </div>
       ),
     },
