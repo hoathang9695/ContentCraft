@@ -107,18 +107,24 @@ router.post('/notifications', isAuthenticated, async (req, res) => {
   }
 });
 
-// Update notification status
+// Update notification
 router.put('/notifications/:id', isAuthenticated, async (req, res) => {
   try {
     const user = req.user as Express.User;
     const { id } = req.params;
-    const { status, approved_by, sent_by } = req.body;
+    const { title, content, targetAudience, status } = req.body;
 
     const updateData: any = {
-      status,
       updatedAt: new Date()
     };
 
+    // Update basic fields if provided
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (targetAudience !== undefined) updateData.targetAudience = targetAudience;
+    if (status !== undefined) updateData.status = status;
+
+    // Handle status-specific logic
     if (status === 'approved' && user.role === 'admin') {
       updateData.approvedBy = user.id;
       updateData.approvedAt = new Date();
@@ -138,6 +144,8 @@ router.put('/notifications/:id', isAuthenticated, async (req, res) => {
     if (result.length === 0) {
       return res.status(404).json({ message: 'Notification not found' });
     }
+
+    console.log('✅ Notification updated successfully:', result[0]);
 
     res.json({
       message: 'Notification updated successfully',
