@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Eye, Edit, Trash2, Send, MoreHorizontal } from 'lucide-react';
 import { SendNotificationDialog } from '@/components/SendNotificationDialog';
+import { ViewNotificationDialog } from '@/components/ViewNotificationDialog';
+import { EditNotificationDialog } from '@/components/EditNotificationDialog';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DataTable } from '@/components/ui/data-table';
 import { format } from 'date-fns';
@@ -57,6 +59,9 @@ export function ListNotificationPage() {
   const [pageSize, setPageSize] = useState(10);
   const [deleteNotificationId, setDeleteNotificationId] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleDialogClose = (newNotification?: Notification) => {
@@ -160,6 +165,35 @@ export function ListNotificationPage() {
     setIsDeleteDialogOpen(true);
   };
 
+  const openViewDialog = (notification: Notification) => {
+    setSelectedNotification(notification);
+    setIsViewDialogOpen(true);
+  };
+
+  const openEditDialog = (notification: Notification) => {
+    setSelectedNotification(notification);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = (updatedNotification: Notification) => {
+    // Update local state with the updated notification
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === updatedNotification.id ? updatedNotification : notification
+      )
+    );
+    
+    // Update notification data if available
+    if (notificationData) {
+      setNotificationData(prev => ({
+        ...prev!,
+        data: prev!.data.map(notification => 
+          notification.id === updatedNotification.id ? updatedNotification : notification
+        )
+      }));
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
@@ -253,11 +287,11 @@ export function ListNotificationPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openViewDialog(row)}>
                 <Eye className="mr-2 h-4 w-4" />
                 <span>Xem</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openEditDialog(row)}>
                 <Edit className="mr-2 h-4 w-4" />
                 <span>Sửa</span>
               </DropdownMenuItem>
@@ -328,6 +362,19 @@ export function ListNotificationPage() {
         <SendNotificationDialog 
           open={isDialogOpen} 
           onClose={handleDialogClose}
+        />
+
+        <ViewNotificationDialog
+          open={isViewDialogOpen}
+          onOpenChange={setIsViewDialogOpen}
+          notification={selectedNotification}
+        />
+
+        <EditNotificationDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          notification={selectedNotification}
+          onSuccess={handleEditSuccess}
         />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
