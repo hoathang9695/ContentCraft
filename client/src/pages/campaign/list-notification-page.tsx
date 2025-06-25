@@ -287,7 +287,7 @@ export function ListNotificationPage() {
               }}
             />
           </div>
-        </div></div>
+        </div>
 
         <SendNotificationDialog 
           open={isDialogOpen} 
