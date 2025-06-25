@@ -18,7 +18,7 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
     title: '',
     message: '',
     targetAudience: 'all',
-    urgency: 'normal'
+    urgency: 'draft'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -31,7 +31,7 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
       title: '',
       message: '',
       targetAudience: 'all',
-      urgency: 'normal'
+      urgency: 'draft'
     });
   };
 
@@ -93,7 +93,7 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
             </div>
 
             <div className="space-y-2">
-              <Label>Mức độ ưu tiên</Label>
+              <Label>Trạng thái</Label>
               <Select
                 value={formData.urgency}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, urgency: value }))}
@@ -102,10 +102,9 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Thấp</SelectItem>
-                  <SelectItem value="normal">Bình thường</SelectItem>
-                  <SelectItem value="high">Cao</SelectItem>
-                  <SelectItem value="urgent">Khẩn cấp</SelectItem>
+                  <SelectItem value="draft">Nháp</SelectItem>
+                  <SelectItem value="approved">Đã duyệt</SelectItem>
+                  <SelectItem value="sent">Đã gửi</SelectItem>
                 </SelectContent>
               </Select>
             </div>
