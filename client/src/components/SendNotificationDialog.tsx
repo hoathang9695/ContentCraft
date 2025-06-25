@@ -163,7 +163,16 @@ export function SendNotificationDialog({ open, onClose }: SendNotificationDialog
               <Send className="h-4 w-4" />
               Lưu
             </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={() => {
+              // Reset form
+              setFormData({
+                title: '',
+                message: '',
+                targetAudience: 'all',
+                urgency: 'draft'
+              });
+              onClose();
+            }}>
               Hủy
             </Button>
           </div>

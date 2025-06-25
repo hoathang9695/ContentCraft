@@ -53,9 +53,22 @@ export function ListNotificationPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleDialogClose = () => {
+  const handleDialogClose = (newNotification?: Notification) => {
     setIsDialogOpen(false);
-    fetchNotifications();
+    
+    // If a new notification was created, add it to the local state
+    if (newNotification) {
+      setNotifications(prev => [newNotification, ...prev]);
+      
+      // Update notification data if available
+      if (notificationData) {
+        setNotificationData(prev => ({
+          ...prev!,
+          data: [newNotification, ...prev!.data],
+          total: prev!.total + 1
+        }));
+      }
+    }
   };
 
   useEffect(() => {
