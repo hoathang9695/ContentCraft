@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Send } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface SendNotificationDialogProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface SendNotificationDialogProps {
 }
 
 export function SendNotificationDialog({ open, onClose }: SendNotificationDialogProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     title: '',
     message: '',
@@ -55,17 +57,29 @@ export function SendNotificationDialog({ open, onClose }: SendNotificationDialog
           urgency: 'draft'
         });
 
+        // Close dialog first
         onClose();
 
-        // Show success message (you can add toast notification here)
-        alert('Thông báo đã được tạo thành công!');
+        // Show success toast
+        toast({
+          title: "Thành công",
+          description: "Lưu chiến dịch thành công",
+        });
       } else {
         console.error('❌ Error creating notification:', result);
-        alert('Có lỗi xảy ra khi tạo thông báo: ' + (result.message || 'Lỗi không xác định'));
+        toast({
+          title: "Lỗi",
+          description: 'Có lỗi xảy ra khi tạo thông báo: ' + (result.message || 'Lỗi không xác định'),
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('❌ Network error:', error);
-      alert('Có lỗi kết nối. Vui lòng thử lại!');
+      toast({
+        title: "Lỗi kết nối",
+        description: "Có lỗi kết nối. Vui lòng thử lại!",
+        variant: "destructive",
+      });
     }
   };
 
