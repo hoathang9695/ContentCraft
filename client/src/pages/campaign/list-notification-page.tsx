@@ -104,8 +104,17 @@ export function ListNotificationPage() {
           description: "Xóa thông báo thành công",
         });
         
-        // Refresh the notifications list
-        fetchNotifications();
+        // Update local state instead of refetching
+        setNotifications(prev => prev.filter(notification => notification.id !== id));
+        
+        // Update notification data if available
+        if (notificationData) {
+          setNotificationData(prev => ({
+            ...prev!,
+            data: prev!.data.filter(notification => notification.id !== id),
+            total: prev!.total - 1
+          }));
+        }
       } else {
         const errorData = await response.json();
         toast({
