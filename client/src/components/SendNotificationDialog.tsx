@@ -113,7 +113,7 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
           <div className="flex gap-4 pt-4">
             <Button type="submit" className="flex items-center gap-2">
               <Send className="h-4 w-4" />
-              Gửi Thông Báo
+              Lưu
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Hủy

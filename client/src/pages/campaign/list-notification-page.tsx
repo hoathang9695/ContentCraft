@@ -41,7 +41,7 @@ export function ListNotificationPage() {
       message: 'Chúng tôi vừa ra mắt tính năng mới...',
       targetAudience: 'positive',
       urgency: 'low',
-      status: 'scheduled',
+      status: 'approved',
       sentAt: '2024-12-25 09:00:00',
       sentCount: 0
     }
@@ -53,8 +53,8 @@ export function ListNotificationPage() {
         return <Badge variant="default">Đã gửi</Badge>;
       case 'draft':
         return <Badge variant="secondary">Nháp</Badge>;
-      case 'scheduled':
-        return <Badge variant="outline">Đã lên lịch</Badge>;
+      case 'approved':
+        return <Badge variant="outline">Đã duyệt</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -156,8 +156,12 @@ export function ListNotificationPage() {
                         <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        {notification.status === 'draft' && (
-                          <Button variant="ghost" size="sm">
+                        {(notification.status === 'approved' || notification.status === 'draft') && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            title="Chỉ Admin mới có thể gửi thông báo"
+                          >
                             <Send className="h-4 w-4" />
                           </Button>
                         )}
