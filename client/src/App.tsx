@@ -58,13 +58,17 @@ function Router() {
       <ProtectedRoute path="/email-templates" component={EmailTemplatesPage} adminOnly={true} />
 
               {/* Campaign Routes - Admin and Marketing only */}
-              <Route 
+              <ProtectedRoute 
                 path="/campaign/send-notification" 
-                component={ProtectedRoute(SendNotificationPage, ['admin'], ['Marketing'])} 
+                component={SendNotificationPage} 
+                allowedRoles={['admin']} 
+                allowedDepartments={['Marketing']} 
               />
-              <Route 
+              <ProtectedRoute 
                 path="/campaign/email-marketing" 
-                component={ProtectedRoute(EmailMarketingPage, ['admin'], ['Marketing'])} 
+                component={EmailMarketingPage} 
+                allowedRoles={['admin']} 
+                allowedDepartments={['Marketing']} 
               />
     </Switch>
   );
