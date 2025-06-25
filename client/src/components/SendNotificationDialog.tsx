@@ -9,10 +9,10 @@ import { Send } from 'lucide-react';
 
 interface SendNotificationDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
 }
 
-export function SendNotificationDialog({ open, onOpenChange }: SendNotificationDialogProps) {
+export function SendNotificationDialog({ open, onClose }: SendNotificationDialogProps) {
   const [formData, setFormData] = useState({
     title: '',
     message: '',
@@ -42,8 +42,9 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
         body: JSON.stringify(notificationData),
       });
 
+      const result = await response.json();
+
       if (response.ok) {
-        const result = await response.json();
         console.log('✅ Notification created successfully:', result);
 
         // Reset form
@@ -54,14 +55,13 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
           urgency: 'draft'
         });
 
-        onOpenChange(false);
+        onClose();
 
         // Show success message (you can add toast notification here)
         alert('Thông báo đã được tạo thành công!');
       } else {
-        const error = await response.json();
-        console.error('❌ Error creating notification:', error);
-        alert('Có lỗi xảy ra khi tạo thông báo: ' + error.message);
+        console.error('❌ Error creating notification:', result);
+        alert('Có lỗi xảy ra khi tạo thông báo: ' + (result.message || 'Lỗi không xác định'));
       }
     } catch (error) {
       console.error('❌ Network error:', error);
@@ -70,7 +70,7 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
               <Send className="h-4 w-4" />
               Lưu
             </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Hủy
             </Button>
           </div>

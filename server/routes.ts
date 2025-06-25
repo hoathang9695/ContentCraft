@@ -2947,6 +2947,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { tickRouter } = await import("./routes/tick.router");
   app.use("/api", tickRouter);
 
+  // Import and mount notifications router
+  const { notificationsRouter } = await import("./routes/notifications.router");
+  app.use("/api", notificationsRouter);
+
   // Support requests routes
   app.get(
     "/api/support-requests",
