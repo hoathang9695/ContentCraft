@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Eye, Edit, Trash2, Send, BarChart3 } from 'lucide-react';
 import { EmailMarketingDialog } from '@/components/EmailMarketingDialog';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 export function ListEmailPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,11 +111,12 @@ export function ListEmailPage() {
   );
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Danh Sách Email Marketing</h1>
-        <p className="text-muted-foreground">Quản lý tất cả email marketing đã gửi và đang soạn thảo</p>
-      </div>
+    <DashboardLayout>
+      <div className="container mx-auto p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">Danh Sách Email Marketing</h1>
+          <p className="text-muted-foreground">Quản lý tất cả email marketing đã gửi và đang soạn thảo</p>
+        </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
@@ -244,9 +246,10 @@ export function ListEmailPage() {
       </Card>
 
       <EmailMarketingDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen}
-      />
-    </div>
+          open={isDialogOpen} 
+          onOpenChange={setIsDialogOpen}
+        />
+      </div>
+    </DashboardLayout>
   );
 }

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Eye, Edit, Trash2, Send } from 'lucide-react';
 import { SendNotificationDialog } from '@/components/SendNotificationDialog';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 export function ListNotificationPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,11 +81,12 @@ export function ListNotificationPage() {
   );
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Danh Sách Thông Báo</h1>
-        <p className="text-muted-foreground">Quản lý tất cả thông báo đã gửi và đang soạn thảo</p>
-      </div>
+    <DashboardLayout>
+      <div className="container mx-auto p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">Danh Sách Thông Báo</h1>
+          <p className="text-muted-foreground">Quản lý tất cả thông báo đã gửi và đang soạn thảo</p>
+        </div>
 
       <Card>
         <CardHeader>
@@ -172,9 +174,10 @@ export function ListNotificationPage() {
       </Card>
 
       <SendNotificationDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen}
-      />
-    </div>
+          open={isDialogOpen} 
+          onOpenChange={setIsDialogOpen}
+        />
+      </div>
+    </DashboardLayout>
   );
 }
