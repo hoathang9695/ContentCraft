@@ -24,7 +24,10 @@ import VerificationPage from "@/pages/user-feedback/verification-page";
 import TickPage from "@/pages/user-feedback/tick-page";
 import RealUserPage from "@/pages/real-user-page";
 import SettingsPage from "@/pages/settings-page";
-import EmailTemplatesPage from "./pages/email-templates-page";
+import { UserActivitiesPage } from '@/pages/user-activities-page';
+import { EmailTemplatesPage } from '@/pages/email-templates-page';
+import { SendNotificationPage } from '@/pages/campaign/send-notification-page';
+import { EmailMarketingPage } from '@/pages/campaign/email-marketing-page';
 import FeedbackPage from "@/pages/user-feedback/feedback-page";
 import ReportManagementPage from "@/pages/report-management-page";
 import ReviewReportsPage from "@/pages/review-reports-page";
@@ -53,8 +56,17 @@ function Router() {
       <Route path="/user-feedback/feedback" component={FeedbackPage} />
       <Route path="/real-user" component={RealUserPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} adminOnly={true} />
-      <ProtectedRoute path="/email-templates" component={EmailTemplatesPage} adminOnly={true} />
-      <Route component={NotFound} />
+      <Route path="/email-templates" component={ProtectedRoute(EmailTemplatesPage, ['admin'])} />
+
+              {/* Campaign Routes - Admin and Marketing only */}
+              <Route 
+                path="/campaign/send-notification" 
+                component={ProtectedRoute(SendNotificationPage, ['admin'], ['Marketing'])} 
+              />
+              <Route 
+                path="/campaign/email-marketing" 
+                component={ProtectedRoute(EmailMarketingPage, ['admin'], ['Marketing'])} 
+              />
     </Switch>
   );
 }

@@ -13,7 +13,10 @@ import {
   UserCog,
   HelpCircle,
   ShieldCheck,
-  BadgeCheck
+  BadgeCheck,
+  Megaphone,
+  Mail,
+  Send
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -76,8 +79,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isCampaignExpanded, setIsCampaignExpanded] = useState(false);
 
   const isAdmin = user?.role === 'admin';
+  const isMarketing = user?.department === 'Marketing';
+  const canAccessCampaign = isAdmin || isMarketing;
 
   // Use WebSocket for real-time badge updates with localStorage persistence
   const { badgeCounts, isConnected, hasInitialData } = useWebSocket();
@@ -252,6 +258,48 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </SidebarItem>
               </div>
             </div>
+
+            {canAccessCampaign && (
+              <div>
+                <div className="relative">
+                  <SidebarItem
+                    href="/campaign"
+                    icon={Megaphone}
+                    isActive={isActivePath('/campaign')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsCampaignExpanded(!isCampaignExpanded);
+                    }}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>Chiến dịch</span>
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", isCampaignExpanded ? "transform rotate-180" : "")} />
+                    </div>
+                  </SidebarItem>
+                </div>
+
+                <div className={cn("pl-6 ml-2 border-l border-border overflow-hidden transition-all", 
+                  isCampaignExpanded ? "max-h-48" : "max-h-0")}>
+                  <SidebarItem
+                    href="/campaign/send-notification"
+                    icon={Send}
+                    isActive={isActivePath('/campaign/send-notification')}
+                    onClick={handleItemClick}
+                  >
+                    Gửi Noti
+                  </SidebarItem>
+
+                  <SidebarItem
+                    href="/campaign/email-marketing"
+                    icon={Mail}
+                    isActive={isActivePath('/campaign/email-marketing')}
+                    onClick={handleItemClick}
+                  >
+                    Gửi Email marketing
+                  </SidebarItem>
+                </div>
+              </div>
+            )}
 
             {isAdmin && (
               <>
