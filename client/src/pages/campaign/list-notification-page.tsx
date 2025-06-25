@@ -29,10 +29,12 @@ export function ListNotificationPage() {
     try {
       // Replace with your actual API endpoint
       const response = await fetch('/api/notifications');
-      const data = await response.json();
-      setNotifications(data);
+      const result = await response.json();
+      // API trả về { data: [...], total, totalPages, currentPage }
+      setNotifications(result.data || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
