@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -248,51 +248,46 @@ export function ListNotificationPage() {
   return (
     <DashboardLayout>
       <div className="container mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Danh Sách Thông Báo</CardTitle>
-              </div>
-              <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Tạo Thông Báo Mới
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="relative w-72">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Tìm kiếm thông báo..."
-                    value={searchTerm}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-              </div>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold tracking-tight">Danh Sách Thông Báo</h1>
+            <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Tạo Thông Báo Mới
+            </Button>
+          </div>
 
-              <DataTable
-                data={notifications}
-                columns={columns}
-                isLoading={loading}
-                pagination={{
-                  currentPage: notificationData?.currentPage || 1,
-                  totalPages: notificationData?.totalPages || 1,
-                  total: notificationData?.total || 0,
-                  pageSize: pageSize,
-                  onPageChange: setCurrentPage,
-                  onPageSizeChange: (newSize) => {
-                    setPageSize(newSize);
-                    setCurrentPage(1);
-                  }
-                }}
+          <div className="flex justify-between items-center">
+            <div className="relative w-72">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm thông báo..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-8"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="bg-card rounded-lg shadow">
+            <DataTable
+              data={notifications}
+              columns={columns}
+              isLoading={loading}
+              pagination={{
+                currentPage: notificationData?.currentPage || 1,
+                totalPages: notificationData?.totalPages || 1,
+                total: notificationData?.total || 0,
+                pageSize: pageSize,
+                onPageChange: setCurrentPage,
+                onPageSizeChange: (newSize) => {
+                  setPageSize(newSize);
+                  setCurrentPage(1);
+                }
+              }}
+            />
+          </div>
+        </div></div>
 
         <SendNotificationDialog 
           open={isDialogOpen} 
