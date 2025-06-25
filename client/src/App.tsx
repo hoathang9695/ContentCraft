@@ -24,7 +24,7 @@ import VerificationPage from "@/pages/user-feedback/verification-page";
 import TickPage from "@/pages/user-feedback/tick-page";
 import RealUserPage from "@/pages/real-user-page";
 import SettingsPage from "@/pages/settings-page";
-import { EmailTemplatesPage } from '@/pages/email-templates-page';
+import EmailTemplatesPage from '@/pages/email-templates-page';
 import { SendNotificationPage } from '@/pages/campaign/send-notification-page';
 import { EmailMarketingPage } from '@/pages/campaign/email-marketing-page';
 import FeedbackPage from "@/pages/user-feedback/feedback-page";
