@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,40 +11,32 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 export function ListNotificationPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - replace with actual API call
-  const notifications = [
-    {
-      id: 1,
-      title: 'Thông báo bảo trì hệ thống',
-      message: 'Hệ thống sẽ được bảo trì vào ngày 25/12/2024...',
-      targetAudience: 'all',
-      urgency: 'normal',
-      status: 'sent',
-      sentAt: '2024-12-20 10:30:00',
-      sentCount: 1234
-    },
-    {
-      id: 2,
-      title: 'Khuyến mãi cuối năm',
-      message: 'Giảm giá đến 50% cho tất cả sản phẩm...',
-      targetAudience: 'potential',
-      urgency: 'high',
-      status: 'draft',
-      sentAt: null,
-      sentCount: 0
-    },
-    {
-      id: 3,
-      title: 'Cập nhật tính năng mới',
-      message: 'Chúng tôi vừa ra mắt tính năng mới...',
-      targetAudience: 'positive',
-      urgency: 'low',
-      status: 'approved',
-      sentAt: '2024-12-25 09:00:00',
-      sentCount: 0
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    // Refresh data when dialog closes (after creating new notification)
+    fetchNotifications();
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      // Replace with your actual API endpoint
+      const response = await fetch('/api/notifications');
+      const data = await response.json();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -77,7 +68,7 @@ export function ListNotificationPage() {
 
   const filteredNotifications = notifications.filter(notification =>
     notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    notification.message.toLowerCase().includes(searchTerm.toLowerCase())
+    notification.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -117,61 +108,77 @@ export function ListNotificationPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tiêu đề</TableHead>
+                  <TableHead>Nội dung</TableHead>
                   <TableHead>Đối tượng</TableHead>
                   <TableHead>Mức độ</TableHead>
                   <TableHead>Trạng thái</TableHead>
-                  <TableHead>Số lượt gửi</TableHead>
                   <TableHead>Thời gian</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredNotifications.map((notification) => (
-                  <TableRow key={notification.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{notification.title}</div>
-                        <div className="text-sm text-muted-foreground truncate max-w-xs">
-                          {notification.message}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {notification.targetAudience === 'all' ? 'Tất cả' :
-                       notification.targetAudience === 'new' ? 'Mới' :
-                       notification.targetAudience === 'potential' ? 'Tiềm năng' :
-                       notification.targetAudience === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
-                    </TableCell>
-                    <TableCell>{getUrgencyBadge(notification.urgency)}</TableCell>
-                    <TableCell>{getStatusBadge(notification.status)}</TableCell>
-                    <TableCell>{notification.sentCount.toLocaleString()}</TableCell>
-                    <TableCell>
-                      {notification.sentAt ? notification.sentAt : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        {(notification.status === 'approved' || notification.status === 'draft') && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            title="Chỉ Admin mới có thể gửi thông báo"
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      Đang tải dữ liệu...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : notifications.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      Chưa có thông báo nào
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  notifications.map((notification) => (
+                    <TableRow key={notification.id}>
+                      <TableCell className="font-medium">{notification.title}</TableCell>
+                      <TableCell>
+                        <div className="max-w-xs truncate">{notification.content}</div>
+                      </TableCell>
+                      <TableCell>
+                        {notification.targetAudience === 'all' ? 'Tất cả' :
+                         notification.targetAudience === 'new' ? 'Mới' :
+                         notification.targetAudience === 'potential' ? 'Tiềm năng' :
+                         notification.targetAudience === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
+                      </TableCell>
+                      <TableCell>{getUrgencyBadge(notification.status)}</TableCell>
+                      <TableCell>{getStatusBadge(notification.status)}</TableCell>
+                      <TableCell>
+                        {notification.status === 'sent' ? (
+                          <div>
+                            <div className="text-sm">{new Date(notification.sentAt).toLocaleString('vi-VN')}</div>
+                            <div className="text-xs text-muted-foreground">{notification.recipientCount || 0} người nhận</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Chưa gửi</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {(notification.status === 'approved' || notification.status === 'draft') && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              title="Chỉ Admin mới có thể gửi thông báo"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" className="text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -179,9 +186,9 @@ export function ListNotificationPage() {
       </Card>
 
       <SendNotificationDialog 
-          open={isDialogOpen} 
-          onOpenChange={setIsDialogOpen}
-        />
+        open={isDialogOpen} 
+        onClose={handleDialogClose}
+      />
       </div>
     </DashboardLayout>
   );

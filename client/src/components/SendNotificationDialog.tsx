@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,18 +20,53 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
     urgency: 'draft'
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement notification sending logic
-    console.log('Sending notification:', formData);
-    onOpenChange(false);
-    // Reset form
-    setFormData({
-      title: '',
-      message: '',
-      targetAudience: 'all',
-      urgency: 'draft'
-    });
+
+    const notificationData = {
+      title: formData.title,
+      message: formData.message,
+      targetAudience: formData.targetAudience,
+      urgency: formData.urgency
+    };
+
+    console.log('Sending notification:', notificationData);
+
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(notificationData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Notification created successfully:', result);
+
+        // Reset form
+        setFormData({
+          title: '',
+          message: '',
+          targetAudience: 'all',
+          urgency: 'draft'
+        });
+
+        onOpenChange(false);
+
+        // Show success message (you can add toast notification here)
+        alert('Thông báo đã được tạo thành công!');
+      } else {
+        const error = await response.json();
+        console.error('❌ Error creating notification:', error);
+        alert('Có lỗi xảy ra khi tạo thông báo: ' + error.message);
+      }
+    } catch (error) {
+      console.error('❌ Network error:', error);
+      alert('Có lỗi kết nối. Vui lòng thử lại!');
+    }
   };
 
   return (
@@ -47,7 +81,7 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
             Điền thông tin để tạo và gửi thông báo đến người dùng
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Tiêu đề thông báo</Label>
