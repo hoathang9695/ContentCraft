@@ -29,7 +29,7 @@ export function ListNotificationPage() {
       id: 2,
       title: 'Khuyến mãi cuối năm',
       message: 'Giảm giá đến 50% cho tất cả sản phẩm...',
-      targetAudience: 'premium',
+      targetAudience: 'potential',
       urgency: 'high',
       status: 'draft',
       sentAt: null,
@@ -39,7 +39,7 @@ export function ListNotificationPage() {
       id: 3,
       title: 'Cập nhật tính năng mới',
       message: 'Chúng tôi vừa ra mắt tính năng mới...',
-      targetAudience: 'active',
+      targetAudience: 'positive',
       urgency: 'low',
       status: 'scheduled',
       sentAt: '2024-12-25 09:00:00',
@@ -138,8 +138,9 @@ export function ListNotificationPage() {
                     </TableCell>
                     <TableCell>
                       {notification.targetAudience === 'all' ? 'Tất cả' :
-                       notification.targetAudience === 'premium' ? 'Premium' :
-                       notification.targetAudience === 'active' ? 'Hoạt động' : 'Mới'}
+                       notification.targetAudience === 'new' ? 'Mới' :
+                       notification.targetAudience === 'potential' ? 'Tiềm năng' :
+                       notification.targetAudience === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
                     </TableCell>
                     <TableCell>{getUrgencyBadge(notification.urgency)}</TableCell>
                     <TableCell>{getStatusBadge(notification.status)}</TableCell>

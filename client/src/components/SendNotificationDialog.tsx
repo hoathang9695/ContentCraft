@@ -83,10 +83,11 @@ export function SendNotificationDialog({ open, onOpenChange }: SendNotificationD
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả người dùng</SelectItem>
-                  <SelectItem value="active">Người dùng hoạt động</SelectItem>
-                  <SelectItem value="new">Người dùng mới</SelectItem>
-                  <SelectItem value="premium">Người dùng Premium</SelectItem>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="new">Mới</SelectItem>
+                  <SelectItem value="potential">Tiềm năng</SelectItem>
+                  <SelectItem value="positive">Tích cực</SelectItem>
+                  <SelectItem value="non_potential">Không tiềm năng</SelectItem>
                 </SelectContent>
               </Select>
             </div>
