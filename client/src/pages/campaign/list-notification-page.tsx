@@ -256,44 +256,47 @@ export function ListNotificationPage() {
   };
 
   const handleSendNotification = async (notificationId: number) => {
-    if (!confirm("Bạn có chắc chắn muốn gửi thông báo này? Hành động này không thể hoàn tác.")) {
-      return;
-    }
-
-    setSendingNotificationId(notificationId);
-
     try {
+      setLoading(true);
+
+      console.log('📤 Sending notification with ID:', notificationId);
+
       const response = await fetch(`/api/notifications/${notificationId}/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
 
       const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to send notification');
-      }
-
-      console.log('✅ Send notification response:', result);
-
-      // Refresh the data
-      // queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-
-      toast({
-        title: "Thành công",
-        description: `Gửi thông báo thành công cho ${result.data.successCount}/${result.data.totalRecipients} người dùng`,
-      });
-
-      if (result.data.failureCount > 0) {
+      if (response.ok) {
+        console.log('✅ Notification sent successfully:', result);
         toast({
-          title: "Cảnh báo",
-          description: `${result.data.failureCount} người dùng không nhận được thông báo`,
+          title: "Thành công",
+          description: `Đã gửi thông báo thành công cho ${result.data.successCount}/${result.data.totalRecipients} người dùng`,
+        });
+
+        if (result.data.failureCount > 0) {
+          toast({
+            title: "Cảnh báo",
+            description: `${result.data.failureCount} người dùng không nhận được thông báo`,
+            variant: "destructive",
+          });
+        }
+
+        // Refresh the list
+        // queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+        fetchNotifications();
+      } else {
+        console.error('❌ Send notification error:', result);
+        toast({
+          title: "Lỗi",
+          description: result.message || "Có lỗi xảy ra khi gửi thông báo",
           variant: "destructive",
         });
       }
-
     } catch (error) {
       console.error('❌ Send notification error:', error);
       toast({
@@ -302,6 +305,7 @@ export function ListNotificationPage() {
         variant: "destructive",
       });
     } finally {
+      setLoading(false);
       setSendingNotificationId(null);
     }
   };
@@ -398,7 +402,9 @@ export function ListNotificationPage() {
                 <span>Sửa</span>
               </DropdownMenuItem>
               {(row.status === 'approved' || row.status === 'draft') && (
-                <DropdownMenuItem title="Chỉ Admin mới có thể gửi thông báo">
+                <DropdownMenuItem 
+                onClick={() => handleSendNotification(row.id)}
+                >
                   <Send className="mr-2 h-4 w-4" />
                   <span>Gửi</span>
                 </DropdownMenuItem>

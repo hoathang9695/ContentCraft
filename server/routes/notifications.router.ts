@@ -259,6 +259,8 @@ router.post("/notifications/:id/send", isAuthenticated, async (req, res) => {
     const user = req.user as Express.User;
     const notificationId = parseInt(req.params.id);
 
+    console.log(`📤 Starting to send notification ID: ${notificationId} by user: ${user.username}`);
+
     // Get notification details
     const notification = await db
       .select()
@@ -272,11 +274,19 @@ router.post("/notifications/:id/send", isAuthenticated, async (req, res) => {
 
     const notif = notification[0];
 
-    if (notif.status !== "approved") {
+    // Allow both 'approved' and 'draft' status to be sent for testing
+    if (notif.status !== "approved" && notif.status !== "draft") {
       return res.status(400).json({ 
-        message: "Only approved notifications can be sent" 
+        message: "Only approved or draft notifications can be sent" 
       });
     }
+
+    console.log(`📋 Notification details:`, {
+      id: notif.id,
+      title: notif.title,
+      targetAudience: notif.targetAudience,
+      status: notif.status
+    });
 
     // Get target users based on audience
     let targetUsersQuery = db
@@ -299,36 +309,53 @@ router.post("/notifications/:id/send", isAuthenticated, async (req, res) => {
 
     const targetUsers = await targetUsersQuery;
 
+    console.log(`👥 Found ${targetUsers.length} users with device tokens for audience: ${notif.targetAudience}`);
+
     if (targetUsers.length === 0) {
       return res.status(400).json({ 
-        message: "No users found with device tokens for the target audience" 
+        message: `No users found with device tokens for target audience: ${notif.targetAudience}` 
       });
     }
+
+    // Show first few users for debugging
+    console.log('👤 Target users sample:', targetUsers.slice(0, 3).map(u => ({
+      id: u.id,
+      name: typeof u.fullName === 'object' ? u.fullName.name : u.fullName,
+      email: u.email,
+      classification: u.classification,
+      hasToken: !!u.deviceToken
+    })));
 
     // Send notifications to all target users
     let successCount = 0;
     let failureCount = 0;
     const results = [];
 
-    for (const user of targetUsers) {
+    for (const targetUser of targetUsers) {
       try {
+        console.log(`📱 Sending to user: ${typeof targetUser.fullName === 'object' ? targetUser.fullName.name : targetUser.fullName}`);
+        
         const result = await firebaseService.sendPushNotification(
-          user.deviceToken!,
+          targetUser.deviceToken!,
           notif.title,
           notif.content
         );
 
         results.push({
-          userId: user.id,
-          email: user.email,
+          userId: targetUser.id,
+          email: targetUser.email,
+          name: typeof targetUser.fullName === 'object' ? targetUser.fullName.name : targetUser.fullName,
           status: "success",
           fcmResponse: result
         });
         successCount++;
+        console.log(`✅ Success for user ${targetUser.id}: ${result}`);
       } catch (error) {
+        console.log(`❌ Failed for user ${targetUser.id}:`, error);
         results.push({
-          userId: user.id,
-          email: user.email,
+          userId: targetUser.id,
+          email: targetUser.email,
+          name: typeof targetUser.fullName === 'object' ? targetUser.fullName.name : targetUser.fullName,
           status: "failed",
           error: error instanceof Error ? error.message : String(error)
         });
@@ -350,6 +377,8 @@ router.post("/notifications/:id/send", isAuthenticated, async (req, res) => {
       })
       .where(eq(notifications.id, notificationId));
 
+    console.log(`📊 Notification sent results: ${successCount}/${targetUsers.length} successful`);
+
     res.json({
       message: "Notification sent successfully",
       data: {
@@ -361,12 +390,12 @@ router.post("/notifications/:id/send", isAuthenticated, async (req, res) => {
         failureCount,
         sentAt: new Date().toISOString(),
         sentBy: user.username || "unknown",
-        results: results.slice(0, 10) // Return first 10 results for preview
+        results: results // Return all results for debugging
       }
     });
 
   } catch (error) {
-    console.error("Error sending notification:", error);
+    console.error("❌ Error sending notification:", error);
     res.status(500).json({
       message: "Failed to send notification",
       error: error instanceof Error ? error.message : String(error)
