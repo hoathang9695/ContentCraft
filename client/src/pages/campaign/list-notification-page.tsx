@@ -8,6 +8,7 @@ import { Search, Plus, Eye, Edit, Trash2, Send, MoreHorizontal } from 'lucide-re
 import { SendNotificationDialog } from '@/components/SendNotificationDialog';
 import { ViewNotificationDialog } from '@/components/ViewNotificationDialog';
 import { EditNotificationDialog } from '@/components/EditNotificationDialog';
+import { TestNotificationDialog } from '@/components/TestNotificationDialog';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DataTable } from '@/components/ui/data-table';
 import { format } from 'date-fns';
@@ -63,6 +64,7 @@ export function ListNotificationPage() {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleDialogClose = (newNotification?: Notification) => {
@@ -340,10 +342,20 @@ export function ListNotificationPage() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold tracking-tight">Danh Sách Thông Báo</h1>
-            <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Tạo Thông Báo Mới
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setIsTestDialogOpen(true)} 
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                <Send className="h-4 w-4" />
+                Test noti
+              </Button>
+              <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Tạo Thông Báo Mới
+              </Button>
+            </div>
           </div>
 
           <div className="flex justify-between items-center">
@@ -394,6 +406,11 @@ export function ListNotificationPage() {
           onOpenChange={setIsEditDialogOpen}
           notification={selectedNotification}
           onSuccess={handleEditSuccess}
+        />
+
+        <TestNotificationDialog
+          open={isTestDialogOpen}
+          onOpenChange={setIsTestDialogOpen}
         />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

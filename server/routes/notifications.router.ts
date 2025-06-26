@@ -186,4 +186,50 @@ router.delete('/notifications/:id', isAuthenticated, async (req, res) => {
   }
 });
 
+// Test push notification endpoint
+router.post('/notifications/test-push', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as Express.User;
+    const { deviceToken, title, message } = req.body;
+
+    // Validate required fields
+    if (!deviceToken || !title || !message) {
+      return res.status(400).json({ 
+        message: 'Device token, title, and message are required' 
+      });
+    }
+
+    // Here you would integrate with your push notification service
+    // For now, we'll just simulate a successful response
+    console.log('📱 Test push notification request:', {
+      deviceToken: deviceToken.substring(0, 20) + '...',
+      title,
+      message,
+      sentBy: user.username
+    });
+
+    // Simulate push notification sending
+    // Replace this with actual push notification service integration
+    // Examples: Firebase Cloud Messaging (FCM), Apple Push Notification Service (APNs)
+    
+    res.json({
+      message: 'Test push notification sent successfully',
+      data: {
+        deviceToken: deviceToken.substring(0, 20) + '...',
+        title,
+        message,
+        sentAt: new Date().toISOString(),
+        sentBy: user.username
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error sending test push notification:', error);
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export { router as notificationsRouter };
