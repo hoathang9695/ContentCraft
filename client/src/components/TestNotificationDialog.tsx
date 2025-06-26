@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -43,9 +42,10 @@ export function TestNotificationDialog({ open, onOpenChange }: TestNotificationD
       const result = await response.json();
 
       if (response.ok) {
+        console.log('✅ Test notification response:', result);
         toast({
           title: "Thành công",
-          description: "Gửi push notification thành công",
+          description: `${result.message}${result.data?.fcmResponse ? ` (FCM ID: ${result.data.fcmResponse.substring(0, 10)}...)` : ''}`,
         });
 
         // Reset form
@@ -57,6 +57,7 @@ export function TestNotificationDialog({ open, onOpenChange }: TestNotificationD
 
         onOpenChange(false);
       } else {
+        console.error('❌ Test notification error:', result);
         toast({
           title: "Lỗi",
           description: result.message || "Có lỗi xảy ra khi gửi push notification",
