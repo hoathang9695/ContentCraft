@@ -1,9 +1,9 @@
-
 import { Router } from 'express';
 import { db } from '../db';
-import { notifications } from '@shared/schema';
-import { desc, eq, and, gte, lte, sql } from 'drizzle-orm';
+import { notifications, realUsers } from '@shared/schema';
+import { desc, eq, and, gte, lte, sql, isNotNull } from 'drizzle-orm';
 import { isAuthenticated } from '../middleware/auth';
+import { firebaseService } from '../firebase-service';
 
 const router = Router();
 
@@ -206,15 +206,12 @@ router.post('/notifications/test-push', isAuthenticated, async (req, res) => {
       sentBy: user.username
     });
 
-    // Import Firebase service
-    const { firebaseService } = await import('../firebase-service');
-
     try {
       // Send actual push notification via Firebase FCM
       const response = await firebaseService.sendPushNotification(deviceToken, title, message);
-      
+
       console.log('✅ Firebase FCM response:', response);
-      
+
       res.json({
         message: 'Test push notification sent successfully via Firebase FCM',
         data: {
@@ -229,7 +226,7 @@ router.post('/notifications/test-push', isAuthenticated, async (req, res) => {
 
     } catch (fcmError) {
       console.error('❌ Firebase FCM Error:', fcmError);
-      
+
       // Check if it's a token validation error
       if (fcmError instanceof Error) {
         if (fcmError.message.includes('registration-token-not-registered') || 
@@ -252,6 +249,127 @@ router.post('/notifications/test-push', isAuthenticated, async (req, res) => {
     res.status(500).json({ 
       message: 'Internal server error',
       error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Send notification to target audience
+router.post("/notifications/:id/send", isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user as Express.User;
+    const notificationId = parseInt(req.params.id);
+
+    // Get notification details
+    const notification = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, notificationId))
+      .limit(1);
+
+    if (notification.length === 0) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    const notif = notification[0];
+
+    if (notif.status !== "approved") {
+      return res.status(400).json({ 
+        message: "Only approved notifications can be sent" 
+      });
+    }
+
+    // Get target users based on audience
+    let targetUsersQuery = db
+      .select({
+        id: realUsers.id,
+        deviceToken: realUsers.deviceToken,
+        fullName: realUsers.fullName,
+        email: realUsers.email,
+        classification: realUsers.classification
+      })
+      .from(realUsers)
+      .where(isNotNull(realUsers.deviceToken));
+
+    // Filter by target audience
+    if (notif.targetAudience !== "all") {
+      targetUsersQuery = targetUsersQuery.where(
+        eq(realUsers.classification, notif.targetAudience)
+      );
+    }
+
+    const targetUsers = await targetUsersQuery;
+
+    if (targetUsers.length === 0) {
+      return res.status(400).json({ 
+        message: "No users found with device tokens for the target audience" 
+      });
+    }
+
+    // Send notifications to all target users
+    let successCount = 0;
+    let failureCount = 0;
+    const results = [];
+
+    for (const user of targetUsers) {
+      try {
+        const result = await firebaseService.sendPushNotification(
+          user.deviceToken!,
+          notif.title,
+          notif.content
+        );
+
+        results.push({
+          userId: user.id,
+          email: user.email,
+          status: "success",
+          fcmResponse: result
+        });
+        successCount++;
+      } catch (error) {
+        results.push({
+          userId: user.id,
+          email: user.email,
+          status: "failed",
+          error: error instanceof Error ? error.message : String(error)
+        });
+        failureCount++;
+      }
+    }
+
+    // Update notification status
+    await db
+      .update(notifications)
+      .set({
+        status: "sent",
+        sentBy: user.id,
+        sentAt: new Date(),
+        recipientCount: targetUsers.length,
+        successCount,
+        failureCount,
+        updatedAt: new Date()
+      })
+      .where(eq(notifications.id, notificationId));
+
+    res.json({
+      message: "Notification sent successfully",
+      data: {
+        notificationId,
+        title: notif.title,
+        targetAudience: notif.targetAudience,
+        totalRecipients: targetUsers.length,
+        successCount,
+        failureCount,
+        sentAt: new Date().toISOString(),
+        sentBy: user.username || "unknown",
+        results: results.slice(0, 10) // Return first 10 results for preview
+      }
+    });
+
+  } catch (error) {
+    console.error("Error sending notification:", error);
+    res.status(500).json({
+      message: "Failed to send notification",
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -65,15 +64,16 @@ export function ListNotificationPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+  const [sendingNotificationId, setSendingNotificationId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const handleDialogClose = (newNotification?: Notification) => {
     setIsDialogOpen(false);
-    
+
     // If a new notification was created, add it to the local state
     if (newNotification) {
       setNotifications(prev => [newNotification, ...prev]);
-      
+
       // Update notification data if available
       if (notificationData) {
         setNotificationData(prev => ({
@@ -103,7 +103,7 @@ export function ListNotificationPage() {
 
       const response = await fetch(`/api/notifications?${params}`);
       const result = await response.json();
-      
+
       setNotificationData(result);
       setNotifications(result.data || []);
     } catch (error) {
@@ -130,10 +130,10 @@ export function ListNotificationPage() {
           title: "Thành công",
           description: "Xóa thông báo thành công",
         });
-        
+
         // Update local state instead of refetching
         setNotifications(prev => prev.filter(notification => notification.id !== id));
-        
+
         // Update notification data if available
         if (notificationData) {
           setNotificationData(prev => ({
@@ -185,7 +185,7 @@ export function ListNotificationPage() {
         notification.id === updatedNotification.id ? updatedNotification : notification
       )
     );
-    
+
     // Update notification data if available
     if (notificationData) {
       setNotificationData(prev => ({
@@ -222,6 +222,87 @@ export function ListNotificationPage() {
         return <Badge variant="secondary">Thấp</Badge>;
       default:
         return <Badge variant="secondary">{urgency}</Badge>;
+    }
+  };
+
+  const handleUpdateNotification = async (id: number, data: Partial<Notification>) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update notification');
+      }
+
+      // Refresh the data
+      // queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      toast({
+        title: "Thành công",
+        description: "Cập nhật thông báo thành công",
+      });
+    } catch (error) {
+      console.error('Error updating notification:', error);
+      toast({
+        title: "Lỗi",
+        description: "Có lỗi xảy ra khi cập nhật thông báo",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendNotification = async (notificationId: number) => {
+    if (!confirm("Bạn có chắc chắn muốn gửi thông báo này? Hành động này không thể hoàn tác.")) {
+      return;
+    }
+
+    setSendingNotificationId(notificationId);
+
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to send notification');
+      }
+
+      console.log('✅ Send notification response:', result);
+
+      // Refresh the data
+      // queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+
+      toast({
+        title: "Thành công",
+        description: `Gửi thông báo thành công cho ${result.data.successCount}/${result.data.totalRecipients} người dùng`,
+      });
+
+      if (result.data.failureCount > 0) {
+        toast({
+          title: "Cảnh báo",
+          description: `${result.data.failureCount} người dùng không nhận được thông báo`,
+          variant: "destructive",
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ Send notification error:', error);
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Có lỗi xảy ra khi gửi thông báo",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingNotificationId(null);
     }
   };
 
