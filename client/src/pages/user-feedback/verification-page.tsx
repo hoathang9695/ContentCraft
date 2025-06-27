@@ -651,6 +651,7 @@ export default function VerificationPage() {
                                   method: 'PATCH',
                                   headers: {
                                     'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
                                   },
                                   body: JSON.stringify({
                                     status: 'approved'
@@ -707,6 +708,7 @@ export default function VerificationPage() {
                                   method: 'PATCH',
                                   headers: {
                                     'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
                                   },
                                   body: JSON.stringify({
                                     status: 'rejected'
