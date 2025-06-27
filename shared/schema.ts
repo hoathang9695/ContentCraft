@@ -145,6 +145,7 @@ export const supportRequests = pgTable("support_requests", {
   attachment_url: text("attachment_url"), // File đính kèm khiếu nại
   verification_name: text("verification_name"), // Tên cần xác minh cho yêu cầu xác minh
   phone_number: text("phone_number"), // Số điện thoại cho yêu cầu xác minh
+  identity_verification_id: integer("identity_verification_id"), // ID xác minh danh tính
 });
 
 export const insertSupportRequestSchema = createInsertSchema(supportRequests).omit({ 

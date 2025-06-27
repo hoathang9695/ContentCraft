@@ -88,6 +88,7 @@ router.get('/verification-requests', isAuthenticated, async (req, res) => {
       attachment_url: supportRequests.attachment_url,
       verification_name: supportRequests.verification_name,
       phone_number: supportRequests.phone_number,
+      identity_verification_id: supportRequests.identity_verification_id,
     })
     .from(supportRequests)
     .leftJoin(users, eq(supportRequests.assigned_to_id, users.id))
