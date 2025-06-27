@@ -117,19 +117,7 @@ export function SupportDetailDialog({ isOpen, onClose, request }: Props) {
               </div>
             )}
 
-            {(request as any).attachment_url && (
-              <div className="grid grid-cols-[100px,1fr] items-center">
-                <span className="text-muted-foreground">File đính kèm:</span>
-                <a
-                  href={(request as any).attachment_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                >
-                  Tải về file đính kèm
-                </a>
-              </div>
-            )}
+            
           </div>
         </div>
 

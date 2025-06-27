@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -293,6 +294,9 @@ export function FilePreviewDialog({
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Xem file đính kèm</DialogTitle>
+            <DialogDescription>
+              Hiển thị nội dung file đính kèm được tải lên
+            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center h-64 text-gray-500">
             <FileIcon className="h-16 w-16 mb-4" />
@@ -481,6 +485,12 @@ export function FilePreviewDialog({
             Xem file đính kèm{" "}
             {fileUrls.length > 1 && `(${fileUrls.length} files)`}
           </DialogTitle>
+          <DialogDescription>
+            {fileUrls.length > 1 
+              ? `Xem và tải xuống ${fileUrls.length} file đính kèm` 
+              : "Xem và tải xuống file đính kèm"
+            }
+          </DialogDescription>
         </DialogHeader>
         {renderFilePreview()}
         <DialogFooter className="flex justify-between items-center">

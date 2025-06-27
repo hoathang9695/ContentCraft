@@ -32,7 +32,7 @@ app.use(
         throw new Error("Invalid JSON in request body");
       }
     },
-  })
+  }),
 );
 
 app.use(express.urlencoded({ extended: false, limit: "50mb" }));
@@ -48,7 +48,7 @@ app.use((req, res, next) => {
   // Cho phép các headers
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
   );
 
   // Xử lý OPTIONS request (preflight)
@@ -79,7 +79,7 @@ app.use((req, res, next) => {
         path,
         res.statusCode,
         duration,
-        capturedJsonResponse
+        capturedJsonResponse,
       );
     }
   });
@@ -185,7 +185,7 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5001;
+  const port = 5000;
   server.listen(
     {
       port,
@@ -204,15 +204,15 @@ app.use((req, res, next) => {
         setupKafkaConsumer()
           .then(() => log("Kafka consumer started successfully", "kafka"))
           .catch((err) =>
-            log(`Failed to start Kafka consumer: ${err}`, "kafka-error")
+            log(`Failed to start Kafka consumer: ${err}`, "kafka-error"),
           );
       } else {
         log(
           "Kafka consumer disabled. Set KAFKA_ENABLED=true to enable.",
-          "kafka"
+          "kafka",
         );
       }
-    }
+    },
   );
 
   // Xử lý tắt ứng dụng
@@ -222,7 +222,7 @@ app.use((req, res, next) => {
     // Đóng Kafka consumer nếu đang chạy
     if (process.env.KAFKA_ENABLED === "true") {
       await disconnectKafkaConsumer().catch((err) =>
-        log(`Error disconnecting Kafka consumer: ${err}`, "kafka-error")
+        log(`Error disconnecting Kafka consumer: ${err}`, "kafka-error"),
       );
     }
 

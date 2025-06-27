@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
@@ -8,7 +7,7 @@ import { startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, MoreHorizontal, Mail, CheckCircle } from "lucide-react";
+import { Eye, Mail, MoreHorizontal, Search, CheckCircle, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +24,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -56,6 +54,7 @@ interface VerificationRequest {
   attachment_url: string | string[] | null;
   verification_name?: string;
   phone_number?: string;
+  identity_verification_id?: number | null;
 }
 
 export default function VerificationPage() {
@@ -643,6 +642,120 @@ export default function VerificationPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
                         </DropdownMenuItem>
+                        {row.status === 'pending' && (
+                          <DropdownMenuItem onClick={async () => {
+                            try {
+                              // First call EMSO API if identity_verification_id exists
+                              if (row.identity_verification_id) {
+                                const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
+                                  },
+                                  body: JSON.stringify({
+                                    status: 'approved'
+                                  })
+                                });
+
+                                if (!emsoResponse.ok) {
+                                  throw new Error('Failed to approve on EMSO system');
+                                }
+                              }
+
+                              // Then update local database
+                              const response = await fetch(`/api/verification-requests/${row.id}`, {
+                                method: 'PUT',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  status: 'approved',
+                                  response_content: 'Yêu cầu xác minh đã được phê duyệt'
+                                })
+                              });
+
+                              if (response.ok) {
+                                toast({
+                                  title: "Thành công",
+                                  description: "Đã phê duyệt yêu cầu xác minh",
+                                });
+                                queryClient.invalidateQueries(['/api/verification-requests']);
+                                queryClient.invalidateQueries(['/api/badge-counts']);
+                                queryClient.refetchQueries(['/api/badge-counts'], { active: true });
+                              } else {
+                                throw new Error('Failed to approve request in local database');
+                              }
+                            } catch (error) {
+                              console.error('Error approving verification:', error);
+                              toast({
+                                title: "Lỗi",
+                                description: "Không thể phê duyệt yêu cầu xác minh",
+                                variant: "destructive"
+                              });
+                            }
+                          }}>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            <span>Đồng ý</span>
+                          </DropdownMenuItem>
+                        )}
+                        {row.status === 'pending' && (
+                          <DropdownMenuItem onClick={async () => {
+                            try {
+                              // First call EMSO API if identity_verification_id exists
+                              if (row.identity_verification_id) {
+                                const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
+                                  },
+                                  body: JSON.stringify({
+                                    status: 'rejected'
+                                  })
+                                });
+
+                                if (!emsoResponse.ok) {
+                                  throw new Error('Failed to reject on EMSO system');
+                                }
+                              }
+
+                              // Then update local database
+                              const response = await fetch(`/api/verification-requests/${row.id}`, {
+                                method: 'PUT',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  status: 'rejected',
+                                  response_content: 'Yêu cầu xác minh đã bị từ chối'
+                                })
+                              });
+
+                              if (response.ok) {
+                                toast({
+                                  title: "Thành công",
+                                  description: "Đã từ chối yêu cầu xác minh",
+                                });
+                                queryClient.invalidateQueries(['/api/verification-requests']);
+                                queryClient.invalidateQueries(['/api/badge-counts']);
+                                queryClient.refetchQueries(['/api/badge-counts'], { active: true });
+                              } else {
+                                throw new Error('Failed to reject request in local database');
+                              }
+                            } catch (error) {
+                              console.error('Error rejecting verification:', error);
+                              toast({
+                                title: "Lỗi",
+                                description: "Không thể từ chối yêu cầu xác minh",
+                                variant: "destructive"
+                              });
+                            }
+                          }}>
+                            <X className="mr-2 h-4 w-4" />
+                            <span>Từ chối</span>
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => setReplyRequest(row)}>
                           <Mail className="mr-2 h-4 w-4" />
                           <span>Gửi phản hồi</span>

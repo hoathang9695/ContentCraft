@@ -90,6 +90,7 @@ export interface VerificationMessage {
   phone_number?: string;
   detailed_description?: string;
   attachment_url?: string | string[];
+  identity_verification_id?: number;
 }
 
 export interface TickMessage {
@@ -1476,6 +1477,7 @@ async function processVerificationMessage(message: VerificationMessage, tx: any)
       verification_name: message.verification_name || message.full_name,
       phone_number: message.phone_number || null,
       attachment_url: message.attachment_url ? JSON.stringify(message.attachment_url) : null,
+      identity_verification_id: message.identity_verification_id || null,
       assigned_to_id,
       assigned_at: now,
       created_at: now,
