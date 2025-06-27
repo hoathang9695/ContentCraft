@@ -1,41 +1,59 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
-import { Redirect, Route } from "wouter";
+import { Redirect, Route, useLocation } from "wouter";
 import NotFound from "@/pages/not-found";
 
-export function ProtectedRoute({
-  path,
-  component: Component,
-  adminOnly = false,
-}: {
+interface ProtectedRouteProps {
   path: string;
-  component: () => React.JSX.Element;
+  component: React.ComponentType<any>;
   adminOnly?: boolean;
-}) {
-  const { user, isLoading } = useAuth();
+  allowedRoles?: string[];
+  allowedDepartments?: string[];
+}
 
-  if (isLoading) {
-    return (
-      <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </Route>
-    );
-  }
+export function ProtectedRoute({ 
+  path, 
+  component: Component, 
+  adminOnly = false,
+  allowedRoles = [],
+  allowedDepartments = []
+}: ProtectedRouteProps) {
+  return (
+    <Route path={path}>
+      {(params) => {
+        const { user, isLoading } = useAuth();
 
-  if (!user) {
-    return (
-      <Route path={path}>
-        <Redirect to="/auth" />
-      </Route>
-    );
-  }
-  
-  // Nếu route yêu cầu quyền admin và người dùng không phải admin
-  if (adminOnly && user.role !== 'admin') {
-    return <Route path={path} component={NotFound} />;
-  }
+        if (isLoading) {
+          return (
+            <div className="flex items-center justify-center min-h-screen">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          );
+        }
 
-  return <Route path={path} component={Component} />;
+        if (!user) {
+          return <Redirect to="/auth" replace />;
+        }
+
+        // Check admin only routes
+        if (adminOnly && user.role !== 'admin') {
+          return <Redirect to="/" replace />;
+        }
+
+        // Check if user has required role or department
+        const hasRequiredRole = allowedRoles.length === 0 || allowedRoles.includes(user.role);
+        const hasRequiredDepartment = allowedDepartments.length === 0 || 
+          (user.department && allowedDepartments.includes(user.department));
+
+        // Allow access if user has admin role OR required role/department
+        const hasAccess = user.role === 'admin' || (hasRequiredRole && hasRequiredDepartment);
+
+        if (!hasAccess) {
+          return <Redirect to="/" replace />;
+        }
+
+        return <Component {...params} />;
+      }}
+    </Route>
+  );
 }

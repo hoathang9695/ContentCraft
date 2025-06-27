@@ -24,7 +24,9 @@ import VerificationPage from "@/pages/user-feedback/verification-page";
 import TickPage from "@/pages/user-feedback/tick-page";
 import RealUserPage from "@/pages/real-user-page";
 import SettingsPage from "@/pages/settings-page";
-import EmailTemplatesPage from "./pages/email-templates-page";
+import EmailTemplatesPage from '@/pages/email-templates-page';
+import { ListNotificationPage } from '@/pages/campaign/list-notification-page';
+import { ListEmailPage } from '@/pages/campaign/list-email-page';
 import FeedbackPage from "@/pages/user-feedback/feedback-page";
 import ReportManagementPage from "@/pages/report-management-page";
 import ReviewReportsPage from "@/pages/review-reports-page";
@@ -54,7 +56,20 @@ function Router() {
       <Route path="/real-user" component={RealUserPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} adminOnly={true} />
       <ProtectedRoute path="/email-templates" component={EmailTemplatesPage} adminOnly={true} />
-      <Route component={NotFound} />
+
+              {/* Campaign Routes - Admin and Marketing only */}
+              <ProtectedRoute 
+                path="/list-noti" 
+                component={ListNotificationPage} 
+                allowedRoles={['admin']} 
+                allowedDepartments={['Marketing']} 
+              />
+              <ProtectedRoute 
+                path="/list-email" 
+                component={ListEmailPage} 
+                allowedRoles={['admin']} 
+                allowedDepartments={['Marketing']} 
+              />
     </Switch>
   );
 }
