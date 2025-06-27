@@ -17,7 +17,10 @@ export function TestNotificationDialog({ open, onOpenChange }: TestNotificationD
   const [formData, setFormData] = useState({
     deviceToken: '',
     title: '',
-    message: ''
+    message: '',
+    clickAction: 'OPEN_MARKETING',
+    type: 'marketing',
+    url: 'https://portal.emso.vn'
   });
   const [loading, setLoading] = useState(false);
 
@@ -35,7 +38,10 @@ export function TestNotificationDialog({ open, onOpenChange }: TestNotificationD
         body: JSON.stringify({
           deviceToken: formData.deviceToken,
           title: formData.title,
-          message: formData.message
+          message: formData.message,
+          clickAction: formData.clickAction,
+          type: formData.type,
+          url: formData.url
         }),
       });
 
@@ -52,7 +58,10 @@ export function TestNotificationDialog({ open, onOpenChange }: TestNotificationD
         setFormData({
           deviceToken: '',
           title: '',
-          message: ''
+          message: '',
+          clickAction: 'OPEN_MARKETING',
+          type: 'marketing',
+          url: 'https://portal.emso.vn'
         });
 
         onOpenChange(false);
@@ -80,7 +89,10 @@ export function TestNotificationDialog({ open, onOpenChange }: TestNotificationD
     setFormData({
       deviceToken: '',
       title: '',
-      message: ''
+      message: '',
+      clickAction: 'OPEN_MARKETING',
+      type: 'marketing',
+      url: 'https://portal.emso.vn'
     });
     onOpenChange(false);
   };
@@ -131,6 +143,38 @@ export function TestNotificationDialog({ open, onOpenChange }: TestNotificationD
               placeholder="Nhập nội dung thông báo..."
               rows={3}
               required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="clickAction">Click Action</Label>
+              <Input
+                id="clickAction"
+                value={formData.clickAction}
+                onChange={(e) => setFormData(prev => ({ ...prev, clickAction: e.target.value }))}
+                placeholder="OPEN_MARKETING"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="type">Loại thông báo</Label>
+              <Input
+                id="type"
+                value={formData.type}
+                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                placeholder="marketing"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="url">URL điều hướng</Label>
+            <Input
+              id="url"
+              value={formData.url}
+              onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+              placeholder="https://portal.emso.vn/thong-bao-bao-tri"
             />
           </div>
 

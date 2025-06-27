@@ -190,7 +190,7 @@ router.delete('/notifications/:id', isAuthenticated, async (req, res) => {
 router.post('/notifications/test-push', isAuthenticated, async (req, res) => {
   try {
     const user = req.user as Express.User;
-    const { deviceToken, title, message } = req.body;
+    const { deviceToken, title, message, clickAction, type, url } = req.body;
 
     // Validate required fields
     if (!deviceToken || !title || !message) {
@@ -208,7 +208,11 @@ router.post('/notifications/test-push', isAuthenticated, async (req, res) => {
 
     try {
       // Send actual push notification via Firebase FCM
-      const response = await firebaseService.sendPushNotification(deviceToken, title, message);
+      const response = await firebaseService.sendPushNotification(deviceToken, title, message, {
+        clickAction,
+        type,
+        url
+      });
 
       console.log('✅ Firebase FCM response:', response);
 
@@ -338,7 +342,12 @@ router.post("/notifications/:id/send", isAuthenticated, async (req, res) => {
         const result = await firebaseService.sendPushNotification(
           targetUser.deviceToken!,
           notif.title,
-          notif.content
+          notif.content,
+          {
+            clickAction: 'OPEN_MARKETING',
+            type: 'notification',
+            url: 'https://portal.emso.vn'
+          }
         );
 
         results.push({

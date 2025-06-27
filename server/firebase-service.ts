@@ -48,7 +48,16 @@ class FirebaseService {
     }
   }
 
-  public async sendPushNotification(deviceToken: string, title: string, body: string): Promise<string> {
+  public async sendPushNotification(
+    deviceToken: string, 
+    title: string, 
+    body: string, 
+    options?: {
+      clickAction?: string;
+      type?: string;
+      url?: string;
+    }
+  ): Promise<string> {
     if (!this.initialized) {
       throw new Error('Firebase not initialized');
     }
@@ -57,19 +66,28 @@ class FirebaseService {
       const message = {
         notification: {
           title,
-          body
+          body,
+          click_action: options?.clickAction || 'OPEN_MARKETING'
+        },
+        data: {
+          type: options?.type || 'marketing',
+          title,
+          body,
+          url: options?.url || 'https://portal.emso.vn'
         },
         token: deviceToken,
         android: {
           notification: {
             icon: 'stock_ticker_update',
-            color: '#7e55c3'
+            color: '#7e55c3',
+            click_action: options?.clickAction || 'OPEN_MARKETING'
           }
         },
         apns: {
           payload: {
             aps: {
-              badge: 1
+              badge: 1,
+              category: options?.clickAction || 'OPEN_MARKETING'
             }
           }
         }
@@ -84,7 +102,16 @@ class FirebaseService {
     }
   }
 
-  public async sendMulticastNotification(deviceTokens: string[], title: string, body: string): Promise<admin.messaging.BatchResponse> {
+  public async sendMulticastNotification(
+    deviceTokens: string[], 
+    title: string, 
+    body: string,
+    options?: {
+      clickAction?: string;
+      type?: string;
+      url?: string;
+    }
+  ): Promise<admin.messaging.BatchResponse> {
     if (!this.initialized) {
       throw new Error('Firebase not initialized');
     }
@@ -93,19 +120,28 @@ class FirebaseService {
       const message = {
         notification: {
           title,
-          body
+          body,
+          click_action: options?.clickAction || 'OPEN_MARKETING'
+        },
+        data: {
+          type: options?.type || 'marketing',
+          title,
+          body,
+          url: options?.url || 'https://portal.emso.vn'
         },
         tokens: deviceTokens,
         android: {
           notification: {
             icon: 'stock_ticker_update',
-            color: '#7e55c3'
+            color: '#7e55c3',
+            click_action: options?.clickAction || 'OPEN_MARKETING'
           }
         },
         apns: {
           payload: {
             aps: {
-              badge: 1
+              badge: 1,
+              category: options?.clickAction || 'OPEN_MARKETING'
             }
           }
         }
