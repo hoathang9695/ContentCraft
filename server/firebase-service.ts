@@ -66,14 +66,14 @@ class FirebaseService {
       const message = {
         notification: {
           title,
-          body,
-          click_action: options?.clickAction || 'OPEN_MARKETING'
+          body
         },
         data: {
           type: options?.type || 'marketing',
           title,
           body,
-          url: options?.url || 'https://portal.emso.vn'
+          url: options?.url || 'https://portal.emso.vn',
+          click_action: options?.clickAction || 'OPEN_MARKETING'
         },
         token: deviceToken,
         android: {
@@ -120,14 +120,14 @@ class FirebaseService {
       const message = {
         notification: {
           title,
-          body,
-          click_action: options?.clickAction || 'OPEN_MARKETING'
+          body
         },
         data: {
           type: options?.type || 'marketing',
           title,
           body,
-          url: options?.url || 'https://portal.emso.vn'
+          url: options?.url || 'https://portal.emso.vn',
+          click_action: options?.clickAction || 'OPEN_MARKETING'
         },
         tokens: deviceTokens,
         android: {
