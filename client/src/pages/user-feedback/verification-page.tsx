@@ -54,6 +54,7 @@ interface VerificationRequest {
   attachment_url: string | string[] | null;
   verification_name?: string;
   phone_number?: string;
+  identity_verification_id?: number | null;
 }
 
 export default function VerificationPage() {
@@ -644,6 +645,24 @@ export default function VerificationPage() {
                         {row.status === 'pending' && (
                           <DropdownMenuItem onClick={async () => {
                             try {
+                              // First call EMSO API if identity_verification_id exists
+                              if (row.identity_verification_id) {
+                                const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    status: 'approved'
+                                  })
+                                });
+
+                                if (!emsoResponse.ok) {
+                                  throw new Error('Failed to approve on EMSO system');
+                                }
+                              }
+
+                              // Then update local database
                               const response = await fetch(`/api/verification-requests/${row.id}`, {
                                 method: 'PUT',
                                 headers: {
@@ -664,9 +683,10 @@ export default function VerificationPage() {
                                 queryClient.invalidateQueries(['/api/badge-counts']);
                                 queryClient.refetchQueries(['/api/badge-counts'], { active: true });
                               } else {
-                                throw new Error('Failed to approve request');
+                                throw new Error('Failed to approve request in local database');
                               }
                             } catch (error) {
+                              console.error('Error approving verification:', error);
                               toast({
                                 title: "Lỗi",
                                 description: "Không thể phê duyệt yêu cầu xác minh",
@@ -681,6 +701,24 @@ export default function VerificationPage() {
                         {row.status === 'pending' && (
                           <DropdownMenuItem onClick={async () => {
                             try {
+                              // First call EMSO API if identity_verification_id exists
+                              if (row.identity_verification_id) {
+                                const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    status: 'rejected'
+                                  })
+                                });
+
+                                if (!emsoResponse.ok) {
+                                  throw new Error('Failed to reject on EMSO system');
+                                }
+                              }
+
+                              // Then update local database
                               const response = await fetch(`/api/verification-requests/${row.id}`, {
                                 method: 'PUT',
                                 headers: {
@@ -701,9 +739,10 @@ export default function VerificationPage() {
                                 queryClient.invalidateQueries(['/api/badge-counts']);
                                 queryClient.refetchQueries(['/api/badge-counts'], { active: true });
                               } else {
-                                throw new Error('Failed to reject request');
+                                throw new Error('Failed to reject request in local database');
                               }
                             } catch (error) {
+                              console.error('Error rejecting verification:', error);
                               toast({
                                 title: "Lỗi",
                                 description: "Không thể từ chối yêu cầu xác minh",
