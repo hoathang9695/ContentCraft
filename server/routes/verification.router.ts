@@ -89,6 +89,7 @@ router.get('/verification-requests', isAuthenticated, async (req, res) => {
       verification_name: supportRequests.verification_name,
       phone_number: supportRequests.phone_number,
       identity_verification_id: supportRequests.identity_verification_id,
+      status_ticket: supportRequests.status_ticket,
     })
     .from(supportRequests)
     .leftJoin(users, eq(supportRequests.assigned_to_id, users.id))
@@ -121,24 +122,19 @@ router.put('/verification-requests/:id', isAuthenticated, async (req, res) => {
     const { status, response_content } = req.body;
     const user = req.user as Express.User;
 
-    console.log(`Updating verification request ${id} with status: ${status}`);
-    console.log(`User: ${user.username} (${user.role})`);
-
     const verificationRequest = await db.query.supportRequests.findFirst({
       where: eq(supportRequests.id, parseInt(id))
     });
 
     if (!verificationRequest) {
-      console.error(`Verification request ${id} not found`);
       return res.status(404).json({ message: 'Verification request not found' });
     }
 
     if (user.role !== 'admin' && verificationRequest.assigned_to_id !== user.id) {
-      console.error(`User ${user.username} not authorized to update request ${id}`);
       return res.status(403).json({ message: 'Not authorized to update this request' });
     }
 
-    const updateData: any = {
+    const updateData = {
       status,
       updated_at: new Date()
     };
@@ -149,20 +145,16 @@ router.put('/verification-requests/:id', isAuthenticated, async (req, res) => {
       updateData.response_time = new Date();
     }
 
-    if (status === 'completed' || status === 'rejected') {
+    if (status === 'completed') {
       updateData.responder_id = user.id;
       updateData.response_time = new Date();
     }
-
-    console.log(`Update data for verification ${id}:`, updateData);
 
     const result = await db
       .update(supportRequests)
       .set(updateData)
       .where(eq(supportRequests.id, parseInt(id)))
       .returning();
-
-    console.log(`Verification request ${id} updated successfully:`, result[0]);
 
     if (result.length === 0) {
       return res.status(404).json({ message: 'Verification request not found' });

@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { EmailReplyDialog } from "@/components/EmailReplyDialog";
 import { SupportDetailDialog } from "@/components/SupportDetailDialog";
 import { FilePreviewDialog } from "@/components/FilePreviewDialog";
@@ -55,6 +56,7 @@ interface VerificationRequest {
   verification_name?: string;
   phone_number?: string;
   identity_verification_id?: number | null;
+  status_ticket: string | null;
 }
 
 export default function VerificationPage() {
@@ -70,6 +72,11 @@ export default function VerificationPage() {
     isOpen: false,
     fileUrl: null,
     fileName: undefined
+  });
+  const [rejectDialog, setRejectDialog] = useState<{ isOpen: boolean; request: VerificationRequest | null; reason: string }>({
+    isOpen: false,
+    request: null,
+    reason: ''
   });
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -590,6 +597,21 @@ export default function VerificationPage() {
                 ),
               },
               {
+                key: 'status_ticket',
+                header: 'Kết quả',
+                render: (row: VerificationRequest) => (
+                  <div>
+                    {row.status_ticket ? (
+                      <Badge variant={row.status_ticket === 'approved' ? 'success' : 'destructive'}>
+                        {row.status_ticket === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">Chưa xử lý</span>
+                    )}
+                  </div>
+                ),
+              },
+              {
                 key: 'assigned',
                 header: 'Phân công',
                 render: (row: VerificationRequest) => (
@@ -645,52 +667,80 @@ export default function VerificationPage() {
                         {row.status === 'pending' && (
                           <DropdownMenuItem onClick={async () => {
                             try {
+                              let emsoApiSuccess = false;
+                              let emsoApiError = null;
+
                               // First call EMSO API if identity_verification_id exists
                               if (row.identity_verification_id) {
-                                const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
-                                  method: 'PATCH',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
-                                  },
-                                  body: JSON.stringify({
-                                    status: 'approved'
-                                  })
-                                });
+                                console.log(`Calling EMSO API to approve identity_verification_id: ${row.identity_verification_id}`);
+                                try {
+                                  const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
+                                    },
+                                    body: JSON.stringify({
+                                      status: 'approved'
+                                    })
+                                  });
 
-                                if (!emsoResponse.ok) {
-                                  throw new Error('Failed to approve on EMSO system');
+                                  console.log(`EMSO API response status: ${emsoResponse.status}`);
+                                  if (emsoResponse.ok) {
+                                    console.log('EMSO API call successful');
+                                    emsoApiSuccess = true;
+                                  } else {
+                                    const errorText = await emsoResponse.text();
+                                    console.warn('EMSO API failed:', errorText);
+                                    emsoApiError = `${emsoResponse.status} - ${errorText}`;
+                                  }
+                                } catch (fetchError) {
+                                  console.warn('EMSO API request failed:', fetchError);
+                                  emsoApiError = fetchError instanceof Error ? fetchError.message : String(fetchError);
                                 }
                               }
 
                               // Then update local database
+                              console.log(`Updating local database for verification request ${row.id}`);
                               const response = await fetch(`/api/verification-requests/${row.id}`, {
                                 method: 'PUT',
                                 headers: {
                                   'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
-                                  status: 'approved',
+                                  status: 'completed',
+                                  status_ticket: 'approved',
                                   response_content: 'Yêu cầu xác minh đã được phê duyệt'
                                 })
                               });
 
+                              console.log(`Local API response status: ${response.status}`);
                               if (response.ok) {
+                                // Prepare success message based on EMSO API result
+                                let successMessage = "Đã phê duyệt yêu cầu xác minh trong hệ thống local";
+                                if (emsoApiSuccess) {
+                                  successMessage = "Đã phê duyệt yêu cầu xác minh thành công";
+                                } else if (emsoApiError) {
+                                  successMessage = `Đã phê duyệt trong hệ thống local. Lưu ý: EMSO API lỗi (${emsoApiError})`;
+                                }
+
                                 toast({
-                                  title: "Thành công",
-                                  description: "Đã phê duyệt yêu cầu xác minh",
+                                  title: emsoApiSuccess ? "Thành công" : "Thành công (có cảnh báo)",
+                                  description: successMessage,
                                 });
-                                queryClient.invalidateQueries(['/api/verification-requests']);
-                                queryClient.invalidateQueries(['/api/badge-counts']);
-                                queryClient.refetchQueries(['/api/badge-counts'], { active: true });
+                                queryClient.invalidateQueries({ queryKey: ['/api/verification-requests'] });
+                                queryClient.invalidateQueries({ queryKey: ['/api/badge-counts'] });
+                                queryClient.refetchQueries({ queryKey: ['/api/badge-counts'] }, { active: true });
                               } else {
-                                throw new Error('Failed to approve request in local database');
+                                const errorText = await response.text();
+                                console.error('Local API error:', errorText);
+                                throw new Error(`Failed to approve request in local database: ${response.status} - ${errorText}`);
                               }
                             } catch (error) {
                               console.error('Error approving verification:', error);
                               toast({
                                 title: "Lỗi",
-                                description: "Không thể phê duyệt yêu cầu xác minh",
+                                description: error instanceof Error ? error.message : "Không thể phê duyệt yêu cầu xác minh",
                                 variant: "destructive"
                               });
                             }
@@ -700,61 +750,12 @@ export default function VerificationPage() {
                           </DropdownMenuItem>
                         )}
                         {row.status === 'pending' && (
-                          <DropdownMenuItem onClick={async () => {
-                            try {
-                                // First update EMSO system if identity_verification_id exists
-                                if (row.identity_verification_id) {
-                                  const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
-                                    method: 'PATCH',
-                                    headers: {
-                                      'Content-Type': 'application/json',
-                                      'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
-                                    },
-                                    body: JSON.stringify({
-                                      status: 'rejected',
-                                      reason: 'Yêu cầu xác minh không đáp ứng yêu cầu'
-                                    })
-                                  });
-
-                                  if (!emsoResponse.ok) {
-                                    const errorText = await emsoResponse.text();
-                                    console.error('EMSO API error:', errorText);
-                                    throw new Error(`Failed to reject on EMSO system: ${emsoResponse.status}`);
-                                  }
-                                }
-
-                                // Then update local database
-                                const response = await fetch(`/api/verification-requests/${row.id}`, {
-                                  method: 'PUT',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                  },
-                                  credentials: 'include', // Include session cookies
-                                  body: JSON.stringify({
-                                    status: 'rejected',
-                                    response_content: 'Yêu cầu xác minh đã bị từ chối'
-                                  })
-                                });
-
-                              if (response.ok) {
-                                toast({
-                                  title: "Thành công",
-                                  description: "Đã từ chối yêu cầu xác minh",
-                                });
-                                queryClient.invalidateQueries(['/api/verification-requests']);
-                                queryClient.invalidateQueries(['/api/badge-counts']);
-                                queryClient.refetchQueries(['/api/badge-counts'], { active: true });
-                              } else {
-                                throw new Error('Failed to reject request in local database');
-                              }
-                            } catch (error) {
-                              console.error('Error rejecting verification:', error);
-                              toast({
-                                title: "Lỗi",
-                                description: "Không thể từ chối yêu cầu xác minh",
-                                variant: "destructive"
-                              });
-                            }
+                          <DropdownMenuItem onClick={() => {
+                            setRejectDialog({
+                              isOpen: true,
+                              request: row,
+                              reason: ''
+                            });
                           }}>
                             <X className="mr-2 h-4 w-4" />
                             <span>Từ chối</span>
@@ -830,6 +831,142 @@ export default function VerificationPage() {
           fileUrl={filePreview.fileUrl}
           fileName={filePreview.fileName}
         />
+
+        {/* Rejection Dialog */}
+        <Dialog open={rejectDialog.isOpen} onOpenChange={(open) => {
+          if (!open) {
+            setRejectDialog({ isOpen: false, request: null, reason: '' });
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Từ chối yêu cầu xác minh</DialogTitle>
+              <DialogDescription>
+                Vui lòng nhập lý do từ chối yêu cầu xác minh này.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <Textarea
+                placeholder="Nhập lý do từ chối (ví dụ: Căn cước bị mờ, Video xác minh không rõ mặt)"
+                value={rejectDialog.reason}
+                onChange={(e) => setRejectDialog(prev => ({ ...prev, reason: e.target.value }))}
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setRejectDialog({ isOpen: false, request: null, reason: '' })}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (!rejectDialog.request || !rejectDialog.reason.trim()) {
+                    toast({
+                      title: "Lỗi",
+                      description: "Vui lòng nhập lý do từ chối",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+
+                  try {
+                    let emsoApiSuccess = false;
+                    let emsoApiError = null;
+
+                    // First call EMSO API if identity_verification_id exists
+                    if (rejectDialog.request.identity_verification_id) {
+                      console.log(`Calling EMSO API to reject identity_verification_id: ${rejectDialog.request.identity_verification_id}`);
+                      try {
+                        const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${rejectDialog.request.identity_verification_id}`, {
+                          method: 'PATCH',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
+                          },
+                          body: JSON.stringify({
+                            status: 'rejected',
+                            note: rejectDialog.reason.trim()
+                          })
+                        });
+
+                        console.log(`EMSO API response status: ${emsoResponse.status}`);
+                        if (emsoResponse.ok) {
+                          console.log('EMSO API call successful');
+                          emsoApiSuccess = true;
+                        } else {
+                          const errorText = await emsoResponse.text();
+                          console.warn('EMSO API failed:', errorText);
+                          emsoApiError = `${emsoResponse.status} - ${errorText}`;
+                          
+                          // Don't throw error here, continue with local update
+                          // but store the error for user notification
+                        }
+                      } catch (fetchError) {
+                        console.warn('EMSO API request failed:', fetchError);
+                        emsoApiError = fetchError instanceof Error ? fetchError.message : String(fetchError);
+                      }
+                    }
+
+                    // Then update local database
+                    console.log(`Updating local database for verification request ${rejectDialog.request.id}`);
+                    const response = await fetch(`/api/verification-requests/${rejectDialog.request.id}`, {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        status: 'completed',
+                        status_ticket: 'rejected',
+                        response_content: `Yêu cầu xác minh đã bị từ chối. Lý do: ${rejectDialog.reason.trim()}`
+                      })
+                    });
+
+                    console.log(`Local API response status: ${response.status}`);
+                    if (response.ok) {
+                      // Prepare success message based on EMSO API result
+                      let successMessage = "Đã từ chối yêu cầu xác minh trong hệ thống local";
+                      if (emsoApiSuccess) {
+                        successMessage = "Đã từ chối yêu cầu xác minh thành công";
+                      } else if (emsoApiError) {
+                        successMessage = `Đã từ chối trong hệ thống local. Lưu ý: EMSO API lỗi (${emsoApiError})`;
+                      }
+
+                      toast({
+                        title: emsoApiSuccess ? "Thành công" : "Thành công (có cảnh báo)",
+                        description: successMessage,
+                        variant: emsoApiSuccess ? "default" : "default"
+                      });
+                      queryClient.invalidateQueries({ queryKey: ['/api/verification-requests'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/badge-counts'] });
+                      queryClient.refetchQueries({ queryKey: ['/api/badge-counts'] }, { active: true });
+                      setRejectDialog({ isOpen: false, request: null, reason: '' });
+                    } else {
+                      const errorText = await response.text();
+                      console.error('Local API error:', errorText);
+                      throw new Error(`Failed to reject request in local database: ${response.status} - ${errorText}`);
+                    }
+                  } catch (error) {
+                    console.error('Error rejecting verification:', error);
+                    toast({
+                      title: "Lỗi",
+                      description: error instanceof Error ? error.message : "Không thể từ chối yêu cầu xác minh",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+                disabled={!rejectDialog.reason.trim()}
+              >
+                Xác nhận từ chối
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

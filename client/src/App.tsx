@@ -76,7 +76,7 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="system">
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Router />
