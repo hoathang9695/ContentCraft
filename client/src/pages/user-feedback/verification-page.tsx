@@ -711,7 +711,8 @@ export default function VerificationPage() {
                                       'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
                                     },
                                     body: JSON.stringify({
-                                      status: 'rejected'
+                                      status: 'rejected',
+                                      reason: 'Yêu cầu xác minh không đáp ứng yêu cầu'
                                     })
                                   });
 
