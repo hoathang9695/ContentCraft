@@ -830,7 +830,7 @@ function parseMessage(
       return message as FeedbackMessage;
     }
     // Check for support/contact message (has full_name, email, subject, content)
-    else if ("full_name" in message && "email" in message && "subject" in message &&"content" in message) {
+    else if ("full_name" in message && "email" in message && "subject" in message && "content" in message) {
       return message as SupportMessage;
     } else if ("externalId" in message){
       return message as ContentMessage;
@@ -1403,13 +1403,12 @@ async function processVerificationMessage(message: VerificationMessage, tx: any)
       return;
     }
 
-    // Check for duplicate verification request ONLY based on attachment_url (if provided)
-    // This allows multiple verification requests from same email/user for different purposes
+    // Check for duplicate verification request based on attachment_url only
     if (message.attachment_url) {
-      const attachmentUrlString = Array.isArray(message.attachment_url) ? 
-        JSON.stringify(message.attachment_url) : 
-        message.attachment_url;
-
+      const attachmentUrlString = Array.isArray(message.attachment_url) 
+        ? JSON.stringify(message.attachment_url) 
+        : message.attachment_url;
+        
       const existingRequest = await tx
         .select()
         .from(supportRequests)
@@ -1427,10 +1426,7 @@ async function processVerificationMessage(message: VerificationMessage, tx: any)
       }
     }
 
-    // If no attachment_url or it's unique, proceed to create new request
-
     log(`Processing verification message: ${JSON.stringify(message)}`, "kafka");
-    log(`Note: Multiple verification requests from same email/user are allowed. Only checking for duplicate attachment_url if provided.`, "kafka");
 
     // Get active users (exclude admin for verification assignment)
     const activeUsers = await tx
