@@ -1403,21 +1403,27 @@ async function processVerificationMessage(message: VerificationMessage, tx: any)
       return;
     }
 
-    // Check for duplicate verification request based on email and id
-    const existingRequest = await tx
-      .select()
-      .from(supportRequests)
-      .where(
-        and(
-          eq(supportRequests.email, message.email),
-          eq(supportRequests.type, "verify")
+    // Check for duplicate verification request based on attachment_url only
+    if (message.attachment_url) {
+      const attachmentUrlString = Array.isArray(message.attachment_url) 
+        ? JSON.stringify(message.attachment_url) 
+        : message.attachment_url;
+        
+      const existingRequest = await tx
+        .select()
+        .from(supportRequests)
+        .where(
+          and(
+            eq(supportRequests.attachment_url, attachmentUrlString),
+            eq(supportRequests.type, "verify")
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    if (existingRequest.length > 0) {
-      log(`Verification request for ${message.email} already exists, skipping...`, "kafka");
-      return existingRequest[0];
+      if (existingRequest.length > 0) {
+        log(`Verification request with same attachment_url already exists, skipping...`, "kafka");
+        return existingRequest[0];
+      }
     }
 
     log(`Processing verification message: ${JSON.stringify(message)}`, "kafka");
