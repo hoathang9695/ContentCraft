@@ -702,35 +702,38 @@ export default function VerificationPage() {
                         {row.status === 'pending' && (
                           <DropdownMenuItem onClick={async () => {
                             try {
-                              // First call EMSO API if identity_verification_id exists
-                              if (row.identity_verification_id) {
-                                const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
-                                  method: 'PATCH',
+                                // First update EMSO system if identity_verification_id exists
+                                if (row.identity_verification_id) {
+                                  const emsoResponse = await fetch(`https://prod-sn.emso.vn/api/admin/identity_verifications/${row.identity_verification_id}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
+                                    },
+                                    body: JSON.stringify({
+                                      status: 'rejected'
+                                    })
+                                  });
+
+                                  if (!emsoResponse.ok) {
+                                    const errorText = await emsoResponse.text();
+                                    console.error('EMSO API error:', errorText);
+                                    throw new Error(`Failed to reject on EMSO system: ${emsoResponse.status}`);
+                                  }
+                                }
+
+                                // Then update local database
+                                const response = await fetch(`/api/verification-requests/${row.id}`, {
+                                  method: 'PUT',
                                   headers: {
                                     'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po'
                                   },
+                                  credentials: 'include', // Include session cookies
                                   body: JSON.stringify({
-                                    status: 'rejected'
+                                    status: 'rejected',
+                                    response_content: 'Yêu cầu xác minh đã bị từ chối'
                                   })
                                 });
-
-                                if (!emsoResponse.ok) {
-                                  throw new Error('Failed to reject on EMSO system');
-                                }
-                              }
-
-                              // Then update local database
-                              const response = await fetch(`/api/verification-requests/${row.id}`, {
-                                method: 'PUT',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  status: 'rejected',
-                                  response_content: 'Yêu cầu xác minh đã bị từ chối'
-                                })
-                              });
 
                               if (response.ok) {
                                 toast({
