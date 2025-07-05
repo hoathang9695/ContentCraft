@@ -47,12 +47,13 @@ export type InsertContent = z.infer<typeof insertContentSchema>;
 export type Content = typeof contents.$inferSelect;
 
 // Login schema (subset of user)
-export const loginSchema = insertUserSchema.pick({
-  username: true,
-  password: true,
+export const loginDataSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().optional(),
 });
 
-export type LoginData = z.infer<typeof loginSchema>;
+export type LoginData = z.infer<typeof loginDataSchema>;
 
 // User activity log for tracking login/logout/registration
 export const userActivities = pgTable("user_activities", {
@@ -176,7 +177,7 @@ export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
   pageName: jsonb("page_name").notNull(),
   pageType: varchar("page_type", { length: 100 }).notNull(),
-  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'non_potential', 'positive'
+  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'positive'
   adminData: jsonb("admin_data"), // Admin data in JSON format
   phoneNumber: varchar("phone_number", { length: 20 }),
   monetizationEnabled: boolean("monetization_enabled").default(false),
