@@ -107,9 +107,13 @@ export interface TickMessage {
 export interface ReportMessage {
   reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'course' | 'project' | 'video' | 'song' | 'event';
   reported_id: {
-    id: string;
-    name: string;
-    email: string;
+    id?: string;
+    name?: string;
+    email?: string;
+    // Special fields for comment reports
+    id_post?: string;
+    id_comment?: string;
+    content?: string;
   };
   reporterName: {
     id: string;
@@ -651,11 +655,26 @@ export async function setupKafkaConsumer() {
                         log(`🔄 Processing report message: ${JSON.stringify(reportMsg)}`, "kafka");
 
                         try {
-                          // Validate required fields
-                          if (!reportMsg.reported_id?.id || !reportMsg.reportType || !reportMsg.reporterName?.id || !reportMsg.reporterName?.reporterEmail || !reportMsg.reason) {
-                            const error = `❌ Invalid report message format - missing required fields: ${JSON.stringify(reportMsg)}`;
+                          // Validate required fields - different validation for comment vs other types
+                          if (!reportMsg.reportType || !reportMsg.reporterName?.id || !reportMsg.reporterName?.reporterEmail || !reportMsg.reason) {
+                            const error = `❌ Invalid report message format - missing basic required fields: ${JSON.stringify(reportMsg)}`;
                             log(error, "kafka-error");
                             throw new Error(error);
+                          }
+
+                          // Type-specific validation
+                          if (reportMsg.reportType === 'comment') {
+                            if (!reportMsg.reported_id?.id_post || !reportMsg.reported_id?.id_comment) {
+                              const error = `❌ Comment report missing id_post or id_comment: ${JSON.stringify(reportMsg.reported_id)}`;
+                              log(error, "kafka-error");
+                              throw new Error(error);
+                            }
+                          } else {
+                            if (!reportMsg.reported_id?.id) {
+                              const error = `❌ Non-comment report missing reported_id.id: ${JSON.stringify(reportMsg.reported_id)}`;
+                              log(error, "kafka-error");
+                              throw new Error(error);
+                            }
                           }
 
                           // Validate report type (expanded list)
@@ -702,8 +721,22 @@ export async function setupKafkaConsumer() {
                           log(`👤 Assigned to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
 
                           // Prepare insert data with new format
+                          // Special handling for comment reports which have extended reported_id structure
+                          let processedReportedId = reportMsg.reported_id;
+                          
+                          // For comment reports, validate the extended structure
+                          if (reportMsg.reportType === 'comment') {
+                            if (!reportMsg.reported_id.id_post || !reportMsg.reported_id.id_comment) {
+                              throw new Error(`Comment report missing required fields: id_post or id_comment`);
+                            }
+                            // Ensure all comment-specific fields are present
+                            if (!reportMsg.reported_id.content) {
+                              log(`⚠️ Comment report without content field for comment ID: ${reportMsg.reported_id.id_comment}`, "kafka");
+                            }
+                          }
+
                           const insertData = {
-                            reportedId: reportMsg.reported_id,
+                            reportedId: processedReportedId,
                             reportType: reportMsg.reportType,
                             reporterName: reportMsg.reporterName, // Giờ đây chứa cả email bên trong
                             reason: reportMsg.reason,
