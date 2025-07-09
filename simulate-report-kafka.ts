@@ -137,8 +137,11 @@ async function simulateReportKafkaMessages() {
       {
         reportType: 'comment',
         reported_id: {
-          id: 'COMMENT_789012345',
-          name: 'Bình luận quấy rối'
+          id_post: '114619409398949374',
+          id_comment: '123456090907890',
+          name: 'Nguyễn Văn A',
+          email: 'comment.user@example.com',
+          content: 'Bình luận này chứa nội dung quấy rối tình dục và không phù hợp với cộng đồng.'
         },
         reporterName: {
           id: '1749539951005',
@@ -147,6 +150,24 @@ async function simulateReportKafkaMessages() {
         },
         reason: 'Quấy rối tình dục',
         detailedReason: 'Bình luận này chứa nội dung quấy rối tình dục và không phù hợp.'
+      }
+    // Additional comment report with new format
+      {
+        reportType: 'comment',
+        reported_id: {
+          id_post: '114652263781752445',
+          id_comment: '987654321098765',
+          name: 'Trần Thị B',
+          email: 'tran.b@example.com',
+          content: 'Spam quảng cáo sản phẩm không rõ nguồn gốc và có thể gây hại cho người tiêu dùng.'
+        },
+        reporterName: {
+          id: '1749539951006',
+          name: 'Lê Văn C',
+          reporterEmail: 'le.c@example.com'
+        },
+        reason: 'Spam quảng cáo',
+        detailedReason: 'Bình luận spam liên tục quảng cáo sản phẩm không rõ nguồn gốc.'
       }
     ];
 
