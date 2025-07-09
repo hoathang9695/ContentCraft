@@ -39,7 +39,7 @@ interface ReportRequest {
   id: number;
   reportedId: string | { id: string; target_id?: string };
   reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'recruitment' | 'project' | 'course' | 'event' | 'song';
-  reporterName: string | { id: string; name: string };
+  reporterName: string | { id: string; name: string, reporterEmail?: string };
   reporterEmail: string;
   reason: string;
   detailedReason: string;
@@ -780,11 +780,11 @@ export default function ReportManagementPage() {
                   const reportedId = typeof row.reportedId === 'string' 
                     ? row.reportedId 
                     : row.reportedId?.id || 'N/A';
-                  
+
                   const reportedName = typeof row.reportedId === 'object' && row.reportedId?.name 
                     ? row.reportedId.name 
                     : 'N/A';
-                  
+
                   const reportedEmail = typeof row.reportedId === 'object' && row.reportedId?.email 
                     ? row.reportedId.email 
                     : null;
@@ -844,6 +844,10 @@ export default function ReportManagementPage() {
                     ? row.reporterName?.id 
                     : null;
 
+                  const reporterEmail = typeof row.reporterName === 'object' && row.reporterName?.reporterEmail 
+                    ? row.reporterName.reporterEmail 
+                    : 'N/A';
+
                   if (reporterId) {
                     return (
                       <div>
@@ -856,7 +860,7 @@ export default function ReportManagementPage() {
                           {reporterName}
                         </div>
                         <div className="text-sm text-muted-foreground">ID: {reporterId}</div>
-                        <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
+                        <div className="text-sm text-muted-foreground">{reporterEmail}</div>
                       </div>
                     );
                   }
@@ -864,7 +868,7 @@ export default function ReportManagementPage() {
                   return (
                     <div>
                       <div className="font-medium">{reporterName}</div>
-                      <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
+                      <div className="text-sm text-muted-foreground">{reporterEmail}</div>
                     </div>
                   );
                 },
@@ -939,7 +943,10 @@ export default function ReportManagementPage() {
                         <Button variant="ghost" size="icon">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                      </DropdownMenuTrigger>
+                      </DropdownMenuTrigger
+Analyzing the user's request, the change involves updating the `reporterEmail` retrieval logic to fetch it from the `reporterName` object within the `DataTable` component's columns definition.
+
+```typescript
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setSelectedRequest(row)}>
                           <Eye className="mr-2 h-4 w-4" />
@@ -986,11 +993,11 @@ export default function ReportManagementPage() {
                       const reportedId = typeof selectedRequest.reportedId === 'string' 
                         ? selectedRequest.reportedId 
                         : selectedRequest.reportedId?.id || 'N/A';
-                      
+
                       const reportedName = typeof selectedRequest.reportedId === 'object' && selectedRequest.reportedId?.name 
                         ? selectedRequest.reportedId.name 
                         : 'N/A';
-                      
+
                       const reportedEmail = typeof selectedRequest.reportedId === 'object' && selectedRequest.reportedId?.email 
                         ? selectedRequest.reportedId.email 
                         : null;

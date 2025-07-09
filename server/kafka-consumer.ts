@@ -705,14 +705,10 @@ export async function setupKafkaConsumer() {
                           const insertData = {
                             reportedId: reportMsg.reported_id,
                             reportType: reportMsg.reportType,
-                            reporterName: {
-                              id: reportMsg.reporterName.id,
-                              name: reportMsg.reporterName.name
-                            },
-                            reporterEmail: reportMsg.reporterName.reporterEmail,
+                            reporterName: reportMsg.reporterName, // Giờ đây chứa cả email bên trong
                             reason: reportMsg.reason,
                             detailedReason: reportMsg.detailedReason || null,
-                            status: 'pending',
+                            status: 'pending' as const,
                             assignedToId: assignedToId,
                             assignedToName: assignedUser.name,
                             assignedAt: now,
@@ -832,6 +828,7 @@ function parseMessage(
       return message as FeedbackMessage;
     }
     // Check for support/contact message (has full_name, email, subject, content)
+    ```
     else if ("full_name" in message && "email" in message && "subject" in message && "content" in message) {
       return message as SupportMessage;
     } else if ("externalId" in message){
@@ -1410,7 +1407,7 @@ async function processVerificationMessage(message: VerificationMessage, tx: any)
       const attachmentUrlString = Array.isArray(message.attachment_url) 
         ? JSON.stringify(message.attachment_url) 
         : message.attachment_url;
-        
+
       const existingRequest = await tx
         .select()
         .from(supportRequests)
