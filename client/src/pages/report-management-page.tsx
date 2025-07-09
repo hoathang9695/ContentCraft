@@ -943,10 +943,7 @@ export default function ReportManagementPage() {
                         <Button variant="ghost" size="icon">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                      </DropdownMenuTrigger
-Analyzing the user's request, the change involves updating the `reporterEmail` retrieval logic to fetch it from the `reporterName` object within the `DataTable` component's columns definition.
-
-```typescript
+                      </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setSelectedRequest(row)}>
                           <Eye className="mr-2 h-4 w-4" />
