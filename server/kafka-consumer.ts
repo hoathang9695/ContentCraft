@@ -105,13 +105,17 @@ export interface TickMessage {
 }
 
 export interface ReportMessage {
-  reportId: string;
   reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'course' | 'project' | 'video' | 'song' | 'event';
+  reported_id: {
+    id: string;
+    name: string;
+    email: string;
+  };
   reporterName: {
     id: string;
     name: string;
-  } | string;
-  reporterEmail: string;
+    reporterEmail: string;
+  };
   reason: string;
   detailedReason?: string;
 }
@@ -639,7 +643,7 @@ export async function setupKafkaConsumer() {
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
-                      } else if ("reportId" in msg && "reportType" in msg && "reporterName" in msg && "reporterEmail" in msg) {
+                      } else if ("reported_id" in msg && "reportType" in msg && "reporterName" in msg) {
                         // Handle report message from Kafka
                         const reportMsg = msg as ReportMessage;
                         const now = new Date();
@@ -648,7 +652,7 @@ export async function setupKafkaConsumer() {
 
                         try {
                           // Validate required fields
-                          if (!reportMsg.reportId || !reportMsg.reportType || !reportMsg.reporterName || !reportMsg.reporterEmail || !reportMsg.reason) {
+                          if (!reportMsg.reported_id?.id || !reportMsg.reportType || !reportMsg.reporterName?.id || !reportMsg.reporterName?.reporterEmail || !reportMsg.reason) {
                             const error = `❌ Invalid report message format - missing required fields: ${JSON.stringify(reportMsg)}`;
                             log(error, "kafka-error");
                             throw new Error(error);
@@ -697,17 +701,15 @@ export async function setupKafkaConsumer() {
 
                           log(`👤 Assigned to user: ${assignedUser.name} (ID: ${assignedToId})`, "kafka");
 
-                          // Use reporterName as provided from Kafka message
-                          const reporterNameObj = reportMsg.reporterName;
-
-                          // Prepare insert data
+                          // Prepare insert data with new format
                           const insertData = {
-                            reportedId: {
-                              id: reportMsg.reportId
-                            },
+                            reportedId: reportMsg.reported_id,
                             reportType: reportMsg.reportType,
-                            reporterName: reporterNameObj,
-                            reporterEmail: reportMsg.reporterEmail,
+                            reporterName: {
+                              id: reportMsg.reporterName.id,
+                              name: reportMsg.reporterName.name
+                            },
+                            reporterEmail: reportMsg.reporterName.reporterEmail,
                             reason: reportMsg.reason,
                             detailedReason: reportMsg.detailedReason || null,
                             status: 'pending',
@@ -729,14 +731,14 @@ export async function setupKafkaConsumer() {
                             throw new Error(error);
                           }
 
-                          log(`✅ Successfully inserted report: ID ${result[0].id}, ReportID: ${reportMsg.reportId}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          log(`✅ Successfully inserted report: ID ${result[0].id}, ReportedID: ${reportMsg.reported_id.id}, AssignedTo: ${assignedUser.name}`, "kafka");
                           metrics.processedMessages++;
                           return result[0];
 
                         } catch (error) {
                           const errorMsg = error instanceof Error ? error.message : String(error);
                           const errorStack = error instanceof Error ? error.stack : '';
-                          log(`❌ Error processing report ${reportMsg.reportId}: ${errorMsg}`, "kafka-error");
+                          log(`❌ Error processing report ${reportMsg.reported_id.id}: ${errorMsg}`, "kafka-error");
                           log(`📍 Error stack: ${errorStack}`, "kafka-error");
 
                           // Log additional context for debugging
@@ -817,8 +819,8 @@ function parseMessage(
     const value = messageValue.toString();
     const message = JSON.parse(value);
 
-    // Check for report message (has reportId, reportType, reporterName, reporterEmail, reason)
-    if ("reportId" in message && "reportType" in message && "reporterName" in message && "reporterEmail" in message && "reason" in message) {
+    // Check for report message (has reported_id, reportType, reporterName with reporterEmail, reason)
+    if ("reported_id" in message && "reportType" in message && "reporterName" in message && message.reporterName && "reporterEmail" in message.reporterName && "reason" in message) {
       return message as ReportMessage;
     }
     // Check for tick message first (has type: 'tick' and id)

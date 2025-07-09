@@ -775,29 +775,47 @@ export default function ReportManagementPage() {
               },
               {
                 key: 'reportedId',
-                header: 'ID bị báo cáo',
+                header: 'Đối tượng bị báo cáo',
                 render: (row: ReportRequest) => {
                   const reportedId = typeof row.reportedId === 'string' 
                     ? row.reportedId 
                     : row.reportedId?.id || 'N/A';
+                  
+                  const reportedName = typeof row.reportedId === 'object' && row.reportedId?.name 
+                    ? row.reportedId.name 
+                    : 'N/A';
+                  
+                  const reportedEmail = typeof row.reportedId === 'object' && row.reportedId?.email 
+                    ? row.reportedId.email 
+                    : null;
 
                   const url = getReportUrl(row.reportType, reportedId);
 
                   if (url && reportedId !== 'N/A') {
                     return (
-                      <div 
-                        className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline transition-colors"
-                        onClick={() => handleReportedIdClick(row.reportType, reportedId)}
-                        title={`Mở ${getReportTypeBadge(row.reportType).label.toLowerCase()} trong tab mới`}
-                      >
-                        {reportedId}
+                      <div>
+                        <div 
+                          className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline transition-colors"
+                          onClick={() => handleReportedIdClick(row.reportType, reportedId)}
+                          title={`Mở ${getReportTypeBadge(row.reportType).label.toLowerCase()} trong tab mới`}
+                        >
+                          {reportedName}
+                        </div>
+                        <div className="text-sm text-muted-foreground">ID: {reportedId}</div>
+                        {reportedEmail && (
+                          <div className="text-sm text-muted-foreground">{reportedEmail}</div>
+                        )}
                       </div>
                     );
                   }
 
                   return (
-                    <div className="font-medium text-gray-600">
-                      {reportedId}
+                    <div>
+                      <div className="font-medium text-gray-600">{reportedName}</div>
+                      <div className="text-sm text-muted-foreground">ID: {reportedId}</div>
+                      {reportedEmail && (
+                        <div className="text-sm text-muted-foreground">{reportedEmail}</div>
+                      )}
                     </div>
                   );
                 },
@@ -837,6 +855,7 @@ export default function ReportManagementPage() {
                         >
                           {reporterName}
                         </div>
+                        <div className="text-sm text-muted-foreground">ID: {reporterId}</div>
                         <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
                       </div>
                     );
@@ -962,30 +981,48 @@ export default function ReportManagementPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium">ID bị báo cáo</Label>
+                    <Label className="text-sm font-medium">Đối tượng bị báo cáo</Label>
                     {(() => {
                       const reportedId = typeof selectedRequest.reportedId === 'string' 
                         ? selectedRequest.reportedId 
                         : selectedRequest.reportedId?.id || 'N/A';
+                      
+                      const reportedName = typeof selectedRequest.reportedId === 'object' && selectedRequest.reportedId?.name 
+                        ? selectedRequest.reportedId.name 
+                        : 'N/A';
+                      
+                      const reportedEmail = typeof selectedRequest.reportedId === 'object' && selectedRequest.reportedId?.email 
+                        ? selectedRequest.reportedId.email 
+                        : null;
 
                       const url = getReportUrl(selectedRequest.reportType, reportedId);
 
                       if (url && reportedId !== 'N/A') {
                         return (
-                          <p 
-                            className="text-blue-600 font-medium hover:text-blue-800 cursor-pointer underline transition-colors"
-                            onClick={() => handleReportedIdClick(selectedRequest.reportType, reportedId)}
-                            title={`Mở ${getReportTypeBadge(selectedRequest.reportType).label.toLowerCase()} trong tab mới`}
-                          >
-                            {reportedId}
-                          </p>
+                          <div>
+                            <p 
+                              className="text-blue-600 font-medium hover:text-blue-800 cursor-pointer underline transition-colors"
+                              onClick={() => handleReportedIdClick(selectedRequest.reportType, reportedId)}
+                              title={`Mở ${getReportTypeBadge(selectedRequest.reportType).label.toLowerCase()} trong tab mới`}
+                            >
+                              {reportedName}
+                            </p>
+                            <p className="text-sm text-muted-foreground">ID: {reportedId}</p>
+                            {reportedEmail && (
+                              <p className="text-sm text-muted-foreground">{reportedEmail}</p>
+                            )}
+                          </div>
                         );
                       }
 
                       return (
-                        <p className="text-gray-600 font-medium">
-                          {reportedId}
-                        </p>
+                        <div>
+                          <p className="text-gray-600 font-medium">{reportedName}</p>
+                          <p className="text-sm text-muted-foreground">ID: {reportedId}</p>
+                          {reportedEmail && (
+                            <p className="text-sm text-muted-foreground">{reportedEmail}</p>
+                          )}
+                        </div>
                       );
                     })()}
                   </div>
