@@ -4,14 +4,19 @@ import { users } from './shared/schema';
 import { eq, ne, and } from 'drizzle-orm';
 
 interface ReportMessage {
-  reportId: string;
   reportType: 'user' | 'page' | 'group' | 'content' | 'comment' | 'post';
-  reporterName: string;
-  reporterEmail: string;
+  reported_id: {
+    id: string;
+    name?: string;
+    email?: string;
+  };
+  reporterName: {
+    id: string;
+    name: string;
+    reporterEmail: string;
+  };
   reason: string;
   detailedReason: string;
-  reportedTargetId?: string;
-  reportedTargetName?: string;
 }
 
 async function processReportMessage(message: ReportMessage) {
@@ -38,15 +43,9 @@ async function processReportMessage(message: ReportMessage) {
 
     // Insert into report_management table
     const insertData = {
-      reportedId: {
-        id: message.reportedTargetId || message.reportId
-      },
+      reportedId: message.reported_id,
       reportType: message.reportType,
-      reporterName: {
-        id: `reporter_${Date.now()}`,
-        name: message.reporterName
-      },
-      reporterEmail: message.reporterEmail,
+      reporterName: message.reporterName,
       reason: message.reason,
       detailedReason: message.detailedReason,
       status: 'pending' as const,
@@ -76,57 +75,78 @@ async function simulateReportKafkaMessages() {
   console.log('🚀 Starting Report Management Kafka simulation...\n');
   
   try {
-    // Test messages for different report types
+    // Test messages for different report types with new format
     const testMessages: ReportMessage[] = [
       {
-        reportId: 'RPT_' + Date.now() + '_001',
         reportType: 'user',
-        reporterName: 'Nguyễn Văn An',
-        reporterEmail: 'an.nguyen@example.com',
+        reported_id: {
+          id: '114619409398949374',
+          name: 'Nguyễn Văn Spam',
+          email: 'spam.user@example.com'
+        },
+        reporterName: {
+          id: '1749539951001',
+          name: 'Nguyễn Văn An',
+          reporterEmail: 'an.nguyen@example.com'
+        },
         reason: 'Spam tin nhắn',
-        detailedReason: 'Người dùng này liên tục gửi tin nhắn spam quảng cáo đến nhiều người dùng khác.',
-        reportedTargetId: '114652263781752445',
-        reportedTargetName: 'Người dùng spam'
+        detailedReason: 'Người dùng này liên tục gửi tin nhắn spam quảng cáo đến nhiều người dùng khác.'
       },
       {
-        reportId: 'RPT_' + Date.now() + '_002',
         reportType: 'page',
-        reporterName: 'Trần Thị Bình',
-        reporterEmail: 'binh.tran@example.com',
+        reported_id: {
+          id: 'PAGE_123456789',
+          name: 'Trang vi phạm bản quyền'
+        },
+        reporterName: {
+          id: '1749539951002',
+          name: 'Trần Thị Bình',
+          reporterEmail: 'binh.tran@example.com'
+        },
         reason: 'Vi phạm bản quyền',
-        detailedReason: 'Trang này đăng tải nhiều hình ảnh có bản quyền mà không có sự cho phép.',
-        reportedTargetId: 'PAGE_123456789',
-        reportedTargetName: 'Trang vi phạm bản quyền'
+        detailedReason: 'Trang này đăng tải nhiều hình ảnh có bản quyền mà không có sự cho phép.'
       },
       {
-        reportId: 'RPT_' + Date.now() + '_003',
         reportType: 'group',
-        reporterName: 'Lê Minh Cường',
-        reporterEmail: 'cuong.le@example.com',
+        reported_id: {
+          id: 'GROUP_987654321',
+          name: 'Nhóm nội dung độc hại'
+        },
+        reporterName: {
+          id: '1749539951003',
+          name: 'Lê Minh Cường',
+          reporterEmail: 'cuong.le@example.com'
+        },
         reason: 'Nội dung độc hại',
-        detailedReason: 'Nhóm này chia sẻ các nội dung có tính chất bạo lực và kích động thù địch.',
-        reportedTargetId: 'GROUP_987654321',
-        reportedTargetName: 'Nhóm nội dung độc hại'
+        detailedReason: 'Nhóm này chia sẻ các nội dung có tính chất bạo lực và kích động thù địch.'
       },
       {
-        reportId: 'RPT_' + Date.now() + '_004',
         reportType: 'content',
-        reporterName: 'Phạm Thị Dung',
-        reporterEmail: 'dung.pham@example.com',
+        reported_id: {
+          id: 'POST_456123789',
+          name: 'Bài viết lừa đảo'
+        },
+        reporterName: {
+          id: '1749539951004',
+          name: 'Phạm Thị Dung',
+          reporterEmail: 'dung.pham@example.com'
+        },
         reason: 'Lừa đảo tài chính',
-        detailedReason: 'Bài viết này quảng cáo các gói đầu tư với lợi nhuận cao bất thường, có dấu hiệu lừa đảo.',
-        reportedTargetId: 'POST_456123789',
-        reportedTargetName: 'Bài viết lừa đảo'
+        detailedReason: 'Bài viết này quảng cáo các gói đầu tư với lợi nhuận cao bất thường, có dấu hiệu lừa đảo.'
       },
       {
-        reportId: 'RPT_' + Date.now() + '_005',
         reportType: 'comment',
-        reporterName: 'Hoàng Văn Em',
-        reporterEmail: 'em.hoang@example.com',
+        reported_id: {
+          id: 'COMMENT_789012345',
+          name: 'Bình luận quấy rối'
+        },
+        reporterName: {
+          id: '1749539951005',
+          name: 'Hoàng Văn Em',
+          reporterEmail: 'em.hoang@example.com'
+        },
         reason: 'Quấy rối tình dục',
-        detailedReason: 'Bình luận này chứa nội dung quấy rối tình dục và không phù hợp.',
-        reportedTargetId: 'COMMENT_789012345',
-        reportedTargetName: 'Bình luận quấy rối'
+        detailedReason: 'Bình luận này chứa nội dung quấy rối tình dục và không phù hợp.'
       }
     ];
 
