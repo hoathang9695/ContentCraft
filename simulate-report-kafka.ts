@@ -150,8 +150,8 @@ async function simulateReportKafkaMessages() {
         },
         reason: 'Quấy rối tình dục',
         detailedReason: 'Bình luận này chứa nội dung quấy rối tình dục và không phù hợp.'
-      }
-    // Additional comment report with new format
+      },
+      // Additional comment report with new format
       {
         reportType: 'comment',
         reported_id: {
