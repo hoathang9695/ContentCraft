@@ -47,12 +47,19 @@ export type InsertContent = z.infer<typeof insertContentSchema>;
 export type Content = typeof contents.$inferSelect;
 
 // Login schema (subset of user)
-export const loginSchema = insertUserSchema.pick({
-  username: true,
-  password: true,
+export const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().optional(),
 });
 
-export type LoginData = z.infer<typeof loginSchema>;
+export const loginDataSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().optional(),
+});
+
+export type LoginData = z.infer<typeof loginDataSchema>;
 
 // User activity log for tracking login/logout/registration
 export const userActivities = pgTable("user_activities", {
@@ -176,7 +183,7 @@ export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
   pageName: jsonb("page_name").notNull(),
   pageType: varchar("page_type", { length: 100 }).notNull(),
-  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'non_potential', 'positive'
+  classification: varchar("classification", { length: 50 }).default("new"), // 'new', 'potential', 'positive'
   adminData: jsonb("admin_data"), // Admin data in JSON format
   phoneNumber: varchar("phone_number", { length: 20 }),
   monetizationEnabled: boolean("monetization_enabled").default(false),
@@ -291,8 +298,7 @@ export const reportManagement = pgTable("report_management", {
   id: serial("id").primaryKey(),
   reportedId: jsonb("reported_id").notNull(), // ID đối tượng bị báo cáo (JSON format)
   reportType: varchar("report_type", { length: 50 }).notNull(), // 'user', 'content', 'page', 'group', 'comment', 'course', 'project', 'recruitment', 'song', 'event'
-  reporterName: jsonb("reporter_name").notNull(), // Tên người báo cáo (JSON format)
-  reporterEmail: varchar("reporter_email", { length: 255 }).notNull(), // Email người báo cáo
+  reporterName: jsonb("reporter_name").notNull(), // Thông tin người báo cáo (JSON format với email)
   reason: varchar("reason", { length: 500 }).notNull(), // Lý do báo cáo
   detailedReason: text("detailed_reason"), // Mô tả chi tiết
   status: varchar("status", { length: 50 }).notNull().default("pending"), // 'pending', 'processing', 'completed'

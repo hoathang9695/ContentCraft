@@ -48,7 +48,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [, navigate] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
-  
+
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
@@ -57,11 +57,12 @@ export default function AuthPage() {
   }, [user, navigate]);
 
   // Login form setup
-  const loginForm = useForm<LoginFormValues>({
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
+      rememberMe: false,
     },
   });
 
@@ -85,7 +86,7 @@ export default function AuthPage() {
   };
 
   const { toast } = useToast();
-  
+
   const onRegisterSubmit = (data: RegisterFormValues) => {
     registerMutation.mutate(data as InsertUser, {
       onSuccess: (response: any) => {
@@ -121,7 +122,7 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Right side with login/register form */}
       <div className="w-full md:w-1/2 flex items-center justify-center p-6 bg-gray-50">
         <div className="w-full max-w-md">
@@ -130,7 +131,7 @@ export default function AuthPage() {
             <h1 className="text-3xl font-medium text-primary">CMS Portal</h1>
             <p className="text-gray-600 mt-2">Manage your content efficiently</p>
           </div>
-          
+
           <Card className="border-none shadow-md">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-medium">Welcome to CMS</CardTitle>
@@ -142,7 +143,7 @@ export default function AuthPage() {
                   <TabsTrigger value="login">Sign In</TabsTrigger>
                   <TabsTrigger value="register">Register</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="login">
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
@@ -166,7 +167,7 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={loginForm.control}
                         name="password"
@@ -206,17 +207,32 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="remember-me" />
-                        <label
-                          htmlFor="remember-me"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          Remember me
-                        </label>
+
+                      <div className="flex items-center justify-between">
+                        <FormField
+                          control={loginForm.control}
+                          name="rememberMe"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel className="text-sm font-medium">
+                                  Remember me
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                        <button type="button" className="text-sm text-primary hover:underline">
+                          Forgot password?
+                        </button>
                       </div>
-                      
+
                       <Button 
                         type="submit" 
                         className="w-full" 
@@ -234,7 +250,7 @@ export default function AuthPage() {
                     </form>
                   </Form>
                 </TabsContent>
-                
+
                 <TabsContent value="register">
                   <div className="p-3 bg-primary/10 text-primary rounded-md mb-4 text-sm">
                     <p>
@@ -264,7 +280,7 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={registerForm.control}
                         name="email"
@@ -285,7 +301,7 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={registerForm.control}
                         name="username"
@@ -306,7 +322,7 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={registerForm.control}
                         name="password"
@@ -405,11 +421,11 @@ export default function AuthPage() {
                           )}
                         />
                       </div>
-                      
+
                       <div className="mb-4 text-sm text-amber-600 dark:text-amber-400 p-3 border border-amber-200 dark:border-amber-800 rounded-md bg-amber-50 dark:bg-amber-950">
                         Note: After registration, your account will need administrator approval before you can log in.
                       </div>
-                      
+
                       <Button 
                         type="submit" 
                         className="w-full" 
@@ -428,7 +444,7 @@ export default function AuthPage() {
                   </Form>
                 </TabsContent>
               </Tabs>
-              
+
               <div className="text-center mt-6">
                 <p className="text-sm text-muted-foreground">
                   {activeTab === 'login' ? (

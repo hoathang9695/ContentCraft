@@ -199,6 +199,8 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    const { rememberMe } = req.body;
+    
     passport.authenticate("local", async (err: Error | null, user: Express.User | false, info: any) => {
       if (err) return next(err);
       if (!user) {
@@ -209,6 +211,16 @@ export function setupAuth(app: Express) {
       req.login(user, async (err) => {
         if (err) return next(err);
         
+        // Set session duration based on remember me
+        if (rememberMe) {
+          // Extend session to 30 days if remember me is checked
+          req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+          console.log('Extended session duration for remember me:', req.session.cookie.maxAge);
+        } else {
+          // Keep default session duration (1 day)
+          req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 1 day
+        }
+        
         // Log login activity
         try {
           await storage.logUserActivity({
@@ -218,7 +230,8 @@ export function setupAuth(app: Express) {
             userAgent: req.headers['user-agent'],
             metadata: { 
               success: true,
-              method: 'password' 
+              method: 'password',
+              rememberMe: rememberMe || false
             }
           });
         } catch (error) {

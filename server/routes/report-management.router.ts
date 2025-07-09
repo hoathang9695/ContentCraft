@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { db } from '../db.js';
 import { reportManagement, users } from '../../shared/schema.js';
@@ -10,10 +9,10 @@ const router = Router();
 // Get all reports with filters and pagination
 router.get('/', async (req, res) => {
   console.log('GET /api/report-management - Request received');
-  
+
   // Ensure JSON response
   res.setHeader('Content-Type', 'application/json');
-  
+
   try {
     const { 
       page = '1', 
@@ -34,15 +33,15 @@ router.get('/', async (req, res) => {
 
     // Build where conditions
     let whereConditions: any[] = [];
-    
+
     if (status && status !== 'all') {
       whereConditions.push(eq(reportManagement.status, status as string));
     }
-    
+
     if (reportType && reportType !== 'all') {
       whereConditions.push(eq(reportManagement.reportType, reportType as string));
     }
-    
+
     if (assignedTo && assignedTo !== 'all') {
       if (assignedTo === 'unassigned') {
         whereConditions.push(sql`${reportManagement.assignedToId} IS NULL`);
@@ -50,7 +49,7 @@ router.get('/', async (req, res) => {
         whereConditions.push(eq(reportManagement.assignedToId, parseInt(assignedTo as string)));
       }
     }
-    
+
     if (search) {
       whereConditions.push(
         or(
@@ -66,7 +65,7 @@ router.get('/', async (req, res) => {
     if (startDate) {
       whereConditions.push(sql`${reportManagement.createdAt} >= ${new Date(startDate as string)}`);
     }
-    
+
     if (endDate) {
       whereConditions.push(sql`${reportManagement.createdAt} <= ${new Date(endDate as string)}`);
     }
@@ -75,31 +74,29 @@ router.get('/', async (req, res) => {
     const orderByField = reportManagement[sortBy as keyof typeof reportManagement] || reportManagement.createdAt;
     const orderDirection = sortOrder === 'asc' ? asc : desc;
 
-    // Get reports with user info
-    const reports = await db
-      .select({
-        id: reportManagement.id,
-        reportedId: reportManagement.reportedId,
-        reportType: reportManagement.reportType,
-        reporterName: reportManagement.reporterName,
-        reporterEmail: reportManagement.reporterEmail,
-        reason: reportManagement.reason,
-        detailedReason: reportManagement.detailedReason,
-        status: reportManagement.status,
-        assignedToId: reportManagement.assignedToId,
-        assignedToName: reportManagement.assignedToName,
-        assignedAt: reportManagement.assignedAt,
-        responseContent: reportManagement.responseContent,
-        responderId: reportManagement.responderId,
-        responseTime: reportManagement.responseTime,
-        createdAt: reportManagement.createdAt,
-        updatedAt: reportManagement.updatedAt,
-        processor: {
-          id: users.id,
-          name: users.name,
-          username: users.username
-        }
-      })
+    const reportsQuery = db
+        .select({
+          id: reportManagement.id,
+          reportedId: reportManagement.reportedId,
+          reportType: reportManagement.reportType,
+          reporterName: reportManagement.reporterName,
+          reason: reportManagement.reason,
+          detailedReason: reportManagement.detailedReason,
+          status: reportManagement.status,
+          assignedToId: reportManagement.assignedToId,
+          assignedToName: reportManagement.assignedToName,
+          assignedAt: reportManagement.assignedAt,
+          responseContent: reportManagement.responseContent,
+          responderId: reportManagement.responderId,
+          responseTime: reportManagement.responseTime,
+          createdAt: reportManagement.createdAt,
+          updatedAt: reportManagement.updatedAt,
+          processor: {
+            id: users.id,
+            name: users.name,
+            username: users.username,
+          },
+        })
       .from(reportManagement)
       .leftJoin(users, eq(reportManagement.assignedToId, users.id))
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
@@ -107,16 +104,34 @@ router.get('/', async (req, res) => {
       .limit(pageSizeNum)
       .offset(offset);
 
+    const reports = await reportsQuery;
+
+    const formattedReports = reports.map((report) => {
+        const reporterName = typeof report.reporterName === 'string' 
+          ? JSON.parse(report.reporterName) 
+          : report.reporterName;
+
+        return {
+          ...report,
+          reportedId: 
+            typeof report.reportedId === 'string' 
+              ? JSON.parse(report.reportedId) 
+              : report.reportedId,
+          reporterName: reporterName,
+          reporterEmail: reporterName?.email || null, // Extract email from reporterName object
+        };
+      });
+
     // Get total count for pagination
     const totalResult = await db
       .select({ count: sql`count(*)` })
       .from(reportManagement)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
-    
+
     const total = Number(totalResult[0].count);
 
     const responseData = {
-      reports,
+      reports: formattedReports,
       pagination: {
         page: pageNum,
         pageSize: pageSizeNum,
@@ -181,7 +196,7 @@ router.patch('/:id/assign', async (req, res) => {
     }
 
     res.json({ message: 'Report assigned successfully', report: updatedReport[0] });
-    
+
     // Broadcast badge update after assignment
     if (typeof (global as any).broadcastReportBadgeUpdate === 'function') {
       (global as any).broadcastReportBadgeUpdate();
@@ -213,7 +228,7 @@ router.patch('/:id/status', async (req, res) => {
     }
 
     res.json({ message: 'Report status updated successfully', report: updatedReport[0] });
-    
+
     // Broadcast badge update after status change
     if (typeof (global as any).broadcastReportBadgeUpdate === 'function') {
       (global as any).broadcastReportBadgeUpdate();
@@ -249,7 +264,7 @@ router.patch('/:id/respond', async (req, res) => {
     }
 
     res.json({ message: 'Response added successfully', report: updatedReport[0] });
-    
+
     // Broadcast badge update after adding response
     if (typeof (global as any).broadcastReportBadgeUpdate === 'function') {
       (global as any).broadcastReportBadgeUpdate();
@@ -272,7 +287,6 @@ router.get('/:id', async (req, res) => {
         reportedId: reportManagement.reportedId,
         reportType: reportManagement.reportType,
         reporterName: reportManagement.reporterName,
-        reporterEmail: reportManagement.reporterEmail,
         reason: reportManagement.reason,
         detailedReason: reportManagement.detailedReason,
         status: reportManagement.status,

@@ -39,7 +39,7 @@ interface ReportRequest {
   id: number;
   reportedId: string | { id: string; target_id?: string };
   reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'recruitment' | 'project' | 'course' | 'event' | 'song';
-  reporterName: string | { id: string; name: string };
+  reporterName: string | { id: string; name: string, reporterEmail?: string };
   reporterEmail: string;
   reason: string;
   detailedReason: string;
@@ -775,29 +775,84 @@ export default function ReportManagementPage() {
               },
               {
                 key: 'reportedId',
-                header: 'ID bị báo cáo',
+                header: 'Đối tượng bị báo cáo',
                 render: (row: ReportRequest) => {
-                  const reportedId = typeof row.reportedId === 'string' 
-                    ? row.reportedId 
-                    : row.reportedId?.id || 'N/A';
+                  // Handle different formats for different report types
+                  let reportedId, reportedName, reportedEmail, displayId;
+                  
+                  if (typeof row.reportedId === 'string') {
+                    reportedId = row.reportedId;
+                    reportedName = 'N/A';
+                    reportedEmail = null;
+                    displayId = reportedId;
+                  } else if (typeof row.reportedId === 'object' && row.reportedId) {
+                    // For comment reports - use id_comment
+                    if (row.reportType === 'comment' && row.reportedId.id_comment) {
+                      reportedId = row.reportedId.id_post || 'N/A'; // Use post ID for URL
+                      displayId = row.reportedId.id_comment; // Display comment ID
+                      reportedName = row.reportedId.name || 'N/A';
+                      reportedEmail = row.reportedId.email || null;
+                    } else {
+                      // For other report types
+                      reportedId = row.reportedId.id || 'N/A';
+                      displayId = reportedId;
+                      reportedName = row.reportedId.name || 'N/A';
+                      reportedEmail = row.reportedId.email || null;
+                    }
+                  } else {
+                    reportedId = 'N/A';
+                    reportedName = 'N/A';
+                    reportedEmail = null;
+                    displayId = 'N/A';
+                  }
 
                   const url = getReportUrl(row.reportType, reportedId);
 
                   if (url && reportedId !== 'N/A') {
                     return (
-                      <div 
-                        className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline transition-colors"
-                        onClick={() => handleReportedIdClick(row.reportType, reportedId)}
-                        title={`Mở ${getReportTypeBadge(row.reportType).label.toLowerCase()} trong tab mới`}
-                      >
-                        {reportedId}
+                      <div>
+                        <div 
+                          className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline transition-colors"
+                          onClick={() => handleReportedIdClick(row.reportType, reportedId)}
+                          title={`Mở ${getReportTypeBadge(row.reportType).label.toLowerCase()} trong tab mới`}
+                        >
+                          {reportedName}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {row.reportType === 'comment' ? 'Comment ID: ' : 'ID: '}{displayId}
+                        </div>
+                        {row.reportType === 'comment' && row.reportedId.id_post && (
+                          <div className="text-sm text-muted-foreground">Post ID: {row.reportedId.id_post}</div>
+                        )}
+                        {reportedEmail && (
+                          <div className="text-sm text-muted-foreground">{reportedEmail}</div>
+                        )}
+                        {row.reportType === 'comment' && row.reportedId.content && (
+                          <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={row.reportedId.content}>
+                            Nội dung: {row.reportedId.content}
+                          </div>
+                        )}
                       </div>
                     );
                   }
 
                   return (
-                    <div className="font-medium text-gray-600">
-                      {reportedId}
+                    <div>
+                      <div className="font-medium text-gray-600">{reportedName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {row.reportType === 'comment' ? 'Comment ID: ' : 'ID: '}{displayId}
+                      </div>
+                      {row.reportType === 'comment' && row.reportedId.id_post && (
+                        <div className="text-sm text-muted-foreground">Post ID: {row.reportedId.id_post}</div>
+                      )}
+                      {reportedEmail && (
+                        <div className="text-sm text-muted-foreground">{reportedEmail}</div>
+                      )}
+                      {row.reportType === 'comment' && row.reportedId.content && (
+                        <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={row.reportedId.content}>
+                          Nội dung: {row.reportedId.content}
+                        </div>
+                      )}
                     </div>
                   );
                 },
@@ -826,6 +881,10 @@ export default function ReportManagementPage() {
                     ? row.reporterName?.id 
                     : null;
 
+                  const reporterEmail = typeof row.reporterName === 'object' && row.reporterName?.reporterEmail 
+                    ? row.reporterName.reporterEmail 
+                    : 'N/A';
+
                   if (reporterId) {
                     return (
                       <div>
@@ -837,7 +896,8 @@ export default function ReportManagementPage() {
                         >
                           {reporterName}
                         </div>
-                        <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
+                        <div className="text-sm text-muted-foreground">ID: {reporterId}</div>
+                        <div className="text-sm text-muted-foreground">{reporterEmail}</div>
                       </div>
                     );
                   }
@@ -845,7 +905,7 @@ export default function ReportManagementPage() {
                   return (
                     <div>
                       <div className="font-medium">{reporterName}</div>
-                      <div className="text-sm text-muted-foreground">{row.reporterEmail}</div>
+                      <div className="text-sm text-muted-foreground">{reporterEmail}</div>
                     </div>
                   );
                 },
@@ -962,30 +1022,87 @@ export default function ReportManagementPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium">ID bị báo cáo</Label>
+                    <Label className="text-sm font-medium">Đối tượng bị báo cáo</Label>
                     {(() => {
-                      const reportedId = typeof selectedRequest.reportedId === 'string' 
-                        ? selectedRequest.reportedId 
-                        : selectedRequest.reportedId?.id || 'N/A';
+                      // Handle different formats for different report types
+                      let reportedId, reportedName, reportedEmail, displayId;
+                      
+                      if (typeof selectedRequest.reportedId === 'string') {
+                        reportedId = selectedRequest.reportedId;
+                        reportedName = 'N/A';
+                        reportedEmail = null;
+                        displayId = reportedId;
+                      } else if (typeof selectedRequest.reportedId === 'object' && selectedRequest.reportedId) {
+                        // For comment reports - use id_comment
+                        if (selectedRequest.reportType === 'comment' && selectedRequest.reportedId.id_comment) {
+                          reportedId = selectedRequest.reportedId.id_post || 'N/A'; // Use post ID for URL
+                          displayId = selectedRequest.reportedId.id_comment; // Display comment ID
+                          reportedName = selectedRequest.reportedId.name || 'N/A';
+                          reportedEmail = selectedRequest.reportedId.email || null;
+                        } else {
+                          // For other report types
+                          reportedId = selectedRequest.reportedId.id || 'N/A';
+                          displayId = reportedId;
+                          reportedName = selectedRequest.reportedId.name || 'N/A';
+                          reportedEmail = selectedRequest.reportedId.email || null;
+                        }
+                      } else {
+                        reportedId = 'N/A';
+                        reportedName = 'N/A';
+                        reportedEmail = null;
+                        displayId = 'N/A';
+                      }
 
                       const url = getReportUrl(selectedRequest.reportType, reportedId);
 
                       if (url && reportedId !== 'N/A') {
                         return (
-                          <p 
-                            className="text-blue-600 font-medium hover:text-blue-800 cursor-pointer underline transition-colors"
-                            onClick={() => handleReportedIdClick(selectedRequest.reportType, reportedId)}
-                            title={`Mở ${getReportTypeBadge(selectedRequest.reportType).label.toLowerCase()} trong tab mới`}
-                          >
-                            {reportedId}
-                          </p>
+                          <div>
+                            <p 
+                              className="text-blue-600 font-medium hover:text-blue-800 cursor-pointer underline transition-colors"
+                              onClick={() => handleReportedIdClick(selectedRequest.reportType, reportedId)}
+                              title={`Mở ${getReportTypeBadge(selectedRequest.reportType).label.toLowerCase()} trong tab mới`}
+                            >
+                              {reportedName}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedRequest.reportType === 'comment' ? 'Comment ID: ' : 'ID: '}{displayId}
+                            </p>
+                            {selectedRequest.reportType === 'comment' && selectedRequest.reportedId.id_post && (
+                              <p className="text-sm text-muted-foreground">Post ID: {selectedRequest.reportedId.id_post}</p>
+                            )}
+                            {reportedEmail && (
+                              <p className="text-sm text-muted-foreground">{reportedEmail}</p>
+                            )}
+                            {selectedRequest.reportType === 'comment' && selectedRequest.reportedId.content && (
+                              <div className="mt-2 p-2 bg-muted rounded text-sm">
+                                <Label className="text-xs font-medium">Nội dung bình luận:</Label>
+                                <p className="text-xs mt-1">{selectedRequest.reportedId.content}</p>
+                              </div>
+                            )}
+                          </div>
                         );
                       }
 
                       return (
-                        <p className="text-gray-600 font-medium">
-                          {reportedId}
-                        </p>
+                        <div>
+                          <p className="text-gray-600 font-medium">{reportedName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedRequest.reportType === 'comment' ? 'Comment ID: ' : 'ID: '}{displayId}
+                          </p>
+                          {selectedRequest.reportType === 'comment' && selectedRequest.reportedId.id_post && (
+                            <p className="text-sm text-muted-foreground">Post ID: {selectedRequest.reportedId.id_post}</p>
+                          )}
+                          {reportedEmail && (
+                            <p className="text-sm text-muted-foreground">{reportedEmail}</p>
+                          )}
+                          {selectedRequest.reportType === 'comment' && selectedRequest.reportedId.content && (
+                            <div className="mt-2 p-2 bg-muted rounded text-sm">
+                              <Label className="text-xs font-medium">Nội dung bình luận:</Label>
+                              <p className="text-xs mt-1">{selectedRequest.reportedId.content}</p>
+                            </div>
+                          )}
+                        </div>
                       );
                     })()}
                   </div>
