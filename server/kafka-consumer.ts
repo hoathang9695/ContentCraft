@@ -828,7 +828,6 @@ function parseMessage(
       return message as FeedbackMessage;
     }
     // Check for support/contact message (has full_name, email, subject, content)
-    ```
     else if ("full_name" in message && "email" in message && "subject" in message && "content" in message) {
       return message as SupportMessage;
     } else if ("externalId" in message){
