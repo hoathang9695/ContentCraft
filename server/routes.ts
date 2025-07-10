@@ -2940,6 +2940,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Report management routes - with authentication middleware
   app.use("/api/report-management", isAuthenticated, reportManagementRouter);
 
+  // Complain management routes - with authentication middleware
+  const complainManagementRouter = (await import("./routes/complain-management.router")).default;
+  app.use("/api/complain-management", isAuthenticated, complainManagementRouter);
+
   // Saved reports routes
   app.use("/api/saved-reports", savedReportsRouter);
 
