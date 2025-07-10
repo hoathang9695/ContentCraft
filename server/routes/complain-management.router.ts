@@ -167,15 +167,25 @@ router.patch('/:id/status', isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: 'Complaint not found' });
     }
 
-    // Broadcast badge update
-    if ((global as any).broadcastComplaintBadgeUpdate) {
-      (global as any).broadcastComplaintBadgeUpdate();
-    }
+    res.json({
+      message: 'Complaint status updated successfully',
+      complaint: result[0]
+    });
 
-    res.json({ message: 'Complaint status updated successfully', complaint: result[0] });
+    // Broadcast badge update after status change
+    try {
+      if ((global as any).broadcastComplaintBadgeUpdate) {
+        await (global as any).broadcastComplaintBadgeUpdate();
+      }
+    } catch (broadcastError) {
+      console.error('Error broadcasting complaint badge update:', broadcastError);
+    }
   } catch (error) {
     console.error('Error updating complaint status:', error);
-    res.status(500).json({ error: 'Failed to update complaint status' });
+    res.status(500).json({ 
+      message: 'Error updating complaint status',
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 
@@ -202,15 +212,25 @@ router.patch('/:id/respond', isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: 'Complaint not found' });
     }
 
-    // Broadcast badge update
-    if ((global as any).broadcastComplaintBadgeUpdate) {
-      (global as any).broadcastComplaintBadgeUpdate();
-    }
+    res.json({
+      message: 'Response sent successfully',
+      complaint: result[0]
+    });
 
-    res.json({ message: 'Response added successfully', complaint: result[0] });
+    // Broadcast badge update after response
+    try {
+      if ((global as any).broadcastComplaintBadgeUpdate) {
+        await (global as any).broadcastComplaintBadgeUpdate();
+      }
+    } catch (broadcastError) {
+      console.error('Error broadcasting complaint badge update:', broadcastError);
+    }
   } catch (error) {
-    console.error('Error adding response to complaint:', error);
-    res.status(500).json({ error: 'Failed to add response' });
+    console.error('Error sending complaint response:', error);
+    res.status(500).json({ 
+      message: 'Error sending complaint response',
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 

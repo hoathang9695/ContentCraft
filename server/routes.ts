@@ -192,11 +192,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(reportManagement)
           .where(eq(reportManagement.status, "pending"));
 
+        // Đếm complaint requests có status = 'pending'
+        const { complainManagement } = await import("../shared/schema");
+        const pendingComplaintRequests = await db
+          .select({ count: sql`count(*)::int` })
+          .from(complainManagement)
+          .where(eq(complainManagement.status, "pending"));
+
         const pendingSupport = pendingSupportRequests[0]?.count || 0;
         const pendingFeedback = pendingFeedbackRequests[0]?.count || 0;
         const pendingVerification = pendingVerificationRequests[0]?.count || 0;
         const pendingTick = pendingTickRequests[0]?.count || 0;
         const pendingReports = pendingReportRequests[0]?.count || 0;
+        const pendingComplaints = pendingComplaintRequests[0]?.count || 0;
 
         // Tổng số pending requests (support + feedback + verification + tick) cho menu cha "Xử lý phản hồi"
         const totalPendingRequests = pendingSupport + pendingFeedback + pendingVerification + pendingTick;
@@ -580,10 +588,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  // Function to broadcast complaint badge updates
+  const broadcastComplaintBadgeUpdate = async () => {
+    try {
+      const { complainManagement } = await import("../shared/schema");
+      
+      // Đếm complaint requests có status = 'pending'
+      const pendingComplaintRequests = await db
+        .select({ count: sql`count(*)::int` })
+        .from(complainManagement)
+        .where(eq(complainManagement.status, "pending"));
+
+      console.log("Complaint badge update - Complaint requests:", {
+        count: pendingComplaintRequests[0]?.count || 0,
+        query: "status='pending'"
+      });
+
+      const pendingComplaints = pendingComplaintRequests[0]?.count || 0;
+
+      const badgeCounts = {
+        complaintRequests: pendingComplaints,
+      };
+
+      const filteredBadgeCounts = {
+        complaintRequests:
+          badgeCounts.complaintRequests > 0
+            ? badgeCounts.complaintRequests
+            : undefined,
+      };
+
+      // Broadcast to all connected clients
+      io.emit("badge-update", filteredBadgeCounts);
+      console.log("Broadcasted complaint badge update:", filteredBadgeCounts);
+    } catch (error) {
+      console.error("Error broadcasting complaint badge update:", error);
+    }
+  };
+
   // Make broadcastBadgeUpdate available globally
   (global as any).broadcastBadgeUpdate = broadcastBadgeUpdate;
   (global as any).broadcastFeedbackBadgeUpdate = broadcastFeedbackBadgeUpdate;
   (global as any).broadcastReportBadgeUpdate = broadcastReportBadgeUpdate;
+  (global as any).broadcastComplaintBadgeUpdate = broadcastComplaintBadgeUpdate;
 
   // Start automatic file cleanup service
   const fileCleanupService = FileCleanupService.getInstance();
