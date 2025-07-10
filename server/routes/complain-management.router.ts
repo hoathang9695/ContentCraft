@@ -1,6 +1,6 @@
 
 import { Router } from 'express';
-import { authenticateUser } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 import { db } from '../db';
 import { complainManagement } from '../../shared/schema';
 import { eq, and, or, ilike, gte, lte, desc, asc } from 'drizzle-orm';
@@ -8,7 +8,7 @@ import { eq, and, or, ilike, gte, lte, desc, asc } from 'drizzle-orm';
 const router = Router();
 
 // Get all complaint requests with filtering and pagination
-router.get('/', authenticateUser, async (req, res) => {
+router.get('/', isAuthenticated, async (req, res) => {
   try {
     const { 
       page = '1', 
@@ -117,7 +117,7 @@ router.get('/', authenticateUser, async (req, res) => {
 });
 
 // Assign complaint to user
-router.patch('/:id/assign', authenticateUser, async (req, res) => {
+router.patch('/:id/assign', isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
     const { assignedToId } = req.body;
@@ -145,7 +145,7 @@ router.patch('/:id/assign', authenticateUser, async (req, res) => {
 });
 
 // Update complaint status
-router.patch('/:id/status', authenticateUser, async (req, res) => {
+router.patch('/:id/status', isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -171,7 +171,7 @@ router.patch('/:id/status', authenticateUser, async (req, res) => {
 });
 
 // Add response to complaint
-router.patch('/:id/respond', authenticateUser, async (req, res) => {
+router.patch('/:id/respond', isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
     const { responseContent } = req.body;
