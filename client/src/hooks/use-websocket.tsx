@@ -10,6 +10,7 @@ interface BadgeCounts {
   verificationRequests?: number;
   tickRequests?: number;
   reportRequests?: number;
+  complaintRequests?: number;
   totalRequests?: number;
 }
 
