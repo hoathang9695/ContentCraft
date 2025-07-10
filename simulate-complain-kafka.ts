@@ -3,7 +3,7 @@ import { users, complainManagement } from "./shared/schema";
 import { eq, ne, and } from "drizzle-orm";
 
 interface ComplainMessage {
-  Type:
+  type:
     | "user_complain"
     | "page_complain"
     | "post_complain"
@@ -20,7 +20,7 @@ interface ComplainMessage {
   activity_id: string;
   activity_class_name: string;
   reason?: string;
-  Descriptions: string;
+  descriptions: string;
   media_attachment?: string[];
 }
 
@@ -66,9 +66,9 @@ async function processComplainMessage(message: ComplainMessage) {
       complainerInfo: message.receiver_account_id,
       activityId: message.activity_id,
       activityClassName: message.activity_class_name,
-      complainType: message.Type,
+      complainType: message.type,
       reason: message.reason || null,
-      descriptions: message.Descriptions,
+      descriptions: message.descriptions,
       mediaAttachment: message.media_attachment || null,
       status: "pending" as const,
       assignedToId: assignedUser.id,
@@ -101,7 +101,7 @@ async function simulateComplainKafkaMessages() {
 
   const complainMessages: ComplainMessage[] = [
     {
-      Type: "user_complain",
+      type: "user_complain",
       receiver_account_id: {
         id: "114619409398949374",
         name: "Nguyễn Văn A",
@@ -110,11 +110,11 @@ async function simulateComplainKafkaMessages() {
       activity_id: "112240909630381155",
       activity_class_name: "Account",
       reason: "Spam tin nhắn",
-      Descriptions: "Tôi không làm gì vi phạm, sao lại khóa tài khoản của tôi.",
+      descriptions: "Tôi không làm gì vi phạm, sao lại khóa tài khoản của tôi.",
       media_attachment: ["link1.jpg", "link2.pdf"],
     },
     {
-      Type: "page_complain",
+      type: "page_complain",
       receiver_account_id: {
         id: "114619409398949375",
         name: "Trần Thị B",
@@ -123,11 +123,11 @@ async function simulateComplainKafkaMessages() {
       activity_id: "112240909630381156",
       activity_class_name: "Page",
       reason: "Nội dung không phù hợp",
-      Descriptions: "Tôi không làm gì vi phạm, sao lại khóa Trang của tôi.",
+      descriptions: "Tôi không làm gì vi phạm, sao lại khóa Trang của tôi.",
       media_attachment: ["screenshot1.png"],
     },
     {
-      Type: "post_complain",
+      type: "post_complain",
       receiver_account_id: {
         id: "114619409398949376",
         name: "Lê Văn C",
@@ -135,10 +135,10 @@ async function simulateComplainKafkaMessages() {
       },
       activity_id: "112240909630381157",
       activity_class_name: "Post",
-      Descriptions: "Tôi không làm gì vi phạm, sao lại khóa Post của tôi.",
+      descriptions: "Tôi không làm gì vi phạm, sao lại khóa Post của tôi.",
     },
     {
-      Type: "group_complain",
+      type: "group_complain",
       receiver_account_id: {
         id: "114619409398949377",
         name: "Phạm Thị D",
@@ -146,11 +146,11 @@ async function simulateComplainKafkaMessages() {
       },
       activity_id: "112240909630381158",
       activity_class_name: "Group",
-      Descriptions: "Tôi không làm gì vi phạm, sao lại khóa Group của tôi.",
+      descriptions: "Tôi không làm gì vi phạm, sao lại khóa Group của tôi.",
       media_attachment: ["evidence1.jpg", "evidence2.pdf"],
     },
     {
-      Type: "event_complain",
+      type: "event_complain",
       receiver_account_id: {
         id: "114619409398949378",
         name: "Hoàng Văn E",
@@ -158,10 +158,10 @@ async function simulateComplainKafkaMessages() {
       },
       activity_id: "112240909630381159",
       activity_class_name: "Event",
-      Descriptions: "Tôi không làm gì vi phạm, sao lại khóa Event của tôi.",
+      descriptions: "Tôi không làm gì vi phạm, sao lại khóa Event của tôi.",
     },
     {
-      Type: "song_complain",
+      type: "song_complain",
       receiver_account_id: {
         id: "114619409398949379",
         name: "Vũ Thị F",
@@ -169,11 +169,11 @@ async function simulateComplainKafkaMessages() {
       },
       activity_id: "112240909630381160",
       activity_class_name: "Song",
-      Descriptions: "Tôi không làm gì vi phạm, sao lại khóa Bài hát của tôi.",
+      descriptions: "Tôi không làm gì vi phạm, sao lại khóa Bài hát của tôi.",
       media_attachment: ["music_license.pdf"],
     },
     {
-      Type: "product_complain",
+      type: "product_complain",
       receiver_account_id: {
         id: "114619409398949380",
         name: "Đỗ Văn G",
@@ -182,11 +182,11 @@ async function simulateComplainKafkaMessages() {
       activity_id: "112240909630381161",
       activity_class_name: "Product",
       reason: "Sản phẩm hợp pháp",
-      Descriptions: "Tôi không làm gì vi phạm, sao lại khóa Sản phẩm của tôi.",
+      descriptions: "Tôi không làm gì vi phạm, sao lại khóa Sản phẩm của tôi.",
       media_attachment: ["product_cert.jpg", "business_license.pdf"],
     },
     {
-      Type: "project_complain",
+      type: "project_complain",
       receiver_account_id: {
         id: "114619409398949381",
         name: "Bùi Thị H",
@@ -194,7 +194,7 @@ async function simulateComplainKafkaMessages() {
       },
       activity_id: "112240909630381162",
       activity_class_name: "Project",
-      Descriptions: "Tôi không làm gì vi phạm, sao lại khóa Dự án của tôi.",
+      descriptions: "Tôi không làm gì vi phạm, sao lại khóa Dự án của tôi.",
     },
   ];
 
