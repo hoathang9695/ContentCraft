@@ -137,6 +137,11 @@ router.patch('/:id/assign', isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: 'Complaint not found' });
     }
 
+    // Broadcast badge update
+    if ((global as any).broadcastComplaintBadgeUpdate) {
+      (global as any).broadcastComplaintBadgeUpdate();
+    }
+
     res.json({ message: 'Complaint assigned successfully', complaint: result[0] });
   } catch (error) {
     console.error('Error assigning complaint:', error);
@@ -161,6 +166,11 @@ router.patch('/:id/status', isAuthenticated, async (req, res) => {
 
     if (result.length === 0) {
       return res.status(404).json({ error: 'Complaint not found' });
+    }
+
+    // Broadcast badge update
+    if ((global as any).broadcastComplaintBadgeUpdate) {
+      (global as any).broadcastComplaintBadgeUpdate();
     }
 
     res.json({ message: 'Complaint status updated successfully', complaint: result[0] });
@@ -191,6 +201,11 @@ router.patch('/:id/respond', isAuthenticated, async (req, res) => {
 
     if (result.length === 0) {
       return res.status(404).json({ error: 'Complaint not found' });
+    }
+
+    // Broadcast badge update
+    if ((global as any).broadcastComplaintBadgeUpdate) {
+      (global as any).broadcastComplaintBadgeUpdate();
     }
 
     res.json({ message: 'Response added successfully', complaint: result[0] });
