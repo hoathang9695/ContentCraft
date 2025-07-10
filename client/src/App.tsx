@@ -30,6 +30,7 @@ import { ListEmailPage } from '@/pages/campaign/list-email-page';
 import FeedbackPage from "@/pages/user-feedback/feedback-page";
 import ReportManagementPage from "@/pages/report-management-page";
 import ReviewReportsPage from "@/pages/review-reports-page";
+import ComplainManagementPage from "@/pages/complain-management-page";
 
 function Router() {
   return (
@@ -47,7 +48,8 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/page-management" component={PageManagementPage} />
       <Route path="/groups-management" component={GroupsManagementPage} />
-      <ProtectedRoute path="/report-management" component={ReportManagementPage} adminOnly={false} />
+      <Route path="/report-management" component={ReportManagementPage} />
+      <Route path="/complain-management" component={ComplainManagementPage} />
       <Route path="/review-reports" component={ReviewReportsPage} />
       <Route path="/user-feedback/support" component={SupportPage} />
       <Route path="/user-feedback/verification" component={VerificationPage} />
