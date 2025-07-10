@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { isAuthenticated } from '../middleware/auth';
 import { db } from '../db';
@@ -29,19 +28,19 @@ router.get('/', isAuthenticated, async (req, res) => {
 
     // Build where conditions
     const conditions = [];
-    
+
     if (status && status !== 'all') {
       conditions.push(eq(complainManagement.status, status as string));
     }
-    
+
     if (complainType && complainType !== 'all') {
       conditions.push(eq(complainManagement.complainType, complainType as string));
     }
-    
+
     if (assignedTo) {
       conditions.push(eq(complainManagement.assignedToId, parseInt(assignedTo as string)));
     }
-    
+
     if (search) {
       const searchConditions = [
         ilike(complainManagement.reason, `%${search}%`),
@@ -49,11 +48,11 @@ router.get('/', isAuthenticated, async (req, res) => {
       ];
       conditions.push(or(...searchConditions));
     }
-    
+
     if (startDate) {
       conditions.push(gte(complainManagement.createdAt, new Date(startDate as string)));
     }
-    
+
     if (endDate) {
       conditions.push(lte(complainManagement.createdAt, new Date(endDate as string)));
     }
@@ -67,7 +66,7 @@ router.get('/', isAuthenticated, async (req, res) => {
       .select()
       .from(complainManagement)
       .where(conditions.length > 0 ? and(...conditions) : undefined);
-    
+
     const total = totalResult.length;
     const totalPages = Math.ceil(total / size);
 
