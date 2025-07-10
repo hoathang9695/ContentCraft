@@ -1,0 +1,128 @@
+// 1. COMPLAIN USER
+
+{ 
+    "Type": "user_complain",
+    "type": "response_reported_status",
+    "receiver_account_id": {
+        "id": "114619409398949374", // ID của người complain
+        "name": "Nguyễn Văn A", // Tên của người complain
+        "email": "abcd@gmail.com"  // Email của người complain
+    },
+     "activity_id": "112240909630381155", // ID của User bị khóa
+     "activity_class_name": "Account",
+     "reason": "Spam tin nhắn",
+     "Descriptions": "Tôi không làm gì vi phạm, sao lại khóa tài khoản của tôi.",
+     "media_attachment": ["linl 1",  "link2" ]
+  }
+
+
+  //2. COMPLAIN PAGE
+{ 
+    "Type": "page_complain",
+    "type": "response_reported_status",
+    "receiver_account_id": {
+        "id": "114619409398949374", // ID của người complain
+        "name": "Nguyễn Văn A", // Tên của người complain
+        "email": "abcd@gmail.com"  // Email của người complain
+    },
+     "activity_id": "112240909630381155", // ID của Trang bị khóa
+     "activity_class_name": "Account",
+     "reason": "Spam tin nhắn",
+     "Descriptions": "Tôi không làm gì vi phạm, sao lại khóa Trang của tôi.",
+     "media_attachment": ["linl 1",  "link2" ]   
+  }
+
+// 3. COMPLAIN POST
+  { 
+    "Type": "post_complain",
+    "type": "response_reported_status",
+    "receiver_account_id": {
+        "id": "114619409398949374", // ID của người complain
+        "name": "Nguyễn Văn A", // Tên của người complain
+        "email": "abcd@gmail.com"  // Email của người complain
+    },
+     "activity_id": "112240909630381155", // ID của Post bị complain
+     "activity_class_name": "Account",
+     "Descriptions": "Tôi không làm gì vi phạm, sao lại khóa Post của tôi.",
+     "media_attachment": ["linl 1",  "link2" ]
+    
+  }
+
+// 4. COMPLAIN GROUP
+  { 
+    "Type": "group_complain",
+    "type": "response_reported_status",
+    "receiver_account_id": {
+        "id": "114619409398949374", // ID của người complain
+        "name": "Nguyễn Văn A", // Tên của người complain
+        "email": "abcd@gmail.com"  // Email của người complain
+    },
+     "activity_id": "112240909630381155", // ID của Group bị complain
+     "activity_class_name": "Account",
+     "Descriptions": "Tôi không làm gì vi phạm, sao lại khóa Group của tôi.",
+     "media_attachment": ["linl 1",  "link2" ]
+  }
+
+ // 5. COMPLAIN EVENT
+  { 
+    "Type": "event_complain",
+    "type": "response_reported_status",
+    "receiver_account_id": {
+        "id": "114619409398949374", // ID của người complain
+        "name": "Nguyễn Văn A", // Tên của người complain
+        "email": "abcd@gmail.com"  // Email của người complain
+    },
+     "activity_id": "112240909630381155", // ID của Event bị khóa
+     "activity_class_name": "Account",
+     "Descriptions": "Tôi không làm gì vi phạm, sao lại khóa Event của tôi.",
+     "media_attachment": ["linl 1",  "link2" ]
+    
+  }
+
+ // 6. COMPLAIN SONG
+  { 
+    "Type": "song_complain",
+    "type": "response_reported_status",
+    "receiver_account_id": {
+        "id": "114619409398949374", // ID của người complain
+        "name": "Nguyễn Văn A", // Tên của người complain
+        "email": "abcd@gmail.com"  // Email của người complain
+    },
+     "activity_id": "112240909630381155", // ID của song bị khóa
+     "activity_class_name": "Account",
+     "Descriptions": "Tôi không làm gì vi phạm, sao lại khóa Bài hát của tôi.",
+     "media_attachment": ["linl 1",  "link2" ]
+    
+  }
+
+ // 7. COMPLAIN PRODUCT
+  { 
+    "Type": "product_complain",
+    "type": "response_reported_status",
+    "receiver_account_id": {
+        "id": "114619409398949374", // ID của người complain
+        "name": "Nguyễn Văn A", // Tên của người complain
+        "email": "abcd@gmail.com"  // Email của người complain
+    },
+     "activity_id": "112240909630381155", // ID của product bị khóa
+     "activity_class_name": "Account",
+     "Descriptions": "Tôi không làm gì vi phạm, sao lại khóa Sản phẩm của tôi.",
+     "media_attachment": ["linl 1",  "link2" ]
+    
+  }
+
+  // 8. COMPLAIN PROJECT
+  { 
+    "Type": "product_complain",
+    "type": "response_reported_status",
+    "receiver_account_id": {
+        "id": "114619409398949374", // ID của người complain
+        "name": "Nguyễn Văn A", // Tên của người complain
+        "email": "abcd@gmail.com"  // Email của người complain
+    },
+     "activity_id": "112240909630381155", // ID của Project bị khóa
+     "activity_class_name": "Account",
+     "Descriptions": "Tôi không làm gì vi phạm, sao lại khóa Sản phẩm của tôi.",
+     "media_attachment": ["linl 1",  "link2" ]
+    
+  }
