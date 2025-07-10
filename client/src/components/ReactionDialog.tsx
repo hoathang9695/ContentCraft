@@ -89,10 +89,10 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
       return;
     }
 
-    if (reactionCount > 10) {
+    if (reactionCount > 50) {
       toast({
         title: 'Số lượng quá lớn',
-        description: 'Số lượng reactions không được vượt quá 10',
+        description: 'Số lượng reactions không được vượt quá 50',
         variant: 'destructive'
       });
       return;
@@ -199,9 +199,9 @@ export function ReactionDialog({ open, onOpenChange, contentId, externalId, onSu
             type="number"
             value={count}
             onChange={(e) => setCount(e.target.value)}
-            placeholder="Nhập số lượng reactions < 10"
+            placeholder="Nhập số lượng reactions < 50"
             min="1"
-            max="10"
+            max="50"
           />
         </div>
         <DialogFooter>
