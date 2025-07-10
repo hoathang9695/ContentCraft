@@ -1,7 +1,9 @@
 
-import { Pool } from 'pg';
+import pg from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
+
+const { Pool } = pg;
 
 const pool = new Pool({
   host: process.env.DB_HOST || '42.96.40.138',
