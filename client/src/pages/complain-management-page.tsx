@@ -85,7 +85,7 @@ export default function ComplainManagementPage() {
         page: currentPage.toString(),
         pageSize: pageSize.toString(),
         ...(statusFilter !== 'all' && { status: statusFilter }),
-        ...(complaintTypeFilter !== 'all' && { complaintType: complaintTypeFilter }),
+        ...(complaintTypeFilter !== 'all' && { complainType: complaintTypeFilter }),
         ...(userFilter !== null && { assignedTo: userFilter.toString() }),
         ...(searchTerm && { search: searchTerm }),
         ...(startDate && { startDate: startOfDay(startDate).toISOString() }),
