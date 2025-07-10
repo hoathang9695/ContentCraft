@@ -10,11 +10,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const pool = new Pool({
-  host: process.env.DB_HOST || '42.96.40.138',
-  database: process.env.DB_NAME || 'content',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'LJhZWd2UQGhXrr3r',
-  port: parseInt(process.env.DB_PORT || '5432'),
+  host: process.env.PGHOST || '42.96.40.138',
+  database: process.env.PGDATABASE || 'content',
+  user: process.env.PGUSER || 'postgres',
+  password: process.env.PGPASSWORD || 'chiakhoathanhcong',
+  port: parseInt(process.env.PGPORT || '5432'),
 });
 
 async function runCreateComplainTable() {
