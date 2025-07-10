@@ -3,7 +3,7 @@ import { users, complainManagement } from "./shared/schema";
 import { eq, ne, and } from "drizzle-orm";
 
 interface ComplainMessage {
-  Type:
+  type:
     | "user_complain"
     | "page_complain"
     | "post_complain"
@@ -20,7 +20,7 @@ interface ComplainMessage {
   activity_id: string;
   activity_class_name: string;
   reason?: string;
-  Descriptions: string;
+  descriptions: string;
   media_attachment?: string[];
 }
 
@@ -66,9 +66,9 @@ async function processComplainMessage(message: ComplainMessage) {
       complainerInfo: message.receiver_account_id,
       activityId: message.activity_id,
       activityClassName: message.activity_class_name,
-      complainType: message.Type,
+      complainType: message.type,
       reason: message.reason || null,
-      descriptions: message.Descriptions,
+      descriptions: message.descriptions,
       mediaAttachment: message.media_attachment || null,
       status: "pending" as const,
       assignedToId: assignedUser.id,
