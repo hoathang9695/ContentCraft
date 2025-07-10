@@ -392,3 +392,34 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+// Bảng quản lý khiếu nại (Complain Management)
+export const complainManagement = pgTable("complain_management", {
+  id: serial("id").primaryKey(),
+  complainerInfo: jsonb("complainer_info").notNull(), // Thông tin người khiếu nại {id, name, email}
+  activityId: varchar("activity_id", { length: 255 }).notNull(), // ID của đối tượng bị khiếu nại
+  activityClassName: varchar("activity_class_name", { length: 100 }).notNull(), // Loại đối tượng (Account, etc.)
+  complainType: varchar("complain_type", { length: 50 }).notNull(), // user_complain, page_complain, post_complain, etc.
+  reason: varchar("reason", { length: 500 }), // Lý do khiếu nại (có thể null)
+  descriptions: text("descriptions"), // Mô tả chi tiết
+  mediaAttachment: jsonb("media_attachment"), // File đính kèm (array of links)
+  status: varchar("status", { length: 50 }).notNull().default("pending"), // 'pending', 'processing', 'completed'
+  assignedToId: integer("assigned_to_id").references(() => users.id), // Người được phân công
+  assignedToName: varchar("assigned_to_name", { length: 255 }), // Tên người được phân công
+  assignedAt: timestamp("assigned_at"), // Thời điểm phân công
+  responseContent: text("response_content"), // Nội dung phản hồi
+  responderId: integer("responder_id").references(() => users.id), // Người phản hồi
+  responseTime: timestamp("response_time"), // Thời gian phản hồi
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// Schema để insert Complain
+export const insertComplainManagementSchema = createInsertSchema(complainManagement).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+
+export type InsertComplainManagement = z.infer<typeof insertComplainManagementSchema>;
+export type ComplainManagement = typeof complainManagement.$inferSelect;

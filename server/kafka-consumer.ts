@@ -135,7 +135,7 @@ async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
 
     // Resubscribe to topics after reconnect
     // Ensure all required topics are explicitly defined
-    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management", "report_management"];
+    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management", "report_management", "complain_management"];
     const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
     const topics = [...new Set([...requiredTopics, ...configuredTopics])];
 
@@ -240,7 +240,7 @@ export async function setupKafkaConsumer() {
     log("Connected to Kafka", "kafka");
 
     // Ensure all required topics are explicitly defined
-    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management", "report_management"];
+    const requiredTopics = ["content_management", "real_users", "contact-messages", "page_management", "groups_management", "report_management", "complain_management"];
     const configuredTopics = process.env.KAFKA_TOPICS?.split(",") || [];
     const topics = [...new Set([...requiredTopics, ...configuredTopics])];
 
@@ -723,7 +723,7 @@ export async function setupKafkaConsumer() {
                           // Prepare insert data with new format
                           // Special handling for comment reports which have extended reported_id structure
                           let processedReportedId = reportMsg.reported_id;
-                          
+
                           // For comment reports, validate the extended structure
                           if (reportMsg.reportType === 'comment') {
                             if (!reportMsg.reported_id.id_post || !reportMsg.reported_id.id_comment) {

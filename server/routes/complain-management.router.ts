@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { authenticateUser } from '../middleware/auth';
 import { db } from '../db';
-import { reportManagement } from '../../shared/schema';
+import { complainManagement } from '../../shared/schema';
 import { eq, and, or, ilike, gte, lte, desc, asc } from 'drizzle-orm';
 
 const router = Router();
@@ -14,7 +14,7 @@ router.get('/', authenticateUser, async (req, res) => {
       page = '1', 
       pageSize = '10', 
       status, 
-      complaintType, 
+      complainType, 
       assignedTo, 
       search, 
       startDate, 
@@ -30,45 +30,42 @@ router.get('/', authenticateUser, async (req, res) => {
     // Build where conditions
     const conditions = [];
     
-    // Note: Using reportManagement table but treating as complaints
-    // This is intentional to reuse the same data structure
-    
     if (status && status !== 'all') {
-      conditions.push(eq(reportManagement.status, status as string));
+      conditions.push(eq(complainManagement.status, status as string));
     }
     
-    if (complaintType && complaintType !== 'all') {
-      conditions.push(eq(reportManagement.reportType, complaintType as string));
+    if (complainType && complainType !== 'all') {
+      conditions.push(eq(complainManagement.complainType, complainType as string));
     }
     
     if (assignedTo) {
-      conditions.push(eq(reportManagement.assignedToId, parseInt(assignedTo as string)));
+      conditions.push(eq(complainManagement.assignedToId, parseInt(assignedTo as string)));
     }
     
     if (search) {
       const searchConditions = [
-        ilike(reportManagement.reason, `%${search}%`),
-        ilike(reportManagement.detailedReason, `%${search}%`)
+        ilike(complainManagement.reason, `%${search}%`),
+        ilike(complainManagement.descriptions, `%${search}%`)
       ];
       conditions.push(or(...searchConditions));
     }
     
     if (startDate) {
-      conditions.push(gte(reportManagement.createdAt, new Date(startDate as string)));
+      conditions.push(gte(complainManagement.createdAt, new Date(startDate as string)));
     }
     
     if (endDate) {
-      conditions.push(lte(reportManagement.createdAt, new Date(endDate as string)));
+      conditions.push(lte(complainManagement.createdAt, new Date(endDate as string)));
     }
 
     // Build sort order
-    const sortField = reportManagement[sortBy as keyof typeof reportManagement] || reportManagement.createdAt;
+    const sortField = complainManagement[sortBy as keyof typeof complainManagement] || complainManagement.createdAt;
     const orderBy = sortOrder === 'asc' ? asc(sortField) : desc(sortField);
 
     // Get total count for pagination
     const totalResult = await db
       .select()
-      .from(reportManagement)
+      .from(complainManagement)
       .where(conditions.length > 0 ? and(...conditions) : undefined);
     
     const total = totalResult.length;
@@ -77,21 +74,21 @@ router.get('/', authenticateUser, async (req, res) => {
     // Get paginated results
     const complaints = await db
       .select()
-      .from(reportManagement)
+      .from(complainManagement)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(orderBy)
       .limit(size)
       .offset(offset);
 
-    // Transform data for complaints (rename fields)
+    // Transform data for complaints
     const transformedComplaints = complaints.map(complaint => ({
       id: complaint.id,
-      complainedId: complaint.reportedId,
-      complaintType: complaint.reportType,
-      complainantName: complaint.reporterName,
-      complainantEmail: complaint.reporterEmail,
+      complainedId: complaint.activityId,
+      complaintType: complaint.complainType,
+      complainantName: complaint.complainerInfo,
+      complainantEmail: (complaint.complainerInfo as any)?.email || '',
       reason: complaint.reason,
-      detailedReason: complaint.detailedReason,
+      detailedReason: complaint.descriptions,
       status: complaint.status,
       assignedToId: complaint.assignedToId,
       assignedToName: complaint.assignedToName,
@@ -100,7 +97,8 @@ router.get('/', authenticateUser, async (req, res) => {
       responderId: complaint.responderId,
       responseTime: complaint.responseTime,
       createdAt: complaint.createdAt,
-      updatedAt: complaint.updatedAt
+      updatedAt: complaint.updatedAt,
+      mediaAttachment: complaint.mediaAttachment
     }));
 
     res.json({
@@ -124,19 +122,15 @@ router.patch('/:id/assign', authenticateUser, async (req, res) => {
     const { id } = req.params;
     const { assignedToId } = req.body;
 
-    // Get user name for assignment
-    const users = await db.select().from(db.select().from(reportManagement).limit(1)); // Get schema reference
-    // For now, we'll just store the ID and update the name separately
-    
     const result = await db
-      .update(reportManagement)
+      .update(complainManagement)
       .set({
         assignedToId: assignedToId,
         assignedAt: new Date(),
         status: 'processing',
         updatedAt: new Date()
       })
-      .where(eq(reportManagement.id, parseInt(id)))
+      .where(eq(complainManagement.id, parseInt(id)))
       .returning();
 
     if (result.length === 0) {
@@ -157,12 +151,12 @@ router.patch('/:id/status', authenticateUser, async (req, res) => {
     const { status } = req.body;
 
     const result = await db
-      .update(reportManagement)
+      .update(complainManagement)
       .set({
         status: status,
         updatedAt: new Date()
       })
-      .where(eq(reportManagement.id, parseInt(id)))
+      .where(eq(complainManagement.id, parseInt(id)))
       .returning();
 
     if (result.length === 0) {
@@ -184,7 +178,7 @@ router.patch('/:id/respond', authenticateUser, async (req, res) => {
     const userId = req.user?.id;
 
     const result = await db
-      .update(reportManagement)
+      .update(complainManagement)
       .set({
         responseContent: responseContent,
         responderId: userId,
@@ -192,7 +186,7 @@ router.patch('/:id/respond', authenticateUser, async (req, res) => {
         status: 'completed',
         updatedAt: new Date()
       })
-      .where(eq(reportManagement.id, parseInt(id)))
+      .where(eq(complainManagement.id, parseInt(id)))
       .returning();
 
     if (result.length === 0) {
