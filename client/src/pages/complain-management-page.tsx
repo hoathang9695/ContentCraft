@@ -39,7 +39,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 interface ComplaintRequest {
   id: number;
   complainedId: string | { id: string; target_id?: string };
-  complaintType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'recruitment' | 'project' | 'course' | 'event' | 'song';
+  complaintType: 'user_complain' | 'post_complain' | 'page_complain' | 'group_complain' | 'event_complain' | 'song_complain' | 'product_complain' | 'project_complain';
   complainantName: string | { id: string; name: string, complainantEmail?: string };
   complainantEmail: string;
   reason: string;
@@ -198,26 +198,22 @@ export default function ComplainManagementPage() {
 
   const getComplaintTypeBadge = (type: string) => {
     switch (type) {
-      case 'user':
+      case 'user_complain':
         return { label: 'Người dùng', variant: 'default' as const };
-      case 'content':
-        return { label: 'Nội dung', variant: 'secondary' as const };
-      case 'page':
+      case 'post_complain':
+        return { label: 'Bài viết', variant: 'secondary' as const };
+      case 'page_complain':
         return { label: 'Trang', variant: 'outline' as const };
-      case 'group':
+      case 'group_complain':
         return { label: 'Nhóm', variant: 'destructive' as const };
-      case 'comment':
-        return { label: 'Bình luận', variant: 'secondary' as const };
-      case 'recruitment':
-        return { label: 'Tuyển dụng', variant: 'default' as const };
-      case 'project':
-        return { label: 'Dự án', variant: 'outline' as const };
-      case 'course':
-        return { label: 'Khóa học', variant: 'secondary' as const };
-      case 'event':
-        return { label: 'Sự kiện', variant: 'destructive' as const };
-      case 'song':
+      case 'event_complain':
+        return { label: 'Sự kiện', variant: 'secondary' as const };
+      case 'song_complain':
         return { label: 'Bài hát', variant: 'default' as const };
+      case 'product_complain':
+        return { label: 'Sản phẩm', variant: 'outline' as const };
+      case 'project_complain':
+        return { label: 'Dự án', variant: 'secondary' as const };
       default:
         return { label: 'Khác', variant: 'secondary' as const };
     }
@@ -419,16 +415,14 @@ export default function ComplainManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả loại</SelectItem>
-                  <SelectItem value="user">Người dùng</SelectItem>
-                  <SelectItem value="content">Nội dung</SelectItem>
-                  <SelectItem value="page">Trang</SelectItem>
-                  <SelectItem value="group">Nhóm</SelectItem>
-                  <SelectItem value="comment">Bình luận</SelectItem>
-                  <SelectItem value="recruitment">Tuyển dụng</SelectItem>
-                  <SelectItem value="project">Dự án</SelectItem>
-                  <SelectItem value="course">Khóa học</SelectItem>
-                  <SelectItem value="event">Sự kiện</SelectItem>
-                  <SelectItem value="song">Bài hát</SelectItem>
+                  <SelectItem value="user_complain">Người dùng</SelectItem>
+                  <SelectItem value="post_complain">Bài viết</SelectItem>
+                  <SelectItem value="page_complain">Trang</SelectItem>
+                  <SelectItem value="group_complain">Nhóm</SelectItem>
+                  <SelectItem value="event_complain">Sự kiện</SelectItem>
+                  <SelectItem value="song_complain">Bài hát</SelectItem>
+                  <SelectItem value="product_complain">Sản phẩm</SelectItem>
+                  <SelectItem value="project_complain">Dự án</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -605,16 +599,14 @@ export default function ComplainManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả loại</SelectItem>
-                  <SelectItem value="user">Người dùng</SelectItem>
-                  <SelectItem value="content">Nội dung</SelectItem>
-                  <SelectItem value="page">Trang</SelectItem>
-                  <SelectItem value="group">Nhóm</SelectItem>
-                  <SelectItem value="comment">Bình luận</SelectItem>
-                  <SelectItem value="recruitment">Tuyển dụng</SelectItem>
-                  <SelectItem value="project">Dự án</SelectItem>
-                  <SelectItem value="course">Khóa học</SelectItem>
-                  <SelectItem value="event">Sự kiện</SelectItem>
-                  <SelectItem value="song">Bài hát</SelectItem>
+                  <SelectItem value="user_complain">Người dùng</SelectItem>
+                  <SelectItem value="post_complain">Bài viết</SelectItem>
+                  <SelectItem value="page_complain">Trang</SelectItem>
+                  <SelectItem value="group_complain">Nhóm</SelectItem>
+                  <SelectItem value="event_complain">Sự kiện</SelectItem>
+                  <SelectItem value="song_complain">Bài hát</SelectItem>
+                  <SelectItem value="product_complain">Sản phẩm</SelectItem>
+                  <SelectItem value="project_complain">Dự án</SelectItem>
                 </SelectContent>
               </Select>
 
