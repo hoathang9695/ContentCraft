@@ -12,7 +12,6 @@ interface ComplainMessage {
     | "song_complain"
     | "product_complain"
     | "project_complain";
-  type: "response_reported_status";
   receiver_account_id: {
     id: string;
     name: string;
