@@ -105,8 +105,9 @@ export interface TickMessage {
 }
 
 export interface ReportMessage {
-  reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'course' | 'project' | 'video' | 'song' | 'event';
+  reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'course' | 'project' | 'song' | 'event';
   reported_id: {
+    // Standard fields for most report types
     id?: string;
     name?: string;
     email?: string;
@@ -656,7 +657,7 @@ export async function setupKafkaConsumer() {
 
                         try {
                           // Validate required fields - different validation for comment vs other types
-                          if (!reportMsg.reportType || !reportMsg.reporterName?.id || !reportMsg.reporterName?.reporterEmail || !reportMsg.reason) {
+                          if (!reportMsg.reportType || !reportMsg.reporterName?.id || !reportMsg.reporterName?.name || !reportMsg.reporterName?.reporterEmail || !reportMsg.reason) {
                             const error = `❌ Invalid report message format - missing basic required fields: ${JSON.stringify(reportMsg)}`;
                             log(error, "kafka-error");
                             throw new Error(error);
@@ -670,15 +671,15 @@ export async function setupKafkaConsumer() {
                               throw new Error(error);
                             }
                           } else {
-                            if (!reportMsg.reported_id?.id) {
-                              const error = `❌ Non-comment report missing reported_id.id: ${JSON.stringify(reportMsg.reported_id)}`;
+                            if (!reportMsg.reported_id?.id || !reportMsg.reported_id?.name) {
+                              const error = `❌ Non-comment report missing reported_id.id or reported_id.name: ${JSON.stringify(reportMsg.reported_id)}`;
                               log(error, "kafka-error");
                               throw new Error(error);
                             }
                           }
 
                           // Validate report type (expanded list)
-                          const validReportTypes = ['user', 'content', 'page', 'group', 'comment', 'course', 'project', 'video', 'song', 'event'];
+                          const validReportTypes = ['user', 'content', 'page', 'group', 'comment', 'course', 'project', 'song', 'event'];
                           if (!validReportTypes.includes(reportMsg.reportType)) {
                             const error = `❌ Invalid reportType: ${reportMsg.reportType}`;
                             log(error, "kafka-error");
@@ -760,14 +761,22 @@ export async function setupKafkaConsumer() {
                             throw new Error(error);
                           }
 
-                          log(`✅ Successfully inserted report: ID ${result[0].id}, ReportedID: ${reportMsg.reported_id.id}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          // Log with appropriate ID based on report type
+                          const reportedObjectId = reportMsg.reportType === 'comment' 
+                            ? `${reportMsg.reported_id.id_post}_${reportMsg.reported_id.id_comment}`
+                            : reportMsg.reported_id.id;
+                          
+                          log(`✅ Successfully inserted report: ID ${result[0].id}, ReportType: ${reportMsg.reportType}, ReportedObjectID: ${reportedObjectId}, AssignedTo: ${assignedUser.name}`, "kafka");
                           metrics.processedMessages++;
                           return result[0];
 
                         } catch (error) {
                           const errorMsg = error instanceof Error ? error.message : String(error);
                           const errorStack = error instanceof Error ? error.stack : '';
-                          log(`❌ Error processing report ${reportMsg.reported_id.id}: ${errorMsg}`, "kafka-error");
+                          const reportedObjectId = reportMsg.reportType === 'comment' 
+                            ? `${reportMsg.reported_id.id_post}_${reportMsg.reported_id.id_comment}`
+                            : reportMsg.reported_id.id;
+                          log(`❌ Error processing report ${reportedObjectId}: ${errorMsg}`, "kafka-error");
                           log(`📍 Error stack: ${errorStack}`, "kafka-error");
 
                           // Log additional context for debugging
