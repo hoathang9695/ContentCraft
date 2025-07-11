@@ -217,6 +217,8 @@ export default function ReportManagementPage() {
         return { label: 'Sự kiện', variant: 'destructive' as const };
       case 'song':
         return { label: 'Bài hát', variant: 'default' as const };
+      case 'recruit':
+        return { label: 'Tuyển dụng', variant: 'outline' as const };
       default:
         return { label: 'Khác', variant: 'secondary' as const };
     }
