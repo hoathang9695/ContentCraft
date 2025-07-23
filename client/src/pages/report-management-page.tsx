@@ -8,7 +8,7 @@ import { startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, MoreHorizontal, Mail, CheckCircle } from "lucide-react";
+import { Eye, MoreHorizontal, Mail, CheckCircle, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -987,6 +987,15 @@ export default function ReportManagementPage() {
                         <DropdownMenuItem onClick={() => setSelectedRequest(row)}>
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          toast({
+                            title: "Tính năng đang phát triển",
+                            description: "Tính năng xử lý đang được phát triển",
+                          });
+                        }}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Xử lý</span>
                         </DropdownMenuItem>
                         {user?.can_send_email && (
                           <DropdownMenuItem onClick={() => {
