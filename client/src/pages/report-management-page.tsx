@@ -409,7 +409,7 @@ export default function ReportManagementPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token || ''}`, // Assuming user has token
+          'Authorization': `Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po`,
         },
         body: JSON.stringify({
           entity_id: entityId,
