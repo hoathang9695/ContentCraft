@@ -8,7 +8,7 @@ import { startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, MoreHorizontal, Mail, CheckCircle } from "lucide-react";
+import { Eye, MoreHorizontal, Mail, CheckCircle, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -217,6 +217,8 @@ export default function ReportManagementPage() {
         return { label: 'Sự kiện', variant: 'destructive' as const };
       case 'song':
         return { label: 'Bài hát', variant: 'default' as const };
+      case 'recruit':
+        return { label: 'Tuyển dụng', variant: 'outline' as const };
       default:
         return { label: 'Khác', variant: 'secondary' as const };
     }
@@ -347,6 +349,92 @@ export default function ReportManagementPage() {
       toast({
         title: "Lỗi",
         description: "Không thể thêm phản hồi",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleProcessReport = async (report: ReportRequest) => {
+    try {
+      // Map report type to entity type for API
+      const getEntityType = (reportType: string): string => {
+        switch (reportType) {
+          case 'page':
+            return 'Page';
+          case 'user':
+            return 'Account';
+          case 'recruitment':
+            return 'Recruit';
+          case 'event':
+            return 'Event';
+          case 'group':
+            return 'Group';
+          case 'project':
+            return 'Project';
+          case 'song':
+            return 'Music';
+          case 'content':
+            return 'Status';
+          case 'comment':
+            return 'Status'; // Comment reports are treated as Status
+          default:
+            return 'Status';
+        }
+      };
+
+      // Get entity ID from reportedId
+      const getEntityId = (reportedId: any, reportType: string): string => {
+        if (typeof reportedId === 'string') {
+          return reportedId;
+        } else if (typeof reportedId === 'object' && reportedId) {
+          // For comment reports, use the post ID
+          if (reportType === 'comment' && reportedId.id_post) {
+            return reportedId.id_post;
+          }
+          // For other types, use the id field
+          return reportedId.id || '';
+        }
+        return '';
+      };
+
+      const entityType = getEntityType(report.reportType);
+      const entityId = getEntityId(report.reportedId, report.reportType);
+
+      if (!entityId) {
+        throw new Error('Không thể xác định ID của đối tượng được báo cáo');
+      }
+
+      // Call the admin API
+      const response = await fetch('https://prod-sn.emso.vn/api/admin/approved_report_violation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer sXR2E4FymdlDirWl04t4hI6r8WQCeEqR3SWG05Ri3Po`,
+        },
+        body: JSON.stringify({
+          entity_id: entityId,
+          entity_type: entityType,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API call failed: ${response.status} - ${errorText}`);
+      }
+
+      // Update report status to completed
+      await handleStatusChange(report.id, 'completed');
+
+      toast({
+        title: "Thành công",
+        description: "Đã xử lý báo cáo thành công",
+      });
+
+    } catch (error) {
+      console.error('Error processing report:', error);
+      toast({
+        title: "Lỗi",
+        description: `Không thể xử lý báo cáo: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -985,6 +1073,10 @@ export default function ReportManagementPage() {
                         <DropdownMenuItem onClick={() => setSelectedRequest(row)}>
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleProcessReport(row)}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Xử lý</span>
                         </DropdownMenuItem>
                         {user?.can_send_email && (
                           <DropdownMenuItem onClick={() => {

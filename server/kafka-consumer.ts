@@ -105,7 +105,7 @@ export interface TickMessage {
 }
 
 export interface ReportMessage {
-  reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'course' | 'project' | 'video' | 'song' | 'event';
+  reportType: 'user' | 'content' | 'page' | 'group' | 'comment' | 'course' | 'project' | 'video' | 'song' | 'event' | 'recruit';
   reported_id: {
     id?: string;
     name?: string;
@@ -678,7 +678,7 @@ export async function setupKafkaConsumer() {
                           }
 
                           // Validate report type (expanded list)
-                          const validReportTypes = ['user', 'content', 'page', 'group', 'comment', 'course', 'project', 'video', 'song', 'event'];
+                          const validReportTypes = ['user', 'content', 'page', 'group', 'comment', 'course', 'project', 'video', 'song', 'event', 'recruit'];
                           if (!validReportTypes.includes(reportMsg.reportType)) {
                             const error = `❌ Invalid reportType: ${reportMsg.reportType}`;
                             log(error, "kafka-error");

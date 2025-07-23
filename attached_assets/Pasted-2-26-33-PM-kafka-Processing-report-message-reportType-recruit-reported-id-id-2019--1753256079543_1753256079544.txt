@@ -1,0 +1,114 @@
+2:26:33 PM [kafka] 🔄 Processing report message: {"reportType":"recruit","reported_id":{"id":"2019","name":"EMSO","email":"ua@emso.vn"},"reporterName":{"id":"113728219087769065","name":"Hùng Nguyễn Trần Đức","reporterEmail":"hungnguyen610a2@gmail.com"},"reason":"Nội dung gớm ghiếc","detailedReason":"báo cáo tuyển dụng"}
+2:26:33 PM [kafka] 👥 Found 2 active non-admin users
+2:26:33 PM [kafka] 👤 Assigned to user: Nguyễn Hoàng Anh (ID: 3)
+2:26:33 PM [kafka] 📝 Inserting report data: {
+  "reportedId": {
+    "id": "2019",
+    "name": "EMSO",
+    "email": "ua@emso.vn"
+  },
+  "reportType": "recruit",
+  "reporterName": {
+    "id": "113728219087769065",
+    "name": "Hùng Nguyễn Trần Đức",
+    "reporterEmail": "hungnguyen610a2@gmail.com"
+  },
+  "reason": "Nội dung gớm ghiếc",
+  "detailedReason": "báo cáo tuyển dụng",
+  "status": "pending",
+  "assignedToId": 3,
+  "assignedToName": "Nguyễn Hoàng Anh",
+  "assignedAt": "2025-07-23T07:26:33.489Z",
+  "createdAt": "2025-07-23T07:26:33.489Z",
+  "updatedAt": "2025-07-23T07:26:33.489Z"
+}
+2:26:33 PM [kafka-error] ❌ Error processing report 2019: new row for relation "report_management" violates check constraint "report_management_report_type_check"
+2:26:33 PM [kafka-error] 📍 Error stack: error: new row for relation "report_management" violates check constraint "report_management_report_type_check"
+    at /home/thangnv/ContentCraft/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/thangnv/ContentCraft/node_modules/src/node-postgres/session.ts:104:19)
+    at async db.transaction.isolationLevel (/home/thangnv/ContentCraft/server/kafka-consumer.ts:755:42)
+    at async NodePgSession.transaction (/home/thangnv/ContentCraft/node_modules/src/node-postgres/session.ts:193:19)
+    at async <anonymous> (/home/thangnv/ContentCraft/server/kafka-consumer.ts:282:21)
+    at async processMessageWithRetry (/home/thangnv/ContentCraft/server/kafka-consumer.ts:175:7)
+    at async <anonymous> (/home/thangnv/ContentCraft/server/kafka-consumer.ts:277:31)
+    at async Promise.all (index 0)
+    at async Runner.eachBatch (/home/thangnv/ContentCraft/server/kafka-consumer.ts:268:11)
+    at async Runner.processEachBatch (/home/thangnv/ContentCraft/node_modules/kafkajs/src/consumer/runner.js:274:7)
+    at async onBatch (/home/thangnv/ContentCraft/node_modules/kafkajs/src/consumer/runner.js:449:9)
+    at async Runner.handleBatch (/home/thangnv/ContentCraft/node_modules/kafkajs/src/consumer/runner.js:461:5)
+    at async /home/thangnv/ContentCraft/node_modules/kafkajs/src/consumer/worker.js:29:9
+2:26:33 PM [kafka-error] 🔍 Report data that failed: {
+  "reportType": "recruit",
+  "reported_id": {
+    "id": "2019",
+    "name": "EMSO",
+    "email": "ua@emso.vn"
+  },
+  "reporterName": {
+    "id": "113728219087769065",
+    "name": "Hùng Nguyễn Trần Đức",
+    "reporterEmail": "hungnguyen610a2@gmail.com"
+  },
+  "reason": "Nội dung gớm ghiếc",
+  "detailedReason": "báo cáo tuyển dụng"
+}
+2:26:33 PM [kafka-error] Processing error (attempt 2/3): error: new row for relation "report_management" violates check constraint "report_management_report_type_check"
+2:26:36 PM [kafka-monitor] Metrics: {"processedMessages":2,"failedMessages":4,"lastProcessingTime":8,"avgProcessingTime":20.708333333333332}
+2:26:39 PM [kafka] 🔄 Processing report message: {"reportType":"recruit","reported_id":{"id":"2019","name":"EMSO","email":"ua@emso.vn"},"reporterName":{"id":"113728219087769065","name":"Hùng Nguyễn Trần Đức","reporterEmail":"hungnguyen610a2@gmail.com"},"reason":"Nội dung gớm ghiếc","detailedReason":"báo cáo tuyển dụng"}
+2:26:39 PM [kafka] 👥 Found 2 active non-admin users
+2:26:39 PM [kafka] 👤 Assigned to user: Nguyễn Hoàng Anh (ID: 3)
+2:26:39 PM [kafka] 📝 Inserting report data: {
+  "reportedId": {
+    "id": "2019",
+    "name": "EMSO",
+    "email": "ua@emso.vn"
+  },
+  "reportType": "recruit",
+  "reporterName": {
+    "id": "113728219087769065",
+    "name": "Hùng Nguyễn Trần Đức",
+    "reporterEmail": "hungnguyen610a2@gmail.com"
+  },
+  "reason": "Nội dung gớm ghiếc",
+  "detailedReason": "báo cáo tuyển dụng",
+  "status": "pending",
+  "assignedToId": 3,
+  "assignedToName": "Nguyễn Hoàng Anh",
+  "assignedAt": "2025-07-23T07:26:39.498Z",
+  "createdAt": "2025-07-23T07:26:39.498Z",
+  "updatedAt": "2025-07-23T07:26:39.498Z"
+}
+2:26:39 PM [kafka-error] ❌ Error processing report 2019: new row for relation "report_management" violates check constraint "report_management_report_type_check"
+2:26:39 PM [kafka-error] 📍 Error stack: error: new row for relation "report_management" violates check constraint "report_management_report_type_check"
+    at /home/thangnv/ContentCraft/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/thangnv/ContentCraft/node_modules/src/node-postgres/session.ts:104:19)
+    at async db.transaction.isolationLevel (/home/thangnv/ContentCraft/server/kafka-consumer.ts:755:42)
+    at async NodePgSession.transaction (/home/thangnv/ContentCraft/node_modules/src/node-postgres/session.ts:193:19)
+    at async <anonymous> (/home/thangnv/ContentCraft/server/kafka-consumer.ts:282:21)
+    at async processMessageWithRetry (/home/thangnv/ContentCraft/server/kafka-consumer.ts:175:7)
+    at async <anonymous> (/home/thangnv/ContentCraft/server/kafka-consumer.ts:277:31)
+    at async Promise.all (index 0)
+    at async Runner.eachBatch (/home/thangnv/ContentCraft/server/kafka-consumer.ts:268:11)
+    at async Runner.processEachBatch (/home/thangnv/ContentCraft/node_modules/kafkajs/src/consumer/runner.js:274:7)
+    at async onBatch (/home/thangnv/ContentCraft/node_modules/kafkajs/src/consumer/runner.js:449:9)
+    at async Runner.handleBatch (/home/thangnv/ContentCraft/node_modules/kafkajs/src/consumer/runner.js:461:5)
+    at async /home/thangnv/ContentCraft/node_modules/kafkajs/src/consumer/worker.js:29:9
+2:26:39 PM [kafka-error] 🔍 Report data that failed: {
+  "reportType": "recruit",
+  "reported_id": {
+    "id": "2019",
+    "name": "EMSO",
+    "email": "ua@emso.vn"
+  },
+  "reporterName": {
+    "id": "113728219087769065",
+    "name": "Hùng Nguyễn Trần Đức",
+    "reporterEmail": "hungnguyen610a2@gmail.com"
+  },
+  "reason": "Nội dung gớm ghiếc",
+  "detailedReason": "báo cáo tuyển dụng"
+}
+2:26:39 PM [kafka-error] Processing error (attempt 3/3): error: new row for relation "report_management" violates check constraint "report_management_report_type_check"
+2:26:39 PM [kafka-error] Message sent to DLQ: {"reportType":"recruit","reported_id":{"id":"2019","name":"EMSO","email":"ua@emso.vn"},"reporterName":{"id":"113728219087769065","name":"Hùng Nguyễn Trần Đức","reporterEmail":"hungnguyen610a2@gmail.com"},"reason":"Nội dung gớm ghiếc","detailedReason":"báo cáo tuyển dụng"}
