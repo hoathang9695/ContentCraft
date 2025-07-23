@@ -354,6 +354,92 @@ export default function ReportManagementPage() {
     }
   };
 
+  const handleProcessReport = async (report: ReportRequest) => {
+    try {
+      // Map report type to entity type for API
+      const getEntityType = (reportType: string): string => {
+        switch (reportType) {
+          case 'page':
+            return 'Page';
+          case 'user':
+            return 'Account';
+          case 'recruitment':
+            return 'Recruit';
+          case 'event':
+            return 'Event';
+          case 'group':
+            return 'Group';
+          case 'project':
+            return 'Project';
+          case 'song':
+            return 'Music';
+          case 'content':
+            return 'Status';
+          case 'comment':
+            return 'Status'; // Comment reports are treated as Status
+          default:
+            return 'Status';
+        }
+      };
+
+      // Get entity ID from reportedId
+      const getEntityId = (reportedId: any, reportType: string): string => {
+        if (typeof reportedId === 'string') {
+          return reportedId;
+        } else if (typeof reportedId === 'object' && reportedId) {
+          // For comment reports, use the post ID
+          if (reportType === 'comment' && reportedId.id_post) {
+            return reportedId.id_post;
+          }
+          // For other types, use the id field
+          return reportedId.id || '';
+        }
+        return '';
+      };
+
+      const entityType = getEntityType(report.reportType);
+      const entityId = getEntityId(report.reportedId, report.reportType);
+
+      if (!entityId) {
+        throw new Error('Không thể xác định ID của đối tượng được báo cáo');
+      }
+
+      // Call the admin API
+      const response = await fetch('https://prod-sn.emso.vn/api/admin/approved_report_violation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token || ''}`, // Assuming user has token
+        },
+        body: JSON.stringify({
+          entity_id: entityId,
+          entity_type: entityType,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API call failed: ${response.status} - ${errorText}`);
+      }
+
+      // Update report status to completed
+      await handleStatusChange(report.id, 'completed');
+
+      toast({
+        title: "Thành công",
+        description: "Đã xử lý báo cáo thành công",
+      });
+
+    } catch (error) {
+      console.error('Error processing report:', error);
+      toast({
+        title: "Lỗi",
+        description: `Không thể xử lý báo cáo: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDateFilter = () => {
     if (startDate && endDate) {
       setCurrentPage(1);
@@ -988,12 +1074,7 @@ export default function ReportManagementPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           <span>Xem chi tiết</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          toast({
-                            title: "Tính năng đang phát triển",
-                            description: "Tính năng xử lý đang được phát triển",
-                          });
-                        }}>
+                        <DropdownMenuItem onClick={() => handleProcessReport(row)}>
                           <Settings className="mr-2 h-4 w-4" />
                           <span>Xử lý</span>
                         </DropdownMenuItem>
