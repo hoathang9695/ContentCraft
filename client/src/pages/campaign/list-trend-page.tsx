@@ -300,7 +300,9 @@ export function ListTrendPage() {
           {row.targetAudience === 'all' ? 'Tất cả' :
            row.targetAudience === 'new' ? 'Mới' :
            row.targetAudience === 'potential' ? 'Tiềm năng' :
-           row.targetAudience === 'positive' ? 'Tích cực' : 'Không tiềm năng'}
+           row.targetAudience === 'positive' ? 'Tích cực' :
+           row.targetAudience === 'non_potential' ? 'Không tiềm năng' :
+           row.targetAudience}
         </div>
       ),
     },
