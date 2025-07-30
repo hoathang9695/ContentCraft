@@ -118,8 +118,25 @@ export function ListTrendPage() {
       const data = await response.json();
       console.log('Trends data received:', data);
 
-      setTrendData(data);
-      setTrends(data.data || []);
+      // Map the database fields to match the interface
+      const mappedData = {
+        ...data,
+        data: data.data?.map((trend: any) => ({
+          id: trend.id,
+          title: trend.title,
+          content: trend.content,
+          targetAudience: trend.target_audience, // Map target_audience to targetAudience
+          status: trend.status,
+          createdBy: trend.created_by,
+          sentAt: trend.sent_at,
+          recipientCount: trend.recipient_count,
+          createdAt: trend.created_at,
+          updatedAt: trend.updated_at
+        })) || []
+      };
+
+      setTrendData(mappedData);
+      setTrends(mappedData.data || []);
     } catch (error) {
       console.error('Error fetching trends:', error);
 
