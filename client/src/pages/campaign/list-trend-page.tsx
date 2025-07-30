@@ -278,6 +278,8 @@ export function ListTrendPage() {
   };
 
   const openConfirmPushDialog = (trend: TrendItem) => {
+    console.log('🎯 Opening confirm dialog for trend:', trend);
+    console.log('🎯 Target audience value:', trend.targetAudience);
     setConfirmPushTrend(trend);
     setIsConfirmPushDialogOpen(true);
   };
@@ -564,7 +566,7 @@ export function ListTrendPage() {
                        confirmPushTrend.targetAudience === 'potential' ? 'Tiềm năng' :
                        confirmPushTrend.targetAudience === 'positive' ? 'Tích cực' :
                        confirmPushTrend.targetAudience === 'non_potential' ? 'Không tiềm năng' :
-                       confirmPushTrend.targetAudience}
+                       confirmPushTrend.targetAudience || 'Không xác định'}
                     </div>
                   </div>
 
