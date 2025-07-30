@@ -1,0 +1,892 @@
+import { useState, useEffect } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Search, Plus, Eye, Edit, Trash2, Send, MoreHorizontal, TrendingUp } from 'lucide-react';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { DataTable } from '@/components/ui/data-table';
+import { format } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
+import { CreateTrendDialog } from '@/components/CreateTrendDialog';
+import { EditTrendDialog } from '@/components/EditTrendDialog';
+
+interface TrendItem {
+  id: number;
+  title: string;
+  content: string;
+  targetAudience: string;
+  status: string;
+  createdBy: number;
+  sentAt?: string;
+  recipientCount?: number;
+  createdAt: string;
+  updatedAt: string;
+  redis_id?: string;
+  redis_s?: string;
+  redis_a?: string;
+  redis_g?: string;
+  redis_k?: string;
+  redis_l?: string;
+  redis_r?: string;
+  ttl?: number;
+}
+
+interface TrendData {
+  data: TrendItem[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export function ListTrendPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [trends, setTrends] = useState<TrendItem[]>([]);
+  const [trendData, setTrendData] = useState<TrendData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [deleteTrendId, setDeleteTrendId] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [sendingTrendId, setSendingTrendId] = useState<number | null>(null);
+  const [confirmPushTrend, setConfirmPushTrend] = useState<TrendItem | null>(null);
+  const [isConfirmPushDialogOpen, setIsConfirmPushDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleDialogClose = (newTrend?: any) => {
+    setIsDialogOpen(false);
+
+    // If a new trend was created, add it to the local state
+    if (newTrend) {
+      // Map the new trend data to match interface
+      const mappedTrend: TrendItem = {
+        id: newTrend.id,
+        title: newTrend.title,
+        content: newTrend.content,
+        targetAudience: newTrend.target_audience || 'all', // Map target_audience to targetAudience
+        status: newTrend.status,
+        createdBy: newTrend.created_by,
+        sentAt: newTrend.sent_at,
+        recipientCount: newTrend.recipient_count,
+        createdAt: newTrend.created_at,
+        updatedAt: newTrend.updated_at,
+        redis_id: newTrend.redis_id,
+        redis_s: newTrend.redis_s,
+        redis_a: newTrend.redis_a,
+        redis_g: newTrend.redis_g,
+        redis_k: newTrend.redis_k,
+        redis_l: newTrend.redis_l,
+        redis_r: newTrend.redis_r,
+        ttl: newTrend.ttl
+      };
+
+      setTrends(prev => [mappedTrend, ...prev]);
+
+      // Update trend data if available
+      if (trendData) {
+        setTrendData(prev => ({
+          ...prev!,
+          data: [mappedTrend, ...prev!.data],
+          total: prev!.total + 1
+        }));
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchTrends();
+  }, [currentPage, pageSize, searchTerm]);
+
+  const fetchTrends = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: pageSize.toString(),
+        ...(searchTerm && { search: searchTerm })
+      });
+
+      console.log('Fetching trends with params:', params.toString());
+
+      const response = await fetch(`/api/trends?${params}`);
+
+      console.log('API Response status:', response.status);
+      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0, 100)}`);
+      }
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.error('Non-JSON response received:', responseText.substring(0, 200));
+        throw new Error('Server returned non-JSON response');
+      }
+
+      const data = await response.json();
+      console.log('Trends data received:', data);
+
+      // Map the database fields to match the interface
+      const mappedData = {
+        ...data,
+        data: data.data?.map((trend: any) => ({
+          id: trend.id,
+          title: trend.title,
+          content: trend.content,
+          targetAudience: trend.target_audience || 'all', // Ensure targetAudience is never undefined
+          status: trend.status,
+          createdBy: trend.created_by,
+          sentAt: trend.sent_at,
+          recipientCount: trend.recipient_count,
+          createdAt: trend.created_at,
+          updatedAt: trend.updated_at,
+          redis_id: trend.redis_id,
+          redis_s: trend.redis_s,
+          redis_a: trend.redis_a,
+          redis_g: trend.redis_g,
+          redis_k: trend.redis_k,
+          redis_l: trend.redis_l,
+          redis_r: trend.redis_r,
+          ttl: trend.ttl
+        })) || []
+      };
+
+      setTrendData(mappedData);
+      setTrends(mappedData.data || []);
+    } catch (error) {
+      console.error('Error fetching trends:', error);
+
+      let errorMessage = "Không thể tải danh sách trends";
+      if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
+        errorMessage = "Server đang gặp vấn đề. Vui lòng thử lại sau.";
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: "Lỗi",
+        description: errorMessage,
+        variant: "destructive",
+      });
+
+      // Set empty data on error
+      setTrendData({
+        data: [],
+        total: 0,
+        totalPages: 0,
+        currentPage: 1
+      });
+      setTrends([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleDeleteTrend = async (id: number) => {
+    try {
+      console.log('🗑️ Deleting trend with ID:', id);
+
+      const response = await fetch(`/api/trends/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      console.log('✅ Trend deleted successfully from database');
+
+      toast({
+        title: "Thành công",
+        description: "Xóa trend thành công",
+      });
+
+      // Update local state
+      setTrends(prev => prev.filter(trend => trend.id !== id));
+
+      if (trendData) {
+        setTrendData(prev => ({
+          ...prev!,
+          data: prev!.data.filter(trend => trend.id !== id),
+          total: prev!.total - 1
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Error deleting trend:', error);
+      
+      let errorMessage = "Có lỗi xảy ra khi xóa trend";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Lỗi",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeleteTrendId(null);
+    }
+  };
+
+  const openDeleteDialog = (id: number) => {
+    setDeleteTrendId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const openViewDialog = (trend: TrendItem) => {
+    setSelectedTrend(trend);
+    setIsViewDialogOpen(true);
+  };
+
+  const openEditDialog = (trend: TrendItem) => {
+    setSelectedTrend(trend);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = (updatedTrend: any) => {
+    // Map the updated trend data to match interface
+    const mappedTrend: TrendItem = {
+      id: updatedTrend.id,
+      title: updatedTrend.title,
+      content: updatedTrend.content,
+      targetAudience: updatedTrend.target_audience || updatedTrend.targetAudience || 'all',
+      status: updatedTrend.status,
+      createdBy: updatedTrend.created_by,
+      sentAt: updatedTrend.sent_at,
+      recipientCount: updatedTrend.recipient_count,
+      createdAt: updatedTrend.created_at,
+      updatedAt: updatedTrend.updated_at,
+      redis_id: updatedTrend.redis_id,
+      redis_s: updatedTrend.redis_s,
+      redis_a: updatedTrend.redis_a,
+      redis_g: updatedTrend.redis_g,
+      redis_k: updatedTrend.redis_k,
+      redis_l: updatedTrend.redis_l,
+      redis_r: updatedTrend.redis_r,
+      ttl: updatedTrend.ttl
+    };
+
+    // Update local state with the updated trend
+    setTrends(prev => 
+      prev.map(trend => 
+        trend.id === mappedTrend.id ? mappedTrend : trend
+      )
+    );
+
+    if (trendData) {
+      setTrendData(prev => ({
+        ...prev!,
+        data: prev!.data.map(trend => 
+          trend.id === mappedTrend.id ? mappedTrend : trend
+        )
+      }));
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="default">Đang hoạt động</Badge>;
+      case 'draft':
+        return <Badge variant="secondary">Nháp</Badge>;
+      case 'approved':
+        return <Badge variant="outline">Đã duyệt</Badge>;
+      case 'completed':
+        return <Badge className="bg-green-500">Hoàn thành</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const openConfirmPushDialog = (trend: TrendItem) => {
+    console.log('🎯 Opening confirm dialog for trend:', trend);
+    console.log('🎯 Target audience value:', trend.targetAudience);
+    setConfirmPushTrend(trend);
+    setIsConfirmPushDialogOpen(true);
+  };
+
+  const handleSendTrend = async (trendId: number) => {
+    try {
+      setLoading(true);
+      setSendingTrendId(trendId);
+
+      console.log('📤 Sending trend with ID:', trendId);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      const response = await fetch(`/api/trends/${trendId}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to send trend`);
+      }
+
+      const result = await response.json();
+
+      console.log('✅ Send trend result:', result);
+
+      toast({
+        title: "Thành công",
+        description: `Đã đẩy trend thành công đến ${result.target_user_count || 0} người dùng`,
+      });
+
+      // Close dialog first
+      setIsConfirmPushDialogOpen(false);
+      setConfirmPushTrend(null);
+      
+      // Then refresh the list to show updated status
+      await fetchTrends();
+    } catch (error) {
+      console.error('❌ Send trend error:', error);
+      
+      let errorMessage = "Có lỗi xảy ra khi đẩy trend";
+      if (error.name === 'AbortError') {
+        errorMessage = "Request timeout - vui lòng thử lại";
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Lỗi",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setSendingTrendId(null);
+      setIsConfirmPushDialogOpen(false);
+      setConfirmPushTrend(null);
+    }
+  };
+
+  // Helper function to safely format dates
+  const formatSafeDate = (dateString: string | undefined) => {
+    if (!dateString) {
+      return 'N/A';
+    }
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
+  };
+
+  const columns = [
+    {
+      key: 'title',
+      header: 'Tiêu đề',
+      render: (row: TrendItem) => (
+        <div className="font-medium max-w-xs truncate" title={row.title}>
+          {row.title}
+        </div>
+      ),
+    },
+    {
+      key: 'content',
+      header: 'Nội dung',
+      render: (row: TrendItem) => (
+        <div className="max-w-xs truncate" title={row.content}>
+          {row.content}
+        </div>
+      ),
+    },
+    {
+      key: 'targetAudience',
+      header: 'Đối tượng',
+      render: (row: TrendItem) => {
+        console.log('🎯 Rendering target audience for row:', row.id, 'value:', row.targetAudience);
+        const audienceText = row.targetAudience === 'all' ? 'Tất cả' :
+                           row.targetAudience === 'new' ? 'Mới' :
+                           row.targetAudience === 'potential' ? 'Tiềm năng' :
+                           row.targetAudience === 'positive' ? 'Tích cực' :
+                           row.targetAudience === 'non_potential' ? 'Không tiềm năng' :
+                           row.targetAudience || 'Không xác định';
+        
+        return (
+          <div className="text-sm">
+            {audienceText}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      render: (row: TrendItem) => getStatusBadge(row.status),
+    },
+    {
+      key: 'sentAt',
+      header: 'Thời gian đẩy',
+      render: (row: TrendItem) => (
+        <div>
+          {row.status === 'active' && row.sentAt ? (
+            <div>
+              <div className="text-sm">{format(new Date(row.sentAt), 'dd/MM/yyyy HH:mm')}</div>
+              <div className="text-xs text-muted-foreground">{row.recipientCount || 0} người xem</div>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">Chưa đẩy</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'createdAt',
+      header: 'Ngày tạo',
+      render: (row: TrendItem) => (
+          <div className="text-sm">
+            {formatSafeDate(row.createdAt)}
+          </div>
+        ),
+    },
+    {
+      key: 'updatedAt',
+      header: 'Ngày cập nhật',
+      render: (row: TrendItem) => (
+          <div className="text-sm">
+            {formatSafeDate(row.updatedAt)}
+          </div>
+        ),
+    },
+    {
+      key: 'actions',
+      header: 'Hành động',
+      className: 'text-right sticky right-0 bg-background',
+      render: (row: TrendItem) => (
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => openViewDialog(row)}>
+                <Eye className="mr-2 h-4 w-4" />
+                <span>Xem</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openEditDialog(row)}>
+                <Edit className="mr-2 h-4 w-4" />
+                <span>Sửa</span>
+              </DropdownMenuItem>
+              {(row.status === 'approved' || row.status === 'draft') && (
+                <DropdownMenuItem 
+                onClick={() => openConfirmPushDialog(row)}
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  <span>Đẩy Trend</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem 
+                onClick={() => openDeleteDialog(row.id)}
+                className="text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-950"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Xóa</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <DashboardLayout>
+      <div className="container mx-auto p-6">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold tracking-tight">Danh Sách Đẩy Trend</h1>
+            <div className="flex gap-2">
+              <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Tạo Trend Mới
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <div className="relative w-72">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm trend..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+
+          <div className="bg-card rounded-lg shadow">
+            <DataTable
+              data={trends}
+              columns={columns}
+              isLoading={loading}
+              pagination={{
+                currentPage: trendData?.currentPage || 1,
+                totalPages: trendData?.totalPages || 1,
+                total: trendData?.total || 0,
+                pageSize: pageSize,
+                onPageChange: setCurrentPage,
+                onPageSizeChange: (newSize) => {
+                  setPageSize(newSize);
+                  setCurrentPage(1);
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xác nhận xóa trend</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn có chắc chắn muốn xóa trend này? Hành động này không thể hoàn tác.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>
+                Hủy
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteTrendId && handleDeleteTrend(deleteTrendId)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Xóa
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Create Trend Dialog */}
+        <CreateTrendDialog 
+          open={isDialogOpen} 
+          onClose={handleDialogClose} 
+        />
+
+        {/* Edit Trend Dialog */}
+        <EditTrendDialog 
+          open={isEditDialogOpen} 
+          trend={selectedTrend}
+          onClose={(updatedTrend) => {
+            setIsEditDialogOpen(false);
+            if (updatedTrend) {
+              handleEditSuccess(updatedTrend);
+            }
+            setSelectedTrend(null);
+          }}
+        />
+
+        {/* Confirm Push Trend Dialog */}
+        {confirmPushTrend && (
+          <AlertDialog open={isConfirmPushDialogOpen} onOpenChange={setIsConfirmPushDialogOpen}>
+            <AlertDialogContent className="max-w-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Xác nhận đẩy trend
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Bạn có chắc chắn muốn đẩy trend này? Trend sẽ được gửi đến Redis và hiển thị cho người dùng.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Tiêu đề:</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                    {confirmPushTrend.title}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Nội dung:</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm max-h-20 overflow-y-auto">
+                    {confirmPushTrend.content}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Đối tượng:</Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                      {confirmPushTrend.targetAudience === 'all' ? 'Tất cả' :
+                       confirmPushTrend.targetAudience === 'new' ? 'Mới' :
+                       confirmPushTrend.targetAudience === 'potential' ? 'Tiềm năng' :
+                       confirmPushTrend.targetAudience === 'positive' ? 'Tích cực' :
+                       confirmPushTrend.targetAudience === 'non_potential' ? 'Không tiềm năng' :
+                       confirmPushTrend.targetAudience || 'Không xác định'}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">TTL:</Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                      {confirmPushTrend.ttl || 3600} giây ({Math.round((confirmPushTrend.ttl || 3600) / 60)} phút)
+                    </div>
+                  </div>
+                </div>
+
+                {confirmPushTrend.redis_id && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Redis ID:</Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-mono">
+                      {confirmPushTrend.redis_id}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => {
+                  setIsConfirmPushDialogOpen(false);
+                  setConfirmPushTrend(null);
+                }}>
+                  Hủy
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => confirmPushTrend && handleSendTrend(confirmPushTrend.id)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={sendingTrendId === confirmPushTrend?.id}
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  {sendingTrendId === confirmPushTrend?.id ? 'Đang đẩy...' : 'Đẩy Trend'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+
+        {/* View Trend Dialog */}
+        {selectedTrend && (
+          <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5" />
+                  Chi Tiết Trend
+                </DialogTitle>
+                <DialogDescription>
+                  Xem thông tin chi tiết của trend
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Redis Fields Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Redis Data Fields
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>ID</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_id || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>S (Source)</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_s || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>A</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_a || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>G</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_g || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>K</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_k || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>L</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_l || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>R</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_r || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>TTL (giây)</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.ttl || 3600} giây
+                        <div className="text-xs text-muted-foreground mt-1">
+                          ({Math.round((selectedTrend.ttl || 3600) / 60)} phút)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trend Information Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Thông Tin Trend
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Tiêu đề trend</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.title}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Nội dung trend</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm max-h-32 overflow-y-auto">
+                        {selectedTrend.content}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Đối tượng mục tiêu</Label>
+                        <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                          {selectedTrend.targetAudience === 'all' ? 'Tất cả' :
+                           selectedTrend.targetAudience === 'new' ? 'Mới' :
+                           selectedTrend.targetAudience === 'potential' ? 'Tiềm năng' :
+                           selectedTrend.targetAudience === 'positive' ? 'Tích cực' :
+                           selectedTrend.targetAudience === 'non_potential' ? 'Không tiềm năng' :
+                           selectedTrend.targetAudience}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Trạng thái</Label>
+                        <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                          {getStatusBadge(selectedTrend.status)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Ngày tạo</Label>
+                        <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                          {formatSafeDate(selectedTrend.createdAt)}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Ngày cập nhật</Label>
+                        <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                          {formatSafeDate(selectedTrend.updatedAt)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedTrend.sentAt && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Thời gian đẩy</Label>
+                          <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                            {formatSafeDate(selectedTrend.sentAt)}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Số người nhận</Label>
+                          <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                            {selectedTrend.recipientCount || 0} người
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsViewDialogOpen(false)}
+                >
+                  Đóng
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}

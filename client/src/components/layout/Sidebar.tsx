@@ -16,7 +16,8 @@ import {
   BadgeCheck,
   Megaphone,
   Mail,
-  Send
+  Send,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -307,6 +308,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     onClick={handleItemClick}
                   >
                     Gửi Email marketing
+                  </SidebarItem>
+
+                  <SidebarItem
+                    href="/trend"
+                    icon={TrendingUp}
+                    isActive={isActivePath('/trend')}
+                    onClick={handleItemClick}
+                  >
+                    Đẩy Trend
                   </SidebarItem>
                 </div>
               </div>
