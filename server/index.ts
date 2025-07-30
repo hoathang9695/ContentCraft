@@ -257,3 +257,9 @@ import "./routes.js";
 
 // Debug logging for routes
 console.log("Report management routes loaded");
+
+// Import trends router
+import trendsRouter from './routes/trends.router.js';
+
+// Register trends router
+app.use('/api/trends', trendsRouter);
