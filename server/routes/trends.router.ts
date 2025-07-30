@@ -80,26 +80,33 @@ async function getTargetUserIds(targetAudience: string): Promise<string[]> {
     let whereClause = 'WHERE full_name IS NOT NULL AND full_name::jsonb->\'id\' IS NOT NULL';
     const params: any[] = [];
 
+    console.log('🎯 Getting target users for audience:', targetAudience);
+
     // Map target_audience to classification values
     switch (targetAudience) {
       case 'all':
         // Get all users - only basic filters
+        console.log('📊 Selecting ALL users');
         break;
       case 'new':
         whereClause += ' AND classification = $1';
         params.push('new');
+        console.log('📊 Selecting NEW users');
         break;
       case 'potential':
         whereClause += ' AND classification = $1';
         params.push('potential');
+        console.log('📊 Selecting POTENTIAL users');
         break;
       case 'positive':
         whereClause += ' AND classification = $1';
         params.push('positive');
+        console.log('📊 Selecting POSITIVE users');
         break;
       case 'non_potential':
         whereClause += ' AND classification = $1';
-        params.push('negative'); // Map non_potential to negative
+        params.push('non_potential'); // Use exact value instead of mapping to negative
+        console.log('📊 Selecting NON_POTENTIAL users');
         break;
       default:
         console.log('⚠️ Unknown target audience:', targetAudience);
@@ -107,7 +114,7 @@ async function getTargetUserIds(targetAudience: string): Promise<string[]> {
     }
 
     const query = `
-      SELECT (full_name::jsonb->>'id') as user_id 
+      SELECT (full_name::jsonb->>'id') as user_id, classification 
       FROM real_users 
       ${whereClause}
     `;
@@ -118,6 +125,13 @@ async function getTargetUserIds(targetAudience: string): Promise<string[]> {
     const userIds = result.rows.map(row => row.user_id).filter(Boolean);
 
     console.log(`👥 Found ${userIds.length} target users for audience: ${targetAudience}`);
+    
+    // Show classification breakdown
+    const classificationBreakdown = result.rows.reduce((acc, row) => {
+      acc[row.classification] = (acc[row.classification] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('📈 Classification breakdown:', classificationBreakdown);
     console.log('📋 Sample user IDs:', userIds.slice(0, 5));
 
     return userIds;
