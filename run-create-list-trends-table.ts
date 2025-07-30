@@ -1,7 +1,9 @@
 
-import { Pool } from 'pg';
+import pg from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
+
+const { Pool } = pg;
 
 const pool = new Pool({
   user: process.env.PGUSER || 'postgres',
