@@ -34,22 +34,36 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
     e.preventDefault();
 
     const trendData = {
-      ...formData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: 1 // Mock user ID
+      title: formData.title,
+      content: formData.content,
+      target_audience: formData.targetAudience,
+      status: formData.status,
+      redis_id: formData.id,
+      redis_s: formData.s,
+      redis_a: formData.a,
+      redis_g: formData.g,
+      redis_k: formData.k,
+      redis_l: formData.l,
+      redis_r: formData.r
     };
 
     console.log('Creating trend:', trendData);
 
     try {
-      // TODO: Implement API call to create trend and push to Redis
-      
-      // Mock success response
-      const newTrend = {
-        id: Date.now(),
-        ...trendData
-      };
+      const response = await fetch('/api/trends', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(trendData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const newTrend = await response.json();
 
       // Reset form
       setFormData({

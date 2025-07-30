@@ -423,3 +423,55 @@ export const insertComplainManagementSchema = createInsertSchema(complainManagem
 
 export type InsertComplainManagement = z.infer<typeof insertComplainManagementSchema>;
 export type ComplainManagement = typeof complainManagement.$inferSelect;
+
+export interface User {
+  id: number;
+  username: string;
+  email?: string;
+  name?: string;
+  role: 'admin' | 'user';
+  can_send_email?: boolean;
+}
+
+export interface TrendItem {
+  id: number;
+  title: string;
+  content: string;
+  target_audience: 'all' | 'new' | 'potential' | 'positive' | 'negative';
+  status: 'draft' | 'approved' | 'active' | 'completed' | 'cancelled';
+  created_by: number;
+  sent_at?: string;
+  recipient_count?: number;
+  created_at: string;
+  updated_at: string;
+
+  // Redis data fields
+  redis_id?: string;
+  redis_s?: string;
+  redis_a?: string;
+  redis_g?: string;
+  redis_k?: string;
+  redis_l?: string;
+  redis_r?: string;
+}
+
+export interface CreateTrendRequest {
+  title: string;
+  content: string;
+  target_audience: 'all' | 'new' | 'potential' | 'positive' | 'negative';
+  status: 'draft' | 'approved';
+  redis_id?: string;
+  redis_s?: string;
+  redis_a?: string;
+  redis_g?: string;
+  redis_k?: string;
+  redis_l?: string;
+  redis_r?: string;
+}
+
+export interface TrendListResponse {
+  data: TrendItem[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}

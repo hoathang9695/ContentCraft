@@ -89,27 +89,23 @@ export function ListTrendPage() {
   const fetchTrends = async () => {
     setLoading(true);
     try {
-      // Placeholder data - sẽ được thay thế bằng API thực tế
-      const mockData = {
-        data: [
-          {
-            id: 1,
-            title: "Trend Gaming 2024",
-            content: "Những xu hướng gaming hot nhất năm 2024",
-            targetAudience: "all",
-            status: "draft",
-            createdBy: 1,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ],
-        total: 1,
-        totalPages: 1,
-        currentPage: 1
-      };
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: pageSize.toString(),
+        ...(searchTerm && { search: searchTerm })
+      });
 
-      setTrendData(mockData);
-      setTrends(mockData.data || []);
+      const response = await fetch(`/api/trends?${params}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTrendData(data);
+      setTrends(data.data || []);
     } catch (error) {
       console.error('Error fetching trends:', error);
       setTrends([]);
