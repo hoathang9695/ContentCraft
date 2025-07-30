@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { CreateTrendDialog } from '@/components/CreateTrendDialog';
 
 interface TrendItem {
   id: number;
@@ -408,6 +409,12 @@ export function ListTrendPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Create Trend Dialog */}
+        <CreateTrendDialog 
+          open={isDialogOpen} 
+          onClose={handleDialogClose} 
+        />
       </div>
     </DashboardLayout>
   );
