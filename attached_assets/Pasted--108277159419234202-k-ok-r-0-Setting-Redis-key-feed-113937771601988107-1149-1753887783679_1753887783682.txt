@@ -1,0 +1,992 @@
+: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113937771601988107:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113937771601988107:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113937771601988107:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113944718849064919:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113944718849064919:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113944718849064919:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113950970280659144:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113950970280659144:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113950970280659144:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113963872679994585:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113963872679994585:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113963872679994585:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113938275282059486:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113938275282059486:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113938275282059486:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113951495908923504:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113951495908923504:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113951495908923504:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113951708385797510:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113951708385797510:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113951708385797510:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113960703912722979:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113960703912722979:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113960703912722979:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113957006101174240:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113957006101174240:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113957006101174240:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-114486984823498618:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-114486984823498618:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-114486984823498618:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113980011047315305:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113980011047315305:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113980011047315305:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113962050964385060:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113962050964385060:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113962050964385060:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113969134534480023:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113969134534480023:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113969134534480023:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-114525459337637363:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-114525459337637363:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-114525459337637363:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113974484896449980:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113974484896449980:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113974484896449980:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113963645769509231:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113963645769509231:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113963645769509231:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113956966235292846:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113956966235292846:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113956966235292846:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-114550224080545546:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-114550224080545546:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-114550224080545546:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113949246738405401:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113949246738405401:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113949246738405401:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-114085068549454836:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-114085068549454836:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-114085068549454836:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113979824053544538:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113979824053544538:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113979824053544538:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-114239977313396039:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-114239977313396039:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-114239977313396039:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-114093551961745547:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-114093551961745547:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-114093551961745547:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-113950851031786011:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-113950851031786011:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-113950851031786011:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+📤 Setting Redis key: feed-114097840956540936:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+} TTL: 300s
+📊 Pipeline result for feed-114097840956540936:114941520911322381: [ 5, 1 ]
+🔍 Verification data for feed-114097840956540936:114941520911322381: [Object: null prototype] {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'ok',
+  r: '0'
+}
+✅ Successfully pushed trend to Redis for 1114/1114 users
+📊 Redis push result: {
+  success: true,
+  results: [
+    {
+      userId: '113983296392820388',
+      redisKey: 'feed-113983296392820388:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114412334499532144',
+      redisKey: 'feed-114412334499532144:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113910835032263084',
+      redisKey: 'feed-113910835032263084:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114319511651323013',
+      redisKey: 'feed-114319511651323013:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113934005631893904',
+      redisKey: 'feed-113934005631893904:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114291607385655449',
+      redisKey: 'feed-114291607385655449:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113951264693731162',
+      redisKey: 'feed-113951264693731162:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114115643949753046',
+      redisKey: 'feed-114115643949753046:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114557434428296951',
+      redisKey: 'feed-114557434428296951:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114397697528381646',
+      redisKey: 'feed-114397697528381646:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114176032270754991',
+      redisKey: 'feed-114176032270754991:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113960429754489982',
+      redisKey: 'feed-113960429754489982:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113978180793217456',
+      redisKey: 'feed-113978180793217456:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113955762062111538',
+      redisKey: 'feed-113955762062111538:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113901333436533352',
+      redisKey: 'feed-113901333436533352:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113939486935769223',
+      redisKey: 'feed-113939486935769223:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114300248225831109',
+      redisKey: 'feed-114300248225831109:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113950801286856937',
+      redisKey: 'feed-113950801286856937:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114512839607309584',
+      redisKey: 'feed-114512839607309584:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114175966198588394',
+      redisKey: 'feed-114175966198588394:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113956218779808572',
+      redisKey: 'feed-113956218779808572:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113951742958902278',
+      redisKey: 'feed-113951742958902278:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113938813298484568',
+      redisKey: 'feed-113938813298484568:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113950965465678765',
+      redisKey: 'feed-113950965465678765:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113996238851810191',
+      redisKey: 'feed-113996238851810191:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113943478438459750',
+      redisKey: 'feed-113943478438459750:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113952457005930111',
+      redisKey: 'feed-113952457005930111:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114080385956328520',
+      redisKey: 'feed-114080385956328520:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114080696703971919',
+      redisKey: 'feed-114080696703971919:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113922539559976001',
+      redisKey: 'feed-113922539559976001:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113918986886615731',
+      redisKey: 'feed-113918986886615731:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113923608427956237',
+      redisKey: 'feed-113923608427956237:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114206235729557724',
+      redisKey: 'feed-114206235729557724:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114398221055642850',
+      redisKey: 'feed-114398221055642850:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113949263768996176',
+      redisKey: 'feed-113949263768996176:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114029691498041340',
+      redisKey: 'feed-114029691498041340:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114132970597323382',
+      redisKey: 'feed-114132970597323382:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113961959344808929',
+      redisKey: 'feed-113961959344808929:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114024242078747196',
+      redisKey: 'feed-114024242078747196:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114286363192092337',
+      redisKey: 'feed-114286363192092337:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113940186730581646',
+      redisKey: 'feed-113940186730581646:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113950496500423171',
+      redisKey: 'feed-113950496500423171:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114104484380872079',
+      redisKey: 'feed-114104484380872079:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113988386324843653',
+      redisKey: 'feed-113988386324843653:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114092118674054788',
+      redisKey: 'feed-114092118674054788:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113933448329952896',
+      redisKey: 'feed-113933448329952896:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114167460664748931',
+      redisKey: 'feed-114167460664748931:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113955357518129036',
+      redisKey: 'feed-113955357518129036:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113935037918849828',
+      redisKey: 'feed-113935037918849828:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113960216749159898',
+      redisKey: 'feed-113960216749159898:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113957093283996495',
+      redisKey: 'feed-113957093283996495:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113954023506924397',
+      redisKey: 'feed-113954023506924397:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113961667205280785',
+      redisKey: 'feed-113961667205280785:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113933805034540794',
+      redisKey: 'feed-113933805034540794:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113983371434632385',
+      redisKey: 'feed-113983371434632385:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114225867843902969',
+      redisKey: 'feed-114225867843902969:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114109035901443190',
+      redisKey: 'feed-114109035901443190:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113967682062000373',
+      redisKey: 'feed-113967682062000373:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114000852933065126',
+      redisKey: 'feed-114000852933065126:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113949089184045661',
+      redisKey: 'feed-113949089184045661:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113949751332019400',
+      redisKey: 'feed-113949751332019400:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114046458514730266',
+      redisKey: 'feed-114046458514730266:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113948438373978482',
+      redisKey: 'feed-113948438373978482:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113955604826326108',
+      redisKey: 'feed-113955604826326108:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114005137768545093',
+      redisKey: 'feed-114005137768545093:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113951215304508373',
+      redisKey: 'feed-113951215304508373:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113950844925562874',
+      redisKey: 'feed-113950844925562874:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114135358116010138',
+      redisKey: 'feed-114135358116010138:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113937032107541929',
+      redisKey: 'feed-113937032107541929:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113933226255654173',
+      redisKey: 'feed-113933226255654173:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114550355608599880',
+      redisKey: 'feed-114550355608599880:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113929523314894299',
+      redisKey: 'feed-113929523314894299:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114184882897715467',
+      redisKey: 'feed-114184882897715467:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113938758011093124',
+      redisKey: 'feed-113938758011093124:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114063615455413034',
+      redisKey: 'feed-114063615455413034:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113978581934721652',
+      redisKey: 'feed-113978581934721652:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114161027009938816',
+      redisKey: 'feed-114161027009938816:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113934971477996775',
+      redisKey: 'feed-113934971477996775:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113949578184622781',
+      redisKey: 'feed-113949578184622781:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113954855991842058',
+      redisKey: 'feed-113954855991842058:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114488517977967498',
+      redisKey: 'feed-114488517977967498:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113950936849581706',
+      redisKey: 'feed-113950936849581706:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113905323452912535',
+      redisKey: 'feed-113905323452912535:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113943029026457206',
+      redisKey: 'feed-113943029026457206:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113978662466616187',
+      redisKey: 'feed-113978662466616187:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114335033251478201',
+      redisKey: 'feed-114335033251478201:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113939045586353109',
+      redisKey: 'feed-113939045586353109:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114109725703474445',
+      redisKey: 'feed-114109725703474445:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113980784664104673',
+      redisKey: 'feed-113980784664104673:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113956662201121695',
+      redisKey: 'feed-113956662201121695:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114417454031367204',
+      redisKey: 'feed-114417454031367204:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113945743242179036',
+      redisKey: 'feed-113945743242179036:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113957218489100810',
+      redisKey: 'feed-113957218489100810:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113945423257567936',
+      redisKey: 'feed-113945423257567936:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113930421831645542',
+      redisKey: 'feed-113930421831645542:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114483206028898890',
+      redisKey: 'feed-114483206028898890:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113909544862086601',
+      redisKey: 'feed-113909544862086601:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114193357460531307',
+      redisKey: 'feed-114193357460531307:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '114558574646675641',
+      redisKey: 'feed-114558574646675641:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    {
+      userId: '113968201143580395',
+      redisKey: 'feed-113968201143580395:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    },
+    ... 1014 more items
+  ],
+  errors: [],
+  total_users: 1114,
+  successful_users: 1114,
+  failed_users: 0,
+  message: 'Data successfully saved to Redis'
+}
+✅ Trend sent successfully to Redis for 1114/1114 users

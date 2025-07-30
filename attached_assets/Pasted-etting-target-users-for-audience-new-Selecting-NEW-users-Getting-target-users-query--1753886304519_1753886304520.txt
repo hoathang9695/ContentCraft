@@ -1,0 +1,150 @@
+etting target users for audience: new
+📊 Selecting NEW users
+🔍 Getting target users query: 
+      SELECT (full_name::jsonb->>'id') as user_id, classification 
+      FROM real_users 
+      WHERE full_name IS NOT NULL AND full_name::jsonb->'id' IS NOT NULL AND classification = $1
+     params: [ 'new' ]
+👥 Found 1 target users for audience: new
+📈 Classification breakdown: { new: 1 }
+📋 Sample user IDs: [ '113752490483913690' ]
+🔍 Executing query with values: [
+  'Thử 1 nhát',
+  'kokoko',
+  'new',
+  'draft',
+  1,
+  '114941520911322381',
+  '114941520911322381',
+  '108277159419234202',
+  null,
+  'test',
+  null,
+  '0',
+  3600,
+  1
+]
+✅ Trend created successfully: {
+  id: 22,
+  title: 'Thử 1 nhát',
+  content: 'kokoko',
+  target_audience: 'new',
+  status: 'draft',
+  created_by: 1,
+  sent_at: null,
+  recipient_count: 1,
+  created_at: 2025-07-30T14:30:36.747Z,
+  updated_at: 2025-07-30T14:30:36.747Z,
+  redis_id: '114941520911322381',
+  redis_s: '114941520911322381',
+  redis_a: '108277159419234202',
+  redis_g: null,
+  redis_k: 'test',
+  redis_l: null,
+  redis_r: '0',
+  ttl: 3600
+}
+📤 Prepared data for Redis: {
+  trend_id: 22,
+  redis_id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  g: '',
+  k: 'test',
+  l: '',
+  r: '0',
+  target_users: '1 users: [113752490483913690...]',
+  target_audience: 'new',
+  title: 'Thử 1 nhát',
+  content: 'kokoko'
+}
+{"@timestamp":"2025-07-30T14:30:36.754Z","@version":"1","level":"info","logger_name":"API","message":"POST /api/trends 201 in 16ms","thread_name":"pid-698567","host":"localhost","application":"emso-content-management","environment":"development","pid":698567,"fields":{"http":{"method":"POST","path":"/api/trends","status_code":201,"response_time_ms":16,"response_size":454},"response_preview":"{\"id\":22,\"title\":\"Thử 1 nhát\",\"content\":\"kokoko\",\"target_audience\":\"new\",\"status\":\"draft\",\"created_by\":1,\"sent_at\":null,\"recipient_count\":1,\"created_at\":\"2025-07-30T14:30:36.747Z\",\"updated_at\":\"2025-0"}}
+📤 Send trend request body: {}
+🎯 Getting target users for audience: new
+📊 Selecting NEW users
+🔍 Getting target users query: 
+      SELECT (full_name::jsonb->>'id') as user_id, classification 
+      FROM real_users 
+      WHERE full_name IS NOT NULL AND full_name::jsonb->'id' IS NOT NULL AND classification = $1
+     params: [ 'new' ]
+👥 Found 1 target users for audience: new
+📈 Classification breakdown: { new: 1 }
+📋 Sample user IDs: [ '113752490483913690' ]
+📤 Sending trend to Redis: {
+  trend_id: 22,
+  redis_id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  g: null,
+  k: 'test',
+  l: null,
+  r: '0',
+  target_users: '1 users: [113752490483913690...]',
+  target_audience: 'new',
+  title: 'Thử 1 nhát',
+  content: 'kokoko',
+  sent_at: '2025-07-30T14:30:44.424Z'
+}
+🚀 Attempting to push trend to Redis with data: {
+  trend_id: 22,
+  redis_id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  g: '',
+  k: 'test',
+  l: '',
+  r: '0',
+  target_users: '1 users',
+  ttl: 3600,
+  title: 'Thử 1 nhát',
+  content: 'kokoko'
+}
+✅ Redis Client Connected
+✅ Redis PING successful
+📤 Setting Redis key: feed-113752490483913690:114941520911322381 with data: {
+  id: '114941520911322381',
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'test',
+  r: '0'
+} TTL: 3600s
+📊 Pipeline result for feed-113752490483913690:114941520911322381: [ 1, 1 ]
+🔍 Verification data for feed-113752490483913690:114941520911322381: [Object: null prototype] {
+  s: '114941520911322381',
+  a: '108277159419234202',
+  k: 'test',
+  r: '0',
+  id: '114941520911322381'
+}
+✅ Successfully pushed trend to Redis for 1/1 users
+📊 Redis push result: {
+  success: true,
+  results: [
+    {
+      userId: '113752490483913690',
+      redisKey: 'feed-113752490483913690:114941520911322381',
+      success: true,
+      verifiedData: [Object: null prototype]
+    }
+  ],
+  errors: [],
+  total_users: 1,
+  successful_users: 1,
+  failed_users: 0,
+  message: 'Data successfully saved to Redis'
+}
+✅ Trend sent successfully to Redis for 1/1 users
+{"@timestamp":"2025-07-30T14:30:44.436Z","@version":"1","level":"info","logger_name":"API","message":"POST /api/trends/22/send 200 in 19ms","thread_name":"pid-698567","host":"localhost","application":"emso-content-management","environment":"development","pid":698567,"fields":{"http":{"method":"POST","path":"/api/trends/22/send","status_code":200,"response_time_ms":19,"response_size":653},"response_preview":"{\"id\":22,\"title\":\"Thử 1 nhát\",\"content\":\"kokoko\",\"target_audience\":\"new\",\"status\":\"active\",\"created_by\":1,\"sent_at\":\"2025-07-30T14:30:44.419Z\",\"recipient_count\":1,\"created_at\":\"2025-07-30T14:30:36.747"}}
+📄 Fetching trends with params: { page: '1', limit: '10' }
+🔍 Count query: SELECT COUNT(*) FROM list_trends WHERE 1=1 params: []
+🔍 Data query: 
+      SELECT 
+        id, title, content, target_audience, status, created_by,
+        sent_at, recipient_count, created_at, updated_at,
+        redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r, ttl
+      FROM list_trends 
+      WHERE 1=1
+      ORDER BY created_at DESC 
+      LIMIT $1 OFFSET $2
+     params: [ 10, 0 ]
+✅ Found 10 trends out of 15 total
