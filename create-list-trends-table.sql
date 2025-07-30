@@ -36,7 +36,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_list_trends_updated_at
+CREATE OR REPLACE TRIGGER update_list_trends_updated_at
     BEFORE UPDATE ON list_trends
     FOR EACH ROW
     EXECUTE FUNCTION update_list_trends_updated_at();
