@@ -260,6 +260,19 @@ export function ListTrendPage() {
     }
   };
 
+  // Helper function to safely format dates
+  const formatSafeDate = (dateString: string | undefined) => {
+    if (!dateString) {
+      return 'N/A';
+    }
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
+  };
+
   const columns = [
     {
       key: 'title',
@@ -316,19 +329,19 @@ export function ListTrendPage() {
       key: 'createdAt',
       header: 'Ngày tạo',
       render: (row: TrendItem) => (
-        <div className="text-sm">
-          {format(new Date(row.createdAt), 'dd/MM/yyyy HH:mm')}
-        </div>
-      ),
+          <div className="text-sm">
+            {formatSafeDate(row.createdAt)}
+          </div>
+        ),
     },
     {
       key: 'updatedAt',
       header: 'Ngày cập nhật',
       render: (row: TrendItem) => (
-        <div className="text-sm">
-          {format(new Date(row.updatedAt), 'dd/MM/yyyy HH:mm')}
-        </div>
-      ),
+          <div className="text-sm">
+            {formatSafeDate(row.updatedAt)}
+          </div>
+        ),
     },
     {
       key: 'actions',
