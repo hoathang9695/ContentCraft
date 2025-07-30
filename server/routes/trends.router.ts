@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pg from 'pg';
+import { redisService } from '../redis-service';
 const { Pool } = pg;
 
 const router = Router();
@@ -360,10 +361,30 @@ router.post('/:id/send', async (req, res) => {
       target_users: `${targetUserIds.length} users: [${targetUserIds.slice(0, 3).join(', ')}...]`
     });
 
-    // TODO: Actually push to Redis here
-    // await sendToRedis(redisData);
+    try {
+      // Push to Redis
+      const redisResult = await redisService.pushTrendToRedis({
+        trend_id: parseInt(id),
+        redis_id: trend.redis_id || trend.id.toString(),
+        s: trend.redis_s || '',
+        a: trend.redis_a || '',
+        g: trend.redis_g || '',
+        k: trend.redis_k || '',
+        l: trend.redis_l || '',
+        r: trend.redis_r || '',
+        target_users: targetUserIds,
+        ttl: trend.ttl || 3600,
+        title: trend.title,
+        content: trend.content
+      });
 
-    console.log('✅ Trend sent successfully to', targetUserIds.length, 'users');
+      console.log('✅ Redis push result:', redisResult);
+      console.log('✅ Trend sent successfully to Redis for', targetUserIds.length, 'users');
+    } catch (redisError) {
+      console.error('❌ Failed to push to Redis:', redisError);
+      // Don't fail the entire operation if Redis fails
+      console.log('⚠️ Continuing without Redis push...');
+    }
 
     res.json({
       ...result.rows[0],
@@ -374,6 +395,30 @@ router.post('/:id/send', async (req, res) => {
     console.error('Error sending trend:', error);
     res.setHeader('Content-Type', 'application/json');
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Debug endpoint to check Redis data
+router.get('/debug/redis/:userId/:trendId', async (req, res) => {
+  try {
+    const { userId, trendId } = req.params;
+    const data = await redisService.getTrendFromRedis(userId, trendId);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error getting Redis data:', error);
+    res.status(500).json({ error: 'Failed to get Redis data' });
+  }
+});
+
+// Debug endpoint to list all trend keys
+router.get('/debug/redis/keys/:pattern?', async (req, res) => {
+  try {
+    const pattern = req.params.pattern || 'feed-*';
+    const keys = await redisService.getAllTrendKeys(pattern);
+    res.json({ success: true, keys, total: keys.length });
+  } catch (error) {
+    console.error('Error getting Redis keys:', error);
+    res.status(500).json({ error: 'Failed to get Redis keys' });
   }
 });
 

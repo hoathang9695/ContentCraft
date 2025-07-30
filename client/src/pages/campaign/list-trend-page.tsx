@@ -287,16 +287,32 @@ export function ListTrendPage() {
   const handleSendTrend = async (trendId: number) => {
     try {
       setLoading(true);
+      setSendingTrendId(trendId);
 
       console.log('📤 Sending trend with ID:', trendId);
 
-      // Placeholder send logic
-      toast({
-        title: "Thành công",
-        description: `Đã đẩy trend thành công`,
+      const response = await fetch(`/api/trends/${trendId}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      // Refresh the list
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send trend');
+      }
+
+      const result = await response.json();
+
+      console.log('✅ Send trend result:', result);
+
+      toast({
+        title: "Thành công",
+        description: `Đã đẩy trend thành công đến ${result.target_user_count || 0} người dùng`,
+      });
+
+      // Refresh the list to show updated status
       fetchTrends();
     } catch (error) {
       console.error('❌ Send trend error:', error);
@@ -598,9 +614,10 @@ export function ListTrendPage() {
                 <AlertDialogAction
                   onClick={() => confirmPushTrend && handleSendTrend(confirmPushTrend.id)}
                   className="bg-blue-600 hover:bg-blue-700"
+                  disabled={sendingTrendId === confirmPushTrend?.id}
                 >
                   <TrendingUp className="mr-2 h-4 w-4" />
-                  Đẩy Trend
+                  {sendingTrendId === confirmPushTrend?.id ? 'Đang đẩy...' : 'Đẩy Trend'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
