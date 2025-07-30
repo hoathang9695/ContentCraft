@@ -107,11 +107,11 @@ async function getTargetUserIds(targetAudience: string): Promise<string[]> {
     }
 
     const query = `
-      SELECT (full_name->>'id') as user_id 
+      SELECT (full_name::jsonb->>'id') as user_id 
       FROM real_users 
       ${whereClause}
       AND full_name IS NOT NULL 
-      AND full_name->>'id' IS NOT NULL
+      AND full_name::jsonb->>'id' IS NOT NULL
     `;
 
     console.log('🔍 Getting target users query:', query, 'params:', params);
