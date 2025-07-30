@@ -27,6 +27,7 @@ import SettingsPage from "@/pages/settings-page";
 import EmailTemplatesPage from '@/pages/email-templates-page';
 import { ListNotificationPage } from '@/pages/campaign/list-notification-page';
 import { ListEmailPage } from '@/pages/campaign/list-email-page';
+import { ListTrendPage } from '@/pages/campaign/list-trend-page';
 import FeedbackPage from "@/pages/user-feedback/feedback-page";
 import ReportManagementPage from "@/pages/report-management-page";
 import ReviewReportsPage from "@/pages/review-reports-page";
@@ -69,6 +70,12 @@ function Router() {
               <ProtectedRoute 
                 path="/list-email" 
                 component={ListEmailPage} 
+                allowedRoles={['admin']} 
+                allowedDepartments={['Marketing']} 
+              />
+              <ProtectedRoute 
+                path="/trend" 
+                component={ListTrendPage} 
                 allowedRoles={['admin']} 
                 allowedDepartments={['Marketing']} 
               />
