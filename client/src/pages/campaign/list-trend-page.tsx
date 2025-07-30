@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Search, Plus, Eye, Edit, Trash2, Send, MoreHorizontal, TrendingUp } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DataTable } from '@/components/ui/data-table';
@@ -18,6 +19,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +46,13 @@ interface TrendItem {
   recipientCount?: number;
   createdAt: string;
   updatedAt: string;
+  redis_id?: string;
+  redis_s?: string;
+  redis_a?: string;
+  redis_g?: string;
+  redis_k?: string;
+  redis_l?: string;
+  redis_r?: string;
 }
 
 interface TrendData {
@@ -131,7 +146,14 @@ export function ListTrendPage() {
           sentAt: trend.sent_at,
           recipientCount: trend.recipient_count,
           createdAt: trend.created_at,
-          updatedAt: trend.updated_at
+          updatedAt: trend.updated_at,
+          redis_id: trend.redis_id,
+          redis_s: trend.redis_s,
+          redis_a: trend.redis_a,
+          redis_g: trend.redis_g,
+          redis_k: trend.redis_k,
+          redis_l: trend.redis_l,
+          redis_r: trend.redis_r
         })) || []
       };
 
@@ -478,6 +500,170 @@ export function ListTrendPage() {
           open={isDialogOpen} 
           onClose={handleDialogClose} 
         />
+
+        {/* View Trend Dialog */}
+        {selectedTrend && (
+          <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5" />
+                  Chi Tiết Trend
+                </DialogTitle>
+                <DialogDescription>
+                  Xem thông tin chi tiết của trend
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Redis Fields Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Redis Data Fields
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>ID</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_id || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>S (Source)</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_s || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>A</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_a || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>G</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_g || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>K</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_k || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>L</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_l || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>R</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.redis_r || 'Không có'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trend Information Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Thông Tin Trend
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Tiêu đề trend</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.title}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Nội dung trend</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm max-h-32 overflow-y-auto">
+                        {selectedTrend.content}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Đối tượng mục tiêu</Label>
+                        <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                          {selectedTrend.targetAudience === 'all' ? 'Tất cả' :
+                           selectedTrend.targetAudience === 'new' ? 'Mới' :
+                           selectedTrend.targetAudience === 'potential' ? 'Tiềm năng' :
+                           selectedTrend.targetAudience === 'positive' ? 'Tích cực' :
+                           selectedTrend.targetAudience === 'non_potential' ? 'Không tiềm năng' :
+                           selectedTrend.targetAudience}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Trạng thái</Label>
+                        <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                          {getStatusBadge(selectedTrend.status)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Ngày tạo</Label>
+                        <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                          {formatSafeDate(selectedTrend.createdAt)}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Ngày cập nhật</Label>
+                        <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                          {formatSafeDate(selectedTrend.updatedAt)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedTrend.sentAt && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Thời gian đẩy</Label>
+                          <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                            {formatSafeDate(selectedTrend.sentAt)}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Số người nhận</Label>
+                          <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                            {selectedTrend.recipientCount || 0} người
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsViewDialogOpen(false)}
+                >
+                  Đóng
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </DashboardLayout>
   );
