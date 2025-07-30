@@ -264,20 +264,9 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
 
               <div className="space-y-2">
                 <Label>Trạng thái</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Nháp</SelectItem>
-                    <SelectItem value="approved">Đã duyệt</SelectItem>
-                    <SelectItem value="active">Đang hoạt động</SelectItem>
-                    <SelectItem value="completed">Hoàn thành</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                  Nháp (Trạng thái sẽ tự động thay đổi khi đẩy trend)
+                </div>
               </div>
             </div>
           </div>
