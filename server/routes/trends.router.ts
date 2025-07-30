@@ -7,7 +7,7 @@ const router = Router();
 const pool = new Pool({
   user: process.env.PGUSER || 'postgres',
   password: process.env.PGPASSWORD || 'chiakhoathanhcong',
-  host: process.env.PGHOST || 'localhost',
+  host: process.env.PGHOST || '42.96.40.138',
   database: process.env.PGDATABASE || 'content',
   port: parseInt(process.env.PGPORT || '5432'),
 });

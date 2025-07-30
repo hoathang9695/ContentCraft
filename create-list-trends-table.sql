@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS list_trends (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
-    target_audience VARCHAR(50) NOT NULL DEFAULT 'all' CHECK (target_audience IN ('all', 'new', 'potential', 'positive', 'negative')),
+    target_audience VARCHAR(50) NOT NULL DEFAULT 'all' CHECK (target_audience IN ('all', 'new', 'potential', 'positive', 'negative', 'non_potential')),
     status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'active', 'completed', 'cancelled')),
     created_by INTEGER NOT NULL,
     sent_at TIMESTAMP,
