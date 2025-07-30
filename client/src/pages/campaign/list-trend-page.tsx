@@ -222,7 +222,22 @@ export function ListTrendPage() {
 
   const handleDeleteTrend = async (id: number) => {
     try {
-      // Placeholder delete logic
+      console.log('🗑️ Deleting trend with ID:', id);
+
+      const response = await fetch(`/api/trends/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      console.log('✅ Trend deleted successfully from database');
+
       toast({
         title: "Thành công",
         description: "Xóa trend thành công",
@@ -239,10 +254,16 @@ export function ListTrendPage() {
         }));
       }
     } catch (error) {
-      console.error('Error deleting trend:', error);
+      console.error('❌ Error deleting trend:', error);
+      
+      let errorMessage = "Có lỗi xảy ra khi xóa trend";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Lỗi",
-        description: "Có lỗi xảy ra khi xóa trend",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
