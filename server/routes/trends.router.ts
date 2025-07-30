@@ -15,6 +15,8 @@ const pool = new Pool({
 // Get all trends with pagination
 router.get('/', async (req, res) => {
   try {
+    console.log('📄 Fetching trends with params:', req.query);
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string || '';
@@ -30,6 +32,8 @@ router.get('/', async (req, res) => {
 
     // Get total count
     const countQuery = `SELECT COUNT(*) FROM list_trends ${whereClause}`;
+    console.log('🔍 Count query:', countQuery, 'params:', queryParams);
+    
     const countResult = await pool.query(countQuery, queryParams);
     const total = parseInt(countResult.rows[0].count);
 
@@ -46,7 +50,11 @@ router.get('/', async (req, res) => {
     `;
     queryParams.push(limit, offset);
 
+    console.log('🔍 Data query:', dataQuery, 'params:', queryParams);
+    
     const dataResult = await pool.query(dataQuery, queryParams);
+
+    console.log(`✅ Found ${dataResult.rows.length} trends out of ${total} total`);
 
     res.json({
       data: dataResult.rows,
@@ -55,14 +63,21 @@ router.get('/', async (req, res) => {
       currentPage: page
     });
   } catch (error) {
-    console.error('Error fetching trends:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Error fetching trends:', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
 // Create new trend
 router.post('/', async (req, res) => {
   try {
+    console.log('📝 Creating new trend with data:', req.body);
+
     const {
       title,
       content,
@@ -77,6 +92,14 @@ router.post('/', async (req, res) => {
       redis_r
     } = req.body;
 
+    // Validate required fields
+    if (!title || !content) {
+      return res.status(400).json({ 
+        error: 'Title and content are required',
+        received: { title, content }
+      });
+    }
+
     const created_by = (req as any).user?.id || 1; // Get from auth middleware
 
     const query = `
@@ -88,11 +111,16 @@ router.post('/', async (req, res) => {
     `;
 
     const values = [
-      title, content, target_audience, status, created_by,
-      redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r
+      title, content, target_audience || 'all', status || 'draft', created_by,
+      redis_id || null, redis_s || null, redis_a || null, 
+      redis_g || null, redis_k || null, redis_l || null, redis_r || null
     ];
 
+    console.log('🔍 Executing query with values:', values);
+
     const result = await pool.query(query, values);
+    
+    console.log('✅ Trend created successfully:', result.rows[0]);
     
     // TODO: Push data to Redis here
     console.log('📤 TODO: Push trend data to Redis:', {
@@ -107,8 +135,13 @@ router.post('/', async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating trend:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Error creating trend:', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
