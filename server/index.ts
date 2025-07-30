@@ -257,3 +257,15 @@ import "./routes.js";
 
 // Debug logging for routes
 console.log("Report management routes loaded");
+
+import notificationsRouter from './routes/notifications.router';
+import feedbackRouter from './routes/feedback.router';
+import verificationRouter from './routes/verification.router';
+import tickRouter from './routes/tick.router';
+import trendsRouter from './routes/trends.router';
+
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/feedback', feedbackRouter);
+app.use('/api/verification', verificationRouter);
+app.use('/api/tick', tickRouter);
+app.use('/api/trends', trendsRouter);
