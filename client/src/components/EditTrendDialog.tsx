@@ -33,6 +33,7 @@ interface TrendItem {
   redis_k?: string;
   redis_l?: string;
   redis_r?: string;
+  ttl?: number;
 }
 
 interface EditTrendDialogProps {
@@ -54,7 +55,8 @@ export function EditTrendDialog({ open, trend, onClose }: EditTrendDialogProps) 
     title: '',
     content: '',
     targetAudience: 'all',
-    status: 'draft'
+    status: 'draft',
+    ttl: 3600
   });
 
   // Load trend data into form when dialog opens
@@ -71,7 +73,8 @@ export function EditTrendDialog({ open, trend, onClose }: EditTrendDialogProps) 
         title: trend.title,
         content: trend.content,
         targetAudience: trend.targetAudience,
-        status: trend.status
+        status: trend.status,
+        ttl: trend.ttl || 3600
       });
     }
   }, [trend, open]);
@@ -92,7 +95,8 @@ export function EditTrendDialog({ open, trend, onClose }: EditTrendDialogProps) 
       redis_g: formData.g,
       redis_k: formData.k,
       redis_l: formData.l,
-      redis_r: formData.r
+      redis_r: formData.r,
+      ttl: formData.ttl
     };
 
     console.log('Updating trend:', trend.id, trendData);
@@ -249,6 +253,21 @@ export function EditTrendDialog({ open, trend, onClose }: EditTrendDialogProps) 
                   onChange={(e) => setFormData(prev => ({ ...prev, r: e.target.value }))}
                   placeholder="Nhập Redis R"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="redis-ttl">TTL (giây)</Label>
+                <Input
+                  id="redis-ttl"
+                  type="number"
+                  value={formData.ttl}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ttl: parseInt(e.target.value) || 3600 }))}
+                  placeholder="3600"
+                  min="1"
+                />
+                <div className="text-xs text-muted-foreground">
+                  Thời gian tồn tại trong Redis (mặc định: 3600 giây = 1 giờ)
+                </div>
               </div>
             </div>
           </div>

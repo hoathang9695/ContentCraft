@@ -27,7 +27,8 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
     title: '',
     content: '',
     targetAudience: 'all',
-    status: 'draft'
+    status: 'draft',
+    ttl: 3600
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,7 +45,8 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
       redis_g: formData.g,
       redis_k: formData.k,
       redis_l: formData.l,
-      redis_r: formData.r
+      redis_r: formData.r,
+      ttl: formData.ttl
     };
 
     console.log('Creating trend:', trendData);
@@ -91,7 +93,8 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
         title: '',
         content: '',
         targetAudience: 'all',
-        status: 'draft'
+        status: 'draft',
+        ttl: 3600
       });
 
       // Show success toast
@@ -210,6 +213,21 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
                   placeholder="1753846150"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ttl">TTL (giây)</Label>
+                <Input
+                  id="ttl"
+                  type="number"
+                  value={formData.ttl}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ttl: parseInt(e.target.value) || 3600 }))}
+                  placeholder="3600"
+                  min="1"
+                />
+                <div className="text-xs text-muted-foreground">
+                  Thời gian tồn tại trong Redis (mặc định: 3600 giây = 1 giờ)
+                </div>
+              </div>
             </div>
           </div>
 
@@ -289,7 +307,8 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
                 title: '',
                 content: '',
                 targetAudience: 'all',
-                status: 'draft'
+                status: 'draft',
+                ttl: 3600
               });
               onClose();
             }}>

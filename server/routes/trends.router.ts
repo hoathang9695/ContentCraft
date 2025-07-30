@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
       SELECT 
         id, title, content, target_audience, status, created_by,
         sent_at, recipient_count, created_at, updated_at,
-        redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r
+        redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r, ttl
       FROM list_trends 
       ${whereClause}
       ORDER BY created_at DESC 
@@ -157,7 +157,8 @@ router.post('/', async (req, res) => {
       redis_g,
       redis_k,
       redis_l,
-      redis_r
+      redis_r,
+      ttl
     } = req.body;
 
     // Validate required fields
@@ -176,9 +177,9 @@ router.post('/', async (req, res) => {
     const query = `
       INSERT INTO list_trends (
         title, content, target_audience, status, created_by,
-        redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r,
+        redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r, ttl,
         recipient_count
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
 
@@ -186,6 +187,7 @@ router.post('/', async (req, res) => {
       title, content, target_audience || 'all', status || 'draft', created_by,
       redis_id || null, redis_s || null, redis_a || null, 
       redis_g || null, redis_k || null, redis_l || null, redis_r || null,
+      ttl || 3600, // Default TTL 1 hour
       targetUserIds.length // Set recipient count
     ];
 
@@ -251,21 +253,22 @@ router.put('/:id', async (req, res) => {
       redis_g,
       redis_k,
       redis_l,
-      redis_r
+      redis_r,
+      ttl
     } = req.body;
 
     const query = `
       UPDATE list_trends 
       SET title = $1, content = $2, target_audience = $3, status = $4,
           redis_id = $5, redis_s = $6, redis_a = $7, redis_g = $8,
-          redis_k = $9, redis_l = $10, redis_r = $11
-      WHERE id = $12
+          redis_k = $9, redis_l = $10, redis_r = $11, ttl = $12
+      WHERE id = $13
       RETURNING *
     `;
 
     const values = [
       title, content, target_audience, status,
-      redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r,
+      redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r, ttl || 3600,
       id
     ];
 

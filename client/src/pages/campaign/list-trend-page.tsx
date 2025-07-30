@@ -54,6 +54,7 @@ interface TrendItem {
   redis_k?: string;
   redis_l?: string;
   redis_r?: string;
+  ttl?: number;
 }
 
 interface TrendData {
@@ -154,7 +155,8 @@ export function ListTrendPage() {
           redis_g: trend.redis_g,
           redis_k: trend.redis_k,
           redis_l: trend.redis_l,
-          redis_r: trend.redis_r
+          redis_r: trend.redis_r,
+          ttl: trend.ttl
         })) || []
       };
 
@@ -583,6 +585,16 @@ export function ListTrendPage() {
                       <Label>R</Label>
                       <div className="px-3 py-2 bg-muted rounded-md text-sm">
                         {selectedTrend.redis_r || 'Không có'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>TTL (giây)</Label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {selectedTrend.ttl || 3600} giây
+                        <div className="text-xs text-muted-foreground mt-1">
+                          ({Math.round((selectedTrend.ttl || 3600) / 60)} phút)
+                        </div>
                       </div>
                     </div>
                   </div>
