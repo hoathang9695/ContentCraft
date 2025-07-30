@@ -110,6 +110,15 @@ class RedisService {
         throw new Error('Redis client is not connected');
       }
 
+      // Test Redis connection with a PING command
+      try {
+        await this.client.ping();
+        console.log('✅ Redis PING successful');
+      } catch (pingError) {
+        console.error('❌ Redis PING failed:', pingError);
+        throw new Error(`Redis connection test failed: ${pingError.message}`);
+      }
+
       const results = [];
       const errors = [];
 
@@ -118,28 +127,41 @@ class RedisService {
         try {
           const redisKey = `feed-${userId}:${trendData.redis_id}`;
           
-          // Prepare data fields
-          const redisData: any = {};
+          // Prepare data fields - include id field and handle empty values
+          const redisData: any = {
+            id: trendData.redis_id
+          };
           
           if (trendData.s) redisData.s = trendData.s;
           if (trendData.a) redisData.a = trendData.a;
-          if (trendData.g) redisData.g = trendData.g;
+          if (trendData.g) redisData.g = trendData.g || '';
           if (trendData.k) redisData.k = trendData.k;
-          if (trendData.l) redisData.l = trendData.l;
-          if (trendData.r) redisData.r = trendData.r;
+          if (trendData.l) redisData.l = trendData.l || '';
+          if (trendData.r !== undefined && trendData.r !== null) redisData.r = trendData.r;
 
           console.log(`📤 Setting Redis key: ${redisKey} with data:`, redisData, `TTL: ${trendData.ttl}s`);
 
-          // Set data with TTL using pipeline for better performance
+          // Set data with TTL using pipeline and verify execution
           const pipeline = this.client.multi();
           pipeline.hSet(redisKey, redisData);
           pipeline.expire(redisKey, trendData.ttl);
-          await pipeline.exec();
+          
+          const pipelineResult = await pipeline.exec();
+          console.log(`📊 Pipeline result for ${redisKey}:`, pipelineResult);
+
+          // Verify the data was actually set
+          const verifyData = await this.client.hGetAll(redisKey);
+          console.log(`🔍 Verification data for ${redisKey}:`, verifyData);
+
+          if (Object.keys(verifyData).length === 0) {
+            throw new Error('Data was not saved to Redis - verification failed');
+          }
 
           results.push({
             userId,
             redisKey,
-            success: true
+            success: true,
+            verifiedData: verifyData
           });
         } catch (userError) {
           console.error(`❌ Failed to set Redis key for user ${userId}:`, userError);
@@ -156,13 +178,17 @@ class RedisService {
         console.log(`⚠️ Failed for ${errors.length} users:`, errors);
       }
 
+      // Return success only if at least one user was successful
+      const isSuccess = results.length > 0;
+
       return {
-        success: true,
+        success: isSuccess,
         results,
         errors,
         total_users: trendData.target_users.length,
         successful_users: results.length,
-        failed_users: errors.length
+        failed_users: errors.length,
+        message: isSuccess ? 'Data successfully saved to Redis' : 'Failed to save data to Redis'
       };
 
     } catch (error) {
@@ -174,7 +200,8 @@ class RedisService {
         errors: [],
         total_users: trendData.target_users.length,
         successful_users: 0,
-        failed_users: trendData.target_users.length
+        failed_users: trendData.target_users.length,
+        message: `Redis operation failed: ${error.message}`
       };
     }
   }

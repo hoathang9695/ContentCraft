@@ -384,15 +384,39 @@ router.post('/:id/send', async (req, res) => {
     
     if (redisResult.success && redisResult.successful_users > 0) {
       console.log(`✅ Trend sent successfully to Redis for ${redisResult.successful_users}/${targetUserIds.length} users`);
+      
+      // Return success response with Redis details
+      res.json({
+        ...result.rows[0],
+        target_user_count: targetUserIds.length,
+        target_users_preview: targetUserIds.slice(0, 5),
+        redis_status: {
+          success: true,
+          message: redisResult.message,
+          successful_users: redisResult.successful_users,
+          failed_users: redisResult.failed_users,
+          sample_keys: redisResult.results.slice(0, 3).map(r => r.redisKey)
+        }
+      });
     } else {
-      console.log(`⚠️ Redis push failed or partially failed: ${redisResult.error || 'Unknown error'}`);
+      console.log(`⚠️ Redis push failed: ${redisResult.error || 'Unknown error'}`);
+      
+      // Return error response if Redis failed
+      res.status(500).json({
+        error: 'Failed to save trend data to Redis',
+        details: redisResult.message || redisResult.error,
+        trend_data: result.rows[0],
+        target_user_count: targetUserIds.length,
+        target_users_preview: targetUserIds.slice(0, 5),
+        redis_status: {
+          success: false,
+          message: redisResult.message,
+          successful_users: redisResult.successful_users,
+          failed_users: redisResult.failed_users,
+          errors: redisResult.errors
+        }
+      });
     }
-
-    res.json({
-      ...result.rows[0],
-      target_user_count: targetUserIds.length,
-      target_users_preview: targetUserIds.slice(0, 5)
-    });
   } catch (error) {
     console.error('Error sending trend:', error);
     res.setHeader('Content-Type', 'application/json');
@@ -409,6 +433,64 @@ router.get('/debug/redis/:userId/:trendId', async (req, res) => {
   } catch (error) {
     console.error('Error getting Redis data:', error);
     res.status(500).json({ error: 'Failed to get Redis data' });
+  }
+});
+
+// Verify trend data in Redis after sending
+router.get('/:id/verify-redis', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get trend details
+    const getTrendQuery = 'SELECT * FROM list_trends WHERE id = $1';
+    const trendResult = await pool.query(getTrendQuery, [id]);
+
+    if (trendResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trend not found' });
+    }
+
+    const trend = trendResult.rows[0];
+    const targetUserIds = await getTargetUserIds(trend.target_audience);
+
+    const verificationResults = [];
+    const errors = [];
+
+    // Check each target user
+    for (const userId of targetUserIds.slice(0, 5)) { // Check first 5 users
+      try {
+        const redisKey = `feed-${userId}:${trend.redis_id}`;
+        const data = await redisService.getTrendFromRedis(userId, trend.redis_id);
+        
+        verificationResults.push({
+          userId,
+          redisKey,
+          found: Object.keys(data).length > 0,
+          data
+        });
+      } catch (error) {
+        errors.push({
+          userId,
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      trend_id: parseInt(id),
+      redis_id: trend.redis_id,
+      target_users_checked: verificationResults.length,
+      total_target_users: targetUserIds.length,
+      verification_results: verificationResults,
+      errors,
+      summary: {
+        found_count: verificationResults.filter(r => r.found).length,
+        not_found_count: verificationResults.filter(r => !r.found).length,
+        error_count: errors.length
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying Redis data:', error);
+    res.status(500).json({ error: 'Failed to verify Redis data' });
   }
 });
 
