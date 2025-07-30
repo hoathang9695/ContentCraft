@@ -311,6 +311,9 @@ router.delete('/:id', async (req, res) => {
 router.post('/:id/send', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Log request body for debugging
+    console.log('📤 Send trend request body:', req.body);
 
     // Get trend details first
     const getTrendQuery = 'SELECT * FROM list_trends WHERE id = $1';

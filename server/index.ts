@@ -26,10 +26,15 @@ app.use(
     limit: "50mb",
     verify: (req, res, buf, encoding) => {
       try {
-        JSON.parse(buf.toString());
-      } catch (e) {
-        console.error("JSON parsing error:", e);
-        throw new Error("Invalid JSON in request body");
+        const str = buf.toString();
+        if (str.length === 0) {
+          // Allow empty body
+          return;
+        }
+        JSON.parse(str);
+      } catch (error) {
+        console.error('JSON parsing error:', error);
+        throw new Error('Invalid JSON in request body');
       }
     },
   })
