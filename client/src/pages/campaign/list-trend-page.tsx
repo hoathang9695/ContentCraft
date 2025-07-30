@@ -82,18 +82,40 @@ export function ListTrendPage() {
   const [isConfirmPushDialogOpen, setIsConfirmPushDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleDialogClose = (newTrend?: TrendItem) => {
+  const handleDialogClose = (newTrend?: any) => {
     setIsDialogOpen(false);
 
     // If a new trend was created, add it to the local state
     if (newTrend) {
-      setTrends(prev => [newTrend, ...prev]);
+      // Map the new trend data to match interface
+      const mappedTrend: TrendItem = {
+        id: newTrend.id,
+        title: newTrend.title,
+        content: newTrend.content,
+        targetAudience: newTrend.target_audience || 'all', // Map target_audience to targetAudience
+        status: newTrend.status,
+        createdBy: newTrend.created_by,
+        sentAt: newTrend.sent_at,
+        recipientCount: newTrend.recipient_count,
+        createdAt: newTrend.created_at,
+        updatedAt: newTrend.updated_at,
+        redis_id: newTrend.redis_id,
+        redis_s: newTrend.redis_s,
+        redis_a: newTrend.redis_a,
+        redis_g: newTrend.redis_g,
+        redis_k: newTrend.redis_k,
+        redis_l: newTrend.redis_l,
+        redis_r: newTrend.redis_r,
+        ttl: newTrend.ttl
+      };
+
+      setTrends(prev => [mappedTrend, ...prev]);
 
       // Update trend data if available
       if (trendData) {
         setTrendData(prev => ({
           ...prev!,
-          data: [newTrend, ...prev!.data],
+          data: [mappedTrend, ...prev!.data],
           total: prev!.total + 1
         }));
       }
@@ -144,7 +166,7 @@ export function ListTrendPage() {
           id: trend.id,
           title: trend.title,
           content: trend.content,
-          targetAudience: trend.target_audience, // Map target_audience to targetAudience
+          targetAudience: trend.target_audience || 'all', // Ensure targetAudience is never undefined
           status: trend.status,
           createdBy: trend.created_by,
           sentAt: trend.sent_at,
@@ -244,11 +266,33 @@ export function ListTrendPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleEditSuccess = (updatedTrend: TrendItem) => {
+  const handleEditSuccess = (updatedTrend: any) => {
+    // Map the updated trend data to match interface
+    const mappedTrend: TrendItem = {
+      id: updatedTrend.id,
+      title: updatedTrend.title,
+      content: updatedTrend.content,
+      targetAudience: updatedTrend.target_audience || updatedTrend.targetAudience || 'all',
+      status: updatedTrend.status,
+      createdBy: updatedTrend.created_by,
+      sentAt: updatedTrend.sent_at,
+      recipientCount: updatedTrend.recipient_count,
+      createdAt: updatedTrend.created_at,
+      updatedAt: updatedTrend.updated_at,
+      redis_id: updatedTrend.redis_id,
+      redis_s: updatedTrend.redis_s,
+      redis_a: updatedTrend.redis_a,
+      redis_g: updatedTrend.redis_g,
+      redis_k: updatedTrend.redis_k,
+      redis_l: updatedTrend.redis_l,
+      redis_r: updatedTrend.redis_r,
+      ttl: updatedTrend.ttl
+    };
+
     // Update local state with the updated trend
     setTrends(prev => 
       prev.map(trend => 
-        trend.id === updatedTrend.id ? updatedTrend : trend
+        trend.id === mappedTrend.id ? mappedTrend : trend
       )
     );
 
@@ -256,7 +300,7 @@ export function ListTrendPage() {
       setTrendData(prev => ({
         ...prev!,
         data: prev!.data.map(trend => 
-          trend.id === updatedTrend.id ? updatedTrend : trend
+          trend.id === mappedTrend.id ? mappedTrend : trend
         )
       }));
     }
@@ -383,16 +427,21 @@ export function ListTrendPage() {
     {
       key: 'targetAudience',
       header: 'Đối tượng',
-      render: (row: TrendItem) => (
-        <div>
-          {row.targetAudience === 'all' ? 'Tất cả' :
-           row.targetAudience === 'new' ? 'Mới' :
-           row.targetAudience === 'potential' ? 'Tiềm năng' :
-           row.targetAudience === 'positive' ? 'Tích cực' :
-           row.targetAudience === 'non_potential' ? 'Không tiềm năng' :
-           row.targetAudience}
-        </div>
-      ),
+      render: (row: TrendItem) => {
+        console.log('🎯 Rendering target audience for row:', row.id, 'value:', row.targetAudience);
+        const audienceText = row.targetAudience === 'all' ? 'Tất cả' :
+                           row.targetAudience === 'new' ? 'Mới' :
+                           row.targetAudience === 'potential' ? 'Tiềm năng' :
+                           row.targetAudience === 'positive' ? 'Tích cực' :
+                           row.targetAudience === 'non_potential' ? 'Không tiềm năng' :
+                           row.targetAudience || 'Không xác định';
+        
+        return (
+          <div className="text-sm">
+            {audienceText}
+          </div>
+        );
+      },
     },
     {
       key: 'status',
