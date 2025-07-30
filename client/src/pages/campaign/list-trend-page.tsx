@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { CreateTrendDialog } from '@/components/CreateTrendDialog';
+import { EditTrendDialog } from '@/components/EditTrendDialog';
 
 interface TrendItem {
   id: number;
@@ -499,6 +500,19 @@ export function ListTrendPage() {
         <CreateTrendDialog 
           open={isDialogOpen} 
           onClose={handleDialogClose} 
+        />
+
+        {/* Edit Trend Dialog */}
+        <EditTrendDialog 
+          open={isEditDialogOpen} 
+          trend={selectedTrend}
+          onClose={(updatedTrend) => {
+            setIsEditDialogOpen(false);
+            if (updatedTrend) {
+              handleEditSuccess(updatedTrend);
+            }
+            setSelectedTrend(null);
+          }}
         />
 
         {/* View Trend Dialog */}
