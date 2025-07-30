@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -87,27 +86,63 @@ export function ListTrendPage() {
   }, [currentPage, pageSize, searchTerm]);
 
   const fetchTrends = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: pageSize.toString(),
         ...(searchTerm && { search: searchTerm })
       });
 
-      const response = await fetch(`/api/trends?${params}`, {
-        credentials: 'include'
-      });
+      console.log('Fetching trends with params:', params.toString());
+
+      const response = await fetch(`/api/trends?${params}`);
+
+      console.log('API Response status:', response.status);
+      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('API Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0, 100)}`);
+      }
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.error('Non-JSON response received:', responseText.substring(0, 200));
+        throw new Error('Server returned non-JSON response');
       }
 
       const data = await response.json();
+      console.log('Trends data received:', data);
+
       setTrendData(data);
       setTrends(data.data || []);
     } catch (error) {
       console.error('Error fetching trends:', error);
+
+      let errorMessage = "Không thể tải danh sách trends";
+      if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
+        errorMessage = "Server đang gặp vấn đề. Vui lòng thử lại sau.";
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: "Lỗi",
+        description: errorMessage,
+        variant: "destructive",
+      });
+
+      // Set empty data on error
+      setTrendData({
+        data: [],
+        total: 0,
+        totalPages: 0,
+        currentPage: 1
+      });
       setTrends([]);
     } finally {
       setLoading(false);

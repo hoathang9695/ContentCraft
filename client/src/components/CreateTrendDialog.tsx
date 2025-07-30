@@ -59,11 +59,25 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
         body: JSON.stringify(trendData),
       });
 
+      console.log('Create trend response status:', response.status);
+      console.log('Create trend response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Create trend error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0, 100)}`);
+      }
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.error('Non-JSON response received:', responseText.substring(0, 200));
+        throw new Error('Server returned non-JSON response');
       }
 
       const newTrend = await response.json();
+      console.log('New trend created:', newTrend);
 
       // Reset form
       setFormData({
@@ -90,9 +104,17 @@ export function CreateTrendDialog({ open, onClose }: CreateTrendDialogProps) {
       onClose(newTrend);
     } catch (error) {
       console.error('❌ Error creating trend:', error);
+      
+      let errorMessage = "Có lỗi xảy ra khi tạo trend";
+      if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
+        errorMessage = "Server đang gặp vấn đề. Vui lòng thử lại sau.";
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Lỗi",
-        description: "Có lỗi xảy ra khi tạo trend",
+        description: errorMessage,
         variant: "destructive",
       });
     }

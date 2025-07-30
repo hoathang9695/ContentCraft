@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { Pool } from 'pg';
 
@@ -33,7 +32,7 @@ router.get('/', async (req, res) => {
     // Get total count
     const countQuery = `SELECT COUNT(*) FROM list_trends ${whereClause}`;
     console.log('🔍 Count query:', countQuery, 'params:', queryParams);
-    
+
     const countResult = await pool.query(countQuery, queryParams);
     const total = parseInt(countResult.rows[0].count);
 
@@ -51,7 +50,7 @@ router.get('/', async (req, res) => {
     queryParams.push(limit, offset);
 
     console.log('🔍 Data query:', dataQuery, 'params:', queryParams);
-    
+
     const dataResult = await pool.query(dataQuery, queryParams);
 
     console.log(`✅ Found ${dataResult.rows.length} trends out of ${total} total`);
@@ -65,6 +64,7 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching trends:', error);
     console.error('Stack trace:', error.stack);
+    res.setHeader('Content-Type', 'application/json');
     res.status(500).json({ 
       error: 'Internal server error',
       details: error.message,
@@ -119,9 +119,9 @@ router.post('/', async (req, res) => {
     console.log('🔍 Executing query with values:', values);
 
     const result = await pool.query(query, values);
-    
+
     console.log('✅ Trend created successfully:', result.rows[0]);
-    
+
     // TODO: Push data to Redis here
     console.log('📤 TODO: Push trend data to Redis:', {
       id: redis_id,
@@ -137,6 +137,7 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('❌ Error creating trend:', error);
     console.error('Stack trace:', error.stack);
+    res.setHeader('Content-Type', 'application/json');
     res.status(500).json({ 
       error: 'Internal server error',
       details: error.message,
@@ -187,6 +188,7 @@ router.put('/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating trend:', error);
+    res.setHeader('Content-Type', 'application/json');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -206,6 +208,7 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Trend deleted successfully' });
   } catch (error) {
     console.error('Error deleting trend:', error);
+    res.setHeader('Content-Type', 'application/json');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -238,6 +241,7 @@ router.post('/:id/send', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error sending trend:', error);
+    res.setHeader('Content-Type', 'application/json');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
