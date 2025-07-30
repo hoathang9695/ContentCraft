@@ -74,6 +74,61 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Helper function to get target user IDs based on audience
+async function getTargetUserIds(targetAudience: string): Promise<string[]> {
+  try {
+    let whereClause = '';
+    const params: any[] = [];
+
+    // Map target_audience to classification values
+    switch (targetAudience) {
+      case 'all':
+        // Get all users - no filter needed
+        break;
+      case 'new':
+        whereClause = 'WHERE classification = $1';
+        params.push('new');
+        break;
+      case 'potential':
+        whereClause = 'WHERE classification = $1';
+        params.push('potential');
+        break;
+      case 'positive':
+        whereClause = 'WHERE classification = $1';
+        params.push('positive');
+        break;
+      case 'non_potential':
+        whereClause = 'WHERE classification = $1';
+        params.push('negative'); // Map non_potential to negative
+        break;
+      default:
+        console.log('⚠️ Unknown target audience:', targetAudience);
+        return [];
+    }
+
+    const query = `
+      SELECT (full_name->>'id') as user_id 
+      FROM real_users 
+      ${whereClause}
+      AND full_name IS NOT NULL 
+      AND full_name->>'id' IS NOT NULL
+    `;
+
+    console.log('🔍 Getting target users query:', query, 'params:', params);
+
+    const result = await pool.query(query, params);
+    const userIds = result.rows.map(row => row.user_id).filter(Boolean);
+
+    console.log(`👥 Found ${userIds.length} target users for audience: ${targetAudience}`);
+    console.log('📋 Sample user IDs:', userIds.slice(0, 5));
+
+    return userIds;
+  } catch (error) {
+    console.error('❌ Error getting target user IDs:', error);
+    return [];
+  }
+}
+
 // Create new trend
 router.post('/', async (req, res) => {
   try {
@@ -103,18 +158,23 @@ router.post('/', async (req, res) => {
 
     const created_by = (req as any).user?.id || 1; // Get from auth middleware
 
+    // Get target user IDs based on audience selection
+    const targetUserIds = await getTargetUserIds(target_audience || 'all');
+
     const query = `
       INSERT INTO list_trends (
         title, content, target_audience, status, created_by,
-        redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        redis_id, redis_s, redis_a, redis_g, redis_k, redis_l, redis_r,
+        recipient_count
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
 
     const values = [
       title, content, target_audience || 'all', status || 'draft', created_by,
       redis_id || null, redis_s || null, redis_a || null, 
-      redis_g || null, redis_k || null, redis_l || null, redis_r || null
+      redis_g || null, redis_k || null, redis_l || null, redis_r || null,
+      targetUserIds.length // Set recipient count
     ];
 
     console.log('🔍 Executing query with values:', values);
@@ -123,18 +183,35 @@ router.post('/', async (req, res) => {
 
     console.log('✅ Trend created successfully:', result.rows[0]);
 
-    // TODO: Push data to Redis here
-    console.log('📤 TODO: Push trend data to Redis:', {
-      id: redis_id,
+    // Prepare data for Redis
+    const redisData = {
+      trend_id: result.rows[0].id,
+      redis_id: redis_id,
       s: redis_s,
       a: redis_a,
       g: redis_g,
       k: redis_k,
       l: redis_l,
-      r: redis_r
+      r: redis_r,
+      target_users: targetUserIds,
+      target_audience: target_audience,
+      title: title,
+      content: content
+    };
+
+    console.log('📤 Prepared data for Redis:', {
+      ...redisData,
+      target_users: `${targetUserIds.length} users: [${targetUserIds.slice(0, 3).join(', ')}...]`
     });
 
-    res.status(201).json(result.rows[0]);
+    // TODO: Send to Redis here
+    // await sendToRedis(redisData);
+
+    res.status(201).json({
+      ...result.rows[0],
+      target_user_count: targetUserIds.length,
+      target_users_preview: targetUserIds.slice(0, 5)
+    });
   } catch (error) {
     console.error('❌ Error creating trend:', error);
     console.error('Stack trace:', error.stack);
@@ -219,27 +296,65 @@ router.post('/:id/send', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Get trend details first
+    const getTrendQuery = 'SELECT * FROM list_trends WHERE id = $1';
+    const trendResult = await pool.query(getTrendQuery, [id]);
+
+    if (trendResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trend not found' });
+    }
+
+    const trend = trendResult.rows[0];
+
+    if (!['approved', 'draft'].includes(trend.status)) {
+      return res.status(400).json({ error: 'Trend cannot be sent in current status' });
+    }
+
+    // Get target user IDs based on audience
+    const targetUserIds = await getTargetUserIds(trend.target_audience);
+
     // Update trend status to active and set sent_at
-    const query = `
+    const updateQuery = `
       UPDATE list_trends 
       SET status = 'active', sent_at = CURRENT_TIMESTAMP, recipient_count = $1
-      WHERE id = $2 AND status IN ('approved', 'draft')
+      WHERE id = $2
       RETURNING *
     `;
 
-    // TODO: Calculate actual recipient count based on target_audience
-    const recipientCount = 100; // Placeholder
+    const result = await pool.query(updateQuery, [targetUserIds.length, id]);
 
-    const result = await pool.query(query, [recipientCount, id]);
+    // Prepare data for Redis
+    const redisData = {
+      trend_id: parseInt(id),
+      redis_id: trend.redis_id,
+      s: trend.redis_s,
+      a: trend.redis_a,
+      g: trend.redis_g,
+      k: trend.redis_k,
+      l: trend.redis_l,
+      r: trend.redis_r,
+      target_users: targetUserIds,
+      target_audience: trend.target_audience,
+      title: trend.title,
+      content: trend.content,
+      sent_at: new Date().toISOString()
+    };
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Trend not found or cannot be sent' });
-    }
+    console.log('📤 Sending trend to Redis:', {
+      ...redisData,
+      target_users: `${targetUserIds.length} users: [${targetUserIds.slice(0, 3).join(', ')}...]`
+    });
 
-    // TODO: Actually push to Redis and send notifications here
-    console.log('📤 TODO: Send trend to users via Redis/notifications');
+    // TODO: Actually push to Redis here
+    // await sendToRedis(redisData);
 
-    res.json(result.rows[0]);
+    console.log('✅ Trend sent successfully to', targetUserIds.length, 'users');
+
+    res.json({
+      ...result.rows[0],
+      target_user_count: targetUserIds.length,
+      target_users_preview: targetUserIds.slice(0, 5)
+    });
   } catch (error) {
     console.error('Error sending trend:', error);
     res.setHeader('Content-Type', 'application/json');
