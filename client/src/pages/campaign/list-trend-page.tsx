@@ -78,6 +78,8 @@ export function ListTrendPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [sendingTrendId, setSendingTrendId] = useState<number | null>(null);
+  const [confirmPushTrend, setConfirmPushTrend] = useState<TrendItem | null>(null);
+  const [isConfirmPushDialogOpen, setIsConfirmPushDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleDialogClose = (newTrend?: TrendItem) => {
@@ -275,6 +277,11 @@ export function ListTrendPage() {
     }
   };
 
+  const openConfirmPushDialog = (trend: TrendItem) => {
+    setConfirmPushTrend(trend);
+    setIsConfirmPushDialogOpen(true);
+  };
+
   const handleSendTrend = async (trendId: number) => {
     try {
       setLoading(true);
@@ -299,6 +306,8 @@ export function ListTrendPage() {
     } finally {
       setLoading(false);
       setSendingTrendId(null);
+      setIsConfirmPushDialogOpen(false);
+      setConfirmPushTrend(null);
     }
   };
 
@@ -410,7 +419,7 @@ export function ListTrendPage() {
               </DropdownMenuItem>
               {(row.status === 'approved' || row.status === 'draft') && (
                 <DropdownMenuItem 
-                onClick={() => handleSendTrend(row.id)}
+                onClick={() => openConfirmPushDialog(row)}
                 >
                   <TrendingUp className="mr-2 h-4 w-4" />
                   <span>Đẩy Trend</span>
@@ -516,6 +525,85 @@ export function ListTrendPage() {
             setSelectedTrend(null);
           }}
         />
+
+        {/* Confirm Push Trend Dialog */}
+        {confirmPushTrend && (
+          <AlertDialog open={isConfirmPushDialogOpen} onOpenChange={setIsConfirmPushDialogOpen}>
+            <AlertDialogContent className="max-w-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Xác nhận đẩy trend
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Bạn có chắc chắn muốn đẩy trend này? Trend sẽ được gửi đến Redis và hiển thị cho người dùng.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Tiêu đề:</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                    {confirmPushTrend.title}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Nội dung:</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm max-h-20 overflow-y-auto">
+                    {confirmPushTrend.content}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Đối tượng:</Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                      {confirmPushTrend.targetAudience === 'all' ? 'Tất cả' :
+                       confirmPushTrend.targetAudience === 'new' ? 'Mới' :
+                       confirmPushTrend.targetAudience === 'potential' ? 'Tiềm năng' :
+                       confirmPushTrend.targetAudience === 'positive' ? 'Tích cực' :
+                       confirmPushTrend.targetAudience === 'non_potential' ? 'Không tiềm năng' :
+                       confirmPushTrend.targetAudience}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">TTL:</Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                      {confirmPushTrend.ttl || 3600} giây ({Math.round((confirmPushTrend.ttl || 3600) / 60)} phút)
+                    </div>
+                  </div>
+                </div>
+
+                {confirmPushTrend.redis_id && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Redis ID:</Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-mono">
+                      {confirmPushTrend.redis_id}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => {
+                  setIsConfirmPushDialogOpen(false);
+                  setConfirmPushTrend(null);
+                }}>
+                  Hủy
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => confirmPushTrend && handleSendTrend(confirmPushTrend.id)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Đẩy Trend
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
 
         {/* View Trend Dialog */}
         {selectedTrend && (
