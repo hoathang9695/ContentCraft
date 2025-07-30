@@ -77,28 +77,28 @@ router.get('/', async (req, res) => {
 // Helper function to get target user IDs based on audience
 async function getTargetUserIds(targetAudience: string): Promise<string[]> {
   try {
-    let whereClause = '';
+    let whereClause = 'WHERE full_name IS NOT NULL AND full_name::jsonb->\'id\' IS NOT NULL';
     const params: any[] = [];
 
     // Map target_audience to classification values
     switch (targetAudience) {
       case 'all':
-        // Get all users - no filter needed
+        // Get all users - only basic filters
         break;
       case 'new':
-        whereClause = 'WHERE classification = $1';
+        whereClause += ' AND classification = $1';
         params.push('new');
         break;
       case 'potential':
-        whereClause = 'WHERE classification = $1';
+        whereClause += ' AND classification = $1';
         params.push('potential');
         break;
       case 'positive':
-        whereClause = 'WHERE classification = $1';
+        whereClause += ' AND classification = $1';
         params.push('positive');
         break;
       case 'non_potential':
-        whereClause = 'WHERE classification = $1';
+        whereClause += ' AND classification = $1';
         params.push('negative'); // Map non_potential to negative
         break;
       default:
@@ -110,8 +110,6 @@ async function getTargetUserIds(targetAudience: string): Promise<string[]> {
       SELECT (full_name::jsonb->>'id') as user_id 
       FROM real_users 
       ${whereClause}
-      AND full_name IS NOT NULL 
-      AND full_name::jsonb->>'id' IS NOT NULL
     `;
 
     console.log('🔍 Getting target users query:', query, 'params:', params);
