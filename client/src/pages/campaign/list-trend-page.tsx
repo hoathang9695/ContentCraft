@@ -291,17 +291,23 @@ export function ListTrendPage() {
 
       console.log('📤 Sending trend with ID:', trendId);
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch(`/api/trends/${trendId}/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}), // Send empty JSON object instead of no body
+        body: JSON.stringify({}),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send trend');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to send trend`);
       }
 
       const result = await response.json();
@@ -313,13 +319,25 @@ export function ListTrendPage() {
         description: `Đã đẩy trend thành công đến ${result.target_user_count || 0} người dùng`,
       });
 
-      // Refresh the list to show updated status
-      fetchTrends();
+      // Close dialog first
+      setIsConfirmPushDialogOpen(false);
+      setConfirmPushTrend(null);
+      
+      // Then refresh the list to show updated status
+      await fetchTrends();
     } catch (error) {
       console.error('❌ Send trend error:', error);
+      
+      let errorMessage = "Có lỗi xảy ra khi đẩy trend";
+      if (error.name === 'AbortError') {
+        errorMessage = "Request timeout - vui lòng thử lại";
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Có lỗi xảy ra khi đẩy trend",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

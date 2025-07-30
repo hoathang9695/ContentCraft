@@ -364,29 +364,28 @@ router.post('/:id/send', async (req, res) => {
       target_users: `${targetUserIds.length} users: [${targetUserIds.slice(0, 3).join(', ')}...]`
     });
 
-    try {
-      // Push to Redis
-      const redisResult = await redisService.pushTrendToRedis({
-        trend_id: parseInt(id),
-        redis_id: trend.redis_id || trend.id.toString(),
-        s: trend.redis_s || '',
-        a: trend.redis_a || '',
-        g: trend.redis_g || '',
-        k: trend.redis_k || '',
-        l: trend.redis_l || '',
-        r: trend.redis_r || '',
-        target_users: targetUserIds,
-        ttl: trend.ttl || 3600,
-        title: trend.title,
-        content: trend.content
-      });
+    // Push to Redis with better error handling
+    const redisResult = await redisService.pushTrendToRedis({
+      trend_id: parseInt(id),
+      redis_id: trend.redis_id || trend.id.toString(),
+      s: trend.redis_s || '',
+      a: trend.redis_a || '',
+      g: trend.redis_g || '',
+      k: trend.redis_k || '',
+      l: trend.redis_l || '',
+      r: trend.redis_r || '',
+      target_users: targetUserIds,
+      ttl: trend.ttl || 3600,
+      title: trend.title,
+      content: trend.content
+    });
 
-      console.log('✅ Redis push result:', redisResult);
-      console.log('✅ Trend sent successfully to Redis for', targetUserIds.length, 'users');
-    } catch (redisError) {
-      console.error('❌ Failed to push to Redis:', redisError);
-      // Don't fail the entire operation if Redis fails
-      console.log('⚠️ Continuing without Redis push...');
+    console.log('📊 Redis push result:', redisResult);
+    
+    if (redisResult.success && redisResult.successful_users > 0) {
+      console.log(`✅ Trend sent successfully to Redis for ${redisResult.successful_users}/${targetUserIds.length} users`);
+    } else {
+      console.log(`⚠️ Redis push failed or partially failed: ${redisResult.error || 'Unknown error'}`);
     }
 
     res.json({
@@ -422,6 +421,26 @@ router.get('/debug/redis/keys/:pattern?', async (req, res) => {
   } catch (error) {
     console.error('Error getting Redis keys:', error);
     res.status(500).json({ error: 'Failed to get Redis keys' });
+  }
+});
+
+// Redis health check endpoint
+router.get('/debug/redis/health', async (req, res) => {
+  try {
+    await redisService.connect();
+    res.json({ 
+      success: true, 
+      message: 'Redis connection healthy',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Redis health check failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Redis connection failed',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
