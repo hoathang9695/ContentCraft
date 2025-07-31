@@ -124,6 +124,20 @@ export interface ReportMessage {
   detailedReason?: string;
 }
 
+export interface ComplainMessage {
+  type: 'user_complain' | 'page_complain' | 'post_complain' | 'group_complain' | 'event_complain' | 'song_complain' | 'product_complain' | 'project_complain';
+  receiver_account_id: {
+    id: string;
+    name: string;
+    email?: string;
+  };
+  activity_id: string;
+  activity_class_name: string;
+  reason?: string;
+  descriptions?: string;
+  media_attachment?: string[];
+}
+
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
@@ -276,7 +290,7 @@ export async function setupKafkaConsumer() {
 
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | ReportMessage | ComplainMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
@@ -776,6 +790,102 @@ export async function setupKafkaConsumer() {
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
+                      } else if ("type" in msg && "receiver_account_id" in msg && "activity_id" in msg && "activity_class_name" in msg) {
+                        // Handle complain message from Kafka
+                        const complainMsg = msg as ComplainMessage;
+                        const now = new Date();
+
+                        log(`🔄 Processing complain message: ${JSON.stringify(complainMsg)}`, "kafka");
+
+                        try {
+                          // Validate required fields
+                          if (!complainMsg.type || !complainMsg.receiver_account_id?.id || !complainMsg.activity_id || !complainMsg.activity_class_name) {
+                            const error = `❌ Invalid complain message format - missing required fields: ${JSON.stringify(complainMsg)}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Validate complain type
+                          const validComplainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain'];
+                          if (!validComplainTypes.includes(complainMsg.type)) {
+                            const error = `❌ Invalid complain type: ${complainMsg.type}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Get active users for round-robin assignment (exclude admin)
+                          const activeUsers = await tx
+                            .select()
+                            .from(users)
+                            .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                          if (!activeUsers || activeUsers.length === 0) {
+                            const error = "❌ No active non-admin users found for assignment";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
+
+                          // Get last assigned COMPLAIN for round-robin
+                          const lastAssignedComplain = await tx.query.complainManagement.findFirst({
+                            orderBy: (complainManagement, { desc }) => [desc(complainManagement.createdAt)]
+                          });
+
+                          // Calculate next assignee index
+                          let nextAssigneeIndex = 0;
+                          if (lastAssignedComplain && lastAssignedComplain.assignedToId) {
+                            const lastAssigneeIndex = activeUsers.findIndex(
+                              user => user.id === lastAssignedComplain.assignedToId
+                            );
+                            if (lastAssigneeIndex !== -1) {
+                              nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                            }
+                          }
+
+                          const assignedUser = activeUsers[nextAssigneeIndex];
+
+                          // Prepare insert data
+                          const insertData = {
+                            complainerInfo: complainMsg.receiver_account_id,
+                            activityId: complainMsg.activity_id,
+                            activityClassName: complainMsg.activity_class_name,
+                            complainType: complainMsg.type,
+                            reason: complainMsg.reason || null,
+                            descriptions: complainMsg.descriptions,
+                            mediaAttachment: complainMsg.media_attachment || null,
+                            status: "pending" as const,
+                            assignedToId: assignedUser.id,
+                            assignedToName: assignedUser.name,
+                            assignedAt: now,
+                            createdAt: now,
+                            updatedAt: now,
+                          };
+
+                          log(`📝 Inserting complain data for ${assignedUser.name}`, "kafka");
+
+                          // Insert new complain
+                          const result = await tx
+                            .insert(complainManagement)
+                            .values(insertData)
+                            .returning();
+
+                          log(`✅ Successfully inserted complain: ID ${result[0].id}, ComplainerID: ${complainMsg.receiver_account_id.id}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          metrics.processedMessages++;
+                          return result[0];
+
+                        } catch (error) {
+                          const errorMsg = error instanceof Error ? error.message : String(error);
+                          const errorStack = error instanceof Error ? error.stack : '';
+                          log(`❌ Error processing complain ${complainMsg.activity_id}: ${errorMsg}`, "kafka-error");
+                          log(`📍 Error stack: ${errorStack}`, "kafka-error");
+
+                          // Log additional context for debugging
+                          log(`🔍 Complain data that failed: ${JSON.stringify(complainMsg, null, 2)}`, "kafka-error");
+
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
@@ -841,7 +951,7 @@ export interface FeedbackMessage {
 
 function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | ReportMessage {
+): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | ReportMessage | ComplainMessage {
   if (!messageValue) return null;
 
   try {
@@ -873,6 +983,8 @@ function parseMessage(
       return message as GroupMessage;
     } else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'verify') {
       return message as VerificationMessage;
+    } else if ("type" in message && "receiver_account_id" in message && "activity_id" in message && "activity_class_name" in message) {
+      return message as ComplainMessage;
     }
 
     return null;
