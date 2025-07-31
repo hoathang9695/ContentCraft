@@ -986,7 +986,7 @@ export interface FeedbackMessage {
   content?: string;
 }
 
-function parseMessage(
+export function parseMessage(
   messageValue: Buffer | null,
 ): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | ReportMessage | ComplainMessage {
   if (!messageValue) return null;
