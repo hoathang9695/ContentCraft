@@ -213,6 +213,11 @@ export async function setupKafkaConsumer() {
     return;
   }
 
+  // Log environment info
+  log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`, "kafka");
+  log(`🔧 Kafka Group ID: ${process.env.KAFKA_GROUP_ID || "emso-processor"}`, "kafka");
+  log(`📊 Kafka Consumer enabled for complain_management topic`, "kafka");
+
   try {
     const sasl = process.env.KAFKA_SASL === "true" ? {
       mechanism: process.env.KAFKA_SASL_MECHANISMS as "PLAIN",
@@ -281,12 +286,18 @@ export async function setupKafkaConsumer() {
 
           await Promise.all(chunk.map(async (message) => {
             try {
+              const rawMessage = message.value?.toString();
+              log(`📨 Processing raw message from topic: ${batch.topic}, partition: ${batch.partition}, offset: ${message.offset}`, "kafka");
+              log(`📄 Raw message content: ${rawMessage}`, "kafka");
+
               const parsedMessage = parseMessage(message.value);
               if (!parsedMessage) {
-                log(`Invalid message format: ${message.value}`, "kafka-error");
+                log(`❌ Invalid message format on topic ${batch.topic}: ${rawMessage}`, "kafka-error");
                 resolveOffset(message.offset);
                 return;
               }
+
+              log(`✅ Successfully parsed message type: ${(parsedMessage as any).type || 'unknown'}`, "kafka");
 
               const success = await processMessageWithRetry(
                 parsedMessage,
@@ -795,15 +806,24 @@ export async function setupKafkaConsumer() {
                         const complainMsg = msg as ComplainMessage;
                         const now = new Date();
 
-                        log(`🔄 Processing complain message: ${JSON.stringify(complainMsg)}`, "kafka");
+                        log(`🔄 Processing complain message: ${JSON.stringify(complainMsg, null, 2)}`, "kafka");
 
                         try {
-                          // Validate required fields
-                          if (!complainMsg.type || !complainMsg.receiver_account_id?.id || !complainMsg.activity_id || !complainMsg.activity_class_name) {
-                            const error = `❌ Invalid complain message format - missing required fields: ${JSON.stringify(complainMsg)}`;
+                          // Enhanced validation with detailed logging
+                          const missingFields = [];
+                          if (!complainMsg.type) missingFields.push('type');
+                          if (!complainMsg.receiver_account_id?.id) missingFields.push('receiver_account_id.id');
+                          if (!complainMsg.receiver_account_id?.name) missingFields.push('receiver_account_id.name');
+                          if (!complainMsg.activity_id) missingFields.push('activity_id');
+                          if (!complainMsg.activity_class_name) missingFields.push('activity_class_name');
+
+                          if (missingFields.length > 0) {
+                            const error = `❌ Invalid complain message - missing fields: ${missingFields.join(', ')} - Message: ${JSON.stringify(complainMsg)}`;
                             log(error, "kafka-error");
                             throw new Error(error);
                           }
+
+                          log(`✅ Complain message validation passed for type: ${complainMsg.type}`, "kafka");
 
                           // Validate complain type
                           const validComplainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain'];
@@ -864,13 +884,30 @@ export async function setupKafkaConsumer() {
 
                           log(`📝 Inserting complain data for ${assignedUser.name}`, "kafka");
 
-                          // Insert new complain
+                          // Insert new complain with detailed logging
+                          log(`📝 About to insert complain data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
+                          
                           const result = await tx
                             .insert(complainManagement)
                             .values(insertData)
                             .returning();
 
+                          if (!result || result.length === 0) {
+                            const error = "❌ Failed to insert complain - no result returned";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
                           log(`✅ Successfully inserted complain: ID ${result[0].id}, ComplainerID: ${complainMsg.receiver_account_id.id}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          
+                          // Broadcast badge update for complain management
+                          setTimeout(() => {
+                            if ((global as any).broadcastComplaintBadgeUpdate) {
+                              (global as any).broadcastComplaintBadgeUpdate();
+                              log(`📡 Broadcast complain badge update for ID ${result[0].id}`, "kafka");
+                            }
+                          }, 1000);
+
                           metrics.processedMessages++;
                           return result[0];
 
@@ -984,7 +1021,15 @@ function parseMessage(
     } else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'verify') {
       return message as VerificationMessage;
     } else if ("type" in message && "receiver_account_id" in message && "activity_id" in message && "activity_class_name" in message) {
-      return message as ComplainMessage;
+      // Enhanced complain message validation
+      const complainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain'];
+      if (complainTypes.includes(message.type)) {
+        log(`🎯 Identified complain message type: ${message.type}`, "kafka");
+        return message as ComplainMessage;
+      } else {
+        log(`⚠️ Unknown complain type: ${message.type}`, "kafka-error");
+        return null;
+      }
     }
 
     return null;
