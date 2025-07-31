@@ -163,3 +163,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npx tsx simulate-10-report-types.ts"
+
+[[workflows.workflow]]
+name = "Test Complain Data"
+author = 41108408
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx simulate-complain-test-data.ts"
