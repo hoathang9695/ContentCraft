@@ -1,5 +1,4 @@
 
-```typescript
 import { parseMessage } from './server/kafka-consumer.js';
 
 // Test với message format thực tế từ producer
@@ -90,4 +89,3 @@ const emptyResult = parseMessage(emptyObject);
 console.log('Result:', emptyResult);
 
 console.log('\n✅ Test completed!');
-```
