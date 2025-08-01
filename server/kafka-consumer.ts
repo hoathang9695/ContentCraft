@@ -808,8 +808,6 @@ export async function setupKafkaConsumer() {
 
                         log(`🔄 Processing complain message: ${JSON.stringify(complainMsg, null, 2)}`, "kafka");
 
-                        ```
-This update adds `recruit_complain` to the list of valid complain types, and updates the ComplainMessage interface.
                         try {
                           // Enhanced validation with detailed logging
                           const missingFields = [];
