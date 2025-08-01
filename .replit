@@ -181,3 +181,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npx tsx test-complain-message-parsing.ts"
+
+[[workflows.workflow]]
+name = "Simulate Complain"
+author = 41108408
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx run-simulate-complain.ts"
