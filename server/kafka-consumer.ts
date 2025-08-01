@@ -125,7 +125,7 @@ export interface ReportMessage {
 }
 
 export interface ComplainMessage {
-  type: 'user_complain' | 'page_complain' | 'post_complain' | 'group_complain' | 'event_complain' | 'song_complain' | 'product_complain' | 'project_complain';
+  type: 'user_complain' | 'page_complain' | 'post_complain' | 'group_complain' | 'event_complain' | 'song_complain' | 'product_complain' | 'project_complain' | 'recruit_complain';
   receiver_account_id: {
     id: string;
     name: string;
@@ -808,6 +808,8 @@ export async function setupKafkaConsumer() {
 
                         log(`🔄 Processing complain message: ${JSON.stringify(complainMsg, null, 2)}`, "kafka");
 
+                        ```
+This update adds `recruit_complain` to the list of valid complain types, and updates the ComplainMessage interface.
                         try {
                           // Enhanced validation with detailed logging
                           const missingFields = [];
@@ -886,7 +888,7 @@ export async function setupKafkaConsumer() {
 
                           // Insert new complain with detailed logging
                           log(`📝 About to insert complain data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
-                          
+
                           const result = await tx
                             .insert(complainManagement)
                             .values(insertData)
@@ -899,7 +901,7 @@ export async function setupKafkaConsumer() {
                           }
 
                           log(`✅ Successfully inserted complain: ID ${result[0].id}, ComplainerID: ${complainMsg.receiver_account_id.id}, AssignedTo: ${assignedUser.name}`, "kafka");
-                          
+
                           // Broadcast badge update for complain management
                           setTimeout(() => {
                             if ((global as any).broadcastComplaintBadgeUpdate) {
@@ -1022,7 +1024,7 @@ export function parseMessage(
       return message as VerificationMessage;
     } else if ("type" in message && "receiver_account_id" in message && "activity_id" in message && "activity_class_name" in message) {
       // Enhanced complain message validation
-      const complainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain'];
+      const complainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain', 'recruit_complain'];
       if (complainTypes.includes(message.type)) {
         log(`🎯 Identified complain message type: ${message.type}`, "kafka");
         return message as ComplainMessage;
