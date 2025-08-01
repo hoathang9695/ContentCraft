@@ -1,6 +1,6 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "./db";
-import { users, supportRequests, contents, realUsers, pages, groups, reportManagement } from "../shared/schema";
+import { users, supportRequests, contents, realUsers, pages, groups, reportManagement,complainManagement } from "../shared/schema";
 import { eq, ne, and, sql } from "drizzle-orm";
 import { log } from "./vite";
 
@@ -124,6 +124,20 @@ export interface ReportMessage {
   detailedReason?: string;
 }
 
+export interface ComplainMessage {
+  type: 'user_complain' | 'page_complain' | 'post_complain' | 'group_complain' | 'event_complain' | 'song_complain' | 'product_complain' | 'project_complain';
+  receiver_account_id: {
+    id: string;
+    name: string;
+    email?: string;
+  };
+  activity_id: string;
+  activity_class_name: string;
+  reason?: string;
+  descriptions?: string;
+  media_attachment?: string[];
+}
+
 async function reconnectConsumer(kafka: Kafka, consumer: Consumer) {
   try {
     await consumer.disconnect();
@@ -199,6 +213,11 @@ export async function setupKafkaConsumer() {
     return;
   }
 
+  // Log environment info
+  log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`, "kafka");
+  log(`🔧 Kafka Group ID: ${process.env.KAFKA_GROUP_ID || "emso-processor"}`, "kafka");
+  log(`📊 Kafka Consumer enabled for complain_management topic`, "kafka");
+
   try {
     const sasl = process.env.KAFKA_SASL === "true" ? {
       mechanism: process.env.KAFKA_SASL_MECHANISMS as "PLAIN",
@@ -267,16 +286,22 @@ export async function setupKafkaConsumer() {
 
           await Promise.all(chunk.map(async (message) => {
             try {
+              const rawMessage = message.value?.toString();
+              log(`📨 Processing raw message from topic: ${batch.topic}, partition: ${batch.partition}, offset: ${message.offset}`, "kafka");
+              log(`📄 Raw message content: ${rawMessage}`, "kafka");
+
               const parsedMessage = parseMessage(message.value);
               if (!parsedMessage) {
-                log(`Invalid message format: ${message.value}`, "kafka-error");
+                log(`❌ Invalid message format on topic ${batch.topic}: ${rawMessage}`, "kafka-error");
                 resolveOffset(message.offset);
                 return;
               }
 
+              log(`✅ Successfully parsed message type: ${(parsedMessage as any).type || 'unknown'}`, "kafka");
+
               const success = await processMessageWithRetry(
                 parsedMessage,
-                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage) => {
+                async (msg: ContentMessage | SupportMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | ReportMessage | ComplainMessage) => {
                   const startTime = Date.now();
                   try {
                     await db.transaction(async (tx) => {
@@ -776,6 +801,128 @@ export async function setupKafkaConsumer() {
                           metrics.failedMessages++;
                           throw error; // Re-throw to trigger transaction rollback
                         }
+                      } else if ("type" in msg && "receiver_account_id" in msg && "activity_id" in msg && "activity_class_name" in msg) {
+                        // Handle complain message from Kafka
+                        const complainMsg = msg as ComplainMessage;
+                        const now = new Date();
+
+                        log(`🔄 Processing complain message: ${JSON.stringify(complainMsg, null, 2)}`, "kafka");
+
+                        try {
+                          // Enhanced validation with detailed logging
+                          const missingFields = [];
+                          if (!complainMsg.type) missingFields.push('type');
+                          if (!complainMsg.receiver_account_id?.id) missingFields.push('receiver_account_id.id');
+                          if (!complainMsg.receiver_account_id?.name) missingFields.push('receiver_account_id.name');
+                          if (!complainMsg.activity_id) missingFields.push('activity_id');
+                          if (!complainMsg.activity_class_name) missingFields.push('activity_class_name');
+
+                          if (missingFields.length > 0) {
+                            const error = `❌ Invalid complain message - missing fields: ${missingFields.join(', ')} - Message: ${JSON.stringify(complainMsg)}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`✅ Complain message validation passed for type: ${complainMsg.type}`, "kafka");
+
+                          // Validate complain type
+                          const validComplainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain'];
+                          if (!validComplainTypes.includes(complainMsg.type)) {
+                            const error = `❌ Invalid complain type: ${complainMsg.type}`;
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          // Get active users for round-robin assignment (exclude admin)
+                          const activeUsers = await tx
+                            .select()
+                            .from(users)
+                            .where(and(eq(users.status, "active"), ne(users.role, "admin")));
+
+                          if (!activeUsers || activeUsers.length === 0) {
+                            const error = "❌ No active non-admin users found for assignment";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`👥 Found ${activeUsers.length} active non-admin users`, "kafka");
+
+                          // Get last assigned COMPLAIN for round-robin
+                          const lastAssignedComplain = await tx.query.complainManagement.findFirst({
+                            orderBy: (complainManagement, { desc }) => [desc(complainManagement.createdAt)]
+                          });
+
+                          // Calculate next assignee index
+                          let nextAssigneeIndex = 0;
+                          if (lastAssignedComplain && lastAssignedComplain.assignedToId) {
+                            const lastAssigneeIndex = activeUsers.findIndex(
+                              user => user.id === lastAssignedComplain.assignedToId
+                            );
+                            if (lastAssigneeIndex !== -1) {
+                              nextAssigneeIndex = (lastAssigneeIndex + 1) % activeUsers.length;
+                            }
+                          }
+
+                          const assignedUser = activeUsers[nextAssigneeIndex];
+
+                          // Prepare insert data
+                          const insertData = {
+                            complainerInfo: complainMsg.receiver_account_id,
+                            activityId: complainMsg.activity_id,
+                            activityClassName: complainMsg.activity_class_name,
+                            complainType: complainMsg.type,
+                            reason: complainMsg.reason || null,
+                            descriptions: complainMsg.descriptions,
+                            mediaAttachment: complainMsg.media_attachment || null,
+                            status: "pending" as const,
+                            assignedToId: assignedUser.id,
+                            assignedToName: assignedUser.name,
+                            assignedAt: now,
+                            createdAt: now,
+                            updatedAt: now,
+                          };
+
+                          log(`📝 Inserting complain data for ${assignedUser.name}`, "kafka");
+
+                          // Insert new complain with detailed logging
+                          log(`📝 About to insert complain data: ${JSON.stringify(insertData, null, 2)}`, "kafka");
+                          
+                          const result = await tx
+                            .insert(complainManagement)
+                            .values(insertData)
+                            .returning();
+
+                          if (!result || result.length === 0) {
+                            const error = "❌ Failed to insert complain - no result returned";
+                            log(error, "kafka-error");
+                            throw new Error(error);
+                          }
+
+                          log(`✅ Successfully inserted complain: ID ${result[0].id}, ComplainerID: ${complainMsg.receiver_account_id.id}, AssignedTo: ${assignedUser.name}`, "kafka");
+                          
+                          // Broadcast badge update for complain management
+                          setTimeout(() => {
+                            if ((global as any).broadcastComplaintBadgeUpdate) {
+                              (global as any).broadcastComplaintBadgeUpdate();
+                              log(`📡 Broadcast complain badge update for ID ${result[0].id}`, "kafka");
+                            }
+                          }, 1000);
+
+                          metrics.processedMessages++;
+                          return result[0];
+
+                        } catch (error) {
+                          const errorMsg = error instanceof Error ? error.message : String(error);
+                          const errorStack = error instanceof Error ? error.stack : '';
+                          log(`❌ Error processing complain ${complainMsg.activity_id}: ${errorMsg}`, "kafka-error");
+                          log(`📍 Error stack: ${errorStack}`, "kafka-error");
+
+                          // Log additional context for debugging
+                          log(`🔍 Complain data that failed: ${JSON.stringify(complainMsg, null, 2)}`, "kafka-error");
+
+                          metrics.failedMessages++;
+                          throw error; // Re-throw to trigger transaction rollback
+                        }
                       }
                     }, { isolationLevel: 'serializable' });
                     metrics.processedMessages++;
@@ -839,9 +986,9 @@ export interface FeedbackMessage {
   content?: string;
 }
 
-function parseMessage(
+export function parseMessage(
   messageValue: Buffer | null,
-): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | ReportMessage {
+): ContentMessage | SupportMessage | FeedbackMessage | ContactMessage | RealUsersMessage | PageMessage | GroupMessage | VerificationMessage | TickMessage | ReportMessage | ComplainMessage {
   if (!messageValue) return null;
 
   try {
@@ -873,6 +1020,16 @@ function parseMessage(
       return message as GroupMessage;
     } else if ("id" in message && "full_name" in message && "email" in message && "type" in message && message.type === 'verify') {
       return message as VerificationMessage;
+    } else if ("type" in message && "receiver_account_id" in message && "activity_id" in message && "activity_class_name" in message) {
+      // Enhanced complain message validation
+      const complainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain'];
+      if (complainTypes.includes(message.type)) {
+        log(`🎯 Identified complain message type: ${message.type}`, "kafka");
+        return message as ComplainMessage;
+      } else {
+        log(`⚠️ Unknown complain type: ${message.type}`, "kafka-error");
+        return null;
+      }
     }
 
     return null;
