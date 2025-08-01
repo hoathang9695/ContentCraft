@@ -214,6 +214,8 @@ export default function ComplainManagementPage() {
         return { label: 'Sản phẩm', variant: 'outline' as const };
       case 'project_complain':
         return { label: 'Dự án', variant: 'secondary' as const };
+      case 'recruit_complain':
+        return { label: 'Tin tuyển dụng', variant: 'outline' as const };
       default:
         return { label: 'Khác', variant: 'secondary' as const };
     }

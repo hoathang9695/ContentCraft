@@ -826,7 +826,7 @@ export async function setupKafkaConsumer() {
                           log(`✅ Complain message validation passed for type: ${complainMsg.type}`, "kafka");
 
                           // Validate complain type
-                          const validComplainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain'];
+                          const validComplainTypes = ['user_complain', 'page_complain', 'post_complain', 'group_complain', 'event_complain', 'song_complain', 'product_complain', 'project_complain', 'recruit_complain'];
                           if (!validComplainTypes.includes(complainMsg.type)) {
                             const error = `❌ Invalid complain type: ${complainMsg.type}`;
                             log(error, "kafka-error");

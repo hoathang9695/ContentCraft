@@ -11,7 +11,8 @@ interface ComplainMessage {
     | "event_complain"
     | "song_complain"
     | "product_complain"
-    | "project_complain";
+    | "project_complain"
+    | "recruit_complain";
   receiver_account_id: {
     id: string;
     name: string;
@@ -195,6 +196,18 @@ async function simulateComplainKafkaMessages() {
       activity_id: "112240909630381162",
       activity_class_name: "Project",
       descriptions: "Tôi không làm gì vi phạm, sao lại khóa Dự án của tôi.",
+    },
+    {
+      type: "recruit_complain",
+      receiver_account_id: {
+        id: "113939184437447563",
+        name: "Nguyễn Văn Chiến",
+        email: "bn700207@gmail.com",
+      },
+      activity_id: "2511",
+      activity_class_name: "Recruit",
+      descriptions: null,
+      media_attachment: [],
     },
   ];
 

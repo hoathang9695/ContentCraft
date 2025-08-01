@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS complain_management (
   complainer_info JSONB NOT NULL, -- Thông tin người khiếu nại {id, name, email}
   activity_id VARCHAR(255) NOT NULL, -- ID của đối tượng bị khiếu nại
   activity_class_name VARCHAR(100) NOT NULL, -- Loại đối tượng (Account, etc.)
-  complain_type VARCHAR(50) NOT NULL, -- user_complain, page_complain, post_complain, group_complain, event_complain, song_complain, product_complain, project_complain
+  complain_type VARCHAR(50) NOT NULL, -- user_complain, page_complain, post_complain, group_complain, event_complain, song_complain, product_complain, project_complain, recruit_complain
   reason VARCHAR(500), -- Lý do khiếu nại (có thể null)
   descriptions TEXT, -- Mô tả chi tiết
   media_attachment JSONB, -- File đính kèm (array of links)
